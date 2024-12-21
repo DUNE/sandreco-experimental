@@ -19,6 +19,10 @@ option(BUILD_DOCUMENTATION "Build documentation tree" OFF)
 cmake_policy(SET CMP0167 NEW)
 find_package(Boost COMPONENTS log REQUIRED)
 
+find_package(ROOT COMPONENTS RIO Tree REQUIRED)
+
+find_package(ufw REQUIRED)
+
 add_subdirectory(src)
 
 if(RUN_TESTS_IN_BUILD)
