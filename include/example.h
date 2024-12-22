@@ -10,5 +10,4 @@ struct example {
   std::vector<float> weights;
 };
 
-
 }
