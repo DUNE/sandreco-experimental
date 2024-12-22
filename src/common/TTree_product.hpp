@@ -6,6 +6,8 @@
 #include <TBranch.h>
 #include <TTree.h>
 
+class TFile;
+
 namespace sand {
 
 namespace common {
@@ -34,6 +36,7 @@ namespace common {
     std::string m_filename;
     std::string m_treename;
     TTree* m_tree;
+    mutable TFile* m_file;
     std::vector<std::string> m_dims;
 
   };
@@ -42,22 +45,22 @@ namespace common {
   class TTree_product : public TTree_product_base {
 
   public:
-    virtual ~TTree_product();
-
     TTree_product& operator = (const DataT& d) {
-      m_data = d;
+      *m_data = d;
       m_dirty = true;
       return *this;
     }
 
-    operator DataT& () { return m_data; }
+    operator DataT& () { return *m_data; }
 
-    operator const DataT& () const { return m_data; }
+    operator const DataT& () const { return *m_data; }
 
     void configure(const ufw::config& cfg) override {
       TTree_product_base::configure(cfg);
       m_branchname = cfg.at("branch");
       m_branch = tree()->Branch(m_branchname.c_str(), &m_data);
+      if (!m_branch)
+        throw std::runtime_error("Cannot create branch " + m_branchname);
     }
 
     void select(const ufw::select_key& k) override {
@@ -67,7 +70,8 @@ namespace common {
       TTree_product_base::select(k);
     }
 
-  protected:
+    std::size_t entries() const { return tree()->GetEntries(); }
+
     void read() override {
       TTree_product_base::read();
       //tmp m_branch is deleted by the the TTree
@@ -87,7 +91,7 @@ namespace common {
   private:
     std::string m_branchname;
     TBranch* m_branch = nullptr;
-    DataT m_data;
+    DataT* m_data = nullptr;
     mutable bool m_dirty = false;
 
   };
