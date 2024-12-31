@@ -1,7 +1,7 @@
 #pragma once
 
+#include <config.hpp>
 #include <product.hpp>
-#include <json_product.hpp>
 
 #include <TBranch.h>
 #include <TTree.h>
@@ -51,9 +51,9 @@ namespace common {
       return *this;
     }
 
-    operator DataT& () { return *m_data; }
+    void* data() override { return m_data; }
 
-    operator const DataT& () const { return *m_data; }
+    const void* data() const override { return m_data; }
 
     void configure(const ufw::config& cfg) override {
       TTree_product_base::configure(cfg);

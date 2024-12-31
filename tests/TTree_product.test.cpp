@@ -53,6 +53,8 @@ bool operator == (const sand::example& lhs, const sand::example& rhs) {
   return lhs.uid == rhs.uid && lhs.base == rhs.base && lhs.weights == rhs.weights;
 }
 
+UFW_DECLARE_DATA_TYPE(sand::example) //this should be in a header, but it's ok since the test is a separate translation unit
+
 BOOST_AUTO_TEST_CASE(tree_read) {
   TTree_test ttt;
   ufw::config cfg;
@@ -63,7 +65,7 @@ BOOST_AUTO_TEST_CASE(tree_read) {
   BOOST_TEST(ttt.entries() == 10);
   for (std::size_t i = 0; i != ttt.entries(); ++i) {
     ttt.select(i);
-    bool match = reference[i] == ttt;
+    bool match = (reference[i] == ufw::data_cast<sand::example>(ttt));
     BOOST_TEST(match);
   }
 }

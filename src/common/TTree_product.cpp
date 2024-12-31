@@ -41,7 +41,6 @@ void TTree_product_base::select(const select_key& k) {
     case 3: //std::string
       throw select_error(id(), k);
     };
-
 }
 
 product_ptr TTree_product_base::clone() const {
