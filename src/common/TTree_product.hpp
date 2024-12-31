@@ -19,6 +19,8 @@ namespace common {
 
     void configure(const ufw::config&) override;
 
+    std::size_t entries() const { return m_tree->GetEntries(); }
+
     void select(const ufw::select_key&) override;
 
   protected:
@@ -51,7 +53,7 @@ namespace common {
       return *this;
     }
 
-    void* data() override { return m_data; }
+    void* data() override { m_dirty = true; return m_data; }
 
     const void* data() const override { return m_data; }
 
@@ -69,8 +71,6 @@ namespace common {
       m_dirty = false;
       TTree_product_base::select(k);
     }
-
-    std::size_t entries() const { return tree()->GetEntries(); }
 
     void read() override {
       TTree_product_base::read();

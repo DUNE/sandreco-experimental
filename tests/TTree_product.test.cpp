@@ -62,10 +62,11 @@ BOOST_AUTO_TEST_CASE(tree_read) {
   cfg["branch"] = "ex";
   ttt.configure(cfg);
   ttt.read();
+  ttt.select(nullptr); //does nothing but mimicks action::execute
   BOOST_TEST(ttt.entries() == 10);
   for (std::size_t i = 0; i != ttt.entries(); ++i) {
     ttt.select(i);
-    bool match = (reference[i] == ufw::data_cast<sand::example>(ttt));
+    bool match = (reference[i] == ufw::data_cast<const sand::example>(ttt)); //const here is very important
     BOOST_TEST(match);
   }
 }
