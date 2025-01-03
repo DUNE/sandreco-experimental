@@ -40,11 +40,11 @@ BOOST_AUTO_TEST_CASE(tree_write) {
   cfg["file"] = "../Testing/Temporary/f.root";
   cfg["branch"] = "ex";
   ttt.configure(cfg);
-  for (int i = 0; i != 10; ++i) {
+  for (std::size_t i = 0; i != 10; ++i) {
     auto e = random_example();
     reference.push_back(e);
+    ttt.select(i);
     ttt = e;
-    ttt.select(nullptr);
   }
   ttt.write();
 }
