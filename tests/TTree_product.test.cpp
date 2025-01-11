@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(tree_write) {
   cfg["file"] = "../Testing/Temporary/f.root";
   cfg["branch"] = "ex";
   ttt.configure(cfg);
-  for (std::size_t i = 0; i != 10; ++i) {
+  for (std::size_t i = 0; i != 100; ++i) {
     auto e = random_example();
     reference.push_back(e);
     ttt.select(i);
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(tree_read) {
   ttt.configure(cfg);
   ttt.read();
   ttt.select(nullptr); //does nothing but mimicks action::execute
-  BOOST_TEST(ttt.entries() == 10);
+  BOOST_TEST(ttt.entries() == 100);
   for (std::size_t i = 0; i != ttt.entries(); ++i) {
     ttt.select(i);
     bool match = (reference[i] == ufw::data_cast<const sand::example>(ttt)); //const here is very important

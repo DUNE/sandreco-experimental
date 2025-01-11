@@ -1,4 +1,4 @@
-#include <TFile.h>
+#include <TFileWrapper.hpp>
 
 #include <TTree_product.hpp>
 
@@ -9,14 +9,13 @@ namespace common {
 using namespace ufw;
 
 TTree_product_base::TTree_product_base() :
-  m_tree(new TTree("TTree_product", "")), m_file(nullptr), m_dirty(false) {
-    m_tree->SetDirectory(nullptr);
+  m_tree(new TTree("TTree_product", "")), m_dirty(false) {
+    m_tree->SetDirectory(nullptr); //do not attach to a random open TFile...
   }
 
 TTree_product_base::~TTree_product_base() {
   assert(!m_dirty);
-  delete m_tree;
-  delete m_file;
+  m_tree.reset();
 }
 
 void TTree_product_base::configure(const ufw::config& cfg) {
@@ -53,25 +52,22 @@ product_ptr TTree_product_base::clone() const {
 
 void TTree_product_base::read() {
   flush();
-  delete m_tree;
-  m_file = TFile::Open(m_filename.c_str());
-  if (!m_file || m_file->IsZombie())
+  auto file = new utils::TFileWrapper(m_filename.c_str(), "READ");
+  if (!file || file->IsZombie())
     throw std::runtime_error("Can not open " + m_filename);
-  m_tree = m_file->Get<TTree>(m_treename.c_str());
-  if (!m_tree)
-    throw std::runtime_error("Can not read tree " + m_treename + " from " + m_filename);
+  m_tree.reset();
+  m_tree = file->Get<TTree>(m_treename.c_str());
 }
 
 void TTree_product_base::write() const {
   flush();
-  m_file = TFile::Open(m_filename.c_str(), "RECREATE");
-  if (!m_file || m_file->IsZombie())
+  auto file = new TFile(m_filename.c_str(), "RECREATE");
+  if (!file || file->IsZombie())
     throw std::runtime_error("Can not open " + m_filename);
-  m_tree->SetDirectory(m_file);
+  m_tree->SetDirectory(file);
   m_tree->Write();
   m_tree->SetDirectory(nullptr);
-  delete m_file;
-  m_file = nullptr;
+  delete file;
 }
   
 }

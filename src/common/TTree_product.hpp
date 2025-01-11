@@ -6,8 +6,6 @@
 #include <TBranch.h>
 #include <TTree.h>
 
-class TFile;
-
 namespace sand {
 
 namespace common {
@@ -27,9 +25,9 @@ namespace common {
 
     void read() override;
 
-    TTree* tree() { touch(); return m_tree; }
+    TTree* tree() { touch(); return m_tree.get(); }
 
-    const TTree* tree() const { return m_tree; }
+    const TTree* tree() const { return m_tree.get(); }
 
     void write() const override;
 
@@ -38,15 +36,14 @@ namespace common {
 
     void touch() { m_dirty = true; }
 
-    TTree* get_tree() { return m_tree; };
+    TTree* get_tree() { return m_tree.get(); };
 
     void flush() const;
 
   private:
     std::string m_filename;
     std::string m_treename;
-    mutable TTree* m_tree;
-    mutable TFile* m_file;
+    mutable std::shared_ptr<TTree> m_tree;
     mutable bool m_dirty;
 
   };
