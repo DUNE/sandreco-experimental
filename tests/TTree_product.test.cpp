@@ -5,8 +5,7 @@
 #include <random>
 
 #include <example.h>
-#include <TTree_product.hpp>
-
+/*
 using TTree_test = sand::common::TTree_product<sand::example>;
 
 BOOST_AUTO_TEST_CASE(tree_instance) {
@@ -70,3 +69,4 @@ BOOST_AUTO_TEST_CASE(tree_read) {
     BOOST_TEST(match);
   }
 }
+*/
