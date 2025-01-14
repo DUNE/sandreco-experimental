@@ -1,39 +1,17 @@
 
+#include "TObjectWrapper.hpp"
 #include <TFile.h>
 
 #include <config.hpp>
 #include <data.hpp>
+#include <factory.hpp>
 
 #include <TFileStreamer.hpp>
+#include <TObjectWrapper.hpp>
 
 namespace sand {
 
   namespace common {
-
-    class TObjectWrapper : public ufw::data {
-
-    public:
-      TObjectWrapper(TObject* tobj) : m_object(tobj) {}
-
-      ~TObjectWrapper() override;
-
-      ufw::data_ptr clone() const override { return std::shared_ptr<TObjectWrapper>(new TObjectWrapper(m_object->Clone())); }
-
-      void setObject(TObject* tobj) { m_object.reset(tobj); }
-
-      TObject* object() { return m_object.get(); }
-
-      const TObject* object() const { return m_object.get(); }
-
-    protected:
-      void* get() override;
-
-      const void* get() const override;
-
-    private:
-      std::unique_ptr<TObject> m_object;
-
-    };
 
     TFileStreamer::~TFileStreamer() = default;
 
@@ -51,23 +29,27 @@ namespace sand {
     }
 
     TFileStreamer::iop TFileStreamer::support(const ufw::type_id& id) const {
-      if (id == ufw::register_data_type_id<TObjectWrapper>::datatype_id)
-        return m_mode;
-      else
-        return iop::none;
+      return m_mode;
     }
 
     void TFileStreamer::read(ufw::data& d) {
-
+      TObjectWrapper* tow = dynamic_cast<TObjectWrapper*>(&d);
+      if (!tow)
+        throw std::runtime_error("Object of type " + d.id() + " is not a TObject and is not supported by TFileStreamer.");
+      TObject* obj = m_file->Get(tow->name().c_str());
+      if (!obj)
+        throw std::runtime_error("TObject " + tow->name() + " not found in file.");
+      tow->setObject(obj);
     }
 
     void TFileStreamer::write(const ufw::data& d) {
-      const TObjectWrapper& tow = ufw::data_cast<TObjectWrapper>(d);
-      const TObject* tobj = tow.object();
+      const TObjectWrapper* tow = dynamic_cast<const TObjectWrapper*>(&d);
+      if (!tow)
+        throw std::runtime_error("Object of type " + d.id() + " is not a TObject and is not supported by TFileStreamer.");
       TFile* current = TFile::CurrentFile();
       if (current != m_file.get())
         m_file->cd();
-      tobj->Write();
+      tow->object()->Write();
       if (current != m_file.get())
         current->cd();
     }
@@ -75,3 +57,5 @@ namespace sand {
   }
 
 }
+
+UFW_REGISTER_DYNAMIC_STREAMER_FACTORY(sand::common::TFileStreamer)
