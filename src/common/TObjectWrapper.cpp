@@ -10,13 +10,12 @@ namespace sand {
 
     TObjectWrapper::~TObjectWrapper() = default;
 
-    TObjectWrapper::TObjectWrapper(TObject* tobj)  : m_object(tobj) {
-      if (m_object)
-        m_objname = m_object->GetName();
-    }
+    TObjectWrapper::TObjectWrapper() = default;
 
     ufw::data_ptr TObjectWrapper::clone() const {
-      return std::shared_ptr<TObjectWrapper>(new TObjectWrapper(m_object->Clone()));
+      auto cl = new TObjectWrapper;
+      cl->setObject(m_object->Clone());
+      return std::shared_ptr<TObjectWrapper>(cl);
     }
 
     void TObjectWrapper::configure(const ufw::config& cfg) {
@@ -32,6 +31,7 @@ namespace sand {
     }
 
     void TObjectWrapper::setObject(TObject* tobj) {
+      assert(tobj);
       m_object.reset(tobj);
       m_objname = m_object->GetName();
     }

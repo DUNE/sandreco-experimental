@@ -11,7 +11,7 @@ namespace sand {
     class TObjectWrapper : public ufw::data {
 
     public:
-      TObjectWrapper(TObject* tobj = nullptr);
+      TObjectWrapper();
 
       ~TObjectWrapper() override;
 
@@ -19,7 +19,7 @@ namespace sand {
 
       void configure(const ufw::config&) override;
 
-      void setObject(TObject* tobj);
+      virtual void setObject(TObject* tobj);
 
       TObject* object() { return m_object.get(); }
 

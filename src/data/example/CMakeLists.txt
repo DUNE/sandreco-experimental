@@ -1,12 +1,12 @@
-add_library(TTree_example)
+add_library(example)
 
 include_directories(../../../include)
 include_directories(../../common)
 
-target_sources(TTree_example PRIVATE example.cpp)
+target_sources(example PRIVATE example.cpp)
 
-ROOT_GENERATE_DICTIONARY(ExampleDict ../../../include/example.h MODULE TTree_example LINKDEF ../../../include/ExampleLinkDef.h)
+ROOT_GENERATE_DICTIONARY(G__example ../../../include/example.h MODULE example LINKDEF ../../../include/ExampleLinkDef.h)
 
-target_link_libraries(TTree_example ROOT::RIO ROOT::Tree Boost::log ufw::ufw common)
+target_link_libraries(example ROOT::RIO ROOT::Tree Boost::log ufw::ufw common)
 
-install(TARGETS TTree_example EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS example EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})

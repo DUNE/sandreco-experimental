@@ -8,14 +8,18 @@
 
 #include <TFileStreamer.hpp>
 #include <TObjectWrapper.hpp>
+#include <TTreeData.hpp>
 
 namespace sand {
 
   namespace common {
 
+    TFileStreamer::TFileStreamer() = default;
+
     TFileStreamer::~TFileStreamer() = default;
 
     void TFileStreamer::configure(const ufw::config& cfg) {
+      streamer::configure(cfg);
       std::string openmode = cfg.value("mode", "READ");
       if (openmode == "READ")
         m_mode = iop::ro;
@@ -49,6 +53,9 @@ namespace sand {
       TFile* current = TFile::CurrentFile();
       if (current != m_file.get())
         m_file->cd();
+      auto maybe_tree = dynamic_cast<TTreeDataBase*>(const_cast<TObjectWrapper*>(tow)); //FIXME get rid of this ugly hack
+      if (maybe_tree)
+        maybe_tree->flush();
       tow->object()->Write();
       if (current != m_file.get())
         current->cd();

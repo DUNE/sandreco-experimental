@@ -27,6 +27,11 @@ namespace sand {
     }
 
     TTree* TTreeDataBase::tree() {
+      touch();
+      return static_cast<TTree*>(object());
+    }
+
+    TTree* TTreeDataBase::touchless_tree() {
       return static_cast<TTree*>(object());
     }
 
@@ -37,7 +42,7 @@ namespace sand {
         case 0: //nullptr
           break;
         case 1: //std::size_t
-          ncthis->tree()->GetEntry(std::get<std::size_t>(k));
+          ncthis->touchless_tree()->GetEntry(std::get<std::size_t>(k));
           break;
         default:
           throw select_error(id(), k);

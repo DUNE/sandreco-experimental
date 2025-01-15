@@ -30,11 +30,14 @@ namespace sand {
 
       void flush();
 
-    private:
+      TTree* touchless_tree();
+
+      friend class TFileStreamer;
+
+    public:
       mutable bool m_dirty = false;
 
     };
-
 
     template <typename DataT>
     class TTreeData : public TTreeDataBase {
@@ -47,9 +50,12 @@ namespace sand {
       }
 
       void configure(const ufw::config& cfg) override {
+        //create a tree just in case. If we are used for reading, we'll delete it in setObject
         TTreeDataBase::configure(cfg);
         m_branchname = cfg.at("branch");
-        m_branch = tree()->Branch(m_branchname.c_str(), &m_data);
+        auto tmptree = new TTree(name().c_str(), "", 0, nullptr);
+        TTreeDataBase::setObject(tmptree);
+        m_branch = tmptree->Branch(m_branchname.c_str(), &m_data);
         if (!m_branch)
           throw std::runtime_error("Cannot create branch " + m_branchname);
       }
@@ -59,15 +65,18 @@ namespace sand {
 
       const void* get() const override { return m_data; }
 
-/*    void read() override {
-      TTree_product_base::read();
-      //tmp m_branch is deleted by the the TTree
-      m_branch = get_tree()->FindBranch(m_branchname.c_str());
-      if (!m_branch)
-        throw std::runtime_error("Cannot find branch " + m_branchname);
-      m_branch->SetAddress(&m_data);
-    }
-*/
+      void setObject(TObject* tobj) override {
+        assert(dynamic_cast<TTree*>(tobj));
+        assert(touchless_tree() != tobj);
+        //this is called by TFileStreamer, so delete the current tree and take the new one...
+        TTreeDataBase::setObject(tobj);
+        //adjust the branch too
+        m_branch = touchless_tree()->FindBranch(m_branchname.c_str());
+        if (!m_branch)
+          throw std::runtime_error("Cannot find branch " + m_branchname);
+        m_branch->SetAddress(&m_data);
+      }
+
     private:
       std::string m_branchname;
       TBranch* m_branch = nullptr;

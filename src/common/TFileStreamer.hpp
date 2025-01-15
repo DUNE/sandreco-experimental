@@ -11,6 +11,8 @@ namespace sand {
     class TFileStreamer : public ufw::streamer {
 
     public:
+      TFileStreamer();
+
       ~TFileStreamer() override;
 
       void configure(const ufw::config&) override;
