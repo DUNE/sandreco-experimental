@@ -1,7 +1,6 @@
 #define BOOST_TEST_MODULE TTreeDataexample
 #include <boost/test/included/unit_test.hpp>
 
-#include <iostream>
 #include <random>
 
 #include <example.h>
@@ -66,10 +65,9 @@ bool operator == (const sand::example& lhs, const sand::example& rhs) {
 
 UFW_REGISTER_DATA(sand::example, sand::common::TTreeData<sand::example>)  //this should be in a header, but it's ok since the test is a separate translation unit
 
-UFW_REGISTER_STATIC_DATA_FACTORY(sand::example, sand::common::TTreeData<sand::example>)
-
 BOOST_AUTO_TEST_CASE(tree_read) {
 
+  ufw::factory::add_search_path("/home/ntosi/Development/sandreco-exp-build/tests/");
   sand::common::TFileStreamer tfs;
   ufw::config tfscfg;
   tfscfg["file"] = "../Testing/Temporary/f_05.root";
@@ -79,7 +77,7 @@ BOOST_AUTO_TEST_CASE(tree_read) {
   ufw::config tdecfg;
   tdecfg["name"] = "mytree";
   tdecfg["branch"] = "myexample";
-  auto tdeptr = ufw::factory::create<TTreeDataexample>("sand::common::TTreeData<sand::example>", tdecfg);
+  auto tdeptr = ufw::factory::create<sand::common::TTreeData<sand::example> >("sand::common::TTreeData<sand::example>", tdecfg);
   auto& tde = *tdeptr;
   tfs.read(tde);
 
