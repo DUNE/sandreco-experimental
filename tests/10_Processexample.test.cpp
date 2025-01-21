@@ -9,6 +9,8 @@
 #include <TTreeData.hpp>
 #include <TFileStreamer.hpp>
 
+#include <TFile.h>
+#include <TTree.h>
 
 UFW_REGISTER_DATA(sand::example, sand::common::TTreeData<sand::example>)
 
@@ -49,6 +51,20 @@ void Process_example::run(const ufw::data_set& input, ufw::data_set& output) {
   ufw::data_cast<sand::example>(*output.at("output")) = ex;
 }
 
+double calculateAverage(const char* fileName) {
+    TFile file(fileName, "READ");
+    TTree* tree = (TTree*)file.Get("mytree");
+    sand::example* value = nullptr;
+    tree->SetBranchAddress("myexample", &value);
+    double sum = 0.0;
+    auto count = tree->GetEntries();
+    for (Long64_t i = 0; i < count; ++i) {
+        tree->GetEntry(i);
+        sum += value->base;
+    }
+    return (count > 0) ? (sum / count) : 0.0;
+}
+
 BOOST_AUTO_TEST_CASE(create) {
   ufw::factory::add_search_path("./");
   ufw::config tdecfg;
@@ -84,4 +100,7 @@ BOOST_AUTO_TEST_CASE(create) {
     procptr->run(in, out);
   }
   tfswptr->write(*tdewptr);
+  double f05 = calculateAverage("../Testing/Temporary/f_05.root") * double(proccfg["scale"]);
+  double f10 = calculateAverage("../Testing/Temporary/f_10.root");
+  BOOST_CHECK_CLOSE(f05, f10, 1e-6);
 }
