@@ -10,7 +10,7 @@
 BOOST_AUTO_TEST_CASE(streamer_write) {
   sand::common::TObjectWrapper tow;
   auto named = new TNamed("myobjname", "My Object Title");
-  tow.setObject(named);
+  tow.setObject(named, true);
 
   sand::common::TFileStreamer tfs;
   ufw::config cfg;

@@ -54,7 +54,7 @@ namespace sand {
         TTreeDataBase::configure(cfg);
         m_branchname = cfg.at("branch");
         auto tmptree = new TTree(name().c_str(), "", 0, nullptr);
-        TTreeDataBase::setObject(tmptree);
+        TTreeDataBase::setObject(tmptree, true);
         m_branch = tmptree->Branch(m_branchname.c_str(), &m_data);
         if (!m_branch)
           throw std::runtime_error("Cannot create branch " + m_branchname);
@@ -65,11 +65,11 @@ namespace sand {
 
       const void* get() const override { return m_data; }
 
-      void setObject(TObject* tobj) override {
+      void setObject(TObject* tobj, bool own) override {
         assert(dynamic_cast<TTree*>(tobj));
         assert(touchless_tree() != tobj);
         //this is called by TFileStreamer, so delete the current tree and take the new one...
-        TTreeDataBase::setObject(tobj);
+        TTreeDataBase::setObject(tobj, own);
         //adjust the branch too
         m_branch = touchless_tree()->FindBranch(m_branchname.c_str());
         if (!m_branch)

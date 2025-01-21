@@ -66,8 +66,7 @@ bool operator == (const sand::example& lhs, const sand::example& rhs) {
 UFW_REGISTER_DATA(sand::example, sand::common::TTreeData<sand::example>)  //this should be in a header, but it's ok since the test is a separate translation unit
 
 BOOST_AUTO_TEST_CASE(tree_read) {
-
-  ufw::factory::add_search_path("/home/ntosi/Development/sandreco-exp-build/tests/");
+  ufw::factory::add_search_path("./");
   sand::common::TFileStreamer tfs;
   ufw::config tfscfg;
   tfscfg["file"] = "../Testing/Temporary/f_05.root";

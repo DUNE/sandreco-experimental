@@ -50,8 +50,7 @@ void Process_example::run(const ufw::data_set& input, ufw::data_set& output) {
 }
 
 BOOST_AUTO_TEST_CASE(create) {
-
-  ufw::factory::add_search_path("/home/ntosi/Development/sandreco-exp-build/tests/");
+  ufw::factory::add_search_path("./");
   ufw::config tdecfg;
   tdecfg["name"] = "mytree";
   tdecfg["branch"] = "myexample";

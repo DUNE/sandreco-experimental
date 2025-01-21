@@ -45,7 +45,7 @@ namespace sand {
       TObject* obj = m_file->Get(tow->name().c_str());
       if (!obj)
         throw std::runtime_error("TObject " + tow->name() + " not found in file.");
-      tow->setObject(obj);
+      tow->setObject(obj, false); //Tree continues to own the object.
     }
 
     void TFileStreamer::write(const ufw::data& d) {

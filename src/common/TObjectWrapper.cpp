@@ -10,11 +10,14 @@ namespace sand {
 
     TObjectWrapper::~TObjectWrapper() = default;
 
-    TObjectWrapper::TObjectWrapper() = default;
+    TObjectWrapper::TObjectWrapper() {
+      if (m_owning)
+        delete m_object;
+    }
 
     ufw::data_ptr TObjectWrapper::clone() const {
       auto cl = new TObjectWrapper;
-      cl->setObject(m_object->Clone());
+      cl->setObject(m_object->Clone(), true);
       return std::shared_ptr<TObjectWrapper>(cl);
     }
 
@@ -30,10 +33,12 @@ namespace sand {
       return m_object;
     }
 
-    void TObjectWrapper::setObject(TObject* tobj) {
+    void TObjectWrapper::setObject(TObject* tobj, bool own) {
       assert(tobj);
-      delete m_object;
+      if (m_owning)
+        delete m_object;
       m_object = tobj;
+      m_owning = own;
       m_objname = m_object->GetName();
     }
 

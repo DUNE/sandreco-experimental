@@ -19,7 +19,7 @@ namespace sand {
 
       void configure(const ufw::config&) override;
 
-      virtual void setObject(TObject* tobj);
+      virtual void setObject(TObject* tobj, bool own);
 
       TObject* object() { return m_object; }
 
@@ -34,6 +34,7 @@ namespace sand {
 
     private:
       TObject* m_object = nullptr;
+      bool m_owning = true;
       std::string m_objname;
 
     };
