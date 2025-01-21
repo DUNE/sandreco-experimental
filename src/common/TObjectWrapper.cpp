@@ -23,16 +23,17 @@ namespace sand {
     }
 
     void* TObjectWrapper::get() {
-      return m_object.get();
+      return m_object;
     }
 
     const void* TObjectWrapper::get() const {
-      return m_object.get();
+      return m_object;
     }
 
     void TObjectWrapper::setObject(TObject* tobj) {
       assert(tobj);
-      m_object.reset(tobj);
+      delete m_object;
+      m_object = tobj;
       m_objname = m_object->GetName();
     }
 

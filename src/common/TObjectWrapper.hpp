@@ -21,9 +21,9 @@ namespace sand {
 
       virtual void setObject(TObject* tobj);
 
-      TObject* object() { return m_object.get(); }
+      TObject* object() { return m_object; }
 
-      const TObject* object() const { return m_object.get(); }
+      const TObject* object() const { return m_object; }
 
       const std::string& name() const { return m_objname; }
 
@@ -33,7 +33,7 @@ namespace sand {
       const void* get() const override;
 
     private:
-      std::unique_ptr<TObject> m_object;
+      TObject* m_object = nullptr;
       std::string m_objname;
 
     };

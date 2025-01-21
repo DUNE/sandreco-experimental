@@ -30,6 +30,8 @@ namespace sand {
       else
         throw std::runtime_error("Mode " + openmode + " is not supported by TFileStreamer");
       m_file.reset(new TFile(path().c_str(), openmode.c_str()));
+      if (!m_file->IsOpen() || m_file->IsZombie())
+        throw std::runtime_error("File " + path().string() + " could not be opened");
     }
 
     TFileStreamer::iop TFileStreamer::support(const ufw::type_id& id) const {
