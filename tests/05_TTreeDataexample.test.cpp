@@ -11,6 +11,7 @@
 using TTreeDataexample = sand::common::TTreeData<sand::example>;
 
 BOOST_AUTO_TEST_CASE(tree_instance) {
+  ::setenv("ROOT_LIBRARY_PATH", "../src/data/example", 0);
   TTreeDataexample tde;
   ufw::config cfg;
   cfg["name"] = "mytree";
@@ -66,7 +67,7 @@ bool operator == (const sand::example& lhs, const sand::example& rhs) {
 UFW_REGISTER_DATA(sand::example, sand::common::TTreeData<sand::example>)  //this should be in a header, but it's ok since the test is a separate translation unit
 
 BOOST_AUTO_TEST_CASE(tree_read) {
-  ufw::factory::add_search_path("./");
+  ufw::factory::add_search_path("../src/data/example");
   sand::common::TFileStreamer tfs;
   ufw::config tfscfg;
   tfscfg["file"] = "../Testing/Temporary/f_05.root";
