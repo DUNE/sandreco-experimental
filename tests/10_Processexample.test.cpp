@@ -66,7 +66,8 @@ double calculateAverage(const char* fileName) {
 }
 
 BOOST_AUTO_TEST_CASE(create) {
-  ufw::factory::add_search_path("./");
+  ::setenv("ROOT_LIBRARY_PATH", "../src/data/example", 0);
+  ufw::factory::add_search_path("../src/data/example");
   ufw::config tdecfg;
   tdecfg["name"] = "mytree";
   tdecfg["branch"] = "myexample";
