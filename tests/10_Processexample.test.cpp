@@ -101,6 +101,7 @@ BOOST_AUTO_TEST_CASE(create) {
     procptr->run(in, out);
   }
   tfswptr->write(*tdewptr);
+  tfswptr.reset(nullptr); //close the file before reopening it
   double f05 = calculateAverage("../Testing/Temporary/f_05.root") * double(proccfg["scale"]);
   double f10 = calculateAverage("../Testing/Temporary/f_10.root");
   BOOST_CHECK_CLOSE(f05, f10, 1e-6);
