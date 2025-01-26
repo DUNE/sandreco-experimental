@@ -1,1 +1,3 @@
+add_subdirectory(caf_srinteraction)
+add_subdirectory(caf_srsand)
 add_subdirectory(example)
