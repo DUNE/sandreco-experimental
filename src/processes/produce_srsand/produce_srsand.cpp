@@ -1,8 +1,7 @@
 #include <data.hpp>
 #include <factory.hpp>
 
-#include <duneanaobj/StandardRecord/SRSAND.h>
-
+#include <caf_srsand.hpp>
 #include <produce_srsand.hpp>
 
 UFW_REGISTER_PROCESS(sand::process::produce_srsand)
