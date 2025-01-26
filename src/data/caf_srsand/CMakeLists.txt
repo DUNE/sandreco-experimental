@@ -5,13 +5,12 @@ set(DUNEANAOBJ_PATH ../../../../duneanaobj/)
 include_directories(${DUNEANAOBJ_PATH})
 
 include_directories(../../common)
+include_directories(.)
 
-target_sources(caf_srsand PRIVATE caf_srsand.cpp)
+target_sources(caf_srsand PRIVATE caf_srsand.hpp caf_srsand.cpp)
 
-ROOT_GENERATE_DICTIONARY(G__caf_srsand ${DUNEANAOBJ_PATH}/duneanaobj/StandardRecord/SRSAND.h
-                         MODULE caf_srsand
-                         LINKDEF SRSANDLinkDef.h)
+ROOT_GENERATE_DICTIONARY(G__caf_srsand caf_srsand.hpp MODULE caf_srsand LINKDEF SRSANDLinkDef.h)
 
-target_link_libraries(caf_srsand ROOT::RIO ROOT::Tree Boost::log ufw::ufw common)
+target_link_libraries(caf_srsand common)
 
 install(TARGETS caf_srsand EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
