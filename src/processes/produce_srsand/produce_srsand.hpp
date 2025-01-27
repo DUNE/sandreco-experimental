@@ -15,6 +15,9 @@ namespace sand {
 
       void run(const ufw::data_set&, ufw::data_set&) override;
 
+    private:
+      uint64_t m_seed;
+
     };
 
   }
