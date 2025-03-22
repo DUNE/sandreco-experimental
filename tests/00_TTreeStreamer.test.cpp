@@ -2,7 +2,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <config.hpp>
-#include <TTreeStreamer.hpp>
+#include <common/root/TTreeStreamer.hpp>
 
 #include <TNamed.h>
 

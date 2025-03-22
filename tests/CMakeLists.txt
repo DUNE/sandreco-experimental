@@ -3,7 +3,7 @@ enable_testing()
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 include_directories(../include)
-include_directories(../src/common)
+include_directories(../src/)
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.test.cpp)
 
