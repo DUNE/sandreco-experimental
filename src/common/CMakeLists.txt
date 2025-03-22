@@ -1,12 +1,8 @@
 add_library(common)
 
 set(COMMON_SRCS
-    TFileStreamer.hpp
-    TFileStreamer.cpp
-    TObjectWrapper.hpp
-    TObjectWrapper.cpp
-    TTreeData.hpp
-    TTreeData.cpp
+    TTreeStreamer.hpp
+    TTreeStreamer.cpp
     )
 
 include_directories(.)

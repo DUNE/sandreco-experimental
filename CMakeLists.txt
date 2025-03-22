@@ -57,3 +57,5 @@ install(
   FILES "${CMAKE_CURRENT_BINARY_DIR}/sandrecoConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/sandrecoConfigVersion.cmake"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/sandreco"
   )
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
