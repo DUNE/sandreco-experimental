@@ -2,45 +2,60 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <config.hpp>
+#include <example1.h>
 #include <common/root/TTreeStreamer.hpp>
 
-#include <TNamed.h>
+#include <TFile.h>
+#include <TTree.h>
 
-BOOST_AUTO_TEST_CASE(streamer_write) {/*
-  sand::common::TObjectWrapper tow;
-  auto named = new TNamed("myobjname", "My Object Title");
-  tow.setObject(named, true);
+using sand::common::root::TTreeStreamer;
 
-  sand::common::TFileStreamer tfs;
+BOOST_AUTO_TEST_CASE(streamer_write) {
+  TTreeStreamer ts;
   ufw::config cfg;
-  cfg["file"] = "../Testing/Temporary/f_00.root";
+  BOOST_TEST(ts.mode() == TTreeStreamer::none);
+  cfg["uri"] = "../Testing/Temporary/f_00.root";
   cfg["mode"] = "RECREATE";
-  tfs.configure(cfg);
-
-  tfs.write(tow);*/
+  cfg["tree"] = "mytree";
+  ts.configure(cfg);
+  BOOST_TEST(ts.mode() == TTreeStreamer::wo);
+  BOOST_TEST(ts.support("sand::example1") == TTreeStreamer::wo);
+  BOOST_TEST(ts.support("sand::example2") == TTreeStreamer::wo);
+  sand::example1 ex;
+  ex.uid = 42;
+  ex.times.push_back(1);
+  ex.times.push_back(2);
+  ex.times.push_back(3);
+  ufw::type_id t("sand::example1");
+  ts.attach(t.c_str(), ex);
+  ts.write(0);
+  ex.uid = 43;
+  ts.write(1);
+  ex.uid = 44;
+  ts.write(2);
 }
 
 BOOST_AUTO_TEST_CASE(streamer_read) {
-  // sand::common::TObjectWrapper tow;
-  // ufw::config towcfg;
-  // towcfg["name"] = "myobjname";
-  // tow.configure(towcfg);
-  // 
-  // sand::common::TFileStreamer tfs;
-  // ufw::config tfscfg;
-  // tfscfg["file"] = "../Testing/Temporary/f_00.root";
-  // tfscfg["mode"] = "READ";
-  // tfs.configure(tfscfg);
-  // 
-  // tfs.read(tow);
-  // 
-  // BOOST_TEST(tow.object() != nullptr);
-  // 
-  // BOOST_TEST(dynamic_cast<TNamed*>(tow.object()) != nullptr);
-  // 
-  // auto tn = static_cast<TNamed*>(tow.object());
-  // 
-  // BOOST_TEST(tn->GetName() == "myobjname");
-  // 
-  // BOOST_TEST(tn->GetTitle() == "My Object Title");
+  TTreeStreamer ts;
+  ufw::config cfg;
+  BOOST_TEST(ts.mode() == TTreeStreamer::none);
+  cfg["uri"] = "../Testing/Temporary/f_00.root";
+  cfg["mode"] = "READ";
+  cfg["tree"] = "mytree";
+  ts.configure(cfg);
+  BOOST_TEST(ts.mode() == TTreeStreamer::ro);
+  BOOST_TEST(ts.support("sand::example1") == TTreeStreamer::ro);
+  BOOST_TEST(ts.support("sand::example2") == TTreeStreamer::ro);
+  sand::example1 ex;
+  ufw::type_id t("sand::example1");
+  ts.attach(t.c_str(), ex);
+  ts.read(0);
+  BOOST_TEST(ex.uid == 42);
+  BOOST_TEST(ex.times[0] == 1);
+  BOOST_TEST(ex.times[1] == 2);
+  BOOST_TEST(ex.times[2] == 3);
+  ts.read(1);
+  BOOST_TEST(ex.uid == 43);
+  ts.read(2);
+  BOOST_TEST(ex.uid == 44);
 }
