@@ -1,0 +1,19 @@
+image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
+
+build:
+  stage: build
+  script:
+    - mkdir build
+    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_PREFIX_PATH=/usr/local/lib64/cmake/ufw/
+    - cd build && make -j16
+
+  artifacts:
+    paths:
+      - build/tests/*
+
+# run tests using the binaries built above
+test:
+  stage: test
+  script:
+    - cd build/tests && make test
+
