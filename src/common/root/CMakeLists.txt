@@ -7,7 +7,7 @@ target_sources(TTreeStreamer PRIVATE
 
 target_include_directories(TTreeStreamer PRIVATE . ${CMAKE_SOURCE_DIR}/include)
 
-target_link_libraries(TTreeStreamer ROOT::RIO ROOT::Tree Boost::log ufw::ufw)
+target_link_libraries(TTreeStreamer ROOT::RIO ROOT::Tree ufw::ufw)
 
 #The streamer relies on dictionary generation and its own definitions for
 #correct representation of any user type. This requires all said types to be known.
@@ -27,7 +27,7 @@ list(TRANSFORM USER_TYPES_INCLUDES APPEND ">\n")
 
 file(WRITE TTreeStreamerTypes.hpp ${COMMENT_NO_EDIT})
 file(APPEND TTreeStreamerTypes.hpp "#ifndef UFW_IMPLEMENT_STREAMER_FOR_TYPE\n#define UFW_IMPLEMENT_STREAMER_FOR_TYPE(T)\n#endif\n")
-file(APPEND TTreeStreamerTypes.hpp "#include <data.hpp>\n")
+file(APPEND TTreeStreamerTypes.hpp "#include <ufw/data.hpp>\n")
 file(APPEND TTreeStreamerTypes.hpp ${USER_TYPES_INCLUDES})
 
 #Generate the linkdef file TTreeStreamerLinkdef.h

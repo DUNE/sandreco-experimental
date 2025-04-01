@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE TFileStreamer
 #include <boost/test/included/unit_test.hpp>
 
-#include <config.hpp>
+#include <ufw/config.hpp>
 #include <example1.h>
 #include <common/root/TTreeStreamer.hpp>
 

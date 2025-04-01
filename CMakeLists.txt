@@ -13,11 +13,13 @@ include(GNUInstallDirs)
 include(CTest)
 
 option(BUILD_SHARED_LIBS "Build libraries as shared libraries by default." ON)
-option(RUN_TESTS_IN_BUILD "Run tests during the build process" ON)
+option(BUILD_TESTS "Build Tests" ON)
 option(BUILD_DOCUMENTATION "Build documentation tree" OFF)
 
-cmake_policy(SET CMP0167 NEW)
-find_package(Boost COMPONENTS log REQUIRED)
+if(CMAKE_VERSION VERSION_GREATER "3.30.0")
+  cmake_policy(SET CMP0167 NEW)
+endif()
+find_package(spdlog REQUIRED)
 
 find_package(ROOT COMPONENTS RIO Tree REQUIRED)
 
@@ -25,7 +27,7 @@ find_package(ufw REQUIRED)
 
 add_subdirectory(src)
 
-if(RUN_TESTS_IN_BUILD)
+if(BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
@@ -57,5 +59,3 @@ install(
   FILES "${CMAKE_CURRENT_BINARY_DIR}/sandrecoConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/sandrecoConfigVersion.cmake"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/sandreco"
   )
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

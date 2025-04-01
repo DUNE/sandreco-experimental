@@ -2,9 +2,9 @@
 #include <TFile.h>
 #include <TTree.h>
 
-#include <config.hpp>
-#include <data.hpp>
-#include <factory.hpp>
+#include <ufw/config.hpp>
+#include <ufw/data.hpp>
+#include <ufw/factory.hpp>
 
 #include <TFileWrapper.hpp>
 #include <TTreeStreamer.hpp>
