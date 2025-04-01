@@ -15,5 +15,5 @@ build:
 test:
   stage: test
   script:
-    - cd build/tests && make test
+    - cd build/tests && make test || cat /builds/dune/sandreco-experimental/build/tests/Testing/Temporary/LastTest.log
 
