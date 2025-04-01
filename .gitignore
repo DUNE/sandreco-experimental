@@ -3,3 +3,5 @@ install/
 *.idx
 .kateproject.build
 compile_commands.json
+src/common/root/TTreeStreamerLinkdef.h
+src/common/root/TTreeStreamerTypes.hpp
