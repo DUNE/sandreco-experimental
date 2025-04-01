@@ -5,16 +5,4 @@ build:
   script:
     - mkdir build
     - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_PREFIX_PATH=/usr/local/lib64/cmake/ufw/
-    - cd build && make -j16 && make install
-
-  artifacts:
-    paths:
-      - /usr/local/lib64/sandreco/*
-      - build/tests/*
-
-# run tests using the binaries built above
-test:
-  stage: test
-  script:
-    - ls /usr/local/lib64/sandreco/
-    - cd build/tests && make test || cat Testing/Temporary/LastTest.log && false
+    - cd build && make -j16 && make test || cat Testing/Temporary/LastTest.log && false
