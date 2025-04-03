@@ -1,1 +1,1 @@
-add_subdirectory(Process_example)
+add_subdirectory(Geant4_example)
