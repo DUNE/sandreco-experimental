@@ -60,10 +60,7 @@ void OptMenActionInitialization::BuildForMaster() const
 void OptMenActionInitialization::Build() const
 {
   SetUserAction(new OptMenPrimaryGeneratorAction);
-  #ifdef G4MULTITHREADED
-  #else
   SetUserAction(new OptMenRunAction(_anMgr));
-  #endif
   SetUserAction(new OptMenEventAction(_anMgr));
   if (_stack == true) SetUserAction(new OptMenStackingAction(_anMgr));
 

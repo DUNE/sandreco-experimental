@@ -173,5 +173,4 @@ void OptMenCosmicMuonGenerator::GeneratePrimaries(G4Event *event) {
   // outfile << px << " " << py << " " << pz << " " << energy << " " << vtx_x << " " << vtx_y << " " << vtx_z << std::endl;
   // outfile.close();
 
-	l.unlock();
 }

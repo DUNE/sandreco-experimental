@@ -28,18 +28,18 @@ G4Mutex	lmutex = G4MUTEX_INITIALIZER;
 
 OptMenPhotonGenerator::OptMenPhotonGenerator() : OptMenVGenerator("OptMenPhotonGenerator") {
 
-    fParticleGun  = new G4ParticleGun;
+    // fParticleGun  = new G4ParticleGun;
     fParticleTable = G4ParticleTable::GetParticleTable();
-    fParticleGun->SetParticleDefinition(fParticleTable->FindParticle("geantino"));
+    fParticleGun.SetParticleDefinition(fParticleTable->FindParticle("geantino"));
     found = false;
 
     fFileName = OptMenReadParameters::Get()->GetInputFile();
     startingEntry = OptMenReadParameters::Get()->GetStartingEntry();
 
-    if(!fParticleGun) {
-        std::cout << "Could not allocate G4ParticleGun! Out of memory?"<< std::endl;
-        exit(EXIT_FAILURE);
-    }
+    // if(!fParticleGun) {
+    //     std::cout << "Could not allocate G4ParticleGun! Out of memory?"<< std::endl;
+    //     exit(EXIT_FAILURE);
+    // }
 
     std::cout << "OptMenPhotonGenerator constructed!" << std::endl;
 }
@@ -48,9 +48,9 @@ OptMenPhotonGenerator::OptMenPhotonGenerator() : OptMenVGenerator("OptMenPhotonG
 OptMenPhotonGenerator::~OptMenPhotonGenerator()
 {
     //G4AutoLock l(&lmutex);
-    delete fParticleGun;
+    // delete fParticleGun;
     // delete fParticleTable;
-    delete fInput;
+    // delete fInput;
     // delete fEDepSimEvents;
     // delete fastComponentHisto;
     // delete slowComponentHisto;
@@ -314,21 +314,21 @@ void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
             //std::cout << "Fast/slow ratio: " << mySingletTripletRatio << std::endl;
 
             G4ParticleDefinition *particle = G4ParticleTable::GetParticleTable()->FindParticle("opticalphoton"); 
-            fParticleGun->SetParticleDefinition(particle);
+            fParticleGun.SetParticleDefinition(particle);
 
             for(int j=0; j< myNumPhotons; j++){
 
                 // Momentum & Polarization
  	            std::pair<G4ThreeVector,G4ThreeVector>  myMomentumPolarization = GenerateRandomMomentumPolarization();
-                fParticleGun->SetParticleMomentumDirection(myMomentumPolarization.first);
-		        fParticleGun->SetParticlePolarization(myMomentumPolarization.second);
+                fParticleGun.SetParticleMomentumDirection(myMomentumPolarization.first);
+		        fParticleGun.SetParticlePolarization(myMomentumPolarization.second);
 
                 G4double random = G4UniformRand(); //random between 0 and 1
 
                 // Position
                 G4ThreeVector myPhotonPosition = fStartTranslated.at(i) + random*( fStopTranslated.at(i) - fStartTranslated.at(i) );
 		        if(ApplyVolumeCut(myPhotonPosition)) continue; // skip if not in LAr
-                fParticleGun->SetParticlePosition(myPhotonPosition);					
+                fParticleGun.SetParticlePosition(myPhotonPosition);					
 
 	            // Time & Energy
                 // photonTime = Global Time ( + Recombination Time ) + Singlet/Triplet Time
@@ -354,11 +354,11 @@ void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
                     mySampledEnergy = slowComponentHisto->GetRandom();				
                 }
 
-                fParticleGun->SetParticleEnergy(mySampledEnergy);
-                fParticleGun->SetParticleTime(myPhotonTime);		
+                fParticleGun.SetParticleEnergy(mySampledEnergy);
+                fParticleGun.SetParticleTime(myPhotonTime);		
 
                 //SHOOT PHOTON!!
-                fParticleGun->GeneratePrimaryVertex(event);
+                fParticleGun.GeneratePrimaryVertex(event);
             }
 
             // TODO: check better sources
@@ -368,26 +368,26 @@ void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
                 
                 // Momentum & Polarization
  	            std::pair<G4ThreeVector,G4ThreeVector>  myMomentumPolarization = GenerateRandomMomentumPolarization();
-                fParticleGun->SetParticleMomentumDirection(myMomentumPolarization.first);
-		        fParticleGun->SetParticlePolarization(myMomentumPolarization.second);
+                fParticleGun.SetParticleMomentumDirection(myMomentumPolarization.first);
+		        fParticleGun.SetParticlePolarization(myMomentumPolarization.second);
 
                 G4double random = G4UniformRand(); //random between 0 and 1
 
                 // Position
                 G4ThreeVector myPhotonPosition = fStartTranslated.at(i) + random*( fStopTranslated.at(i) - fStartTranslated.at(i) );
 		        if(ApplyVolumeCut(myPhotonPosition)) continue; // skip if not in LAr
-                fParticleGun->SetParticlePosition(myPhotonPosition);					
+                fParticleGun.SetParticlePosition(myPhotonPosition);					
 
 	            // Time & Energy
                 // (slow component only)
                 G4double myPhotonTime = fStart.at(i).T() + random*(fStop.at(i).T() - fStart.at(i).T()) - fTauSlow * log( G4UniformRand() );
                 G4double mySampledEnergy = slowComponentHisto->GetRandom();				
 
-                fParticleGun->SetParticleEnergy(mySampledEnergy);
-                fParticleGun->SetParticleTime(myPhotonTime);		
+                fParticleGun.SetParticleEnergy(mySampledEnergy);
+                fParticleGun.SetParticleTime(myPhotonTime);		
 
                 //SHOOT PHOTON!!
-                fParticleGun->GeneratePrimaryVertex(event);
+                fParticleGun.GeneratePrimaryVertex(event);
 	        }
 	
 	        tmpEnDep += fEnDep[i];
@@ -414,11 +414,11 @@ void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
                 currentHit++;
 
                 G4ParticleDefinition* particleDefinition = G4ParticleTable::GetParticleTable()->FindParticle("geantino");
-                fParticleGun->SetParticleDefinition(particleDefinition);
-                fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
-                fParticleGun->SetParticleEnergy(1*GeV);
-                fParticleGun->SetParticlePosition(G4ThreeVector(0., 0., -500));
-                fParticleGun->GeneratePrimaryVertex(event);
+                fParticleGun.SetParticleDefinition(particleDefinition);
+                fParticleGun.SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
+                fParticleGun.SetParticleEnergy(1*GeV);
+                fParticleGun.SetParticlePosition(G4ThreeVector(0., 0., -500));
+                fParticleGun.GeneratePrimaryVertex(event);
                 
                 if (currentHit == fNHits) {
                     eventIndex++;
@@ -435,18 +435,17 @@ void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
         } else {
             eventIndex++;
             G4ParticleDefinition* particleDefinition = G4ParticleTable::GetParticleTable()->FindParticle("geantino");
-            fParticleGun->SetParticleDefinition(particleDefinition);
-            fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
-            fParticleGun->SetParticleEnergy(1*GeV);
-            fParticleGun->SetParticlePosition(G4ThreeVector(0., 0., -500));
-            fParticleGun->GeneratePrimaryVertex(event);
+            fParticleGun.SetParticleDefinition(particleDefinition);
+            fParticleGun.SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
+            fParticleGun.SetParticleEnergy(1*GeV);
+            fParticleGun.SetParticlePosition(G4ThreeVector(0., 0., -500));
+            fParticleGun.GeneratePrimaryVertex(event);
         }
         
     }
 
     clear();
     fInput->Close();
-    l.unlock();
     std::cout << "---------> Fine generazione fotoni <---------------" << std::endl;
 }
 

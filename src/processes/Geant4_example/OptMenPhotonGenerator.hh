@@ -81,7 +81,7 @@ class OptMenPhotonGenerator : public OptMenVGenerator {
 		bool found;
 
 		//OptMenPhotonGeneratorMessenger*   fTheMessenger;
-		G4ParticleGun*               fParticleGun;
+		G4ParticleGun               fParticleGun;
 		G4ParticleTable*             fParticleTable;
 
 		TFile* fInput;        //ROOT file to be read.

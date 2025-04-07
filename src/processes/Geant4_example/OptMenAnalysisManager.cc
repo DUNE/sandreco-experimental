@@ -11,7 +11,6 @@
 #include <G4THitsCollection.hh>
 #include <G4Version.hh>
 #include <numeric>
-#include <//G4AutoLock.hh>
 #include "OptMenSensor.h"
 #include "OptMenSensitiveArgon.h"
 #include "OptMenSensorHit.h"
@@ -48,9 +47,9 @@ OptMenAnalysisManager::OptMenAnalysisManager()
   m_pEventDataStacking = new OptMenEventData();
   m_pEventDataArgon    = new OptMenEventData();
 
-  tmpPrimaryFile = "tmpPrimary.root";
-  tmpOpticalPhotonsFile = "tmpOptical.root";
-  tmpSensorsFile = "tmpSensors.root";
+  tmpPrimaryFile = "/home/sandreco-experimental/build/tmpPrimary.root";
+  tmpOpticalPhotonsFile = "/home/sandreco-experimental/build/tmpOptical.root";
+  tmpSensorsFile = "/home/sandreco-experimental/build/tmpSensors.root";
 
   inputFile = OptMenReadParameters::Get()->GetInputFile().c_str();
   generator = OptMenReadParameters::Get()->GetGeneratorType().c_str();
@@ -102,6 +101,7 @@ void OptMenAnalysisManager::CreateFolders() {
 }
 
 void OptMenAnalysisManager::BeginOfRun() {
+  std::cout << "Begin of run" << std::endl;
   CreateFolders();
   // Primary particles output file
   if (OptMenReadParameters::Get()->GetPrimariesFile() == true) {
@@ -252,33 +252,34 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
   OptMenSensorHitCollection *sensorHitsCollection = 0;
   
   int eventID; //use EDepSim EvtId: possibly != from file entry!!
-  if(generator.find("edepsim") != std::string::npos)
-	eventID = OptMenReadParameters::Get()->GetEDepSimEvtIdFromEntry(pEvent->GetEventID());
+  if(generator.find("edepsim") != std::string::npos) {
+	  eventID = OptMenReadParameters::Get()->GetEDepSimEvtIdFromEntry(pEvent->GetEventID());
+  }
   else 	
-  	eventID = pEvent->GetEventID();
+  eventID = pEvent->GetEventID();
 
-  // Retrieving info of detected photons
-  if (OptMenReadParameters::Get()->GetSensorsFile() == true) {
+// Retrieving info of detected photons
+if (OptMenReadParameters::Get()->GetSensorsFile() == true) {
+  
+  G4SDManager *pSDManager = G4SDManager::GetSDMpointer();
+  m_pOutputFileSensor->cd();
+  
+  
+  for (int i = 2; i < _nCollections; i++) {
     
-    G4SDManager *pSDManager = G4SDManager::GetSDMpointer();
-    m_pOutputFileSensor->cd();
-
+    OptMenSensorHit *sensorHit; 
     
-    for (int i = 2; i < _nCollections; i++) {
-
-      OptMenSensorHit *sensorHit; 
-
-      sensorHitsCollection = (OptMenSensorHitCollection *)(pHCofThisEvent->GetHC(i));
-      G4int totEntriesScint = sensorHitsCollection->entries();
-      std::cout << i << " " << totEntriesScint << " " << sensorHitsCollection->GetName() << std::endl;
-
-
-
-      for (auto elem:eventDataMap) {
-        elem.second->eventID = eventID;
-        elem.second->innerPhotons = 0;
-      }
-      
+    sensorHitsCollection = (OptMenSensorHitCollection *)(pHCofThisEvent->GetHC(i));
+    G4int totEntriesScint = sensorHitsCollection->entries();
+    std::cout << i << " " << totEntriesScint << " " << sensorHitsCollection->GetName() << std::endl;
+    
+    
+    
+    for (auto elem:eventDataMap) {
+      elem.second->eventID = eventID;
+      elem.second->innerPhotons = 0;
+    }
+    
       if (totEntriesScint != 0) {
         for (int j = 0; j < totEntriesScint; j++) {
           sensorHit = (*sensorHitsCollection)[j];
@@ -380,11 +381,9 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
   
   G4cout << "End of event" << std::endl;
   gSystem->cd(startingPath.c_str());
-  l.unlock();
 }
 
 void OptMenAnalysisManager::NewStage(OptMenEventData* sData) {
-  // //G4AutoLock lock(&endOfEventMutex);
   m_pEventDataStacking->eventID = sData->eventID;
   
   for (unsigned int i = 0; i < sData->x.size(); i++) {

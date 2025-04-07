@@ -50,5 +50,4 @@ void OptMenParticleGun::GeneratePrimaries(G4Event *event) {
 	G4cout << "Energy: " << fParticleSource->GetParticleEnergy() << " MeV" << G4endl;
 	G4cout << "<--------------------------------->" << G4endl;
 			
-	l.unlock();
 }
