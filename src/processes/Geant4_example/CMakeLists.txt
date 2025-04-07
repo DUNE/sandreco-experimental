@@ -1,13 +1,20 @@
-add_library(Geant4_example)
+add_library(G4_optmen_edepsim)
 
 include_directories(../../../include)
 include_directories(../../common)
+include_directories(../../data)
+include_directories(.)
+
+file(GLOB SOURCES *.cc)
+file(GLOB HEADERS *.hh)
 
 find_package(Geant4 REQUIRED)
 include_directories(${Geant4_USE_FILE})
 
-target_sources(Geant4_example PRIVATE Geant4_example.cpp)
+find_package(EDepSim NAMES EDepSim REQUIRED)
 
-target_link_libraries(Geant4_example ROOT::RIO ROOT::Tree ufw::ufw TTreeStreamer ${Geant4_LIBRARIES})
+target_sources(G4_optmen_edepsim PRIVATE G4_optmen_edepsim.cpp ${SOURCES})
 
-install(TARGETS Geant4_example EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+target_link_libraries(G4_optmen_edepsim ROOT::RIO ROOT::Tree ufw::ufw ${Geant4_LIBRARIES} EDepSim::edepsim_io G4_optmen_runmanager)
+
+install(TARGETS G4_optmen_edepsim EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
