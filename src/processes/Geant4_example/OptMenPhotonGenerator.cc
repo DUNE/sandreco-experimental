@@ -22,6 +22,9 @@
 #include "G4VPhysicalVolume.hh"
 #include "G4Poisson.hh"
 
+#include <EdepReader/EdepReader.hpp>
+#include <ufw/context.hpp>
+
 G4Mutex	lmutex = G4MUTEX_INITIALIZER;
 
 //---------------------------------------------------------------------------//
@@ -62,43 +65,47 @@ int OptMenPhotonGenerator::subEventNumber = 0;
 //---------------------------------------------------------------------------//
 
 void OptMenPhotonGenerator::ReadEDepSimEvent(){    
-    fInput = new TFile(fFileName.c_str(), "READ");
-    if(!fInput->IsOpen()){
-		std::cout << "ERROR : " << fFileName << " cannot be opened! "<< std::endl;
-		exit(EXIT_FAILURE);
-	}
+//     fInput = new TFile(fFileName.c_str(), "READ");
+//     if(!fInput->IsOpen()){
+// 		std::cout << "ERROR : " << fFileName << " cannot be opened! "<< std::endl;
+// 		exit(EXIT_FAILURE);
+// 	}
 
-	std::cout << "Opening the EVENT source file: " << fFileName << std::endl;
+// 	std::cout << "Opening the EVENT source file: " << fFileName << std::endl;
 	
-	fEDepSimEvents = (TTree*) fInput->Get("EDepSimEvents");
-	if(!fEDepSimEvents){
-		std::cout << "ERROR : EDepSimEvents tree not found!"<< std::endl;
-		exit(EXIT_FAILURE);
-	}
+// 	fEDepSimEvents = (TTree*) fInput->Get("EDepSimEvents");
+// 	if(!fEDepSimEvents){
+// 		std::cout << "ERROR : EDepSimEvents tree not found!"<< std::endl;
+// 		exit(EXIT_FAILURE);
+// 	}
 
-    gSystem->Load("libGeom");
-    TGeoManager::Import(fFileName.c_str());
+//     gSystem->Load("libGeom");
+//     TGeoManager::Import(fFileName.c_str());
     
-    //new GRAIN geometry 
-  gGeoManager->cd("volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0");    
-//gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRIAN_LAr_lv_PV_0");
-    //old GRAIN geometry 
-    //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0");
-    //old geometry
-    //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/volSTTLAR_PV_0/Gr_ext_lv_PV_0/Empty_tgt_lv_PV_0/Al_int_lv_PV_0/Lar_bulk_lv_PV_0");
+//     //new GRAIN geometry 
+//   gGeoManager->cd("volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0");    
+// //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRIAN_LAr_lv_PV_0");
+//     //old GRAIN geometry 
+//     //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0");
+//     //old geometry
+//     //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/volSTTLAR_PV_0/Gr_ext_lv_PV_0/Empty_tgt_lv_PV_0/Al_int_lv_PV_0/Lar_bulk_lv_PV_0");
     
-    gGeoManager->LocalToMaster(local, master);
-    // std::cout << master[0] << " " << master[1] << " " << master[2] <<  std::endl;
+//     gGeoManager->LocalToMaster(local, master);
+//     // std::cout << master[0] << " " << master[1] << " " << master[2] <<  std::endl;
 
     
-    fEvent = new TG4Event();
-    fEDepSimEvents->SetBranchAddress("Event",&fEvent);
+//     fEvent = new TG4Event();
+//     fEDepSimEvents->SetBranchAddress("Event",&fEvent);
 }
 
 //-------------------------------------------------------------------------//
 
 void OptMenPhotonGenerator::GetEntry(){
-    fEDepSimEvents->GetEntry(eventIndex + startingEntry);
+    auto& tree = ufw::context::instance<sand::EdepReader>();
+
+
+    // fEDepSimEvents->GetEntry(eventIndex + startingEntry);
+    
     fNHits = 0;
     fTotEnDep = 0;
     fTotSecondaryEnDep = 0;
@@ -117,43 +124,38 @@ void OptMenPhotonGenerator::GetEntry(){
         }
     }
 
-        for (auto elem:fEvent->SegmentDetectors) {
-            std::cout << eventIndex + startingEntry << " " << elem.first << " " << fEvent->EventId << " " << subEventNumber << std::endl;
-            if (elem.first == "LArHit") {
-                fDetName = elem.first;
-                std::vector<TG4HitSegment> hits = elem.second;
-                fNHits = hits.size();
-                std::cout << fNHits << std::endl;
-                for (int j = 0; j < fNHits; j++) {
-                    fPrimaryID.push_back(hits.at(j).GetPrimaryId());
-                    fContribID[j] = hits.at(j).Contrib;
-                    fStart.push_back(hits.at(j).GetStart());
-                    fStop.push_back(hits.at(j).GetStop());
-                    fStepLength.push_back(hits.at(j).GetTrackLength());
-                    fEnDep.push_back(hits.at(j).GetEnergyDeposit());
-                    fSecondaryEnDep.push_back(hits.at(j).GetSecondaryDeposit());
-                    fTotEnDep += hits.at(j).GetEnergyDeposit();
-                    fTotSecondaryEnDep += hits.at(j).GetSecondaryDeposit();
-                }
-            }
+    for (const auto& trj : tree) {
+        std::cout << eventIndex + startingEntry << " " << subEventNumber << std::endl;
+
+        int id = trj.GetId();
+        int PDG = trj.GetPDGCode();
+        double energy = trj.GetInitialMomentum().E();
+
+        //if track is a primary contributor && not already recorded
+        if( std::find(fPrimaryID.begin(),fPrimaryID.end(),id) != fPrimaryID.end()
+                && fPrimaryPDG.find(id) == fPrimaryPDG.end() ){
+
+            fPrimaryPDG.insert(std::make_pair(id, PDG));
+            fInitialEnergy.insert(std::make_pair(id, energy));
+            std::cout << "Track: " << id << " PDG: " << PDG << " Energy: " << energy << std::endl;
         }
-        //get PDG code from trajectory
-        for (auto track:fEvent->Trajectories){
 
-            int id = track.GetTrackId();
-            int PDG = track.GetPDGCode();
-            double energy = track.GetInitialMomentum().E();
-
-            //if track is a primary contributor && not already recorded
-            if( std::find(fPrimaryID.begin(),fPrimaryID.end(),id) != fPrimaryID.end()
-                    && fPrimaryPDG.find(id) == fPrimaryPDG.end() ){
-
-                fPrimaryPDG.insert(std::make_pair(id, PDG));
-                fInitialEnergy.insert(std::make_pair(id, energy));
-                std::cout << "Track: " << id << " PDG: " << PDG << " Energy: " << energy << std::endl;
-            }
+        for (const auto& hit : trj.GetHitMap().at(component::GRAIN)) {
+            fDetName = component_to_string[component::GRAIN];
+            
+            fPrimaryID.push_back(hit.GetPrimaryId());
+            fContribID[hit.GetId()] = std::vector<int> (1, hit.GetContrib());
+            fStart.push_back(hit.GetStart());
+            fStop.push_back(hit.GetStop());
+            fStepLength.push_back(hit.GetTrackLength());
+            fEnDep.push_back(hit.GetEnergyDeposit());
+            fSecondaryEnDep.push_back(hit.GetSecondaryDeposit());
+            fTotEnDep += hit.GetEnergyDeposit();
+            fTotSecondaryEnDep += hit.GetSecondaryDeposit();
+            fNHits += 1;
         }
-    
+        std::cout << fNHits << std::endl;
+    }
 }
 
 //-------------------------------------------------------------------------//

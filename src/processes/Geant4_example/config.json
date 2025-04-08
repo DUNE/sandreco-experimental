@@ -3,6 +3,7 @@
     "ufw-loglevel" : "debug",
     "ufw-basepath" : "/home/sandreco-experimental/build/outputs",
     "ufw-ldpath" : ["/home/sandreco-experimental/build/src/processes/Geant4_example",
+                    "/home/sandreco-experimental/build/src/data/EdepReader",
                     "/home/sandreco-experimental/build/src/data/G4_optmen_runmanager"]
   },
   "globals" : {
@@ -10,7 +11,9 @@
   },
   "contexts" : {
     "keys" : 1,
-    "locals" : {}
+    "locals" : {
+      "sand::EdepReader" : {"uri" : "/home/sandreco-experimental/src/processes/Geant4_example/events-in-GRAIN_LAr_lv.10.edep-sim.root"}
+    }
   },
   "run" : [
     {
