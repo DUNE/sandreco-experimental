@@ -1,1 +1,2 @@
 add_subdirectory(G4_optmen_runmanager)
+add_subdirectory(EdepReader)
