@@ -23,7 +23,7 @@ namespace sand::grain {
     };
   };
 
-  using digitized_image = std::vector<camera>;
+  using digitized_image = std::vector<digi::camera>;
 
 }
 

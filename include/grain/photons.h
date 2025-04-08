@@ -32,7 +32,7 @@ namespace sand::grain {
     };
   };
 
-  using optical_image = std::vector<camera>;
+  using optical_image = std::vector<photons::camera>;
 }
 
 UFW_DECLARE_MANAGED_DATA(sand::grain::photons)
