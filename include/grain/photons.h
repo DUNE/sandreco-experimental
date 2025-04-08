@@ -25,7 +25,7 @@ namespace sand::grain {
       bool inside_camera;
     };
 
-    struct camera:
+    struct camera
     {
       uint16_t camera_id;  // or std::string camera_name;
       std::vector<pe> photoelectrons;

@@ -7,7 +7,7 @@
 namespace sand::grain {
 
   struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct channel:
+    struct channel
     {
        uint16_t channel_id;
        double time_rising_edge;
@@ -16,7 +16,7 @@ namespace sand::grain {
        std::vector<uint32_t> h_indices; 
     };
 
-    struct camera:
+    struct camera
     {
       uint16_t camera_id;  // or std::string camera_name;
       std::vector<channel> channels;
