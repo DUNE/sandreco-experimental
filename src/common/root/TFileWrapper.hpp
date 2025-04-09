@@ -69,6 +69,7 @@ namespace sand::common::root {
      * do not delete it yourself.
      */
     ~TFileWrapper() {
+      UFW_INFO("Destroying TFileWrapper for file {} at {}", GetPath(), fmt::ptr(this));
       assert(m_objects.empty());
       TFile::Close();
     }

@@ -14,6 +14,9 @@ namespace sand {
 ufw::data::factory<sand::EdepReader>::factory(const ufw::config& cfg) :
   input_file(TFile::Open(cfg.at("uri").template get<std::string>().c_str())),
   event(new TG4Event()) {
+  
+    UFW_INFO("Crated file {} at {} in {}", "input_file", fmt::ptr(input_file), cfg.at("uri").template get<std::string>().c_str());
+
 
   input_tree = input_file->Get<TTree>("EDepSimEvents");
 	

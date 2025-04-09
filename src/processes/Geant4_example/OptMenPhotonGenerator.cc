@@ -65,13 +65,14 @@ int OptMenPhotonGenerator::subEventNumber = 0;
 //---------------------------------------------------------------------------//
 
 void OptMenPhotonGenerator::ReadEDepSimEvent(){    
-//     fInput = new TFile(fFileName.c_str(), "READ");
+    // fInput = new TFile(fFileName.c_str(), "READ");
+    // UFW_INFO("Read file {} at {} in {}", "fInput", fmt::ptr(fInput), fFileName.c_str());
 //     if(!fInput->IsOpen()){
 // 		std::cout << "ERROR : " << fFileName << " cannot be opened! "<< std::endl;
 // 		exit(EXIT_FAILURE);
 // 	}
 
-// 	std::cout << "Opening the EVENT source file: " << fFileName << std::endl;
+	// UFW_INFO("Opening the EVENT source file: {}", fFileName);
 	
 // 	fEDepSimEvents = (TTree*) fInput->Get("EDepSimEvents");
 // 	if(!fEDepSimEvents){
@@ -79,22 +80,24 @@ void OptMenPhotonGenerator::ReadEDepSimEvent(){
 // 		exit(EXIT_FAILURE);
 // 	}
 
-//     gSystem->Load("libGeom");
-//     TGeoManager::Import(fFileName.c_str());
+    // gSystem->Load("libGeom");
+    // TGeoManager::Import(fFileName.c_str());
     
-//     //new GRAIN geometry 
+    //new GRAIN geometry 
 //   gGeoManager->cd("volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0");    
-// //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRIAN_LAr_lv_PV_0");
+//gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRIAN_LAr_lv_PV_0");
 //     //old GRAIN geometry 
 //     //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0");
 //     //old geometry
 //     //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/volSTTLAR_PV_0/Gr_ext_lv_PV_0/Empty_tgt_lv_PV_0/Al_int_lv_PV_0/Lar_bulk_lv_PV_0");
     
-//     gGeoManager->LocalToMaster(local, master);
-//     // std::cout << master[0] << " " << master[1] << " " << master[2] <<  std::endl;
-
+    // gGeoManager->LocalToMaster(local, master);
+    master[0]= 0;
+    master[1]= -2384.73;
+    master[2]= 22381;
+    std::cout << "MASTER: " << master[0] << " " << master[1] << " " << master[2] <<  std::endl;
     
-//     fEvent = new TG4Event();
+    // fEvent = new TG4Event();
 //     fEDepSimEvents->SetBranchAddress("Event",&fEvent);
 }
 
@@ -130,18 +133,14 @@ void OptMenPhotonGenerator::GetEntry(){
         int id = trj.GetId();
         int PDG = trj.GetPDGCode();
         double energy = trj.GetInitialMomentum().E();
+        UFW_INFO("Track: {}, PDG: {}, Energy: {}", id, PDG, energy);
 
-        //if track is a primary contributor && not already recorded
-        if( std::find(fPrimaryID.begin(),fPrimaryID.end(),id) != fPrimaryID.end()
-                && fPrimaryPDG.find(id) == fPrimaryPDG.end() ){
-
-            fPrimaryPDG.insert(std::make_pair(id, PDG));
-            fInitialEnergy.insert(std::make_pair(id, energy));
-            std::cout << "Track: " << id << " PDG: " << PDG << " Energy: " << energy << std::endl;
-        }
-
+        if (trj.GetHitMap().find(component::GRAIN) != trj.GetHitMap().end()) {
+        
         for (const auto& hit : trj.GetHitMap().at(component::GRAIN)) {
             fDetName = component_to_string[component::GRAIN];
+            
+            // assert(id == hit.GetPrimaryId());
             
             fPrimaryID.push_back(hit.GetPrimaryId());
             fContribID[hit.GetId()] = std::vector<int> (1, hit.GetContrib());
@@ -154,7 +153,17 @@ void OptMenPhotonGenerator::GetEntry(){
             fTotSecondaryEnDep += hit.GetSecondaryDeposit();
             fNHits += 1;
         }
-        std::cout << fNHits << std::endl;
+        UFW_INFO("fNHits: {}", fNHits);
+        
+        //if track is a primary contributor && not already recorded
+        if( std::find(fPrimaryID.begin(),fPrimaryID.end(),id) != fPrimaryID.end()
+                && fPrimaryPDG.find(id) == fPrimaryPDG.end() ){
+    
+            fPrimaryPDG.insert(std::make_pair(id, PDG));
+            fInitialEnergy.insert(std::make_pair(id, energy));
+            UFW_INFO("Inserted Track: {} with: PDG {}, Energy {}", id, PDG, energy);
+        }
+    }
     }
 }
 
@@ -164,15 +173,18 @@ void OptMenPhotonGenerator::ApplyTranslation(){
 
     fStartTranslated.resize(fNHits);
     fStopTranslated.resize(fNHits);
-
+    int N = fStartTranslated.size();
+    UFW_INFO("SIZE: {}", N);
+    UFW_INFO("MASTER: {}", master[0]);
     for (int i = 0; i < fNHits; i++) {
         fStartTranslated.at(i).setX(fStart.at(i).X() - master[0]);
         fStartTranslated.at(i).setY(fStart.at(i).Y() - master[1]);
         fStartTranslated.at(i).setZ(fStart.at(i).Z() - master[2]);
-
+        
         fStopTranslated.at(i).setX(fStop.at(i).X() - master[0]);
         fStopTranslated.at(i).setY(fStop.at(i).Y() - master[1]);
         fStopTranslated.at(i).setZ(fStop.at(i).Z() - master[2]);
+        // UFW_INFO("START: {}", fStartTranslated.at(i).getX());
     }
 }
 
@@ -329,6 +341,7 @@ void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
 
                 // Position
                 G4ThreeVector myPhotonPosition = fStartTranslated.at(i) + random*( fStopTranslated.at(i) - fStartTranslated.at(i) );
+                // UFW_INFO("POS: {}, {}, {}", fStartTranslated.at(i).X, fStartTranslated.at(i).Y, fStartTranslated.at(i).Z );
 		        if(ApplyVolumeCut(myPhotonPosition)) continue; // skip if not in LAr
                 fParticleGun.SetParticlePosition(myPhotonPosition);					
 
@@ -447,7 +460,7 @@ void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
     }
 
     clear();
-    fInput->Close();
+    // fInput->Close();
     std::cout << "---------> Fine generazione fotoni <---------------" << std::endl;
 }
 

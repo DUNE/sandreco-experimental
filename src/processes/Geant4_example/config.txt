@@ -1,4 +1,4 @@
-inputFile = /home/sandreco-experimental/src/processes/Geant4_example/events-in-GRAIN_LAr_lv.10.edep-sim.root
+inputFile = /home/sand/sandreco-experimental/src/processes/Geant4_example/geometry.root
 generatorType = edepsim
 IDlistFile = no
 IDlistName = /storage/gpfs_data/neutrino/users/vpia/grain-physics-case/wd/numu_LBNF_GV2_prod2/results/EDepInGrain_vale/EDepInGrain_1.txt
@@ -10,7 +10,7 @@ merge = yes
 startingEntry = 0
 startingOnly = no
 fullVolume = yes
-geometryFile = /home/geometry/main.gdml
+geometryFile = /home/sand/geometry/main.gdml
 temporaryFiles = no
 primariesFile = yes
 primariesName = primaries.root

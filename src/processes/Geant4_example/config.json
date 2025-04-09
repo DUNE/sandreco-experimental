@@ -2,9 +2,7 @@
   "ufw" : {
     "ufw-loglevel" : "debug",
     "ufw-basepath" : "/home/sandreco-experimental/build/outputs",
-    "ufw-ldpath" : ["/home/sandreco-experimental/build/src/processes/Geant4_example",
-                    "/home/sandreco-experimental/build/src/data/EdepReader",
-                    "/home/sandreco-experimental/build/src/data/G4_optmen_runmanager"]
+    "ufw-ldpath" : ["/usr/local/lib64"]
   },
   "globals" : {
     "G4_optmen_runmanager" : {}
@@ -12,17 +10,25 @@
   "contexts" : {
     "keys" : 1,
     "locals" : {
-      "sand::EdepReader" : {"uri" : "/home/sandreco-experimental/src/processes/Geant4_example/events-in-GRAIN_LAr_lv.10.edep-sim.root"}
+      "sand::EdepReader" : {"uri" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/events-in-GRAIN_LAr_lv.10.edep-sim.root"}
     }
   },
   "run" : [
     {
       "G4_optmen_edepsim" : { 
         "seed" : 111,
-        "config" : "/home/sandreco-experimental/src/processes/Geant4_example/config.txt"
+        "config" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/config.txt"
       },
       "reqs" : {},
-      "prods" : {}
+      "prods" : {"cameras" : "pippo"}
+    },
+    {
+      "sand::common::root::TTreeStreamer" : { 
+        "uri" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/sensors.root",
+        "mode" : "RECREATE",
+        "tree" : "cameras"
+      },
+      "write" : { "sand::grain::photons" : "pippo"}
     }
   ]
 }

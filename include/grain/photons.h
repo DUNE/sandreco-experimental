@@ -21,6 +21,7 @@ namespace sand::grain {
     struct image
     {
       uint16_t camera_id;  // or std::string camera_name;
+      std::string camera_name;
       std::vector<photon> photons;
     };
 

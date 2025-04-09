@@ -51,8 +51,8 @@ OptMenEventCounter::OptMenEventCounter()
 
 OptMenEventCounter::~OptMenEventCounter()
 {
-	delete fInput;
-  if (OptMenReadParameters::Get()->GetGeneratorType().find("edepsim") != std::string::npos) delete fEvent;
+	// delete fInput;
+  // if (OptMenReadParameters::Get()->GetGeneratorType().find("edepsim") != std::string::npos) delete fEvent;
 }
 
 TFile* OptMenEventCounter::fInput = 0;

@@ -81,7 +81,7 @@ class G4_optmen_edepsim : public ufw::process {
   //   return ufw::data_list{{"input", "sand::example"}};
   // }
   
-  G4_optmen_edepsim::G4_optmen_edepsim() : process({}, {}) {
+  G4_optmen_edepsim::G4_optmen_edepsim() : process({}, {{"cameras", "sand::grain::photons"}}) {
     UFW_INFO("Creating a G4_optmen_edepsim process at {}", fmt::ptr(this));
   }
 

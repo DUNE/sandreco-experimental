@@ -5,4 +5,4 @@ install/
 compile_commands.json
 src/common/root/TTreeStreamerLinkdef.h
 src/common/root/TTreeStreamerTypes.hpp
-src/processes/Geant4_example/events-in-GRAIN_LAr_lv.10.edep-sim.root
+src/processes/Geant4_example/*.root

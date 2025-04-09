@@ -17,9 +17,12 @@ UFW_DECLARE_RTTI(type)
 namespace sand::common::root {
 
   TTreeStreamer::~TTreeStreamer() {
-    m_tree->Write();
-    delete m_tree;
-    delete m_file;
+    m_file->cd();
+    UFW_INFO("m_file->GetPath(): {}", m_file->GetPath());
+    UFW_INFO("m_file->GetListOfKeys()->At(0): {}", fmt::ptr(m_file->GetListOfKeys()->At(0)));
+    m_tree->Write("", TObject::kOverwrite);
+    //delete m_tree;
+    //delete m_file;
   }
 
   void TTreeStreamer::configure(const ufw::config& cfg) {
@@ -69,10 +72,12 @@ namespace sand::common::root {
   }
 
   void TTreeStreamer::read(ufw::context_id i) {
+    m_file->cd();
     m_tree->GetEntry(i);
   }
 
   void TTreeStreamer::write(ufw::context_id) {
+    m_file->cd();
     m_tree->Fill();
   }
 

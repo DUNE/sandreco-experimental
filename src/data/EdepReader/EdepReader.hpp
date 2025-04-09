@@ -28,7 +28,7 @@ class ufw::data::factory<sand::EdepReader> {
     sand::EdepReader reader;
     std::unique_ptr<TFile> input_file;
     TTree* input_tree;
-    std::unique_ptr<TG4Event> event;
+    TG4Event* event;
   
 };
 
