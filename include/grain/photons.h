@@ -1,38 +1,35 @@
 #pragma once
 
 #include <ufw/data.hpp>
+#include <common/sand.h>
+#include <common/truth.h>
 #include <vector>
 #include <cstdint>
 
 namespace sand::grain {
 
   struct photons : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct pe
+    struct photon : public true_hit
     {
-      uint32_t h_index;
-      double energy;
-      double time;
-      double x;
-      double y;
-      double z;
-      double x_origin;
-      double y_origin;
-      double z_origin;
-      double px;
-      double py;
-      double pz;
+      pos_4d pos;
+      pos_3d origin;
+      mom_4d p;
       double scatter;
       bool inside_camera;
     };
 
-    struct camera
+    struct image
     {
       uint16_t camera_id;  // or std::string camera_name;
-      std::vector<pe> photoelectrons;
+      std::vector<photon> photons;
     };
+
+    using image_list = std::vector<photons::image>;
+
+    image_list images;
+
   };
 
-  using optical_image = std::vector<photons::camera>;
 }
 
 UFW_DECLARE_MANAGED_DATA(sand::grain::photons)
