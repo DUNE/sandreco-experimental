@@ -15,6 +15,6 @@ find_package(EDepSim NAMES EDepSim REQUIRED)
 
 target_sources(G4_optmen_edepsim PRIVATE G4_optmen_edepsim.cpp ${SOURCES})
 
-target_link_libraries(G4_optmen_edepsim ROOT::RIO ROOT::Tree ufw::ufw ${Geant4_LIBRARIES} EDepSim::edepsim_io G4_optmen_runmanager EdepReader)
+target_link_libraries(G4_optmen_edepsim ROOT::RIO ROOT::Tree ufw::ufw ${Geant4_LIBRARIES} z EDepSim::edepsim_io G4_optmen_runmanager EdepReader)
 
 install(TARGETS G4_optmen_edepsim EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})

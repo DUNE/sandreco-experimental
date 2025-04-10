@@ -6,7 +6,6 @@
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 
-#include <TFileWrapper.hpp>
 #include <TTreeStreamer.hpp>
 
 #define UFW_IMPLEMENT_STREAMER_FOR_TYPE(type) \
@@ -18,11 +17,10 @@ namespace sand::common::root {
 
   TTreeStreamer::~TTreeStreamer() {
     m_file->cd();
-    UFW_INFO("m_file->GetPath(): {}", m_file->GetPath());
-    UFW_INFO("m_file->GetListOfKeys()->At(0): {}", fmt::ptr(m_file->GetListOfKeys()->At(0)));
-    m_tree->Write("", TObject::kOverwrite);
-    //delete m_tree;
-    //delete m_file;
+    m_tree->Write();
+    m_file->Close();
+    //delete m_tree; //deleted in close
+    delete m_file;
   }
 
   void TTreeStreamer::configure(const ufw::config& cfg) {
@@ -35,11 +33,11 @@ namespace sand::common::root {
     } else if (openmode == "UPDATE") {
       m_mode = iop::rw;
     } else {
-      throw std::runtime_error("Mode " + openmode + " is not supported by TTreeStreamer");
+      UFW_ERROR("Mode {} is not supported by TTreeStreamer", openmode);
     }
-    m_file = new TFileWrapper(path().c_str(), openmode.c_str());
+    m_file = new TFile(path().c_str(), openmode.c_str());
     if (!m_file->IsOpen() || m_file->IsZombie()) {
-      throw std::runtime_error("File " + path().string() + " could not be opened");
+      UFW_ERROR("File {} could not be opened", path().string());
     }
     std::string treename = cfg.at("tree");
     if (m_mode == iop::ro || m_mode == iop::rw) {
@@ -50,16 +48,27 @@ namespace sand::common::root {
   }
 
   void TTreeStreamer::attach(const ufw::type_id& t, ufw::data::data_base& d) {
+    UFW_DEBUG("Attached object at {} of type {}", fmt::ptr(&d), t);
     TClass* tcl = TClass::GetClass(t.c_str());
-    assert(tcl);
+    if (!tcl) {
+      UFW_ERROR("TClass for '{}' not found.", t);
+    }
     //you would think using a temporary here would be fine, and yet...
     m_branchaddr = &d;
+    //remove any namespace from the branch name, for convenience.
+    const char* brname = t.c_str();
+    auto idx = t.find_last_of(':');
+    if (idx != std::string::npos) {
+      brname += idx + 1;
+    }
     if (m_mode == iop::ro || m_mode == iop::rw) {
-      TBranch* br = m_tree->GetBranch(t.c_str());
-      assert(br);
+      TBranch* br = m_tree->GetBranch(brname);
+      if (!br) {
+        UFW_ERROR("TBranch '{}' not found.", brname);
+      }
       br->SetAddress(&m_branchaddr);
     } else if (m_mode == iop::wo) {
-      m_tree->Branch(t.c_str(), t.c_str(), &m_branchaddr);
+      m_tree->Branch(brname, t.c_str(), &m_branchaddr);
     }
   }
 

@@ -128,12 +128,12 @@ void OptMenPhotonGenerator::GetEntry(){
     }
 
     for (const auto& trj : tree) {
-        std::cout << eventIndex + startingEntry << " " << subEventNumber << std::endl;
+        //std::cout << eventIndex + startingEntry << " " << subEventNumber << std::endl;
 
         int id = trj.GetId();
         int PDG = trj.GetPDGCode();
         double energy = trj.GetInitialMomentum().E();
-        UFW_INFO("Track: {}, PDG: {}, Energy: {}", id, PDG, energy);
+        //UFW_INFO("Track: {}, PDG: {}, Energy: {}", id, PDG, energy);
 
         if (trj.GetHitMap().find(component::GRAIN) != trj.GetHitMap().end()) {
         
@@ -153,7 +153,7 @@ void OptMenPhotonGenerator::GetEntry(){
             fTotSecondaryEnDep += hit.GetSecondaryDeposit();
             fNHits += 1;
         }
-        UFW_INFO("fNHits: {}", fNHits);
+        //UFW_INFO("fNHits: {}", fNHits);
         
         //if track is a primary contributor && not already recorded
         if( std::find(fPrimaryID.begin(),fPrimaryID.end(),id) != fPrimaryID.end()

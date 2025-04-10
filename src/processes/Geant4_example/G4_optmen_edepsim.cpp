@@ -39,8 +39,6 @@ class G4_optmen_edepsim : public ufw::process {
   void G4_optmen_edepsim::configure (const ufw::config& cfg) {
     process::configure(cfg);
     m_seed = cfg.at("seed");
-
-    UFW_DEBUG("Configuring optmen_edepsim");
     std::ifstream ifs(cfg.at("config"));
   	OptMenReadParameters::Get()->ReadConfigurationFile(ifs);
 	  ifs.close();

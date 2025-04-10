@@ -7,7 +7,6 @@ class TTree;
 
 namespace sand::common::root {
 
-
   class TTreeStreamer : public ufw::streamer {
 
   public:
