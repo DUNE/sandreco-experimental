@@ -1,3 +1,5 @@
+#include <ufw/utils.hpp>
+
 #include <TFile.h>
 
 namespace sand::common::root {
@@ -31,10 +33,11 @@ namespace sand::common::root {
      */
 
     template <typename T>
-    std::shared_ptr<T> Get(const std::string& objname) {
+    std::shared_ptr<T> GetShared(const std::string& objname) {
       T* obj = TFile::Get<T>(objname.c_str());
-      if (!obj)
-        throw std::runtime_error("No object named " + objname + " in file.");
+      if (!obj) {
+        UFW_ERROR("No object named '{}' in file.", objname);
+      }
       auto it = m_objects.find(obj);
       if (it == m_objects.end()) {
         auto deleter = [this](T* obj) {
@@ -69,6 +72,7 @@ namespace sand::common::root {
      * do not delete it yourself.
      */
     ~TFileWrapper() {
+      UFW_INFO("Destroying TFileWrapper for file {} at {}", GetPath(), fmt::ptr(this));
       assert(m_objects.empty());
       TFile::Close();
     }

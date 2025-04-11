@@ -44,7 +44,7 @@ list(TRANSFORM USER_TYPES_LINKDEF PREPEND "#pragma link C++ class ")
 list(TRANSFORM USER_TYPES_LINKDEF APPEND "+\;\n")
 
 file(WRITE TTreeStreamerLinkdef.h ${COMMENT_NO_EDIT})
-file(APPEND TTreeStreamerLinkdef.h "#ifdef __CLING__\n#pragma link off all globals;\n#pragma link off all classes;\n#pragma link off all functions;\n#pragma link C++ nestedclasses;\n")
+file(APPEND TTreeStreamerLinkdef.h "#ifdef __CLING__\n#pragma link off all globals;\n#pragma link off all classes;\n#pragma link off all functions;\n")
 file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ nestedclasses;\n")
 file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ nestedtypedefs;\n")
 file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ class ufw::data::data_base+;\n")
@@ -52,9 +52,13 @@ file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ class ufw::data::managed_ta
 file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ class ufw::data::instanced_tag+;\n")
 file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ class ufw::data::context_tag+;\n")
 file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ class ufw::data::base<ufw::data::managed_tag,ufw::data::instanced_tag,ufw::data::context_tag>+;\n")
+file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ class sand::true_hit+;\n")
+file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ class sand::true_hits+;\n")
 file(APPEND TTreeStreamerLinkdef.h ${USER_TYPES_LINKDEF})
 file(APPEND TTreeStreamerLinkdef.h "#endif\n")
 
 ROOT_GENERATE_DICTIONARY(TTreeStreamerDictionaries TTreeStreamerTypes.hpp MODULE TTreeStreamer LINKDEF TTreeStreamerLinkdef.h)
 
 install(TARGETS TTreeStreamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libTTreeStreamer_rdict.pcm
+        ${CMAKE_CURRENT_BINARY_DIR}/libTTreeStreamer.rootmap DESTINATION ${CMAKE_INSTALL_LIBDIR})
