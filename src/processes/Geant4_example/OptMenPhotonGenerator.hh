@@ -14,8 +14,6 @@
 #include "G4ParticleTable.hh"
 #include "G4NistManager.hh"
 
-#include "TTree.h"
-#include "TFile.h"
 #include "TH1D.h"
 #include "TLorentzVector.h"
 #include "TGeoManager.h"
@@ -84,8 +82,6 @@ class OptMenPhotonGenerator : public OptMenVGenerator {
 		G4ParticleGun               fParticleGun;
 		G4ParticleTable*             fParticleTable;
 
-		TFile* fInput;        //ROOT file to be read.
-		TTree* fEDepSimEvents;    //TTree of steps info
 		TG4Event* fEvent;
 		G4String fFileName;
 	

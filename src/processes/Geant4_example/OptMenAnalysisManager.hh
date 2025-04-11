@@ -12,8 +12,6 @@ class G4Run;
 class G4Event;
 class G4Step;
 
-class TFile;
-class TTree;
 class CALPrimaryGeneratorAction;
 
 
@@ -46,20 +44,10 @@ private:
   OptMenEventData *m_pEventDataPrimary;
   OptMenEventData *m_pEventDataArgon;
   
-  TFile *m_pOutputFilePrimary;
-  TFile *m_pOutputFileSensor;
-  TFile *m_pOutputFileStacking;
-
   G4String tmpPrimaryFile;
   G4String tmpOpticalPhotonsFile;
   G4String tmpSensorsFile;
   
-  std::vector<TTree*> m_pTreeSensor;
-  TTree *m_pTreePrimary;
-  TTree *m_pTreeStacking;
-  TTree *m_pTreeEnergyDeposits;
-
-  std::map<G4String, TTree*> sensorsMap;
   std::map<G4String, OptMenEventData*> eventDataMap;
 
   std::vector<std::string> path;

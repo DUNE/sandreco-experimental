@@ -25,13 +25,9 @@
 #include <EdepReader/EdepReader.hpp>
 #include <ufw/context.hpp>
 
-G4Mutex	lmutex = G4MUTEX_INITIALIZER;
-
-//---------------------------------------------------------------------------//
 
 OptMenPhotonGenerator::OptMenPhotonGenerator() : OptMenVGenerator("OptMenPhotonGenerator") {
 
-    // fParticleGun  = new G4ParticleGun;
     fParticleTable = G4ParticleTable::GetParticleTable();
     fParticleGun.SetParticleDefinition(fParticleTable->FindParticle("geantino"));
     found = false;
@@ -39,75 +35,20 @@ OptMenPhotonGenerator::OptMenPhotonGenerator() : OptMenVGenerator("OptMenPhotonG
     fFileName = OptMenReadParameters::Get()->GetInputFile();
     startingEntry = OptMenReadParameters::Get()->GetStartingEntry();
 
-    // if(!fParticleGun) {
-    //     std::cout << "Could not allocate G4ParticleGun! Out of memory?"<< std::endl;
-    //     exit(EXIT_FAILURE);
-    // }
-
     std::cout << "OptMenPhotonGenerator constructed!" << std::endl;
 }
 //---------------------------------------------------------------------------//
 
-OptMenPhotonGenerator::~OptMenPhotonGenerator()
-{
-    //G4AutoLock l(&lmutex);
-    // delete fParticleGun;
-    // delete fParticleTable;
-    // delete fInput;
-    // delete fEDepSimEvents;
-    // delete fastComponentHisto;
-    // delete slowComponentHisto;
-}
+OptMenPhotonGenerator::~OptMenPhotonGenerator() {}
 
 int OptMenPhotonGenerator::eventIndex = 0;
 int OptMenPhotonGenerator::currentHit = 0;
 int OptMenPhotonGenerator::subEventNumber = 0;
-//---------------------------------------------------------------------------//
 
-void OptMenPhotonGenerator::ReadEDepSimEvent(){    
-    // fInput = new TFile(fFileName.c_str(), "READ");
-    // UFW_INFO("Read file {} at {} in {}", "fInput", fmt::ptr(fInput), fFileName.c_str());
-//     if(!fInput->IsOpen()){
-// 		std::cout << "ERROR : " << fFileName << " cannot be opened! "<< std::endl;
-// 		exit(EXIT_FAILURE);
-// 	}
-
-	// UFW_INFO("Opening the EVENT source file: {}", fFileName);
-	
-// 	fEDepSimEvents = (TTree*) fInput->Get("EDepSimEvents");
-// 	if(!fEDepSimEvents){
-// 		std::cout << "ERROR : EDepSimEvents tree not found!"<< std::endl;
-// 		exit(EXIT_FAILURE);
-// 	}
-
-    // gSystem->Load("libGeom");
-    // TGeoManager::Import(fFileName.c_str());
-    
-    //new GRAIN geometry 
-//   gGeoManager->cd("volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0");    
-//gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRIAN_LAr_lv_PV_0");
-//     //old GRAIN geometry 
-//     //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0");
-//     //old geometry
-//     //gGeoManager->cd("volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/volSTTLAR_PV_0/Gr_ext_lv_PV_0/Empty_tgt_lv_PV_0/Al_int_lv_PV_0/Lar_bulk_lv_PV_0");
-    
-    // gGeoManager->LocalToMaster(local, master);
-    master[0]= 0;
-    master[1]= -2384.73;
-    master[2]= 22381;
-    std::cout << "MASTER: " << master[0] << " " << master[1] << " " << master[2] <<  std::endl;
-    
-    // fEvent = new TG4Event();
-//     fEDepSimEvents->SetBranchAddress("Event",&fEvent);
-}
-
-//-------------------------------------------------------------------------//
+void OptMenPhotonGenerator::ReadEDepSimEvent() {}
 
 void OptMenPhotonGenerator::GetEntry(){
     auto& tree = ufw::context::instance<sand::EdepReader>();
-
-
-    // fEDepSimEvents->GetEntry(eventIndex + startingEntry);
     
     fNHits = 0;
     fTotEnDep = 0;
@@ -128,19 +69,14 @@ void OptMenPhotonGenerator::GetEntry(){
     }
 
     for (const auto& trj : tree) {
-        //std::cout << eventIndex + startingEntry << " " << subEventNumber << std::endl;
-
         int id = trj.GetId();
         int PDG = trj.GetPDGCode();
         double energy = trj.GetInitialMomentum().E();
-        //UFW_INFO("Track: {}, PDG: {}, Energy: {}", id, PDG, energy);
 
         if (trj.GetHitMap().find(component::GRAIN) != trj.GetHitMap().end()) {
         
         for (const auto& hit : trj.GetHitMap().at(component::GRAIN)) {
             fDetName = component_to_string[component::GRAIN];
-            
-            // assert(id == hit.GetPrimaryId());
             
             fPrimaryID.push_back(hit.GetPrimaryId());
             fContribID[hit.GetId()] = std::vector<int> (1, hit.GetContrib());
@@ -153,7 +89,6 @@ void OptMenPhotonGenerator::GetEntry(){
             fTotSecondaryEnDep += hit.GetSecondaryDeposit();
             fNHits += 1;
         }
-        //UFW_INFO("fNHits: {}", fNHits);
         
         //if track is a primary contributor && not already recorded
         if( std::find(fPrimaryID.begin(),fPrimaryID.end(),id) != fPrimaryID.end()
@@ -167,15 +102,13 @@ void OptMenPhotonGenerator::GetEntry(){
     }
 }
 
-//-------------------------------------------------------------------------//
-
 void OptMenPhotonGenerator::ApplyTranslation(){
+    master[0]= 0;
+    master[1]= -2384.73;
+    master[2]= 22381;
 
     fStartTranslated.resize(fNHits);
     fStopTranslated.resize(fNHits);
-    int N = fStartTranslated.size();
-    UFW_INFO("SIZE: {}", N);
-    UFW_INFO("MASTER: {}", master[0]);
     for (int i = 0; i < fNHits; i++) {
         fStartTranslated.at(i).setX(fStart.at(i).X() - master[0]);
         fStartTranslated.at(i).setY(fStart.at(i).Y() - master[1]);
@@ -184,17 +117,14 @@ void OptMenPhotonGenerator::ApplyTranslation(){
         fStopTranslated.at(i).setX(fStop.at(i).X() - master[0]);
         fStopTranslated.at(i).setY(fStop.at(i).Y() - master[1]);
         fStopTranslated.at(i).setZ(fStop.at(i).Z() - master[2]);
-        // UFW_INFO("START: {}", fStartTranslated.at(i).getX());
     }
 }
 
-//-------------------------------------------------------------------------//
-
 bool OptMenPhotonGenerator::ApplyVolumeCut(G4ThreeVector pos){
 
-      	//reference: Geant4 User's Guide for Application Developers, Detector Definition and Response, 4.1.8.2
-        //se usi il navigatore del tracking durante il tracking, causi problemi... qui però non dovrebbe darne
-        //in caso ne dia, bisogna creare un nuovo navigatore a cui associare il volume del mondo
+    //reference: Geant4 User's Guide for Application Developers, Detector Definition and Response, 4.1.8.2
+    //se usi il navigatore del tracking durante il tracking, causi problemi... qui però non dovrebbe darne
+    //in caso ne dia, bisogna creare un nuovo navigatore a cui associare il volume del mondo
 	G4Navigator* tracking_navigator = G4TransportationManager::GetTransportationManager()->GetNavigatorForTracking();
 	G4VPhysicalVolume* myVolume  = tracking_navigator->LocateGlobalPointAndSetup(pos);
 
@@ -205,8 +135,6 @@ bool OptMenPhotonGenerator::ApplyVolumeCut(G4ThreeVector pos){
 	if(matname.find("G4_lAr") == std::string::npos) return true;
 	else return false;         
 }
-
-//-------------------------------------------------------------------------//
 
 std::pair<G4ThreeVector,G4ThreeVector> OptMenPhotonGenerator::GenerateRandomMomentumPolarization(){
 
@@ -243,9 +171,8 @@ std::pair<G4ThreeVector,G4ThreeVector> OptMenPhotonGenerator::GenerateRandomMome
 //--------------------------------------------------------------------------//
 
 void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
-    //G4AutoLock l(&lmutex);
 
-    event->SetEventID(eventIndex + startingEntry);
+    event->SetEventID(ufw::context::current());
 
     // Read EdepSim file
     ReadEDepSimEvent();
@@ -290,7 +217,7 @@ void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
             //initial kinetic energy of track
             G4double myVertexKinEne = fInitialEnergy[fPrimaryID[i]] - myMass;                   
 
-            //COMPUTATION FOR NUMBER of PHOTONS
+            // COMPUTATION FOR NUMBER of PHOTONS
             // The fraction of the energy deposit that ends up producing photons is already computed by EDepSim
             // using the Doke-Birks NEST model and store in "SecondaryDeposit".
             // This ALREADY takes into account excitons and the fraction of recombinating ions 
@@ -460,7 +387,6 @@ void OptMenPhotonGenerator::GeneratePrimaries(G4Event *event) {
     }
 
     clear();
-    // fInput->Close();
     std::cout << "---------> Fine generazione fotoni <---------------" << std::endl;
 }
 

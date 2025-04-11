@@ -6,8 +6,6 @@
  */
 
 #include "OptMenSensorHit.h"
-//#include "TFile.h"
-//#include "TTree.h"
 
 G4ThreadLocal G4Allocator<OptMenSensorHit>* OptMenSensorHitAllocator = 0;
 

@@ -4,6 +4,8 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
+#include <grain/photons.h>
+
 #include "OptMenDetectorConstruction.hh"
 #include "OptMenActionInitialization.hh"
 #include "OptMenAnalysisManager.hh"
@@ -106,5 +108,10 @@ class G4_optmen_edepsim : public ufw::process {
     UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
     run_manager.BeamOn(OptMenReadParameters::Get()->GetSplitEventNumber());
 
+    for (const auto& [var, id]: outputs) {
+      UFW_INFO("  out: {{{}, {}}}", var, id);
+    }
+    UFW_INFO("ufw::context::instance<sand::grain::photons>(pippo) size: {}", ufw::context::instance<sand::grain::photons>("pippo").images.size());
+    // ufw::context::instance<sand::grain::photons>(outputs.at("cameras")) = 
       
 }  

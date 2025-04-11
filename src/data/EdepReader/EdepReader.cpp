@@ -3,9 +3,6 @@
 
 #include <EdepReader.hpp>
 
-#include <TFile.h>
-#include <TTree.h>
-#include <TTreeReader.h>
 
 namespace sand {
   EdepReader::EdepReader() : EDEPTree() {}

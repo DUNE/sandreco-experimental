@@ -34,8 +34,6 @@
 
 #include "G4String.hh"
 
-#include "TTree.h"
-#include "TFile.h"
 #include "TH1D.h"
 #include "TGeoManager.h"
 
@@ -55,8 +53,6 @@ class OptMenEventCounter{
     int GetEventsCount();
   
   private:
-    static TFile* fInput;        //ROOT file to be read.
-    TTree* fEDepSimEvents;    //TTree of steps info
     TG4Event* fEvent;
     G4String fFileName;
 

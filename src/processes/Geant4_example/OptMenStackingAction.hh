@@ -6,8 +6,6 @@
 #include "OptMenAnalysisManager.hh"
 #include "OptMenEventData.hh"
 
-#include "TTree.h"
-#include "TFile.h"
 #include "TVector3.h"
 
 #include <string>

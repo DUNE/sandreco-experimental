@@ -29,13 +29,14 @@
 
 #include "OptMenEventCounter.hh"
 
+#include <EdepReader/EdepReader.hpp>
+#include <ufw/context.hpp>
+
 #include "G4Event.hh"
 #include "G4EventManager.hh"
 #include "G4TrajectoryContainer.hh"
 #include "G4Trajectory.hh"
 #include "G4ios.hh"
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 OptMenEventCounter::OptMenEventCounter()
 {
@@ -47,119 +48,79 @@ OptMenEventCounter::OptMenEventCounter()
   isArgon = false;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+OptMenEventCounter::~OptMenEventCounter() {}
 
-OptMenEventCounter::~OptMenEventCounter()
-{
-	// delete fInput;
-  // if (OptMenReadParameters::Get()->GetGeneratorType().find("edepsim") != std::string::npos) delete fEvent;
-}
-
-TFile* OptMenEventCounter::fInput = 0;
-
-void OptMenEventCounter::ReadEDepSimEvent() {
-	
-  fInput = new TFile(fFileName.c_str(), "READ");
-	if(!fInput->IsOpen()){
-		std::cout << "ERROR : " << fFileName << " cannot be opened! "<< std::endl;
-		exit(EXIT_FAILURE);
-	}
-
-	std::cout << "Opening the EVENT source file: " << fFileName << std::endl;
-	
-	fEDepSimEvents = (TTree*) fInput->Get("EDepSimEvents");
-	if(!fEDepSimEvents){
-		std::cout << "ERROR : EDepSimEvents tree not found!"<< std::endl;
-		exit(EXIT_FAILURE);
-	}
-
-  fEvent = new TG4Event();
-	fEDepSimEvents->SetBranchAddress("Event",&fEvent);
-
-	if (OptMenReadParameters::Get()->GetStartingOnly() == false) {
-		if (startingEntry + OptMenReadParameters::Get()->GetEventNumber() > fEDepSimEvents->GetEntries()) {
-			std::cout << "Requested " << OptMenReadParameters::Get()->GetEventNumber() 
-							<< " events starting from entry number " << startingEntry <<std::endl;
-			std::cout << "but the file has only " << fEDepSimEvents->GetEntries() << " entries." << std::endl;
-
-			requestedEvents = fEDepSimEvents->GetEntries() - startingEntry;
-			OptMenReadParameters::Get()->SetEventNumber(requestedEvents);
-			std::cout << "Changing the number of requested events to: " << requestedEvents << std::endl;
-		}
-	}
-}
+void OptMenEventCounter::ReadEDepSimEvent() {}
 
 void OptMenEventCounter::CountEvents() {
-  for (int i = startingEntry; i < startingEntry + requestedEvents; i++){
-	fEDepSimEvents->GetEntry(i);
-	
-	//important: EvtId possibly != file entry -> record association
-	OptMenReadParameters::Get()->SetEDepSimEvtIdFromEntry(i, fEvent->EventId);
-	std::cout << "added entry " << i << " with " << fEvent->EventId << std::endl;
-
 	fNHits = 0;
 	fTotEnDep = 0;
 	fTotSecondaryEnDep = 0;
 
-	for (auto elem:fEvent->SegmentDetectors) {
-		if (elem.first == "LArHit") {
-        		isArgon = true;
-	  		std::vector<TG4HitSegment> hits = elem.second;
-	  		fNHits = hits.size();
-	  		for (int j = 0; j < fNHits; j++) {
-	  			fTotEnDep += hits.at(j).GetEnergyDeposit();
-	  			fTotSecondaryEnDep += hits.at(j).GetSecondaryDeposit();
-					if (fTotEnDep > energySplitThreshold) {
-						std::cout << "Reached " <<  fTotEnDep << " MeV. Adding a new event." << std::endl;
-						eventCount++;
-						fTotEnDep = 0;
-					} else if (j == fNHits - 1) {
-						std::cout << "Reached end of event at " <<  fTotEnDep << " MeV. Adding a new event." << std::endl;
-						eventCount++;
-					}
-	  		}
-	  	}
+	auto& tree = ufw::context::instance<sand::EdepReader>();
+
+	for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
+
+		if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
+			
+			isArgon = true;
+
+			for (const auto& hit : trj_it->GetHitMap().at(component::GRAIN)) {
+				fTotEnDep += hit.GetEnergyDeposit();
+				fTotSecondaryEnDep += hit.GetSecondaryDeposit();
+				fNHits += 1;
+				if (fTotEnDep > energySplitThreshold) {
+					std::cout << "Reached " <<  fTotEnDep << " MeV. Adding a new event." << std::endl;
+					eventCount++;
+					fTotEnDep = 0;
+				}
+			}
+    }
+
+		if (fTotEnDep != 0 && std::next(trj_it) == tree.end()) {
+			std::cout << "Reached end of event at " <<  fTotEnDep << " MeV. Adding a new event." << std::endl;
+			eventCount++;
+		}
 	}
-    	if(!isArgon) {
-			std::cout << "Reached end of event with no argon hits." << std::endl;
-      			eventCount++;
-    	} else {
-      		isArgon = false;
-    	}
-  }
+
+	if(!isArgon) {
+		std::cout << "Reached end of event with no argon hits." << std::endl;
+		eventCount++;
+	} else {
+		isArgon = false;
+	}
 }
 
 void OptMenEventCounter::ReadGenieEvent() {
-	fInput = new TFile(fFileName.c_str(),"READ");
-	if (!fInput->IsOpen()) {
-		std::cout << "ERROR : " << fFileName << " cannot be opened! "<< std::endl;
-		exit(EXIT_FAILURE);
-	}
+	// fInput = new TFile(fFileName.c_str(),"READ");
+	// if (!fInput->IsOpen()) {
+	// 	std::cout << "ERROR : " << fFileName << " cannot be opened! "<< std::endl;
+	// 	exit(EXIT_FAILURE);
+	// }
 
-	TTree* fTree = (TTree*)fInput->Get("gRooTracker");
-  	if (!fTree) {
-		std::cout << "ERROR : Tree not found." << std::endl;
-		exit(EXIT_FAILURE);
-	}
-	std::cout << "Opening the GENIE file in a RooTracker tree:  " << fFileName <<std::endl;
+	// TTree* fTree = (TTree*)fInput->Get("gRooTracker");
+  // 	if (!fTree) {
+	// 	std::cout << "ERROR : Tree not found." << std::endl;
+	// 	exit(EXIT_FAILURE);
+	// }
+	// std::cout << "Opening the GENIE file in a RooTracker tree:  " << fFileName <<std::endl;
 
-	std::cout<< "File has " << fTree->GetEntries() << " entries."<<std::endl;
+	// std::cout<< "File has " << fTree->GetEntries() << " entries."<<std::endl;
 
-  if (OptMenReadParameters::Get()->GetStartingOnly() == false) {
-	  if (startingEntry + requestedEvents > fTree->GetEntries()) {
-  		std::cout << "Requested " << requestedEvents << " events starting from entry number " << startingEntry <<std::endl;
-	  	std::cout << "but the file has only " << fTree->GetEntries() << " entries." <<std::endl;
+  // if (OptMenReadParameters::Get()->GetStartingOnly() == false) {
+	//   if (startingEntry + requestedEvents > fTree->GetEntries()) {
+  // 		std::cout << "Requested " << requestedEvents << " events starting from entry number " << startingEntry <<std::endl;
+	//   	std::cout << "but the file has only " << fTree->GetEntries() << " entries." <<std::endl;
 
-		requestedEvents = fTree->GetEntries() - startingEntry;
-		std::cout << "Changing the number of requested events to: " << requestedEvents << std::endl;
-	  }
-  }
-  eventCount = requestedEvents;
-  fInput->Close();
+	// 	requestedEvents = fTree->GetEntries() - startingEntry;
+	// 	std::cout << "Changing the number of requested events to: " << requestedEvents << std::endl;
+	//   }
+  // }
+  // eventCount = requestedEvents;
+  // fInput->Close();
 }
 int OptMenEventCounter::GetEventsCount() {
 	if (OptMenReadParameters::Get()->GetGeneratorType().find("edepsim") != std::string::npos) {
-		ReadEDepSimEvent();
 		CountEvents();
 	}
   if (OptMenReadParameters::Get()->GetGeneratorType().find("genie") != std::string::npos) {

@@ -6,8 +6,6 @@
  */
 
 #include "OptMenSensitiveArgonHit.h"
-//#include "TFile.h"
-//#include "TTree.h"
 
 G4ThreadLocal G4Allocator<OptMenSensitiveArgonHit>* OptMenSensitiveArgonHitAllocator = 0;
 
