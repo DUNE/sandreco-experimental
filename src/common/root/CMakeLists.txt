@@ -44,7 +44,7 @@ list(TRANSFORM USER_TYPES_LINKDEF PREPEND "#pragma link C++ class ")
 list(TRANSFORM USER_TYPES_LINKDEF APPEND "+\;\n")
 
 file(WRITE TTreeStreamerLinkdef.h ${COMMENT_NO_EDIT})
-file(APPEND TTreeStreamerLinkdef.h "#ifdef __CLING__\n#pragma link off all globals;\n#pragma link off all classes;\n#pragma link off all functions;")
+file(APPEND TTreeStreamerLinkdef.h "#ifdef __CLING__\n#pragma link off all globals;\n#pragma link off all classes;\n#pragma link off all functions;\n")
 file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ nestedclasses;\n")
 file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ nestedtypedefs;\n")
 file(APPEND TTreeStreamerLinkdef.h "#pragma link C++ class ufw::data::data_base+;\n")
