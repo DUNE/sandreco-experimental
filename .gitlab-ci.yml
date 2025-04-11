@@ -2,6 +2,8 @@ image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
 
 build:
   stage: build
+  before_script:
+    - ls -l /usr/lib64/libz*
   script:
     - mkdir build
     - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_PREFIX_PATH=/usr/local/
