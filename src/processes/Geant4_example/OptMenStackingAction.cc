@@ -22,30 +22,48 @@
 // * use  in  resulting  scientific  publications,  and indicate your *
 // * acceptance of all terms of the Geant4 Software license.          *
 // ********************************************************************
-//
-//
-/// \file OptMenActionInitialization.cc
-/// \brief Implementation of the OptMenActionInitialization class
 
-#include "OptMenActionInitialization.hh"
-#include "OptMenPrimaryGeneratorAction.hh"
-#include "OptMenRunAction.hh"
-#include "OptMenEventAction.hh"
 #include "OptMenStackingAction.hh"
 
-OptMenActionInitialization::OptMenActionInitialization(OptMenAnalysisManager* mgr, const G4_optmen_edepsim* optmen_edepsim)
- : G4VUserActionInitialization(), m_optmen_edepsim(optmen_edepsim)
+#include <ufw/utils.hpp>
+#include <G4_optmen_edepsim.hpp>
+
+#include "G4VProcess.hh"
+#include "G4Track.hh"
+#include "G4ParticleDefinition.hh"
+#include "G4OpticalPhoton.hh"  
+#include "G4ThreeVector.hh"  
+#include "G4ios.hh"
+#include <G4RunManager.hh>
+
+#include <string.h>
+
+OptMenStackingAction::OptMenStackingAction(OptMenAnalysisManager* mgr)
+  :G4UserStackingAction()
 {
   _anMgr = mgr;
 }
 
-OptMenActionInitialization::~OptMenActionInitialization()
+OptMenStackingAction::~OptMenStackingAction() {}
+
+G4ClassificationOfNewTrack OptMenStackingAction::ClassifyNewTrack(const G4Track * aTrack)
+{
+  
+  // aTrack->SetAuxiliaryTrackInformation(13, );
+  if (!_anMgr->m_optmen_edepsim->track_times.empty()) {
+    if(_anMgr->m_optmen_edepsim->track_times.front() != aTrack->GetGlobalTime()) {
+      UFW_ERROR("Stack time {} different from track time {}", _anMgr->m_optmen_edepsim->track_times.front(), aTrack->GetGlobalTime());
+    }
+    _anMgr->m_optmen_edepsim->track_times.pop_front();
+  } else {
+    UFW_WARN("Unable to pop from the stack");
+  }
+  
+  return fUrgent; 
+}
+
+void OptMenStackingAction::NewStage()
 {}
 
-void OptMenActionInitialization::Build() const
-{
-  SetUserAction(new OptMenPrimaryGeneratorAction(m_optmen_edepsim));
-  SetUserAction(new OptMenRunAction(_anMgr));
-  SetUserAction(new OptMenEventAction(_anMgr));
-  SetUserAction(new OptMenStackingAction(_anMgr));
-}  
+void OptMenStackingAction::PrepareNewEvent() {}
+

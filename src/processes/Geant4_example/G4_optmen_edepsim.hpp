@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <deque>
 
 #include <ufw/context.hpp>
 #include <ufw/config.hpp>
@@ -38,6 +39,9 @@ class G4_optmen_edepsim : public ufw::process {
   OpticsType opticsType() const {return m_optics_type;}
   double energySplitThreshold() const {return m_energy_split_threshold;}
   int GetEventsNumber();
+
+  mutable std::deque<int> track_ids;
+  mutable std::deque<double> track_times;
 
   private:
     ufw::public_id m_output_variable_name;

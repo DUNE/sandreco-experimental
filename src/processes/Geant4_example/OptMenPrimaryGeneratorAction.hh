@@ -154,5 +154,9 @@ class OptMenPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 
 		const G4_optmen_edepsim* m_optmen_edepsim;
 
+		// EDEPTree::const_iterator tree_it;
+		// std::vector<EDEPHit>::const_iterator hits_it;
+		// bool first_iteration = true;
+
 };
 #endif

@@ -29,12 +29,12 @@ public:
   virtual void BeginOfEvent(const G4Event *pEvent); 
   virtual void EndOfEvent(const G4Event *pEvent);
 
+  G4_optmen_edepsim* m_optmen_edepsim;
 private:
   OptMenSensorHitCollection* GetHitsCollection(const G4String& hcName,const G4Event* event) const;
   
   std::vector<G4int> sensorCollID;
 
-  G4_optmen_edepsim* m_optmen_edepsim;
 
   
 };

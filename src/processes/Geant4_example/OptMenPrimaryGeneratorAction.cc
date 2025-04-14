@@ -142,6 +142,8 @@ bool OptMenPrimaryGeneratorAction::ApplyVolumeCut(G4ThreeVector pos){
 	else return false;         
 }
 
+// TODO: void nextIteration() {}
+
 std::pair<G4ThreeVector,G4ThreeVector> OptMenPrimaryGeneratorAction::GenerateRandomMomentumPolarization(){
 
 	G4double cost = 1 - 2*G4UniformRand();
@@ -193,6 +195,16 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     // Get lAr info
     getMaterialProperties();
 
+    // auto& tree = ufw::context::instance<sand::EdepReader>();
+    // iauto& tree = ufw::context::instance<sand::EdepReader>();
+    // int eventCount = 0;
+  
+    //   for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
+  
+    //       if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
+    //     eventCount += trj_it->GetHitMap().at(component::GRAIN).size();
+    //   }
+    //   }
     if (fNHits > 0) {
         std::cout << "Processing emitted photons from hit: " << currentHit << std::endl;
         for (int i = currentHit; i < fNHits; i++) {
@@ -313,6 +325,7 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 
                 //SHOOT PHOTON!!
                 fParticleGun.GeneratePrimaryVertex(event);
+                m_optmen_edepsim->track_times.push_back(myPhotonTime);
             }
 
             // TODO: check better sources

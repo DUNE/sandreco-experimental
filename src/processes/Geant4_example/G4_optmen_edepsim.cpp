@@ -87,29 +87,13 @@ void G4_optmen_edepsim::run(const ufw::var_id_map& inputs, const ufw::var_id_map
 int G4_optmen_edepsim::GetEventsNumber() {
   UFW_DEBUG("Computing the number of block for the event");
 	auto& tree = ufw::context::instance<sand::EdepReader>();
-  double fTotEnDep = 0;
-  double fTotSecondaryEnDep = 0;
   int eventCount = 0;
 
 	for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
 
 		if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
-
-			for (const auto& hit : trj_it->GetHitMap().at(component::GRAIN)) {
-				fTotEnDep += hit.GetEnergyDeposit();
-				fTotSecondaryEnDep += hit.GetSecondaryDeposit();
-				if (fTotEnDep > m_energy_split_threshold) {
-					UFW_DEBUG("Reached {} MeV. Adding a new event.", fTotEnDep);
-					eventCount++;
-					fTotEnDep = 0;
-				}
-			}
+      eventCount += trj_it->GetHitMap().at(component::GRAIN).size();
     }
-
-		if (fTotEnDep > 0 && std::next(trj_it) == tree.end()) {
-			UFW_DEBUG("Reached end of event at {} MeV. Adding a new event.", fTotEnDep);
-			eventCount++;
-		}
 	}
   UFW_DEBUG("Split into {} events.", eventCount);
 
