@@ -28,7 +28,12 @@
         "mode" : "RECREATE",
         "tree" : "cameras"
       },
-      "write" : { "sand::grain::photons" : "pippo"}
+      "write" : { "pippo" : "sand::grain::photons"}
+    },
+    {
+      "detector_response" : {},
+      "reqs" : {"cameras_in" : "pippo"},
+      "prods" : {}
     }
   ]
 }
