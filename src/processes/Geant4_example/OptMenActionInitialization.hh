@@ -41,7 +41,6 @@ class OptMenActionInitialization : public G4VUserActionInitialization
     OptMenActionInitialization(OptMenAnalysisManager* mgr, const G4_optmen_edepsim* optmen_edepsim);
     virtual ~OptMenActionInitialization();
 
-    // virtual void BuildForMaster() const;
     virtual void Build() const;
 
   private:

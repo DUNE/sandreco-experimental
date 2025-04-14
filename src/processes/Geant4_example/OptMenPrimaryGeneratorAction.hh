@@ -94,7 +94,6 @@ class OptMenPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 
 	
 	private:
-		static int eventIndex;
 		int startingEntry;
 		bool found;
 

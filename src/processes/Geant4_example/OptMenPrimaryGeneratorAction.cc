@@ -208,11 +208,19 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 		        if (type == 10 && ionZ > 0 && ionA > ionZ) {
 		        	G4IonTable* ionTable = G4ParticleTable::GetParticleTable()->GetIonTable();
 		        	myParticle = ionTable->GetIon(ionZ,ionA);
+                    if (!myParticle) {
+                        UFW_WARN("Particle '{}' not found. Tried getIon({}, {})", myPDG, ionZ, ionA);
+                        continue;
+                    }
 	        	}
 	        	else if (type == 20) {
-		        	// This is a pseudo-particle, so skip it
+                    // This is a pseudo-particle, so skip it
 	        		continue;
-	        	}
+	        	} else {
+                    UFW_WARN("Particle '{}' not found. type {} not supported", myPDG, type);
+                    continue;
+
+                }
 	        }
 
 	        G4int myZ = myParticle->GetAtomicNumber();
@@ -341,7 +349,6 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
             currentHit++;
 
             if (currentHit == fNHits) {
-                eventIndex++;
                 currentHit = 0;
                 std::cout << "Reached end of lAr hits. Resetting currentHit to " << currentHit << std::endl;
                 break;
@@ -367,7 +374,6 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
                 fParticleGun.GeneratePrimaryVertex(event);
                 
                 if (currentHit == fNHits) {
-                    eventIndex++;
                     currentHit = 0;
                     std::cout << "Reached end of not processed event. Resetting currentHit to " << currentHit << std::endl;
                     break;
@@ -379,7 +385,6 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
                 }		
             }
         } else {
-            eventIndex++;
             G4ParticleDefinition* particleDefinition = G4ParticleTable::GetParticleTable()->FindParticle("geantino");
             fParticleGun.SetParticleDefinition(particleDefinition);
             fParticleGun.SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));

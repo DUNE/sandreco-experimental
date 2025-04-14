@@ -41,11 +41,6 @@ OptMenActionInitialization::OptMenActionInitialization(OptMenAnalysisManager* mg
 OptMenActionInitialization::~OptMenActionInitialization()
 {}
 
-// void OptMenActionInitialization::BuildForMaster() const
-// {
-//   SetUserAction(new OptMenRunAction(_anMgr));
-// }
-
 void OptMenActionInitialization::Build() const
 {
   SetUserAction(new OptMenPrimaryGeneratorAction(m_optmen_edepsim));

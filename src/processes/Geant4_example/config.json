@@ -10,7 +10,7 @@
   "contexts" : {
     "keys" : [0, 14],
     "locals" : {
-      "sand::EdepReader" : {"uri" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/events-in-GRAIN_LAr_lv.10.edep-sim.root"}
+      "sand::EdepReader" : {"uri" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/events-in-GRAIN_LAr_lv.1.edep-sim.root"}
     }
   },
   "run" : [

@@ -62,51 +62,6 @@ void OptMenAnalysisManager::BeginOfRun() {
     }
   }
 
-  // // Primary particles output file
-  // if (OptMenReadParameters::Get()->GetPrimariesFile() == true) {
-  //   if(generator.find("edepsim") == std::string::npos) {
-  //     m_pOutputFilePrimary = new TFile(tmpPrimaryFile, "RECREATE");
-  //     UFW_INFO("Crated file {} at {} in {}", "m_pOutputFilePrimary", fmt::ptr(m_pOutputFilePrimary), tmpPrimaryFile);
-
-  //     m_pTreePrimary = new TTree("primaries", "Tree w info");
-  //     m_pTreePrimary->Branch("idEvent", &m_pEventDataPrimary->eventID,"idEvent/I");
-  //     m_pTreePrimary->Branch("xVertex", &m_pEventDataPrimary->xVertex, "xVertex/D");
-  //     m_pTreePrimary->Branch("yVertex", &m_pEventDataPrimary->yVertex, "yVertex/D");
-  //     m_pTreePrimary->Branch("zVertex", &m_pEventDataPrimary->zVertex, "zVertex/D");
-  //     m_pTreePrimary->Branch("px", &m_pEventDataPrimary->px);
-  //     m_pTreePrimary->Branch("py", &m_pEventDataPrimary->py);
-  //     m_pTreePrimary->Branch("pz", &m_pEventDataPrimary->pz);
-  //     m_pTreePrimary->Branch("energy", &m_pEventDataPrimary->energy);
-  //     m_pTreePrimary->Branch("pdg", &m_pEventDataPrimary->pdg);
-
-  //     m_pTreeEnergyDeposits = new TTree("energyDeposits", "Tree w info");
-  //     m_pTreeEnergyDeposits->Branch("idEvent", &m_pEventDataArgon->eventID);
-  //     m_pTreeEnergyDeposits->Branch("trackID", &m_pEventDataArgon->ID);
-  //     m_pTreeEnergyDeposits->Branch("depEnergy", &m_pEventDataArgon->energy);
-  //     m_pTreeEnergyDeposits->Branch("pdg", &m_pEventDataArgon->pdg);
-  //     m_pTreeEnergyDeposits->Branch("x", &m_pEventDataArgon->x);
-  //     m_pTreeEnergyDeposits->Branch("y", &m_pEventDataArgon->y);
-  //     m_pTreeEnergyDeposits->Branch("z", &m_pEventDataArgon->z);
-  //   }
-  // }
-
-  // // Full optical photons info output file
-  // if (OptMenReadParameters::Get()->GetOpticalPhotonsFile() == true) {
-  //   m_pOutputFileStacking = new TFile(tmpOpticalPhotonsFile, "RECREATE");
-  //   UFW_INFO("Crated file {} at {} in {}", "m_pOutputFileStacking", fmt::ptr(m_pOutputFileStacking), tmpOpticalPhotonsFile);
-
-  //   m_pTreeStacking = new TTree("opticalPhotons", "Tree w info");
-  //   m_pTreeStacking->Branch("idEvent", &m_pEventDataStacking->eventID);
-  //   m_pTreeStacking->Branch("x", &m_pEventDataStacking->x);
-  //   m_pTreeStacking->Branch("y", &m_pEventDataStacking->y);
-  //   m_pTreeStacking->Branch("z", &m_pEventDataStacking->z);
-  //   m_pTreeStacking->Branch("px", &m_pEventDataStacking->px);
-  //   m_pTreeStacking->Branch("py", &m_pEventDataStacking->py);
-  //   m_pTreeStacking->Branch("pz", &m_pEventDataStacking->pz);
-  //   m_pTreeStacking->Branch("energy", &m_pEventDataStacking->energy);
-  //   m_pTreeStacking->Branch("time", &m_pEventDataStacking->time);
-  // }
-
   if (sensorCollID.size() == 0) {
 	  G4SDManager *pSDManager = G4SDManager::GetSDMpointer();
 	  _nCollections = pSDManager->GetCollectionCapacity();
@@ -128,11 +83,6 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
   G4HCofThisEvent *pHCofThisEvent = pEvent->GetHCofThisEvent();
   OptMenSensorHitCollection *sensorHitsCollection = 0;
   
-  // int eventID; //use EDepSim EvtId: possibly != from file entry!!
-  // if(generator.find("edepsim") != std::string::npos) {
-	//   eventID = OptMenReadParameters::Get()->GetEDepSimEvtIdFromEntry(pEvent->GetEventID());
-  // }
-  // else 	
   int eventID = pEvent->GetEventID();
   
   auto& hits = ufw::context::instance<sand::grain::hits>(m_optmen_edepsim->outputVariableName());
@@ -177,76 +127,5 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
     }
   }
 
-  // Retrieving info of primary particles
-  // if (OptMenReadParameters::Get()->GetPrimariesFile() == true) {
-  //   if(generator.find("edepsim") == std::string::npos) {
-  //     m_pEventDataPrimary->eventID = eventID;
-
-  //     G4PrimaryVertex* vtx = pEvent->GetPrimaryVertex();
-  //     if (vtx)
-  //     {
-  // 	    m_pEventDataPrimary->xVertex = vtx->GetX0();
-  // 	    m_pEventDataPrimary->yVertex = vtx->GetY0();
-  // 	    m_pEventDataPrimary->zVertex = vtx->GetZ0();
-  // 	    int nPrimaries = vtx->GetNumberOfParticle();
-  //       if (nPrimaries > 100) nPrimaries = 100;
-  // 	    for (int i = 0; i < nPrimaries; i++)
-  // 	    {
-  // 	  	  G4PrimaryParticle *part = vtx->GetPrimary(i);
-  //         m_pEventDataPrimary->energy.push_back(part->GetTotalEnergy());
-  // 	  	  m_pEventDataPrimary->pdg.push_back(part->GetPDGcode());
-  // 	  	  m_pEventDataPrimary->px.push_back(part->GetPx());
-  // 	  	  m_pEventDataPrimary->py.push_back(part->GetPy());
-  // 	  	  m_pEventDataPrimary->pz.push_back(part->GetPz());
-  // 	    }
-      
-  //       OptMenSensitiveArgonHitCollection *argonHitsCollection = 0;
-  //       argonHitsCollection = (OptMenSensitiveArgonHitCollection *)(pHCofThisEvent->GetHC(0));
-  //       OptMenSensitiveArgonHit *argonHit; 
-  //       G4int totEntriesScint = argonHitsCollection->entries();
-  //       std::cout << "0 " << totEntriesScint << " " << argonHitsCollection->GetName() << std::endl;
-
-  //       m_pEventDataArgon->eventID = eventID;
-      
-  //       if (totEntriesScint != 0) {
-  //         for (int j = 0; j < totEntriesScint; j++) {
-  //           argonHit = (*argonHitsCollection)[j];
-  //           if (argonHit->energy() > 0) {
-  //             m_pEventDataArgon->energy.push_back(argonHit->energy());
-  //             m_pEventDataArgon->ID.push_back(argonHit->trackID());
-  //             m_pEventDataArgon->pdg.push_back(argonHit->pdgCode());
-  //             m_pEventDataArgon->x.push_back(argonHit->hitPosition().getX());
-  //             m_pEventDataArgon->y.push_back(argonHit->hitPosition().getY());
-  //             m_pEventDataArgon->z.push_back(argonHit->hitPosition().getZ());
-  //           }
-  //         }
-  //       }
-
-  //       argonHitsCollection = (OptMenSensitiveArgonHitCollection *)(pHCofThisEvent->GetHC(1));
-  //       totEntriesScint = argonHitsCollection->entries();
-  //       std::cout << "1 " << totEntriesScint << " " << argonHitsCollection->GetName() << std::endl;
-
-  //       if (totEntriesScint != 0) {
-  //         for (int j = 0; j < totEntriesScint; j++) {
-  //           argonHit = (*argonHitsCollection)[j];
-  //           if (argonHit->energy() > 0) {
-  //             m_pEventDataArgon->energy.push_back(argonHit->energy());
-  //             m_pEventDataArgon->ID.push_back(argonHit->trackID());
-  //             m_pEventDataArgon->pdg.push_back(argonHit->pdgCode());
-  //             m_pEventDataArgon->x.push_back(argonHit->hitPosition().getX());
-  //             m_pEventDataArgon->y.push_back(argonHit->hitPosition().getY());
-  //             m_pEventDataArgon->z.push_back(argonHit->hitPosition().getZ());
-  //           }
-  //         }
-  //       }
-  //     }
-
-  //     m_pOutputFilePrimary->cd();
-  //     m_pTreePrimary->Fill();
-  //     m_pTreeEnergyDeposits->Fill();
-  //     m_pEventDataPrimary->Clear();
-  //     m_pEventDataArgon->Clear();
-  //   }
-  // }
   G4cout << "End of event" << std::endl;
 }
