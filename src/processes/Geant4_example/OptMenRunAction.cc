@@ -32,8 +32,6 @@
 #include "G4Run.hh"
 #include "G4RunManager.hh"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 OptMenRunAction::OptMenRunAction(OptMenAnalysisManager* mgr)
  : G4UserRunAction()
 { 
@@ -43,12 +41,8 @@ OptMenRunAction::OptMenRunAction(OptMenAnalysisManager* mgr)
   _anMgr = mgr;  
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 OptMenRunAction::~OptMenRunAction()
 {}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 void OptMenRunAction::BeginOfRunAction(const G4Run*)
 { 
@@ -57,8 +51,6 @@ void OptMenRunAction::BeginOfRunAction(const G4Run*)
 
   _anMgr->BeginOfRun();
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 void OptMenRunAction::EndOfRunAction(const G4Run*)
 {

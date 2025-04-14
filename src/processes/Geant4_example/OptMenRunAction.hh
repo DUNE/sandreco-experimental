@@ -34,8 +34,6 @@
 #include "G4UserRunAction.hh"
 #include "globals.hh"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 class G4Run;
 
 /// Run action class
@@ -53,7 +51,5 @@ class OptMenRunAction : public G4UserRunAction
     OptMenAnalysisManager* _anMgr;
 
 };
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 #endif

@@ -49,7 +49,4 @@ class OptMenEventAction : public G4UserEventAction
   private:
     OptMenAnalysisManager* _anMgr;
 };
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 #endif

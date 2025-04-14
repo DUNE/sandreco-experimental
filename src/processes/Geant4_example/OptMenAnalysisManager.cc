@@ -23,9 +23,7 @@
 #include "OptMenSensitiveArgonHit.h"
 #include "G4RunManager.hh"
 #include "OptMenAnalysisManager.hh"
-#include "OptMenEventData.hh"
 #include "OptMenReadParameters.hh"
-#include "OptMenOrderFile.hh"
 
 #include <TROOT.h>
 #include "TSystem.h"
@@ -45,18 +43,9 @@ using std::vector;
 G4Mutex	beginOfEventMutex = G4MUTEX_INITIALIZER;
 G4Mutex	endOfEventMutex = G4MUTEX_INITIALIZER;
 
-OptMenAnalysisManager::OptMenAnalysisManager()
-{
-  m_pEventDataPrimary  = new OptMenEventData();
-  m_pEventDataStacking = new OptMenEventData();
-  m_pEventDataArgon    = new OptMenEventData();
-
-  // generator = OptMenReadParameters::Get()->GetGeneratorType().c_str();
-}
-
+OptMenAnalysisManager::OptMenAnalysisManager() {}
 
 OptMenAnalysisManager::~OptMenAnalysisManager() {}
-void OptMenAnalysisManager::CreateFolders() {}
 
 void OptMenAnalysisManager::BeginOfRun() {
   std::cout << "Begin of run" << std::endl;
@@ -124,7 +113,6 @@ void OptMenAnalysisManager::BeginOfRun() {
 }
 
 void OptMenAnalysisManager::EndOfRun() {
-
   G4cout << "End of run" << std::endl;
 }
 
@@ -188,7 +176,6 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
           camera_it->photons.push_back(ph);
         }
       }
-        
     }
   }
 
@@ -267,7 +254,7 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
   G4cout << "End of event" << std::endl;
 }
 
-void OptMenAnalysisManager::NewStage(OptMenEventData* sData) {
+void OptMenAnalysisManager::NewStage(/*OptMenEventData* sData*/) {
   // m_pEventDataStacking->eventID = sData->eventID;
   
   // for (unsigned int i = 0; i < sData->x.size(); i++) {

@@ -4,7 +4,6 @@
 #include <globals.hh>
 #include "OptMenSensorHit.h"
 #include "OptMenSensor.h"
-#include "OptMenEventData.hh"
 #include "G4GDMLParser.hh"
 #include "G4PhysicalVolumeStore.hh"
 
@@ -28,9 +27,8 @@ public:
   virtual void EndOfRun(); 
   virtual void BeginOfEvent(const G4Event *pEvent); 
   virtual void EndOfEvent(const G4Event *pEvent);
-  virtual void NewStage(OptMenEventData* sData);
-  virtual void CreateFolders();
-  
+  virtual void NewStage();
+
 private:
   OptMenSensorHitCollection* GetHitsCollection(const G4String& hcName,const G4Event* event) const;
   
@@ -39,20 +37,6 @@ private:
   std::string inputFile;
   std::string generator;
 
-  OptMenEventData* m_pEventDataSensor;
-  OptMenEventData* m_pEventDataStacking;
-  OptMenEventData *m_pEventDataPrimary;
-  OptMenEventData *m_pEventDataArgon;
-  
-  G4String tmpPrimaryFile;
-  G4String tmpOpticalPhotonsFile;
-  G4String tmpSensorsFile;
-  
-  std::map<G4String, OptMenEventData*> eventDataMap;
-
-  std::vector<std::string> path;
-  std::string startingPath;
-  std::string outputPath;
   
 };
 

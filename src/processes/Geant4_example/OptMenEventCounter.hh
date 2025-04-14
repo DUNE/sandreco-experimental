@@ -40,41 +40,22 @@
 #include <TG4Event.h>
 #include <TG4HitSegment.h>
 
-/// Event counter class
-
 class OptMenEventCounter{
   public:
     OptMenEventCounter();
     virtual ~OptMenEventCounter();
-
-    virtual void  ReadEDepSimEvent();
-    virtual void  ReadGenieEvent();
-    virtual void  CountEvents();
     int GetEventsCount();
   
   private:
-    TG4Event* fEvent;
-    G4String fFileName;
-
-
     ///Number of hits
     G4int fNHits;
-    ///Detector volume name
-    G4String fDetName; 
 		
 		///energy loss
-    std::vector<double> fEnDep;
-    std::vector<double> fSecondaryEnDep;
     double fTotEnDep;
     double fTotSecondaryEnDep;
     double energySplitThreshold;
 
     bool isArgon;
     int eventCount;
-    int requestedEvents;
-    int startingEntry;
 };
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 #endif

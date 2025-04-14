@@ -40,23 +40,17 @@
 
 OptMenEventCounter::OptMenEventCounter()
 {
-  fFileName = OptMenReadParameters::Get()->GetInputFile();
-  requestedEvents = OptMenReadParameters::Get()->GetEventNumber();
-  startingEntry = OptMenReadParameters::Get()->GetStartingEntry();
   energySplitThreshold = OptMenReadParameters::Get()->GetEnergySplitThreshold();
+	fTotSecondaryEnDep = 0;
   eventCount = 0;
+	fTotEnDep = 0;
+	fNHits = 0;
   isArgon = false;
 }
 
 OptMenEventCounter::~OptMenEventCounter() {}
 
-void OptMenEventCounter::ReadEDepSimEvent() {}
-
-void OptMenEventCounter::CountEvents() {
-	fNHits = 0;
-	fTotEnDep = 0;
-	fTotSecondaryEnDep = 0;
-
+int OptMenEventCounter::GetEventsCount() {
 	auto& tree = ufw::context::instance<sand::EdepReader>();
 
 	for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
@@ -89,43 +83,7 @@ void OptMenEventCounter::CountEvents() {
 	} else {
 		isArgon = false;
 	}
-}
 
-void OptMenEventCounter::ReadGenieEvent() {
-	// fInput = new TFile(fFileName.c_str(),"READ");
-	// if (!fInput->IsOpen()) {
-	// 	std::cout << "ERROR : " << fFileName << " cannot be opened! "<< std::endl;
-	// 	exit(EXIT_FAILURE);
-	// }
-
-	// TTree* fTree = (TTree*)fInput->Get("gRooTracker");
-  // 	if (!fTree) {
-	// 	std::cout << "ERROR : Tree not found." << std::endl;
-	// 	exit(EXIT_FAILURE);
-	// }
-	// std::cout << "Opening the GENIE file in a RooTracker tree:  " << fFileName <<std::endl;
-
-	// std::cout<< "File has " << fTree->GetEntries() << " entries."<<std::endl;
-
-  // if (OptMenReadParameters::Get()->GetStartingOnly() == false) {
-	//   if (startingEntry + requestedEvents > fTree->GetEntries()) {
-  // 		std::cout << "Requested " << requestedEvents << " events starting from entry number " << startingEntry <<std::endl;
-	//   	std::cout << "but the file has only " << fTree->GetEntries() << " entries." <<std::endl;
-
-	// 	requestedEvents = fTree->GetEntries() - startingEntry;
-	// 	std::cout << "Changing the number of requested events to: " << requestedEvents << std::endl;
-	//   }
-  // }
-  // eventCount = requestedEvents;
-  // fInput->Close();
-}
-int OptMenEventCounter::GetEventsCount() {
-	if (OptMenReadParameters::Get()->GetGeneratorType().find("edepsim") != std::string::npos) {
-		CountEvents();
-	}
-  if (OptMenReadParameters::Get()->GetGeneratorType().find("genie") != std::string::npos) {
-		ReadGenieEvent();
-	}
-  std::cout << eventCount << std::endl;
-  return eventCount;
+	std::cout << eventCount << std::endl;
+	return eventCount;
 }

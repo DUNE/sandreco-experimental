@@ -4,7 +4,6 @@
 #include "globals.hh"
 #include "G4UserStackingAction.hh"
 #include "OptMenAnalysisManager.hh"
-#include "OptMenEventData.hh"
 
 #include "TVector3.h"
 
@@ -30,7 +29,6 @@ class OptMenStackingAction : public G4UserStackingAction
   private:
 
     OptMenAnalysisManager* _anMgr;
-    OptMenEventData* sData;
   };
 
 #endif

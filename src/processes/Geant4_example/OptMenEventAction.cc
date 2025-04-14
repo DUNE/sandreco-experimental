@@ -35,31 +35,21 @@
 #include "G4Trajectory.hh"
 #include "G4ios.hh"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 OptMenEventAction::OptMenEventAction(OptMenAnalysisManager* mgr)
 : G4UserEventAction()
 {
   _anMgr = mgr;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 OptMenEventAction::~OptMenEventAction()
 {}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 void OptMenEventAction::BeginOfEventAction(const G4Event* event)
 {
   _anMgr->BeginOfEvent(event);
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 void OptMenEventAction::EndOfEventAction(const G4Event* event)
 {
   _anMgr->EndOfEvent(event);
 }  
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

@@ -30,50 +30,22 @@
 #include "OptMenPrimaryGeneratorAction.hh"
 #include "OptMenVGenerator.hh"
 #include "OptMenPhotonGenerator.hh"
-#include "OptMenParticleGun.hh"
-#include "OptMenCosmicMuonGenerator.hh"
-#include "OptMenGenieGenerator.hh"
 
 #include "G4Event.hh"
 
-G4Mutex	amutex = G4MUTEX_INITIALIZER;
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-	OptMenPrimaryGeneratorAction::OptMenPrimaryGeneratorAction()
+OptMenPrimaryGeneratorAction::OptMenPrimaryGeneratorAction()
 : G4VUserPrimaryGeneratorAction()
 {
-
 	std::string generator = OptMenReadParameters::Get()->GetGeneratorType().c_str();
-
-	if(generator.find("macro") != std::string::npos) {
-		fGenerator = new OptMenParticleGun;
-	} else if (generator.find("edepsim") != std::string::npos) {
-		fGenerator = new OptMenPhotonGenerator;
-	} else if (generator.find("cosmic") != std::string::npos) {
-		fGenerator = new OptMenCosmicMuonGenerator;
-	} else if (generator.find("genie") != std::string::npos) {
-		fGenerator = new OptMenGenieGenerator;
-	} else {
-		std::cout << "Unknown input file." << std::endl;
-		exit(EXIT_FAILURE);
-	}
+	fGenerator = new OptMenPhotonGenerator;
 }
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 OptMenPrimaryGeneratorAction::~OptMenPrimaryGeneratorAction()
 {
 	delete fGenerator;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
-	//G4AutoLock l(&amutex);
-	// This function is called at the begining of event
 	fGenerator->GeneratePrimaries(anEvent); 
-
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

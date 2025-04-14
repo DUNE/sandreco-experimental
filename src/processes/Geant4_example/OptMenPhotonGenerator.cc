@@ -103,6 +103,7 @@ void OptMenPhotonGenerator::GetEntry(){
 }
 
 void OptMenPhotonGenerator::ApplyTranslation(){
+    // TODO: use the geoManager as soon as it is available
     master[0]= 0;
     master[1]= -2384.73;
     master[2]= 22381;
