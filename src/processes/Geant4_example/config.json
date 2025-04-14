@@ -8,7 +8,7 @@
     "G4_optmen_runmanager" : {}
   },
   "contexts" : {
-    "keys" : 1,
+    "keys" : [14],
     "locals" : {
       "sand::EdepReader" : {"uri" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/events-in-GRAIN_LAr_lv.10.edep-sim.root"}
     }
@@ -20,7 +20,7 @@
         "config" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/config.txt"
       },
       "reqs" : {},
-      "prods" : {"cameras" : "pippo"}
+      "prods" : {"cameras_out" : "pippo"}
     },
     {
       "sand::common::root::TTreeStreamer" : { 

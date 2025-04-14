@@ -81,7 +81,7 @@ class G4_optmen_edepsim : public ufw::process {
   //   return ufw::data_list{{"input", "sand::example"}};
   // }
   
-  G4_optmen_edepsim::G4_optmen_edepsim() : process({}, {{"cameras", "sand::grain::photons"}}) {
+  G4_optmen_edepsim::G4_optmen_edepsim() : process({}, {{"cameras_out", "sand::grain::photons"}}) {
     UFW_INFO("Creating a G4_optmen_edepsim process at {}", fmt::ptr(this));
   }
 
@@ -89,6 +89,10 @@ class G4_optmen_edepsim : public ufw::process {
   void G4_optmen_edepsim::run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) {
     // CLHEP::HepRandom::setTheSeed(m_seed);
     // CLHEP::HepRandom::showEngineStatus();
+
+    auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
+    UFW_INFO("Setting run manager outputs");
+    run_manager.setOutputs(outputs);
 
     UFW_INFO("Requested {} events", OptMenReadParameters::Get()->GetEventNumber());
     OptMenEventCounter eventCounter;
@@ -104,14 +108,11 @@ class G4_optmen_edepsim : public ufw::process {
       }
     }
 
-    auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
     UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
     run_manager.BeamOn(OptMenReadParameters::Get()->GetSplitEventNumber());
 
     for (const auto& [var, id]: outputs) {
       UFW_INFO("  out: {{{}, {}}}", var, id);
     }
-    UFW_INFO("ufw::context::instance<sand::grain::photons>(pippo) size: {}", ufw::context::instance<sand::grain::photons>("pippo").images.size());
-    // ufw::context::instance<sand::grain::photons>(outputs.at("cameras")) = 
-      
+    UFW_INFO("ufw::context::instance<sand::grain::photons>(outputs.at(\"cameras_out\")) size: {}", ufw::context::instance<sand::grain::photons>(outputs.at("cameras_out")).images.size());
 }  

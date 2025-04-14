@@ -2,6 +2,8 @@
 #include <ufw/context.hpp>
 #include <grain/photons.h>
 
+#include <G4_optmen_runmanager/G4_optmen_runmanager.hpp>
+
 #include <G4ElementTable.hh>
 #include <G4EmCalculator.hh>
 #include <G4Event.hh>
@@ -59,10 +61,14 @@ void OptMenAnalysisManager::CreateFolders() {}
 void OptMenAnalysisManager::BeginOfRun() {
   std::cout << "Begin of run" << std::endl;
 
-  auto& cameras = ufw::context::instance<sand::grain::photons>("pippo");
+  auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
+  
+  if (OptMenReadParameters::Get()->GetSensorsFile() == true) {
+    auto& cameras = ufw::context::instance<sand::grain::photons>(run_manager.getOutputs().at("cameras_out"));
 
-  for(const auto& name : OptMenReadParameters::Get()->GetSensorsTreeName()) {
-    cameras.images.emplace_back(sand::grain::photons::image{0, name, {}});
+    for(const auto& name : OptMenReadParameters::Get()->GetSensorsTreeName()) {
+      cameras.images.emplace_back(sand::grain::photons::image{0, name, {}});
+    }
   }
 
   // // Primary particles output file
@@ -138,8 +144,9 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
   }
   else 	
   eventID = pEvent->GetEventID();
-
-  auto& cameras = ufw::context::instance<sand::grain::photons>("pippo");
+  
+  auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
+  auto& cameras = ufw::context::instance<sand::grain::photons>(run_manager.getOutputs().at("cameras_out"));
 
   // Retrieving info of detected photons
   if (OptMenReadParameters::Get()->GetSensorsFile() == true) {
