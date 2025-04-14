@@ -1,3 +1,5 @@
+#include <filesystem>
+
 #include <ufw/context.hpp>
 #include <ufw/config.hpp>
 #include <ufw/data.hpp>
@@ -5,13 +7,14 @@
 #include <ufw/process.hpp>
 
 #include <grain/photons.h>
+#include <G4_optmen_edepsim.hpp>
+#include <EdepReader/EdepReader.hpp>
 
 #include "OptMenDetectorConstruction.hh"
 #include "OptMenActionInitialization.hh"
 #include "OptMenAnalysisManager.hh"
 #include "OptMenPhysicsList.hh"
-#include "OptMenReadParameters.hh"
-#include "OptMenEventCounter.hh"
+
 
 #include <G4_optmen_runmanager/G4_optmen_runmanager.hpp>
 #include <root/TTreeStreamer.hpp>
@@ -19,100 +22,96 @@
 #include "Randomize.hh"
 #include "TSystem.h"
 
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(G4_optmen_edepsim)
 
-class G4_optmen_edepsim : public ufw::process {
-
-  public:
-  G4_optmen_edepsim();
-  void configure (const ufw::config& cfg) override;
-  // const ufw::var_type_map& products() const override;
-  // const ufw::var_type_map& requirements() const override;
-  void run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) override;
-
+void G4_optmen_edepsim::configure (const ufw::config& cfg) {
+  process::configure(cfg);
   
-  private:
-    int m_seed = 0;
-    G4String inputFile;
-};
+  m_energy_split_threshold = cfg.value("energy_split_threshold", m_energy_split_threshold);
+  m_geometry = cfg.at("geometry").template get<std::string>().c_str();
   
-  UFW_REGISTER_PROCESS(G4_optmen_edepsim)
-  UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(G4_optmen_edepsim)
-
-  void G4_optmen_edepsim::configure (const ufw::config& cfg) {
-    process::configure(cfg);
-    m_seed = cfg.at("seed");
-    std::ifstream ifs(cfg.at("config"));
-  	OptMenReadParameters::Get()->ReadConfigurationFile(ifs);
-	  ifs.close();
-
-    std::string startingPath = gSystem->pwd();
-    
-    std::string geomPath = OptMenReadParameters::Get()->GetGeometryFile();
-    gSystem->cd(gSystem->DirName(geomPath.c_str()));
-
-    inputFile = OptMenReadParameters::Get()->GetInputFile();
-
-    G4GDMLParser parser;
-    parser.SetOverlapCheck(true);
-    parser.SetStripFlag(false);
-    parser.Read(gSystem->BaseName(geomPath.c_str()), false);
-
-    gSystem->cd(startingPath.c_str());
-
-    auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
-    UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
-
-    run_manager.SetUserInitialization(new OptMenDetectorConstruction(parser));
-
-    OptMenAnalysisManager *pAnalysisManager = new OptMenAnalysisManager();
-    run_manager.SetUserInitialization(new OptMenPhysicsList);
-
-    // Set user action classes
-    run_manager.SetUserInitialization(new OptMenActionInitialization(pAnalysisManager));
-
-    run_manager.Initialize();
-  }
-  
-  // ufw::data_list G4_optmen_edepsim::products() const {
-  //   return ufw::data_list{{"output", "sand::example"}};
-  // }
-  
-  // ufw::data_list G4_optmen_edepsim::requirements() const {
-  //   return ufw::data_list{{"input", "sand::example"}};
-  // }
-  
-  G4_optmen_edepsim::G4_optmen_edepsim() : process({}, {{"cameras_out", "sand::grain::photons"}}) {
-    UFW_INFO("Creating a G4_optmen_edepsim process at {}", fmt::ptr(this));
-  }
-
-
-  void G4_optmen_edepsim::run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) {
-    // CLHEP::HepRandom::setTheSeed(m_seed);
-    // CLHEP::HepRandom::showEngineStatus();
-
-    auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
-    UFW_INFO("Setting run manager outputs");
-    run_manager.setOutputs(outputs);
-
-    UFW_INFO("Requested {} events", OptMenReadParameters::Get()->GetEventNumber());
-    OptMenEventCounter eventCounter;
-    OptMenReadParameters::Get()->SetSplitEventNumber(eventCounter.GetEventsCount());
-    UFW_INFO("{} events being processed instead.", OptMenReadParameters::Get()->GetSplitEventNumber());
-
-    if (OptMenReadParameters::Get()->GetIDlistName() != "") {
-      std::ifstream idIfs(OptMenReadParameters::Get()->GetIDlistName());
-      std::string idLine;
-      while(getline(idIfs, idLine)) {
-        if(idLine.empty() || idLine[0] == '#') continue;
-        OptMenReadParameters::Get()->pushIdList(std::stoi(idLine));
-      }
+  if (m_geometry.string().find("lenses") != std::string::npos) {
+    m_optics_type = OpticsType::LENS;
+    if (m_geometry.string().find("Xe") != std::string::npos) {
+      m_optics_type = OpticsType::LENS_DOPED;
     }
+  } else {
+    m_optics_type = OpticsType::MASK;
+  }
+  UFW_INFO("Optics type {}", m_optics_type);
+  
+  auto starting_path = std::filesystem::current_path();
+  UFW_DEBUG("Starting path {}", std::filesystem::current_path().string());
+  std::filesystem::current_path(m_geometry.parent_path());
+  UFW_DEBUG("Current path {}", std::filesystem::current_path().string());
+  G4GDMLParser parser;
+  parser.SetOverlapCheck(true);
+  parser.SetStripFlag(false);
+  UFW_DEBUG("Reading geometry file: {}", m_geometry.filename().string());
+  parser.Read(m_geometry.filename().c_str(), false);
+  std::filesystem::current_path(starting_path);
+  UFW_DEBUG("Back to {}", std::filesystem::current_path().string());
+  
 
-    UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
-    run_manager.BeamOn(OptMenReadParameters::Get()->GetSplitEventNumber());
+  auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
+  UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
 
-    for (const auto& [var, id]: outputs) {
-      UFW_INFO("  out: {{{}, {}}}", var, id);
-    }
-    UFW_INFO("ufw::context::instance<sand::grain::photons>(outputs.at(\"cameras_out\")) size: {}", ufw::context::instance<sand::grain::photons>(outputs.at("cameras_out")).images.size());
+  run_manager.SetUserInitialization(new OptMenDetectorConstruction(parser, this));
+
+  run_manager.SetUserInitialization(new OptMenPhysicsList);
+  
+  // Set user action classes
+  OptMenAnalysisManager *pAnalysisManager = new OptMenAnalysisManager(this);
+  run_manager.SetUserInitialization(new OptMenActionInitialization(pAnalysisManager, this));
+
+  run_manager.Initialize();
+}
+  
+G4_optmen_edepsim::G4_optmen_edepsim() : process({}, {{"cameras_out", "sand::grain::hits"}}) {
+  UFW_INFO("Creating a G4_optmen_edepsim process at {}", fmt::ptr(this));
+}
+
+
+void G4_optmen_edepsim::run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) {
+  // CLHEP::HepRandom::setTheSeed(m_seed);
+  // CLHEP::HepRandom::showEngineStatus();
+  m_output_variable_name = outputs.at("cameras_out");
+
+  auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
+
+  UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
+  run_manager.BeamOn(GetEventsNumber());
 }  
+
+
+int G4_optmen_edepsim::GetEventsNumber() {
+  UFW_DEBUG("Computing the number of block for the event");
+	auto& tree = ufw::context::instance<sand::EdepReader>();
+  double fTotEnDep = 0;
+  double fTotSecondaryEnDep = 0;
+  int eventCount = 0;
+
+	for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
+
+		if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
+
+			for (const auto& hit : trj_it->GetHitMap().at(component::GRAIN)) {
+				fTotEnDep += hit.GetEnergyDeposit();
+				fTotSecondaryEnDep += hit.GetSecondaryDeposit();
+				if (fTotEnDep > m_energy_split_threshold) {
+					UFW_DEBUG("Reached {} MeV. Adding a new event.", fTotEnDep);
+					eventCount++;
+					fTotEnDep = 0;
+				}
+			}
+    }
+
+		if (fTotEnDep > 0 && std::next(trj_it) == tree.end()) {
+			UFW_DEBUG("Reached end of event at {} MeV. Adding a new event.", fTotEnDep);
+			eventCount++;
+		}
+	}
+  UFW_DEBUG("Split into {} events.", eventCount);
+
+	return eventCount;
+}

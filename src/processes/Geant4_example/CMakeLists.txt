@@ -9,7 +9,6 @@ file(GLOB SOURCES *.cc)
 file(GLOB HEADERS *.hh)
 
 find_package(Geant4 REQUIRED)
-include_directories(${Geant4_USE_FILE})
 
 find_package(EDepSim NAMES EDepSim REQUIRED)
 

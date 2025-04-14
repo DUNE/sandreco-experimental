@@ -6,8 +6,8 @@
  */
 
 #include "OptMenSensitiveArgon.h"
-#include "OptMenReadParameters.hh"
 
+#include "G4SystemOfUnits.hh"
 #include "G4OpBoundaryProcess.hh"
 #include "G4ParticleDefinition.hh"
 #include "G4ParticleTypes.hh"

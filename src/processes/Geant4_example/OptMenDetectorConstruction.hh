@@ -35,14 +35,14 @@
 
 #include "G4VUserDetectorConstruction.hh"
 #include "G4SDManager.hh"
-#include "G4PhysicalVolumeStore.hh"
 #include "G4LogicalVolumeStore.hh"
 #include "G4LogicalSkinSurface.hh" 
 #include "G4SurfaceProperty.hh"
-#include "OptMenReadParameters.hh"  
 
 
 class G4GDMLParser;
+
+class G4_optmen_edepsim;
 
 struct logicalVolumeStruct {
   G4LogicalVolume* _logicalVolume;
@@ -57,7 +57,7 @@ struct logicalVolumeStruct {
 class OptMenDetectorConstruction : public G4VUserDetectorConstruction
 {
   public: 
-    OptMenDetectorConstruction(const G4GDMLParser& parser);
+    OptMenDetectorConstruction(const G4GDMLParser& parser,  const G4_optmen_edepsim* optmen_edepsim);
 
     virtual G4VPhysicalVolume *Construct();  
     virtual void ConstructSDandField();
@@ -69,8 +69,8 @@ class OptMenDetectorConstruction : public G4VUserDetectorConstruction
 
     std::map<G4String, logicalVolumeStruct> logicalVolumesMap;
 
-    G4PhysicalVolumeStore* pstore;
     G4LogicalVolumeStore *lstore;
+    const G4_optmen_edepsim* m_optmen_edepsim; 
 
 };
 

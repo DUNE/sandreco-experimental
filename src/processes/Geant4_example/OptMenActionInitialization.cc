@@ -31,39 +31,24 @@
 #include "OptMenPrimaryGeneratorAction.hh"
 #include "OptMenRunAction.hh"
 #include "OptMenEventAction.hh"
-#include "OptMenStackingAction.hh"
-#include "OptMenReadParameters.hh"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-OptMenActionInitialization::OptMenActionInitialization(OptMenAnalysisManager* mgr)
- : G4VUserActionInitialization()
+OptMenActionInitialization::OptMenActionInitialization(OptMenAnalysisManager* mgr, const G4_optmen_edepsim* optmen_edepsim)
+ : G4VUserActionInitialization(), m_optmen_edepsim(optmen_edepsim)
 {
   _anMgr = mgr;
-  _stack = OptMenReadParameters::Get()->GetOpticalPhotonsFile();
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 OptMenActionInitialization::~OptMenActionInitialization()
 {}
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-void OptMenActionInitialization::BuildForMaster() const
-{
-  SetUserAction(new OptMenRunAction(_anMgr));
-}
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+// void OptMenActionInitialization::BuildForMaster() const
+// {
+//   SetUserAction(new OptMenRunAction(_anMgr));
+// }
 
 void OptMenActionInitialization::Build() const
 {
-  SetUserAction(new OptMenPrimaryGeneratorAction);
+  SetUserAction(new OptMenPrimaryGeneratorAction(m_optmen_edepsim));
   SetUserAction(new OptMenRunAction(_anMgr));
   SetUserAction(new OptMenEventAction(_anMgr));
-  if (_stack == true) SetUserAction(new OptMenStackingAction(_anMgr));
-
 }  
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

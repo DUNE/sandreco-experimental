@@ -44,20 +44,20 @@ class detector_response : public ufw::process {
   //   return ufw::data_list{{"input", "sand::example"}};
   // }
   
-  detector_response::detector_response() : process({{"cameras_in", "sand::grain::photons"}}, {}) {
+  detector_response::detector_response() : process({{"cameras_in", "sand::grain::hits"}}, {}) {
     UFW_INFO("Creating a detector_response process at {}", fmt::ptr(this));
   }
 
 
   void detector_response::run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) {
-    auto& cameras = ufw::context::instance<sand::grain::photons>(inputs.at("cameras_in"));
-    UFW_INFO("QUI: {}", cameras.images.size());
+    auto& hits = ufw::context::instance<sand::grain::hits>(inputs.at("cameras_in"));
+    UFW_INFO("QUI: {}", hits.cameras.size());
     
     UFW_INFO("Executing test_process::run at {} with parameters:", fmt::ptr(this));
     for (const auto& [var, id]: inputs) {
       UFW_INFO("  in : {{{}, {}}}", var, id);
     }
-    for (auto& i : cameras.images) {
+    for (auto& i : hits.cameras) {
       UFW_INFO("Image {}", i.camera_name);
       for (auto& p : i.photons) {
         // UFW_INFO("Position: {}", p.pos.X());

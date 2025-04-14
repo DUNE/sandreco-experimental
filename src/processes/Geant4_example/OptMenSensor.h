@@ -15,9 +15,11 @@
 class G4Step;
 class G4HCofThisEvent;
 
+class G4_optmen_edepsim;
+
 class OptMenSensor : public G4VSensitiveDetector {
  public:
-  OptMenSensor(const G4String &name, const G4String &hitsCollectionName);
+  OptMenSensor(const G4String &name, const G4String &hitsCollectionName, const G4_optmen_edepsim* optmen_edepsim);
   virtual ~OptMenSensor();
   virtual void Initialize(G4HCofThisEvent *hitCollection);
 
@@ -32,6 +34,7 @@ class OptMenSensor : public G4VSensitiveDetector {
 
  private:
   OptMenSensorHitCollection *_photonDetHitCollection;
+  const G4_optmen_edepsim* m_optmen_edepsim;
 };
 
 #endif /* OptMenSENSOR_H */

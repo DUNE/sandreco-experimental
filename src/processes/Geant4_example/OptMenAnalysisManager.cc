@@ -2,7 +2,7 @@
 #include <ufw/context.hpp>
 #include <grain/photons.h>
 
-#include <G4_optmen_runmanager/G4_optmen_runmanager.hpp>
+#include <G4_optmen_edepsim.hpp>
 
 #include <G4ElementTable.hh>
 #include <G4EmCalculator.hh>
@@ -23,7 +23,7 @@
 #include "OptMenSensitiveArgonHit.h"
 #include "G4RunManager.hh"
 #include "OptMenAnalysisManager.hh"
-#include "OptMenReadParameters.hh"
+
 
 #include <TROOT.h>
 #include "TSystem.h"
@@ -43,20 +43,22 @@ using std::vector;
 G4Mutex	beginOfEventMutex = G4MUTEX_INITIALIZER;
 G4Mutex	endOfEventMutex = G4MUTEX_INITIALIZER;
 
-OptMenAnalysisManager::OptMenAnalysisManager() {}
+OptMenAnalysisManager::OptMenAnalysisManager(G4_optmen_edepsim* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {}
 
 OptMenAnalysisManager::~OptMenAnalysisManager() {}
 
 void OptMenAnalysisManager::BeginOfRun() {
-  std::cout << "Begin of run" << std::endl;
+  UFW_DEBUG("Begin of run");
 
-  auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
-  
-  if (OptMenReadParameters::Get()->GetSensorsFile() == true) {
-    auto& cameras = ufw::context::instance<sand::grain::photons>(run_manager.getOutputs().at("cameras_out"));
+  auto& hits = ufw::context::instance<sand::grain::hits>(m_optmen_edepsim->outputVariableName());
 
-    for(const auto& name : OptMenReadParameters::Get()->GetSensorsTreeName()) {
-      cameras.images.emplace_back(sand::grain::photons::image{0, name, {}});
+  // TODO: use info from grain geomanager
+  for (auto p : *G4PhysicalVolumeStore::GetInstance()) {
+	  std::string volName = p->GetName();
+    if( p->GetName().find("CAM_") != std::string::npos)  {
+      hits.cameras.emplace_back(sand::grain::hits::camera{0, p->GetName(), {}});
+      UFW_DEBUG("Adding camera {}", p->GetName());
+      UFW_DEBUG("Cameras size {}", hits.cameras.size());
     }
   }
 
@@ -126,55 +128,51 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
   G4HCofThisEvent *pHCofThisEvent = pEvent->GetHCofThisEvent();
   OptMenSensorHitCollection *sensorHitsCollection = 0;
   
-  int eventID; //use EDepSim EvtId: possibly != from file entry!!
-  if(generator.find("edepsim") != std::string::npos) {
-	  eventID = OptMenReadParameters::Get()->GetEDepSimEvtIdFromEntry(pEvent->GetEventID());
-  }
-  else 	
-  eventID = pEvent->GetEventID();
+  // int eventID; //use EDepSim EvtId: possibly != from file entry!!
+  // if(generator.find("edepsim") != std::string::npos) {
+	//   eventID = OptMenReadParameters::Get()->GetEDepSimEvtIdFromEntry(pEvent->GetEventID());
+  // }
+  // else 	
+  int eventID = pEvent->GetEventID();
   
-  auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
-  auto& cameras = ufw::context::instance<sand::grain::photons>(run_manager.getOutputs().at("cameras_out"));
+  auto& hits = ufw::context::instance<sand::grain::hits>(m_optmen_edepsim->outputVariableName());
 
   // Retrieving info of detected photons
-  if (OptMenReadParameters::Get()->GetSensorsFile() == true) {
+  G4SDManager *pSDManager = G4SDManager::GetSDMpointer();
+  
+  auto sorter = [](const auto& lhs, const auto& rhs) { return lhs.camera_name < rhs.camera_name; };
+  std::sort(hits.cameras.begin(), hits.cameras.end(), sorter);
 
-    G4SDManager *pSDManager = G4SDManager::GetSDMpointer();
+  for (int i = 2; i < _nCollections; i++) {
     
-    auto sorter = [](const auto& lhs, const auto& rhs) { return lhs.camera_name < rhs.camera_name; };
-    std::sort(cameras.images.begin(), cameras.images.end(), sorter);
+    OptMenSensorHit *sensorHit; 
+    
+    sensorHitsCollection = (OptMenSensorHitCollection *)(pHCofThisEvent->GetHC(i));
+    G4int totEntriesScint = sensorHitsCollection->entries();
+    std::cout << i << " " << totEntriesScint << " " << sensorHitsCollection->GetName() << std::endl;
+    
+    if (totEntriesScint != 0) {
+      for (int j = 0; j < totEntriesScint; j++) {
+        sensorHit = (*sensorHitsCollection)[j];
+        
+        auto camera_it = std::find_if(hits.cameras.begin(), hits.cameras.end(), 
+                          [sensorHit](const auto& lhs) { return lhs.camera_name == sensorHit->camName();});
+        
+        sand::grain::hits::photon ph;
+        ph.inside_camera = (sensorHit->productionVolume() == sensorHit->camName());
+        ph.p.SetPx(sensorHit->direction().getX());
+        ph.p.SetPy(sensorHit->direction().getY());
+        ph.p.SetPz(sensorHit->direction().getZ());
+        ph.p.SetE(sensorHit->energy());
+        ph.origin.SetX(sensorHit->originPos().getX());
+        ph.origin.SetY(sensorHit->originPos().getY());
+        ph.origin.SetZ(sensorHit->originPos().getZ());
+        ph.pos.SetXYZT(sensorHit->arrivalPos().getX(), sensorHit->arrivalPos().getY(),
+                        sensorHit->arrivalPos().getZ(), sensorHit->arrivalTime());
+        ph.scatter = sensorHit->scatter();
+        ph.hit = -1;
 
-    for (int i = 2; i < _nCollections; i++) {
-      
-      OptMenSensorHit *sensorHit; 
-      
-      sensorHitsCollection = (OptMenSensorHitCollection *)(pHCofThisEvent->GetHC(i));
-      G4int totEntriesScint = sensorHitsCollection->entries();
-      std::cout << i << " " << totEntriesScint << " " << sensorHitsCollection->GetName() << std::endl;
-      
-      if (totEntriesScint != 0) {
-        for (int j = 0; j < totEntriesScint; j++) {
-          sensorHit = (*sensorHitsCollection)[j];
-          
-          auto camera_it = std::find_if(cameras.images.begin(), cameras.images.end(), 
-                            [sensorHit](const auto& lhs) { return lhs.camera_name == sensorHit->camName();});
-          
-          sand::grain::photons::photon ph;
-          ph.inside_camera = (sensorHit->productionVolume() == sensorHit->camName());
-          ph.p.SetPx(sensorHit->direction().getX());
-          ph.p.SetPy(sensorHit->direction().getY());
-          ph.p.SetPz(sensorHit->direction().getZ());
-          ph.p.SetE(sensorHit->energy());
-          ph.origin.SetX(sensorHit->originPos().getX());
-          ph.origin.SetY(sensorHit->originPos().getY());
-          ph.origin.SetZ(sensorHit->originPos().getZ());
-          ph.pos.SetXYZT(sensorHit->arrivalPos().getX(), sensorHit->arrivalPos().getY(),
-                         sensorHit->arrivalPos().getZ(), sensorHit->arrivalTime());
-          ph.scatter = sensorHit->scatter();
-          ph.hit = -1;
-
-          camera_it->photons.push_back(ph);
-        }
+        camera_it->photons.push_back(ph);
       }
     }
   }
@@ -250,28 +248,5 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
   //     m_pEventDataArgon->Clear();
   //   }
   // }
-  
   G4cout << "End of event" << std::endl;
-}
-
-void OptMenAnalysisManager::NewStage(/*OptMenEventData* sData*/) {
-  // m_pEventDataStacking->eventID = sData->eventID;
-  
-  // for (unsigned int i = 0; i < sData->x.size(); i++) {
-    
-  //   m_pEventDataStacking->x.push_back(sData->x.at(i));
-  //   m_pEventDataStacking->y.push_back(sData->y.at(i));
-  //   m_pEventDataStacking->z.push_back(sData->z.at(i));
-
-  //   m_pEventDataStacking->px.push_back(sData->px.at(i));
-  //   m_pEventDataStacking->py.push_back(sData->py.at(i));
-  //   m_pEventDataStacking->pz.push_back(sData->pz.at(i));
-
-  //   m_pEventDataStacking->energy.push_back(sData->energy.at(i));
-  //   m_pEventDataStacking->time.push_back(sData->time.at(i));
-  // }
-
-  // m_pOutputFileStacking->cd();
-  // m_pTreeStacking->Fill();
-  // m_pEventDataStacking->Clear();
 }

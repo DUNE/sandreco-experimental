@@ -38,24 +38,17 @@
  namespace { G4Mutex	sensitiveDetMutex = G4MUTEX_INITIALIZER; }
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-OptMenDetectorConstruction::OptMenDetectorConstruction(const G4GDMLParser& parser)
+OptMenDetectorConstruction::OptMenDetectorConstruction(const G4GDMLParser& parser, const G4_optmen_edepsim* optmen_edepsim )
  : G4VUserDetectorConstruction(),
-   fParser(parser)
+   fParser(parser),
+   m_optmen_edepsim(optmen_edepsim)
 {}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 G4VPhysicalVolume* OptMenDetectorConstruction::Construct()
 {
-  pstore = G4PhysicalVolumeStore::GetInstance();
-  unsigned int length = pstore->size();
-
-  for (unsigned int iVol = 0; iVol < length; iVol++) {
-	  std::string volName = ((*pstore)[iVol])->GetName();
-    if( ((*pstore)[iVol])->GetName().find("CAM_") != std::string::npos)  {
-      OptMenReadParameters::Get()->pushSensorsTreeName(((*pstore)[iVol])->GetName());
-    }
-  }
+  
 
   return fParser.GetWorldVolume();
 }
@@ -121,7 +114,7 @@ void OptMenDetectorConstruction::ConstructSDandField()
         std::string trackerChamberSDname = auxItem->value;
         std::string trackerChamberHitCollectionName = trackerChamberSDname + "_collection";
 
-        OptMenSensor* aTrackerSD = new OptMenSensor(trackerChamberSDname, trackerChamberHitCollectionName);
+        OptMenSensor* aTrackerSD = new OptMenSensor(trackerChamberSDname, trackerChamberHitCollectionName, m_optmen_edepsim);
         SDman->AddNewDetector( aTrackerSD );   
         G4VSensitiveDetector* mydet = SDman->FindSensitiveDetector(trackerChamberSDname);
       

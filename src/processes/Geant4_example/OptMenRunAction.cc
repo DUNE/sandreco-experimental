@@ -56,5 +56,3 @@ void OptMenRunAction::EndOfRunAction(const G4Run*)
 {
   _anMgr->EndOfRun();
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

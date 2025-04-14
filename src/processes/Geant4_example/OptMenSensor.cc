@@ -4,9 +4,10 @@
  *
  * Created on April 1, 2014, 12:14 PM
  */
+#include <G4_optmen_edepsim.hpp>
 
 #include "OptMenSensor.h"
-#include "OptMenReadParameters.hh"
+
 
 #include "G4OpBoundaryProcess.hh"
 #include "G4ParticleDefinition.hh"
@@ -21,8 +22,8 @@
 #include "G4ios.hh"
 #include "G4Box.hh"
 
-OptMenSensor::OptMenSensor(const G4String& name, const G4String& hitsCollectionName)
-    : G4VSensitiveDetector(name), _photonDetHitCollection(0) {
+OptMenSensor::OptMenSensor(const G4String& name, const G4String& hitsCollectionName, const G4_optmen_edepsim* optmen_edepsim)
+    : G4VSensitiveDetector(name), _photonDetHitCollection(0), m_optmen_edepsim(optmen_edepsim) {
   G4cout << "_photonDetHitCollection:" << hitsCollectionName << G4endl;
   collectionName.insert(hitsCollectionName);
   nHits = 0;
@@ -118,7 +119,7 @@ G4bool OptMenSensor::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
               photonArrive);
 
 	//kill photons from the back (lens assembly is not sealed)
-	if(OptMenReadParameters::Get()->GetLensType() && 
+	if(m_optmen_edepsim->opticsType() != G4_optmen_edepsim::OpticsType::MASK  && 
              ( ((G4Box*)theTouchable->GetSolid())->GetZHalfLength() - photonArrive.z() > 0.01) ){
 	      //std::cout << "Killed from the back" << std::endl;	
               break;

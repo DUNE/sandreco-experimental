@@ -8,7 +8,7 @@
     "G4_optmen_runmanager" : {}
   },
   "contexts" : {
-    "keys" : [14],
+    "keys" : [0, 14],
     "locals" : {
       "sand::EdepReader" : {"uri" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/events-in-GRAIN_LAr_lv.10.edep-sim.root"}
     }
@@ -17,7 +17,9 @@
     {
       "G4_optmen_edepsim" : { 
         "seed" : 111,
-        "config" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/config.txt"
+        "config" : "/home/sand/sandreco-experimental/src/processes/Geant4_example/config.txt",
+        "geometry" : "/home/sand/geometry/main.gdml",
+        "energy_split_threshold" : 100
       },
       "reqs" : {},
       "prods" : {"cameras_out" : "pippo"}
@@ -28,7 +30,7 @@
         "mode" : "RECREATE",
         "tree" : "cameras"
       },
-      "write" : { "pippo" : "sand::grain::photons"}
+      "write" : { "pippo" : "sand::grain::hits"}
     },
     {
       "detector_response" : {},

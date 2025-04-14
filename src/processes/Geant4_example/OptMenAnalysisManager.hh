@@ -13,12 +13,13 @@ class G4Step;
 
 class CALPrimaryGeneratorAction;
 
+class G4_optmen_edepsim;
 
 class OptMenAnalysisManager
 {
 public:
 
-  OptMenAnalysisManager();
+  OptMenAnalysisManager(G4_optmen_edepsim* optmen_edepsim);
   virtual ~OptMenAnalysisManager();
   int _nCollections;
 
@@ -27,15 +28,13 @@ public:
   virtual void EndOfRun(); 
   virtual void BeginOfEvent(const G4Event *pEvent); 
   virtual void EndOfEvent(const G4Event *pEvent);
-  virtual void NewStage();
 
 private:
   OptMenSensorHitCollection* GetHitsCollection(const G4String& hcName,const G4Event* event) const;
   
   std::vector<G4int> sensorCollID;
 
-  std::string inputFile;
-  std::string generator;
+  G4_optmen_edepsim* m_optmen_edepsim;
 
   
 };
