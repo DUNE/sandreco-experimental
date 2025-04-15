@@ -33,6 +33,7 @@ class ufw::data::factory<sand::EdepReader> {
     std::unique_ptr<TFile> input_file;
     TTree* input_tree;
     TG4Event* event;
+    ufw::context_id m_id = -1;
   
 };
 

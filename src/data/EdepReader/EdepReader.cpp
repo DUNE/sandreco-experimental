@@ -25,7 +25,10 @@ ufw::data::factory<sand::EdepReader>::factory(const ufw::config& cfg) :
 }
 
 sand::EdepReader& ufw::data::factory<sand::EdepReader>::instance(ufw::context_id i) {
-  input_tree->GetEntry(i);
-  reader.InizializeFromEdep(*event);
+  if (m_id != i) {
+    input_tree->GetEntry(i);
+    reader.InizializeFromEdep(*event);
+    m_id = i;
+  }
   return reader;
 }
