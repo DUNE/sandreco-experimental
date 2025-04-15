@@ -207,7 +207,7 @@ class EDEPTrajectory {
 
     bool HasHitNearPoint(TVector3 point, double distance) const;
     bool HasHitNear4DPoint(TLorentzVector point, double distance, double time) const;
-    std::vector<EDEPHit>::iterator GetHitNear4DPoint(TLorentzVector point, double distance, double time);
+    std::vector<EDEPHit>::const_iterator GetHitNear4DPoint(TLorentzVector point, double distance, double time);
     
     std::string Print(std::string& full_out, int depth = 100, int current_depth = 0) const;
     
@@ -225,8 +225,8 @@ class EDEPTrajectory {
       return false;
     }
 
-    template<typename Funct> std::vector<EDEPHit>::iterator GetHitWhere(Funct&& f) {
-      for(auto& hits:hit_map_) {
+    template<typename Funct> std::vector<EDEPHit>::const_iterator GetHitWhere(Funct&& f) {
+      for(const auto& hits:hit_map_) {
         for(auto it =  hits.second.begin();
                  it != hits.second.end(); ++it) {
           if (f(*it)) {

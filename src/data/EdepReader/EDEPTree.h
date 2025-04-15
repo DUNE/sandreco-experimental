@@ -31,6 +31,8 @@ class EDEPTree : public EDEPTrajectory {
         typedef value_type* pointer;
         typedef value_type& reference;
 
+        iterator() = default;
+
         reference operator *  () {return *current_it_;};
         pointer operator -> () {return &(*current_it_);};
         bool operator == (const iterator& it) {return (this->parent_trj_ == it.parent_trj_ && this->current_it_ == it.current_it_);};
@@ -63,7 +65,8 @@ class EDEPTree : public EDEPTrajectory {
         typedef ptrdiff_t difference_type;
         typedef value_type* pointer;
         typedef value_type& reference;
-
+      
+        const_iterator() = default;
         reference operator *  () {return *current_it_;};
         pointer operator -> () {return &(*current_it_);};
         bool operator == (const const_iterator& it) {return (this->parent_trj_ == it.parent_trj_ && this->current_it_ == it.current_it_);};

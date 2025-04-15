@@ -340,7 +340,7 @@ std::string EDEPTrajectory::Print(std::string& full_out, int depth, int current_
     if (this->GetDepth() == 0) std::cout << this->GetReaction() << std::endl;
     full_out += std::to_string(this->GetDepth()) + " " + std::to_string(this->GetId()) + " " + std::to_string(this->GetPDGCode()) + "\n";
 
-    for (auto el:hit_map_) {
+    for (const auto& el:hit_map_) {
       for ( int i = 0 ; i < current_depth ; i++ ) {
         if ( i != current_depth ) {
           std::cout << "    ";
@@ -471,7 +471,7 @@ bool EDEPTrajectory::HasHitNear4DPoint(TLorentzVector point, double distance, do
  * @param time The maximum allowed time difference.
  * @return An iterator to the first hit that is near the specified 4D point, or the end iterator if no hit matches.
  */
-std::vector<EDEPHit>::iterator EDEPTrajectory::GetHitNear4DPoint(TLorentzVector point, double distance, double time) {
+std::vector<EDEPHit>::const_iterator EDEPTrajectory::GetHitNear4DPoint(TLorentzVector point, double distance, double time) {
   return GetHitWhere([&](const EDEPHit& hit) {
       TVector3 middle_hit_point = (hit.GetStart().Vect() + hit.GetStop().Vect()) * 0.5;
       double middle_hit_point_time  = (hit.GetStart().T() + hit.GetStop().T()) * 0.5;
@@ -524,7 +524,7 @@ bool EDEPTrajectory::HasHitWithIdInDetector( int id, component component_name) c
  */
 double EDEPTrajectory::GetDepositedEnergy(component component_name) {
   double deposited_energy = 0;
-  for (auto& hit:hit_map_[component_name]) {
+  for (const auto& hit:hit_map_[component_name]) {
     deposited_energy += hit.GetSecondaryDeposit();
   }
   return deposited_energy;

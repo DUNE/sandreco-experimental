@@ -52,7 +52,6 @@
 #include "G4VPhysicalVolume.hh"
 #include "G4Poisson.hh"
 
-#include <EdepReader/EdepReader.hpp>
 #include <ufw/context.hpp>
 #include <G4_optmen_edepsim.hpp>
 
@@ -66,7 +65,7 @@ OptMenPrimaryGeneratorAction::~OptMenPrimaryGeneratorAction() {}
 void OptMenPrimaryGeneratorAction::ReadEDepSimEvent() {}
 
 void OptMenPrimaryGeneratorAction::GetEntry(){
-    auto& tree = ufw::context::instance<sand::EdepReader>();
+    const auto& tree = ufw::context::instance<sand::EdepReader>();
     
     fNHits = 0;
     fTotEnDep = 0;
@@ -142,7 +141,55 @@ bool OptMenPrimaryGeneratorAction::ApplyVolumeCut(G4ThreeVector pos){
 	else return false;         
 }
 
-// TODO: void nextIteration() {}
+void OptMenPrimaryGeneratorAction::nextIteration() {
+    UFW_DEBUG("Before tree instance");
+    const auto& tree = ufw::context::instance<sand::EdepReader>();
+    UFW_DEBUG("After tree instance");
+    
+    if(m_first_iteration) {
+        UFW_DEBUG("Selecting begin of tree");
+        m_tree_it = tree.begin();
+        m_first_iteration = false;
+    }
+    
+    if(m_tree_it == tree.end()) {
+        UFW_FATAL("Reached end of tree");
+    }
+
+    UFW_DEBUG("Reading tree iterator at distance {} from begin", std::distance(tree.begin(), m_tree_it));
+    if (m_tree_it->GetHitMap().find(component::GRAIN) == m_tree_it->GetHitMap().end()) {
+        UFW_DEBUG("Track {} doesnt have grain hits. Moving to the next track. ", m_tree_it->GetId());
+        m_tree_it++;
+        m_new_iteration = true;
+        nextIteration();
+    } else {
+        UFW_DEBUG("Track {} has grain hits:", m_tree_it->GetId());
+        UFW_DEBUG("Tree it -> operator: {}", fmt::ptr(m_tree_it.operator->()));
+        const auto& hit_map = m_tree_it->GetHitMap();
+        UFW_DEBUG("Tree it getHitMap: {}", fmt::ptr(&hit_map));
+        const auto& hit_vect = hit_map.at(component::GRAIN);
+        UFW_DEBUG("Vector pointer: {}", fmt::ptr(&*(hit_vect.begin())));
+        UFW_DEBUG("Vector size: {}", hit_vect.size());
+        for (auto h:hit_vect) {
+            UFW_DEBUG("id: {}", h.GetId());
+        }
+        if(m_new_iteration) {
+            m_hits_it = hit_vect.begin();
+            m_new_iteration = false;
+            UFW_DEBUG("Looking at hit {} in the first iteration at {}, from m_tree_it at {}..", m_hits_it->GetId(), fmt::ptr(&*(hit_vect.begin())), fmt::ptr(&m_tree_it));
+        } else {
+            m_hits_it++;
+            if (m_hits_it == hit_vect.end()) {
+                UFW_DEBUG("Reached track {} end- Moving to the next one.", m_tree_it->GetId());
+                m_tree_it++;
+                m_new_iteration = true;
+                nextIteration();
+            }
+            UFW_DEBUG("Looking at hit {} not in the first iteration at {}, from m_tree_it at {}.", m_hits_it->GetId(),  fmt::ptr(&*(hit_vect.begin())), fmt::ptr(&m_tree_it));
+        }
+    }
+}
+    
 
 std::pair<G4ThreeVector,G4ThreeVector> OptMenPrimaryGeneratorAction::GenerateRandomMomentumPolarization(){
 
@@ -180,11 +227,12 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 
     event->SetEventID(ufw::context::current());
 
-    // Read EdepSim file
-    ReadEDepSimEvent();
+    // // Read EdepSim file
+    // ReadEDepSimEvent();
 
-    // Read EdepSim energy deposits
+    // // Read EdepSim energy deposits
     GetEntry();
+    nextIteration();
 
     tmpEnDep = 0;
     tmpSecondaryEnDep = 0;

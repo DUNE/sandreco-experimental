@@ -47,12 +47,17 @@
 
 #include "Randomize.hh"
 #include <vector>
+#include <optional>
 
 #include <TG4Event.h>
 #include <TG4HitSegment.h>
 
+#include <EdepReader/EdepReader.hpp>
+
 class G4Event;
 class G4_optmen_edepsim;
+// class EDEPTree;
+// class EDEPHit;
 
 /// The primary generator action class is used to switch between generators
 /// Instead of implmenting the generator, it builds a generic one (OptMenVGenerator)
@@ -92,6 +97,7 @@ class OptMenPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 		// Clear vectors
 		void clear();
 
+		void nextIteration();
 	
 	private:
 		int startingEntry;
@@ -154,9 +160,10 @@ class OptMenPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 
 		const G4_optmen_edepsim* m_optmen_edepsim;
 
-		// EDEPTree::const_iterator tree_it;
-		// std::vector<EDEPHit>::const_iterator hits_it;
-		// bool first_iteration = true;
+		EDEPTree::const_iterator m_tree_it;
+		std::vector<EDEPHit>::const_iterator m_hits_it;
+		bool m_first_iteration = true;
+		bool m_new_iteration = true;
 
 };
 #endif
