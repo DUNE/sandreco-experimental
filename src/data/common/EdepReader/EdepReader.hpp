@@ -11,25 +11,25 @@ class TG4Event;
 // class TTree;
 
 namespace sand {
-  struct EdepReader : public EDEPTree, public ufw::data::base<ufw::data::complex_tag, 
+  struct edep_reader : public EDEPTree, public ufw::data::base<ufw::data::complex_tag, 
                                               ufw::data::singleton_tag, 
                                               ufw::data::context_tag> {
 
     public:
-      explicit EdepReader();
+      explicit edep_reader();
   };
 }
 
-UFW_DECLARE_COMPLEX_DATA(sand::EdepReader);
+UFW_DECLARE_COMPLEX_DATA(sand::edep_reader);
 
 template <>
-class ufw::data::factory<sand::EdepReader> {
+class ufw::data::factory<sand::edep_reader> {
   public:
     factory(const ufw::config&);
-    sand::EdepReader& instance(ufw::context_id);
+    sand::edep_reader& instance(ufw::context_id);
 
   private:
-    sand::EdepReader reader;
+    sand::edep_reader reader;
     std::unique_ptr<TFile> input_file;
     TTree* input_tree;
     TG4Event* event;

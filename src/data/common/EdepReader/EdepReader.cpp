@@ -1,14 +1,14 @@
 #include <ufw/data.hpp>
 #include <ufw/config.hpp>
 
-#include <EdepReader.hpp>
+#include <edep_reader.hpp>
 
 
 namespace sand {
-  EdepReader::EdepReader() : EDEPTree() {}
+  edep_reader::edep_reader() : EDEPTree() {}
 }
 
-ufw::data::factory<sand::EdepReader>::factory(const ufw::config& cfg) :
+ufw::data::factory<sand::edep_reader>::factory(const ufw::config& cfg) :
   input_file(TFile::Open(cfg.at("uri").template get<std::string>().c_str())),
   event(new TG4Event()) {
   
@@ -24,7 +24,7 @@ ufw::data::factory<sand::EdepReader>::factory(const ufw::config& cfg) :
   input_tree->SetBranchAddress("Event", &event);
 }
 
-sand::EdepReader& ufw::data::factory<sand::EdepReader>::instance(ufw::context_id i) {
+sand::edep_reader& ufw::data::factory<sand::edep_reader>::instance(ufw::context_id i) {
   if (m_id != i) {
     input_tree->GetEntry(i);
     reader.InizializeFromEdep(*event);
