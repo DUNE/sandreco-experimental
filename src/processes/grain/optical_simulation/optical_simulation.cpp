@@ -68,7 +68,7 @@ void optical_simulation::configure (const ufw::config& cfg) {
   run_manager.Initialize();
 }
   
-optical_simulation::optical_simulation() : process({}, {{"cameras_out", "sand::grain::hits"}}) {
+optical_simulation::optical_simulation() : process({}, {{"hits", "sand::grain::hits"}}) {
   UFW_INFO("Creating a optical_simulation process at {}", fmt::ptr(this));
 }
 
@@ -76,7 +76,7 @@ optical_simulation::optical_simulation() : process({}, {{"cameras_out", "sand::g
 void optical_simulation::run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) {
   // CLHEP::HepRandom::setTheSeed(m_seed);
   // CLHEP::HepRandom::showEngineStatus();
-  m_output_variable_name = outputs.at("cameras_out");
+  m_output_variable_name = outputs.at("hits");
   m_run_start = true;
   m_new_iteration = true;
 

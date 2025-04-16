@@ -20,7 +20,7 @@
         "energy_split_threshold" : 100
       },
       "reqs" : {},
-      "prods" : {"cameras_out" : "pippo"}
+      "prods" : {"hits" : "foo"}
     },
     {
       "sand::root::tree_streamer" : { 
@@ -28,11 +28,11 @@
         "mode" : "RECREATE",
         "tree" : "cameras"
       },
-      "write" : { "pippo" : "sand::grain::hits"}
+      "write" : { "foo" : "sand::grain::hits"}
     },
     {
       "detector_response" : {},
-      "reqs" : {"cameras_in" : "pippo"},
+      "reqs" : {"hits" : "foo"},
       "prods" : {}
     }
   ]
