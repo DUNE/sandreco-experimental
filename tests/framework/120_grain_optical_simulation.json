@@ -1,0 +1,39 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-ldpath" : ["/usr/local/lib64"]
+  },
+  "globals" : {
+    "sand::grain::geant_run_manager" : {}
+  },
+  "contexts" : {
+    "keys" : [14],
+    "locals" : {
+      "sand::EdepReader" : {"uri" : "/home/sand/events-in-GRAIN_LAr_lv.1.edep-sim.root"}
+    }
+  },
+  "run" : [
+    {
+      "sand::grain::optical_simulation" : { 
+        "seed" : 111,
+        "geometry" : "/home/sand/geometry/main.gdml",
+        "energy_split_threshold" : 100
+      },
+      "reqs" : {},
+      "prods" : {"cameras_out" : "pippo"}
+    },
+    {
+      "sand::common::root::TTreeStreamer" : { 
+        "uri" : "/home/sand/sensors.root",
+        "mode" : "RECREATE",
+        "tree" : "cameras"
+      },
+      "write" : { "pippo" : "sand::grain::hits"}
+    },
+    {
+      "detector_response" : {},
+      "reqs" : {"cameras_in" : "pippo"},
+      "prods" : {}
+    }
+  ]
+}

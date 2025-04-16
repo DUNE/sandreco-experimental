@@ -12,23 +12,18 @@ namespace sand::common::root {
   public:
     ~TTreeStreamer();
 
-    void configure(const ufw::config&) override;
+    void configure(const ufw::config&, const ufw::type_id&, ufw::op_type) override;
 
-    void attach(const ufw::type_id&, ufw::data::data_base&) override;
-
-    iop support(const ufw::type_id&) const override;
+    void attach(ufw::data::data_base&) override;
 
     void read(ufw::context_id) override;
 
     void write(ufw::context_id) override;
 
-    ufw::streamer::iop mode() const { return m_mode; }
-
   private:
     TFile* m_file;
     TTree* m_tree;
-    void* m_branchaddr;
-    ufw::streamer::iop m_mode = iop::none;
+    void* m_branchaddr;;
 
   };
 

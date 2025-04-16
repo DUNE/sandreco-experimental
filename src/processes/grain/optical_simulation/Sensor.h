@@ -1,0 +1,41 @@
+/*
+ * File:   Sensor.h
+ * Author: pozzato
+ *
+ * Created on April 1, 2014, 12:14 PM
+ */
+
+#ifndef SENSOR_H
+#define SENSOR_H
+
+#include "SensorHit.h"
+#include "G4ProcessManager.hh"
+#include "G4VSensitiveDetector.hh"
+
+class G4Step;
+class G4HCofThisEvent;
+
+namespace sand::grain {
+class optical_simulation;
+
+class Sensor : public G4VSensitiveDetector {
+ public:
+  Sensor(const G4String &name, const G4String &hitsCollectionName, const optical_simulation* optmen_edepsim);
+  virtual ~Sensor();
+  virtual void Initialize(G4HCofThisEvent *hitCollection);
+
+  virtual G4bool ProcessHits(G4Step *aStep, G4TouchableHistory *history);
+
+  virtual void EndOfEvent(G4HCofThisEvent *hitCollection);
+  // A version of processHits that keeps aStep constant
+  // G4bool processHitsConstStep(const G4Step *aStep, G4TouchableHistory
+  // *history);
+  G4int nHits;
+  G4int collectionID;
+
+ private:
+  SensorHitCollection *_photonDetHitCollection;
+  const optical_simulation* m_optmen_edepsim;
+};
+}
+#endif /* SENSOR_H */

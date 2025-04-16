@@ -3,7 +3,7 @@
 
 #include <ufw/config.hpp>
 #include <example1.h>
-#include <common/root/TTreeStreamer.hpp>
+#include <streamers/root/TTreeStreamer.hpp>
 
 #include <TFile.h>
 #include <TTree.h>
@@ -13,21 +13,18 @@ using sand::common::root::TTreeStreamer;
 BOOST_AUTO_TEST_CASE(streamer_write) {
   TTreeStreamer ts;
   ufw::config cfg;
-  BOOST_TEST(ts.mode() == TTreeStreamer::none);
-  cfg["uri"] = "../Testing/Temporary/f_00.root";
-  cfg["mode"] = "RECREATE";
+  BOOST_TEST(ts.operation() == ufw::op_type::none);
+  cfg["uri"] = "../../Testing/Temporary/f_00.root";
   cfg["tree"] = "mytree";
-  ts.configure(cfg);
-  BOOST_TEST(ts.mode() == TTreeStreamer::wo);
-  BOOST_TEST(ts.support("sand::example1") == TTreeStreamer::wo);
-  BOOST_TEST(ts.support("sand::example2") == TTreeStreamer::wo);
+  ufw::type_id t("sand::example1");
+  ts.configure(cfg, t.c_str(), ufw::op_type::wo);
+  BOOST_TEST(ts.operation() == ufw::op_type::wo);
   sand::example1 ex;
   ex.uid = 42;
   ex.times.push_back(1);
   ex.times.push_back(2);
   ex.times.push_back(3);
-  ufw::type_id t("sand::example1");
-  ts.attach(t.c_str(), ex);
+  ts.attach(ex);
   ts.write(0);
   ex.uid = 43;
   ts.write(1);
@@ -38,17 +35,14 @@ BOOST_AUTO_TEST_CASE(streamer_write) {
 BOOST_AUTO_TEST_CASE(streamer_read) {
   TTreeStreamer ts;
   ufw::config cfg;
-  BOOST_TEST(ts.mode() == TTreeStreamer::none);
-  cfg["uri"] = "../Testing/Temporary/f_00.root";
-  cfg["mode"] = "READ";
+  BOOST_TEST(ts.operation() == ufw::op_type::none);
+  cfg["uri"] = "../../Testing/Temporary/f_00.root";
   cfg["tree"] = "mytree";
-  ts.configure(cfg);
-  BOOST_TEST(ts.mode() == TTreeStreamer::ro);
-  BOOST_TEST(ts.support("sand::example1") == TTreeStreamer::ro);
-  BOOST_TEST(ts.support("sand::example2") == TTreeStreamer::ro);
-  sand::example1 ex;
   ufw::type_id t("sand::example1");
-  ts.attach(t.c_str(), ex);
+  ts.configure(cfg, t.c_str(), ufw::op_type::ro);
+  BOOST_TEST(ts.operation() == ufw::op_type::ro);
+  sand::example1 ex;
+  ts.attach(ex);
   ts.read(0);
   BOOST_TEST(ex.uid == 42);
   BOOST_TEST(ex.times[0] == 1);

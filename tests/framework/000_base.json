@@ -1,0 +1,11 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug"
+  },
+  "globals" : {},
+  "contexts" : {
+    "keys" : 1,
+    "locals" : {}
+  },
+  "run" : []
+}

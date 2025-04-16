@@ -8,7 +8,7 @@
 
 namespace sand::grain {
 
-  struct photons : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
+  struct hits : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
     struct photon : public true_hit
     {
       pos_4d pos;
@@ -18,18 +18,19 @@ namespace sand::grain {
       bool inside_camera;
     };
 
-    struct image
+    struct camera
     {
       uint16_t camera_id;  // or std::string camera_name;
+      std::string camera_name;
       std::vector<photon> photons;
     };
 
-    using image_list = std::vector<photons::image>;
+    using camera_list = std::vector<camera>;
 
-    image_list images;
+    camera_list cameras;
 
   };
 
 }
 
-UFW_DECLARE_MANAGED_DATA(sand::grain::photons)
+UFW_DECLARE_MANAGED_DATA(sand::grain::hits)

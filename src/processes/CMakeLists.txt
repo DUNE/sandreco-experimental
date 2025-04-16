@@ -1,1 +1,1 @@
-add_subdirectory(Geant4_example)
+add_subdirectory(grain)

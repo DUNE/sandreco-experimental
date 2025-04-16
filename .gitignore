@@ -5,3 +5,4 @@ install/
 compile_commands.json
 src/common/root/TTreeStreamerLinkdef.h
 src/common/root/TTreeStreamerTypes.hpp
+src/processes/Geant4_example/*.root
