@@ -24,17 +24,17 @@
 // ********************************************************************
 //
 //
-/// \file OptMenPrimaryGeneratorAction.cc
-/// \brief Implementation of the OptMenPrimaryGeneratorAction class
+/// \file PrimaryGeneratorAction.cc
+/// \brief Implementation of the PrimaryGeneratorAction class
 
-#include "OptMenPrimaryGeneratorAction.hh"
+#include "PrimaryGeneratorAction.hh"
 
 #include "G4Event.hh"
 #include "G4ParticleGun.hh"
 #include "G4IonTable.hh"
 #include "G4ParticleTable.hh"
 #include "G4ParticleDefinition.hh"
-#include "OptMenPrimaryGeneratorAction.hh"
+#include "PrimaryGeneratorAction.hh"
 #include "G4SystemOfUnits.hh"
 #include <cmath>
 #include <vector>
@@ -55,21 +55,21 @@
 #include <ufw/context.hpp>
 #include <optical_simulation.hpp>
 
-OptMenPrimaryGeneratorAction::OptMenPrimaryGeneratorAction(G4_optmen_edepsim* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {
+PrimaryGeneratorAction::PrimaryGeneratorAction(G4_optmen_edepsim* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {
 	fParticleTable = G4ParticleTable::GetParticleTable();
 	fParticleGun.SetParticleDefinition(fParticleTable->FindParticle("geantino"));
 }
 
-OptMenPrimaryGeneratorAction::~OptMenPrimaryGeneratorAction() {}
+PrimaryGeneratorAction::~PrimaryGeneratorAction() {}
 
-void OptMenPrimaryGeneratorAction::ApplyTranslation(){
+void PrimaryGeneratorAction::ApplyTranslation(){
     // TODO: use the geoManager as soon as it is available
     master[0]= 0;
     master[1]= -2384.73;
     master[2]= 22381;
 }
 
-void OptMenPrimaryGeneratorAction::nextIteration() {
+void PrimaryGeneratorAction::nextIteration() {
     const auto& tree = ufw::context::instance<sand::EdepReader>();
     
     if(m_optmen_edepsim->getStartRun()) {
@@ -117,7 +117,7 @@ bool isInArgon(const G4ThreeVector& myPhotonPosition)
     return (matname.find("G4_lAr") != std::string::npos);
 }
 
-std::pair<G4ThreeVector,G4ThreeVector> OptMenPrimaryGeneratorAction::GenerateRandomMomentumPolarization(){
+std::pair<G4ThreeVector,G4ThreeVector> PrimaryGeneratorAction::GenerateRandomMomentumPolarization(){
 
 	G4double cost = 1 - 2*G4UniformRand();
 	G4double sint = sqrt( 1 - cost*cost );
@@ -149,7 +149,7 @@ std::pair<G4ThreeVector,G4ThreeVector> OptMenPrimaryGeneratorAction::GenerateRan
 	return std::make_pair(myPhotonMomentum, myPhotonPolarization);
 }
 
-void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
+void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 
     event->SetEventID(ufw::context::current());
 
@@ -257,7 +257,7 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
         //FIXME: uncertain (reported only by protoDUNE) -> investigate
         //Xe-DOPING: Xe-doping below 1000ppm does not shift the fast component
         //but also reduces it to the absorption. From protoDUNE plots, it seems a 50% reduction
-        /*if( OptMenReadParameters::Get()->GetXeDoping() ) {
+        /*if( ReadParameters::Get()->GetXeDoping() ) {
             if( G4UniformRand() < 0.5 ) continue; //skip, don't emit
         }*/
 
@@ -309,7 +309,7 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     UFW_DEBUG("Completed photons generation for hit {}", m_hits_it->GetId());
 }
 
-void OptMenPrimaryGeneratorAction::getMaterialProperties() {
+void PrimaryGeneratorAction::getMaterialProperties() {
 
     G4NistManager* manager = G4NistManager::Instance();
     G4Material* mat = manager->FindOrBuildMaterial("G4_lAr");
@@ -337,7 +337,7 @@ void OptMenPrimaryGeneratorAction::getMaterialProperties() {
 //della costante di scintillazione (COPIED from DuLight3.cc)
 ////////////////////////////////////////////////////////////////////////////////
 
-G4double OptMenPrimaryGeneratorAction::getERf90 (double ene) {
+G4double PrimaryGeneratorAction::getERf90 (double ene) {
     double f90p0 = 0.249488;
     double f90p1 = 0.146597;
     double f90p2 = -2.89121;
@@ -345,7 +345,7 @@ G4double OptMenPrimaryGeneratorAction::getERf90 (double ene) {
 }
 
 
-G4double OptMenPrimaryGeneratorAction::GetSingletTripletRatio(double myZ, double myDepEne, double VertexKinEne){
+G4double PrimaryGeneratorAction::GetSingletTripletRatio(double myZ, double myDepEne, double VertexKinEne){
 
     double mySingletTripletRatio=0;
 

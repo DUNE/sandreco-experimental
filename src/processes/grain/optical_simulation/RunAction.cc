@@ -23,55 +23,36 @@
 // * acceptance of all terms of the Geant4 Software license.          *
 // ********************************************************************
 //
-/// \file persistency/gdml/G04/include/OptMenDetectorConstruction.hh
-/// \brief Definition of the OptMenDetectorConstruction class
 //
-//
-//
-//
+/// \file RunAction.cc
+/// \brief Implementation of the RunAction class
 
-#ifndef _OptMenDetectorConstruction_H_
-#define _OptMenDetectorConstruction_H_
+#include "RunAction.hh"
 
-#include "G4VUserDetectorConstruction.hh"
-#include "G4SDManager.hh"
-#include "G4LogicalVolumeStore.hh"
-#include "G4LogicalSkinSurface.hh" 
-#include "G4SurfaceProperty.hh"
+#include "G4Run.hh"
+#include "G4RunManager.hh"
 
+RunAction::RunAction(AnalysisManager* mgr)
+ : G4UserRunAction()
+{ 
+  // set printing event number per each 100 events
+  G4RunManager::GetRunManager()->SetPrintProgress(1000);   
 
-class G4GDMLParser;
+  _anMgr = mgr;  
+}
 
-class G4_optmen_edepsim;
+RunAction::~RunAction()
+{}
 
-struct logicalVolumeStruct {
-  G4LogicalVolume* _logicalVolume;
-  G4SurfaceProperty* _skinProp;
-  G4String collectionName;
-  int nSensors = 0;
-  std::string name;
-};
+void RunAction::BeginOfRunAction(const G4Run*)
+{ 
+  //inform the runManager to save random number seed
+  G4RunManager::GetRunManager()->SetRandomNumberStore(false);
 
-/// Detector construction for laoding GDML geometry
+  _anMgr->BeginOfRun();
+}
 
-class OptMenDetectorConstruction : public G4VUserDetectorConstruction
+void RunAction::EndOfRunAction(const G4Run*)
 {
-  public: 
-    OptMenDetectorConstruction(const G4GDMLParser& parser,  const G4_optmen_edepsim* optmen_edepsim);
-
-    virtual G4VPhysicalVolume *Construct();  
-    virtual void ConstructSDandField();
-    virtual G4LogicalVolume *findLogicalDetector(G4LogicalVolume *l, std::string name);
-
-  private:
-    const G4GDMLParser& fParser;
-    G4int NSiPMs;
-
-    std::map<G4String, logicalVolumeStruct> logicalVolumesMap;
-
-    G4LogicalVolumeStore *lstore;
-    const G4_optmen_edepsim* m_optmen_edepsim; 
-
-};
-
-#endif
+  _anMgr->EndOfRun();
+}

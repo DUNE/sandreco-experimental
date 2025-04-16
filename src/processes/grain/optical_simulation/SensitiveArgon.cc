@@ -1,11 +1,11 @@
 /*
- * File:   OptMenSensitiveArgon.cpp
+ * File:   SensitiveArgon.cpp
  * Author: pozzato
  *
  * Created on April 1, 2014, 12:14 PM
  */
 
-#include "OptMenSensitiveArgon.h"
+#include "SensitiveArgon.h"
 
 #include "G4SystemOfUnits.hh"
 #include "G4OpBoundaryProcess.hh"
@@ -20,7 +20,7 @@
 #include "G4ios.hh"
 #include "G4Box.hh"
 
-OptMenSensitiveArgon::OptMenSensitiveArgon(const G4String& name, const G4String& hitsCollectionName)
+SensitiveArgon::SensitiveArgon(const G4String& name, const G4String& hitsCollectionName)
     : G4VSensitiveDetector(name), _argonDetHitCollection(0) {
   G4cout << "_argonDetHitCollection:" << hitsCollectionName << G4endl;
   collectionName.insert(hitsCollectionName);
@@ -29,18 +29,18 @@ OptMenSensitiveArgon::OptMenSensitiveArgon(const G4String& name, const G4String&
   SetVerboseLevel(2);
 }
 
-OptMenSensitiveArgon::~OptMenSensitiveArgon() {}
+SensitiveArgon::~SensitiveArgon() {}
 
-void OptMenSensitiveArgon::Initialize(G4HCofThisEvent* hitCollection) {
+void SensitiveArgon::Initialize(G4HCofThisEvent* hitCollection) {
 
   _argonDetHitCollection =
-      new OptMenSensitiveArgonHitCollection(SensitiveDetectorName, collectionName[0]);
+      new SensitiveArgonHitCollection(SensitiveDetectorName, collectionName[0]);
   G4int HCID = G4SDManager::GetSDMpointer()->GetCollectionID(collectionName[0]);
   hitCollection->AddHitsCollection(HCID, _argonDetHitCollection);
 
 }
 
-G4bool OptMenSensitiveArgon::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
+G4bool SensitiveArgon::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   if (aStep == NULL) return false;
   G4Track* theTrack = aStep->GetTrack();
 
@@ -72,10 +72,10 @@ G4bool OptMenSensitiveArgon::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   bool hitAdded = false;
 
   // Creating the hit and add it to the collection
-  _argonDetHitCollection->insert(new OptMenSensitiveArgonHit(trackID, pdgCode, depositedEnergy, hitPosition));
+  _argonDetHitCollection->insert(new SensitiveArgonHit(trackID, pdgCode, depositedEnergy, hitPosition));
   nHits++;
   hitAdded = true;
   return hitAdded;
 }
 
-void OptMenSensitiveArgon::EndOfEvent(G4HCofThisEvent*) {}
+void SensitiveArgon::EndOfEvent(G4HCofThisEvent*) {}

@@ -24,35 +24,29 @@
 // ********************************************************************
 //
 //
-/// \file OptMenRunAction.cc
-/// \brief Implementation of the OptMenRunAction class
+/// \file EventAction.hh
+/// \brief Definition of the EventAction class
 
-#include "OptMenRunAction.hh"
+#ifndef EventAction_h
+#define EventAction_h 1
+#include "AnalysisManager.hh"
 
-#include "G4Run.hh"
-#include "G4RunManager.hh"
+#include "G4UserEventAction.hh"
 
-OptMenRunAction::OptMenRunAction(OptMenAnalysisManager* mgr)
- : G4UserRunAction()
-{ 
-  // set printing event number per each 100 events
-  G4RunManager::GetRunManager()->SetPrintProgress(1000);   
+#include "globals.hh"
 
-  _anMgr = mgr;  
-}
+/// Event action class
 
-OptMenRunAction::~OptMenRunAction()
-{}
-
-void OptMenRunAction::BeginOfRunAction(const G4Run*)
-{ 
-  //inform the runManager to save random number seed
-  G4RunManager::GetRunManager()->SetRandomNumberStore(false);
-
-  _anMgr->BeginOfRun();
-}
-
-void OptMenRunAction::EndOfRunAction(const G4Run*)
+class EventAction : public G4UserEventAction
 {
-  _anMgr->EndOfRun();
-}
+  public:
+    EventAction(AnalysisManager* mgr);
+    virtual ~EventAction();
+
+    virtual void  BeginOfEventAction(const G4Event* );
+    virtual void    EndOfEventAction(const G4Event* );
+  
+  private:
+    AnalysisManager* _anMgr;
+};
+#endif

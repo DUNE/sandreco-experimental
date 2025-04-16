@@ -1,12 +1,12 @@
 /*
- * File:   OptMenSensitiveArgonHit.h
+ * File:   SensitiveArgonHit.h
  * Author: pozzato
  *
  * Created on April 11, 2014, 12:42 PM
  */
 
-#ifndef OptMenSensitiveArgonHit_H
-#define OptMenSensitiveArgonHit_H
+#ifndef SensitiveArgonHit_H
+#define SensitiveArgonHit_H
 
 #include "G4Allocator.hh"
 #include "G4THitsCollection.hh"
@@ -23,15 +23,15 @@
 
 class G4VTouchable;
 
-class OptMenSensitiveArgonHit : public G4VHit {
+class SensitiveArgonHit : public G4VHit {
  public:
-  OptMenSensitiveArgonHit();
-  OptMenSensitiveArgonHit(G4int trackID, G4int pdgCode, G4double depositedEnergy, G4ThreeVector hitPosition);
-  virtual ~OptMenSensitiveArgonHit();
+  SensitiveArgonHit();
+  SensitiveArgonHit(G4int trackID, G4int pdgCode, G4double depositedEnergy, G4ThreeVector hitPosition);
+  virtual ~SensitiveArgonHit();
 
-  const OptMenSensitiveArgonHit& operator=(const OptMenSensitiveArgonHit& right);
+  const SensitiveArgonHit& operator=(const SensitiveArgonHit& right);
 
-  G4int operator==(const OptMenSensitiveArgonHit& right) const;
+  G4int operator==(const SensitiveArgonHit& right) const;
 
   inline void* operator new(size_t);
   inline void operator delete(void* aHit);
@@ -59,21 +59,21 @@ class OptMenSensitiveArgonHit : public G4VHit {
 // Type Definitions
 //--------------------------------------------------
 
-typedef G4THitsCollection<OptMenSensitiveArgonHit> OptMenSensitiveArgonHitCollection;
+typedef G4THitsCollection<SensitiveArgonHit> SensitiveArgonHitCollection;
 
-extern G4ThreadLocal G4Allocator<OptMenSensitiveArgonHit>* OptMenSensitiveArgonHitAllocator;
+extern G4ThreadLocal G4Allocator<SensitiveArgonHit>* SensitiveArgonHitAllocator;
 
 //--------------------------------------------------
 // Operator Overloads
 //--------------------------------------------------
 
-inline void* OptMenSensitiveArgonHit::operator new(size_t) {
-  if (!OptMenSensitiveArgonHitAllocator) OptMenSensitiveArgonHitAllocator = new G4Allocator<OptMenSensitiveArgonHit>;
-  return (void*)OptMenSensitiveArgonHitAllocator->MallocSingle();
+inline void* SensitiveArgonHit::operator new(size_t) {
+  if (!SensitiveArgonHitAllocator) SensitiveArgonHitAllocator = new G4Allocator<SensitiveArgonHit>;
+  return (void*)SensitiveArgonHitAllocator->MallocSingle();
 }
 
-inline void OptMenSensitiveArgonHit::operator delete(void* aHit) {
-  OptMenSensitiveArgonHitAllocator->FreeSingle((OptMenSensitiveArgonHit*)aHit);
+inline void SensitiveArgonHit::operator delete(void* aHit) {
+  SensitiveArgonHitAllocator->FreeSingle((SensitiveArgonHit*)aHit);
 }
 
-#endif /* OptMenSensitiveArgonHit_H */
+#endif /* SensitiveArgonHit_H */

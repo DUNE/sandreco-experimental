@@ -24,12 +24,12 @@
 // ********************************************************************
 //
 //
-/// \file OptMenRunAction.hh
-/// \brief Definition of the OptMenRunAction class
+/// \file RunAction.hh
+/// \brief Definition of the RunAction class
 
-#ifndef OptMenRunAction_h
-#define OptMenRunAction_h 1
-#include "OptMenAnalysisManager.hh"
+#ifndef RunAction_h
+#define RunAction_h 1
+#include "AnalysisManager.hh"
 
 #include "G4UserRunAction.hh"
 #include "globals.hh"
@@ -38,17 +38,17 @@ class G4Run;
 
 /// Run action class
 
-class OptMenRunAction : public G4UserRunAction
+class RunAction : public G4UserRunAction
 {
   public:
-    OptMenRunAction(OptMenAnalysisManager* mgr);
-    virtual ~OptMenRunAction();
+    RunAction(AnalysisManager* mgr);
+    virtual ~RunAction();
 
     virtual void BeginOfRunAction(const G4Run* run);
     virtual void   EndOfRunAction(const G4Run* run);
 
   private:
-    OptMenAnalysisManager* _anMgr;
+    AnalysisManager* _anMgr;
 
 };
 

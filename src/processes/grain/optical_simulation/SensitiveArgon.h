@@ -1,26 +1,24 @@
 /*
- * File:   OptMenSensor.h
+ * File:   SensitiveArgon.h
  * Author: pozzato
  *
  * Created on April 1, 2014, 12:14 PM
  */
 
-#ifndef OptMenSENSOR_H
-#define OptMenSENSOR_H
+#ifndef SensitiveArgon_H
+#define SensitiveArgon_H
 
-#include "OptMenSensorHit.h"
+#include "SensitiveArgonHit.h"
 #include "G4ProcessManager.hh"
 #include "G4VSensitiveDetector.hh"
 
 class G4Step;
 class G4HCofThisEvent;
 
-class G4_optmen_edepsim;
-
-class OptMenSensor : public G4VSensitiveDetector {
+class SensitiveArgon : public G4VSensitiveDetector {
  public:
-  OptMenSensor(const G4String &name, const G4String &hitsCollectionName, const G4_optmen_edepsim* optmen_edepsim);
-  virtual ~OptMenSensor();
+  SensitiveArgon(const G4String &name, const G4String &hitsCollectionName);
+  virtual ~SensitiveArgon();
   virtual void Initialize(G4HCofThisEvent *hitCollection);
 
   virtual G4bool ProcessHits(G4Step *aStep, G4TouchableHistory *history);
@@ -33,8 +31,7 @@ class OptMenSensor : public G4VSensitiveDetector {
   G4int collectionID;
 
  private:
-  OptMenSensorHitCollection *_photonDetHitCollection;
-  const G4_optmen_edepsim* m_optmen_edepsim;
+  SensitiveArgonHitCollection *_argonDetHitCollection;
 };
 
-#endif /* OptMenSENSOR_H */
+#endif /* SensitiveArgon_H */

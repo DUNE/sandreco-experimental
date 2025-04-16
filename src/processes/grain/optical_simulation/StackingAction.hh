@@ -3,7 +3,7 @@
 
 #include "globals.hh"
 #include "G4UserStackingAction.hh"
-#include "OptMenAnalysisManager.hh"
+#include "AnalysisManager.hh"
 
 #include "TVector3.h"
 
@@ -16,11 +16,11 @@ using std::vector;
 class G4Track;
 class G4VHitsCollection;
 
-class OptMenStackingAction : public G4UserStackingAction
+class StackingAction : public G4UserStackingAction
 {
   public:
-    OptMenStackingAction(OptMenAnalysisManager* mgr);
-    virtual ~OptMenStackingAction();
+    StackingAction(AnalysisManager* mgr);
+    virtual ~StackingAction();
 
     virtual G4ClassificationOfNewTrack ClassifyNewTrack(const G4Track* aTrack);
     virtual void NewStage();
@@ -28,7 +28,7 @@ class OptMenStackingAction : public G4UserStackingAction
 
   private:
 
-    OptMenAnalysisManager* _anMgr;
+    AnalysisManager* _anMgr;
   };
 
 #endif

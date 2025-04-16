@@ -1,4 +1,4 @@
-#include "OptMenPhysicsList.hh"
+#include "PhysicsList.hh"
 
 #include "G4EmStandardPhysics.hh"
 
@@ -29,7 +29,7 @@
 #include "G4EmSaturation.hh"
 #include "G4LossTableManager.hh"
 
-OptMenPhysicsList::OptMenPhysicsList() : G4VUserPhysicsList() {
+PhysicsList::PhysicsList() : G4VUserPhysicsList() {
   defaultCutValue = 1.0 * CLHEP::mm;  // to be defined...
   // RegisterPhysics(new G4EmStandardPhysics(0, "standard EM"));
   /*
@@ -41,11 +41,11 @@ OptMenPhysicsList::OptMenPhysicsList() : G4VUserPhysicsList() {
   */
 }
 
-OptMenPhysicsList::~OptMenPhysicsList() {}
+PhysicsList::~PhysicsList() {}
 
-void OptMenPhysicsList::setCuts() { SetCutsWithDefault(); }
+void PhysicsList::setCuts() { SetCutsWithDefault(); }
 
-void OptMenPhysicsList::ConstructParticle() {
+void PhysicsList::ConstructParticle() {
 
   G4cout << "PARTICLE DEFINITION...." << G4endl;
   
@@ -84,7 +84,7 @@ void OptMenPhysicsList::ConstructParticle() {
 
 }
 
-void OptMenPhysicsList::ConstructProcess() {
+void PhysicsList::ConstructProcess() {
   G4cout << "CONSTRUCT PROCESS...." << G4endl;
   AddTransportation();
   ConstructGeneral();
@@ -113,7 +113,7 @@ void OptMenPhysicsList::ConstructProcess() {
 
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-void OptMenPhysicsList::ConstructGeneral() {
+void PhysicsList::ConstructGeneral() {
   // Add Decay Process
   G4Decay* theDecayProcess = new G4Decay();
   auto theParticleIterator = GetParticleIterator();
@@ -130,7 +130,7 @@ void OptMenPhysicsList::ConstructGeneral() {
   }
 }
 
-void OptMenPhysicsList::ConstructEM() {
+void PhysicsList::ConstructEM() {
 	auto theParticleIterator = GetParticleIterator();
   theParticleIterator->reset();
   while ((*theParticleIterator)()) {
@@ -192,7 +192,7 @@ void OptMenPhysicsList::ConstructEM() {
   }
 }
 
-void OptMenPhysicsList::ConstructOp() {
+void PhysicsList::ConstructOp() {
 	G4Scintillation *fScintillationProcess = new G4Scintillation("Scintillation");
   G4OpAbsorption *fAbsorptionProcess = new G4OpAbsorption();
 	G4OpRayleigh *fRayleighScatteringProcess = new G4OpRayleigh();

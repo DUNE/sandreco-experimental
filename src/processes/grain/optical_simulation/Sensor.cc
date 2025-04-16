@@ -1,12 +1,12 @@
 /*
- * File:   OptMenSensor.cpp
+ * File:   Sensor.cpp
  * Author: pozzato
  *
  * Created on April 1, 2014, 12:14 PM
  */
 #include <optical_simulation.hpp>
 
-#include "OptMenSensor.h"
+#include "Sensor.h"
 
 
 #include "G4OpBoundaryProcess.hh"
@@ -22,7 +22,7 @@
 #include "G4ios.hh"
 #include "G4Box.hh"
 
-OptMenSensor::OptMenSensor(const G4String& name, const G4String& hitsCollectionName, const G4_optmen_edepsim* optmen_edepsim)
+Sensor::Sensor(const G4String& name, const G4String& hitsCollectionName, const G4_optmen_edepsim* optmen_edepsim)
     : G4VSensitiveDetector(name), _photonDetHitCollection(0), m_optmen_edepsim(optmen_edepsim) {
   G4cout << "_photonDetHitCollection:" << hitsCollectionName << G4endl;
   collectionName.insert(hitsCollectionName);
@@ -31,18 +31,18 @@ OptMenSensor::OptMenSensor(const G4String& name, const G4String& hitsCollectionN
   SetVerboseLevel(2);
 }
 
-OptMenSensor::~OptMenSensor() {}
+Sensor::~Sensor() {}
 
-void OptMenSensor::Initialize(G4HCofThisEvent* hitCollection) {
+void Sensor::Initialize(G4HCofThisEvent* hitCollection) {
 
   _photonDetHitCollection =
-      new OptMenSensorHitCollection(SensitiveDetectorName, collectionName[0]);
+      new SensorHitCollection(SensitiveDetectorName, collectionName[0]);
   G4int HCID = G4SDManager::GetSDMpointer()->GetCollectionID(collectionName[0]);
   hitCollection->AddHitsCollection(HCID, _photonDetHitCollection);
 
 }
 
-G4bool OptMenSensor::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
+G4bool Sensor::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   if (aStep == NULL) return false;
   G4Track* theTrack = aStep->GetTrack();
 
@@ -127,7 +127,7 @@ G4bool OptMenSensor::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
 
       // Creating the hit and add it to the collection
       _photonDetHitCollection->insert(
-          new OptMenSensorHit(photonArrive, emissionPosition, photonDirection, arrivalTime, energy, scatterAngle, camName, productionVolume));
+          new SensorHit(photonArrive, emissionPosition, photonDirection, arrivalTime, energy, scatterAngle, camName, productionVolume));
       nHits++;
       hitAdded = true;
       break;
@@ -139,4 +139,4 @@ G4bool OptMenSensor::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   return hitAdded;
 }
 
-void OptMenSensor::EndOfEvent(G4HCofThisEvent*) {}
+void Sensor::EndOfEvent(G4HCofThisEvent*) {}

@@ -24,30 +24,28 @@
 // ********************************************************************
 //
 //
-/// \file OptMenActionInitialization.hh
-/// \brief Definition of the OptMenActionInitialization class
+/// \file ActionInitialization.cc
+/// \brief Implementation of the ActionInitialization class
 
-#ifndef OptMenActionInitialization_h
-#define OptMenActionInitialization_h 1
+#include "ActionInitialization.hh"
+#include "PrimaryGeneratorAction.hh"
+#include "RunAction.hh"
+#include "EventAction.hh"
+#include "StackingAction.hh"
 
-#include "G4VUserActionInitialization.hh"
-#include "OptMenAnalysisManager.hh"
-
-class B4DetectorConstruction;
-
-class OptMenActionInitialization : public G4VUserActionInitialization
+ActionInitialization::ActionInitialization(AnalysisManager* mgr, G4_optmen_edepsim* optmen_edepsim)
+ : G4VUserActionInitialization(), m_optmen_edepsim(optmen_edepsim)
 {
-  public:
-    OptMenActionInitialization(OptMenAnalysisManager* mgr, G4_optmen_edepsim* optmen_edepsim);
-    virtual ~OptMenActionInitialization();
+  _anMgr = mgr;
+}
 
-    virtual void Build() const;
+ActionInitialization::~ActionInitialization()
+{}
 
-  private:
-    OptMenAnalysisManager *_anMgr;
-    G4_optmen_edepsim* m_optmen_edepsim;
-};
-
-#endif
-
-    
+void ActionInitialization::Build() const
+{
+  SetUserAction(new PrimaryGeneratorAction(m_optmen_edepsim));
+  SetUserAction(new RunAction(_anMgr));
+  SetUserAction(new EventAction(_anMgr));
+  SetUserAction(new StackingAction(_anMgr));
+}  

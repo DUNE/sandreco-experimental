@@ -1,5 +1,5 @@
-#ifndef OptMenPHYSICSLIST_H
-#define OptMenPHYSICSLIST_H
+#ifndef PHYSICSLIST_H
+#define PHYSICSLIST_H
 
 #include <G4EmStandardPhysics.hh>
 #include <G4VModularPhysicsList.hh>
@@ -22,12 +22,12 @@ class G4OpRayleigh;
 class G4OpWLS;
 class G4OpMieHG;
 
-class OptMenPhysicsList : public G4VModularPhysicsList {
+class PhysicsList : public G4VModularPhysicsList {
  private:
 	 
  public:
-  OptMenPhysicsList();
-  virtual ~OptMenPhysicsList();
+  PhysicsList();
+  virtual ~PhysicsList();
   virtual void setCuts();
 
   virtual void ConstructParticle();
@@ -37,4 +37,4 @@ class OptMenPhysicsList : public G4VModularPhysicsList {
   void ConstructGeneral();
 };
 
-#endif /* OptMenPHYSICSLIST_H */
+#endif /* PHYSICSLIST_H */

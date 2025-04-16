@@ -24,11 +24,11 @@
 // ********************************************************************
 //
 //
-/// \file OptMenPrimaryGeneratorAction.hh
-/// \brief Definition of the OptMenPrimaryGeneratorAction class
+/// \file PrimaryGeneratorAction.hh
+/// \brief Definition of the PrimaryGeneratorAction class
 
-#ifndef OptMenPrimaryGeneratorAction_h
-#define OptMenPrimaryGeneratorAction_h 1
+#ifndef PrimaryGeneratorAction_h
+#define PrimaryGeneratorAction_h 1
 
 #include "G4VUserPrimaryGeneratorAction.hh"
 #include "G4GeneralParticleSource.hh"
@@ -60,14 +60,14 @@ class G4_optmen_edepsim;
 // class EDEPHit;
 
 /// The primary generator action class is used to switch between generators
-/// Instead of implmenting the generator, it builds a generic one (OptMenVGenerator)
+/// Instead of implmenting the generator, it builds a generic one (VGenerator)
 /// which is the base class of all implementations (its methods are overloaded)
 
-class OptMenPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
+class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 {
   public:
-    OptMenPrimaryGeneratorAction(G4_optmen_edepsim* optmen_edepsim);
-    virtual ~OptMenPrimaryGeneratorAction();
+    PrimaryGeneratorAction(G4_optmen_edepsim* optmen_edepsim);
+    virtual ~PrimaryGeneratorAction();
 
    ///public interface
 		void GeneratePrimaries(G4Event *event) override;

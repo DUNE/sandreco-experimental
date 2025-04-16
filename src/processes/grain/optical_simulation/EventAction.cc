@@ -24,29 +24,32 @@
 // ********************************************************************
 //
 //
-/// \file OptMenEventAction.hh
-/// \brief Definition of the OptMenEventAction class
+/// \file EventAction.cc
+/// \brief Implementation of the EventAction class
 
-#ifndef OptMenEventAction_h
-#define OptMenEventAction_h 1
-#include "OptMenAnalysisManager.hh"
+#include "EventAction.hh"
 
-#include "G4UserEventAction.hh"
+#include "G4Event.hh"
+#include "G4EventManager.hh"
+#include "G4TrajectoryContainer.hh"
+#include "G4Trajectory.hh"
+#include "G4ios.hh"
 
-#include "globals.hh"
-
-/// Event action class
-
-class OptMenEventAction : public G4UserEventAction
+EventAction::EventAction(AnalysisManager* mgr)
+: G4UserEventAction()
 {
-  public:
-    OptMenEventAction(OptMenAnalysisManager* mgr);
-    virtual ~OptMenEventAction();
+  _anMgr = mgr;
+}
 
-    virtual void  BeginOfEventAction(const G4Event* );
-    virtual void    EndOfEventAction(const G4Event* );
-  
-  private:
-    OptMenAnalysisManager* _anMgr;
-};
-#endif
+EventAction::~EventAction()
+{}
+
+void EventAction::BeginOfEventAction(const G4Event* event)
+{
+  _anMgr->BeginOfEvent(event);
+}
+
+void EventAction::EndOfEventAction(const G4Event* event)
+{
+  _anMgr->EndOfEvent(event);
+}  

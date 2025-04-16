@@ -22,34 +22,48 @@
 // * use  in  resulting  scientific  publications,  and indicate your *
 // * acceptance of all terms of the Geant4 Software license.          *
 // ********************************************************************
-//
-//
-/// \file OptMenEventAction.cc
-/// \brief Implementation of the OptMenEventAction class
 
-#include "OptMenEventAction.hh"
+#include "StackingAction.hh"
 
-#include "G4Event.hh"
-#include "G4EventManager.hh"
-#include "G4TrajectoryContainer.hh"
-#include "G4Trajectory.hh"
+#include <ufw/utils.hpp>
+#include <optical_simulation.hpp>
+
+#include "G4VProcess.hh"
+#include "G4Track.hh"
+#include "G4ParticleDefinition.hh"
+#include "G4OpticalPhoton.hh"  
+#include "G4ThreeVector.hh"  
 #include "G4ios.hh"
+#include <G4RunManager.hh>
 
-OptMenEventAction::OptMenEventAction(OptMenAnalysisManager* mgr)
-: G4UserEventAction()
+#include <string.h>
+
+StackingAction::StackingAction(AnalysisManager* mgr)
+  :G4UserStackingAction()
 {
   _anMgr = mgr;
 }
 
-OptMenEventAction::~OptMenEventAction()
-{}
+StackingAction::~StackingAction() {}
 
-void OptMenEventAction::BeginOfEventAction(const G4Event* event)
+G4ClassificationOfNewTrack StackingAction::ClassifyNewTrack(const G4Track * aTrack)
 {
-  _anMgr->BeginOfEvent(event);
+  
+  // aTrack->SetAuxiliaryTrackInformation(13, );
+  if (!_anMgr->m_optmen_edepsim->track_times.empty()) {
+    if(_anMgr->m_optmen_edepsim->track_times.front() != aTrack->GetGlobalTime()) {
+      UFW_ERROR("Stack time {} different from track time {}", _anMgr->m_optmen_edepsim->track_times.front(), aTrack->GetGlobalTime());
+    }
+    _anMgr->m_optmen_edepsim->track_times.pop_front();
+  } else {
+    UFW_WARN("Unable to pop from the stack");
+  }
+  
+  return fUrgent; 
 }
 
-void OptMenEventAction::EndOfEventAction(const G4Event* event)
-{
-  _anMgr->EndOfEvent(event);
-}  
+void StackingAction::NewStage()
+{}
+
+void StackingAction::PrepareNewEvent() {}
+

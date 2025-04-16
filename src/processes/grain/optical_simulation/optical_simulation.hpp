@@ -9,10 +9,10 @@
 
 #include <grain/photons.h>
 
-#include "OptMenDetectorConstruction.hh"
-#include "OptMenActionInitialization.hh"
-#include "OptMenAnalysisManager.hh"
-#include "OptMenPhysicsList.hh"
+#include "DetectorConstruction.hh"
+#include "ActionInitialization.hh"
+#include "AnalysisManager.hh"
+#include "PhysicsList.hh"
 
 #include <root/TTreeStreamer.hpp>
 

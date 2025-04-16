@@ -1,31 +1,31 @@
 /*
- * File:   OptMenSensitiveArgonHit.cpp
+ * File:   SensitiveArgonHit.cpp
  * Author: pozzato
  *
  * Created on April 11, 2014, 12:42 PM
  */
 
-#include "OptMenSensitiveArgonHit.h"
+#include "SensitiveArgonHit.h"
 
-G4ThreadLocal G4Allocator<OptMenSensitiveArgonHit>* OptMenSensitiveArgonHitAllocator = 0;
+G4ThreadLocal G4Allocator<SensitiveArgonHit>* SensitiveArgonHitAllocator = 0;
 
-OptMenSensitiveArgonHit::OptMenSensitiveArgonHit() {
+SensitiveArgonHit::SensitiveArgonHit() {
   _depositedEnergy = 0;
   _trackID = -1;
   _pdgCode = -1;
   _hitPosition = G4ThreeVector(0., 0., 0.);
 }
 
-OptMenSensitiveArgonHit::OptMenSensitiveArgonHit(G4int pTrackID, G4int pPdgCode, G4double pDepositedEnergy, G4ThreeVector pHitPosition) {
+SensitiveArgonHit::SensitiveArgonHit(G4int pTrackID, G4int pPdgCode, G4double pDepositedEnergy, G4ThreeVector pHitPosition) {
   _depositedEnergy = pDepositedEnergy;
   _pdgCode = pPdgCode;
   _trackID = pTrackID;
   _hitPosition = pHitPosition;
 }
 
-OptMenSensitiveArgonHit::~OptMenSensitiveArgonHit() {}
+SensitiveArgonHit::~SensitiveArgonHit() {}
 
-const OptMenSensitiveArgonHit& OptMenSensitiveArgonHit::operator=(const OptMenSensitiveArgonHit& right) {
+const SensitiveArgonHit& SensitiveArgonHit::operator=(const SensitiveArgonHit& right) {
   _depositedEnergy = right._depositedEnergy;
   _pdgCode = right._pdgCode;
   _trackID = right._trackID;
@@ -33,7 +33,7 @@ const OptMenSensitiveArgonHit& OptMenSensitiveArgonHit::operator=(const OptMenSe
   return *this;
 }
 
-G4int OptMenSensitiveArgonHit::operator==(const OptMenSensitiveArgonHit& right) const {
+G4int SensitiveArgonHit::operator==(const SensitiveArgonHit& right) const {
   return (_depositedEnergy == right._depositedEnergy && _pdgCode == right._pdgCode &&
           _trackID == right._trackID && _hitPosition == right._hitPosition);
 }

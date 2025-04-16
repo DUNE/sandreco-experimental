@@ -22,48 +22,56 @@
 // * use  in  resulting  scientific  publications,  and indicate your *
 // * acceptance of all terms of the Geant4 Software license.          *
 // ********************************************************************
+//
+/// \file persistency/gdml/G04/include/DetectorConstruction.hh
+/// \brief Definition of the DetectorConstruction class
+//
+//
+//
+//
 
-#include "OptMenStackingAction.hh"
+#ifndef _DetectorConstruction_H_
+#define _DetectorConstruction_H_
 
-#include <ufw/utils.hpp>
-#include <optical_simulation.hpp>
+#include "G4VUserDetectorConstruction.hh"
+#include "G4SDManager.hh"
+#include "G4LogicalVolumeStore.hh"
+#include "G4LogicalSkinSurface.hh" 
+#include "G4SurfaceProperty.hh"
 
-#include "G4VProcess.hh"
-#include "G4Track.hh"
-#include "G4ParticleDefinition.hh"
-#include "G4OpticalPhoton.hh"  
-#include "G4ThreeVector.hh"  
-#include "G4ios.hh"
-#include <G4RunManager.hh>
 
-#include <string.h>
+class G4GDMLParser;
 
-OptMenStackingAction::OptMenStackingAction(OptMenAnalysisManager* mgr)
-  :G4UserStackingAction()
+class G4_optmen_edepsim;
+
+struct logicalVolumeStruct {
+  G4LogicalVolume* _logicalVolume;
+  G4SurfaceProperty* _skinProp;
+  G4String collectionName;
+  int nSensors = 0;
+  std::string name;
+};
+
+/// Detector construction for laoding GDML geometry
+
+class DetectorConstruction : public G4VUserDetectorConstruction
 {
-  _anMgr = mgr;
-}
+  public: 
+    DetectorConstruction(const G4GDMLParser& parser,  const G4_optmen_edepsim* optmen_edepsim);
 
-OptMenStackingAction::~OptMenStackingAction() {}
+    virtual G4VPhysicalVolume *Construct();  
+    virtual void ConstructSDandField();
+    virtual G4LogicalVolume *findLogicalDetector(G4LogicalVolume *l, std::string name);
 
-G4ClassificationOfNewTrack OptMenStackingAction::ClassifyNewTrack(const G4Track * aTrack)
-{
-  
-  // aTrack->SetAuxiliaryTrackInformation(13, );
-  if (!_anMgr->m_optmen_edepsim->track_times.empty()) {
-    if(_anMgr->m_optmen_edepsim->track_times.front() != aTrack->GetGlobalTime()) {
-      UFW_ERROR("Stack time {} different from track time {}", _anMgr->m_optmen_edepsim->track_times.front(), aTrack->GetGlobalTime());
-    }
-    _anMgr->m_optmen_edepsim->track_times.pop_front();
-  } else {
-    UFW_WARN("Unable to pop from the stack");
-  }
-  
-  return fUrgent; 
-}
+  private:
+    const G4GDMLParser& fParser;
+    G4int NSiPMs;
 
-void OptMenStackingAction::NewStage()
-{}
+    std::map<G4String, logicalVolumeStruct> logicalVolumesMap;
 
-void OptMenStackingAction::PrepareNewEvent() {}
+    G4LogicalVolumeStore *lstore;
+    const G4_optmen_edepsim* m_optmen_edepsim; 
 
+};
+
+#endif

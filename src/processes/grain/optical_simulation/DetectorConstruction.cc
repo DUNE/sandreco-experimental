@@ -24,12 +24,12 @@
 // ********************************************************************
 //
 //
-/// \file OptMenDetectorConstruction.cc
-/// \brief Implementation of the OptMenDetectorConstruction class
+/// \file DetectorConstruction.cc
+/// \brief Implementation of the DetectorConstruction class
 
-#include "OptMenDetectorConstruction.hh"
-#include "OptMenSensor.h"
-#include "OptMenSensitiveArgon.h"
+#include "DetectorConstruction.hh"
+#include "Sensor.h"
+#include "SensitiveArgon.h"
 
 #include "G4SDManager.hh"
 #include "G4NistManager.hh"
@@ -38,7 +38,7 @@
  namespace { G4Mutex	sensitiveDetMutex = G4MUTEX_INITIALIZER; }
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-OptMenDetectorConstruction::OptMenDetectorConstruction(const G4GDMLParser& parser, const G4_optmen_edepsim* optmen_edepsim )
+DetectorConstruction::DetectorConstruction(const G4GDMLParser& parser, const G4_optmen_edepsim* optmen_edepsim )
  : G4VUserDetectorConstruction(),
    fParser(parser),
    m_optmen_edepsim(optmen_edepsim)
@@ -46,7 +46,7 @@ OptMenDetectorConstruction::OptMenDetectorConstruction(const G4GDMLParser& parse
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-G4VPhysicalVolume* OptMenDetectorConstruction::Construct()
+G4VPhysicalVolume* DetectorConstruction::Construct()
 {
   
 
@@ -55,7 +55,7 @@ G4VPhysicalVolume* OptMenDetectorConstruction::Construct()
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-void OptMenDetectorConstruction::ConstructSDandField()
+void DetectorConstruction::ConstructSDandField()
 {
   //G4AutoLock lock(&sensitiveDetMutex);
 
@@ -75,7 +75,7 @@ void OptMenDetectorConstruction::ConstructSDandField()
   // matTable->AddProperty("RINDEX", property);
 
 
-  OptMenSensitiveArgon* argonSD = new OptMenSensitiveArgon("lArSensitive", "lArSensitiveHitCollection");
+  SensitiveArgon* argonSD = new SensitiveArgon("lArSensitive", "lArSensitiveHitCollection");
   SDman->AddNewDetector( argonSD );   
   G4VSensitiveDetector* mydet = SDman->FindSensitiveDetector("lArSensitive");
       
@@ -88,7 +88,7 @@ void OptMenDetectorConstruction::ConstructSDandField()
     myvol->SetSensitiveDetector(mydet);
   }
 
-  OptMenSensitiveArgon* camera_argonSD = new OptMenSensitiveArgon("camera_lArSensitive", "camera_lArSensitiveHitCollection");
+  SensitiveArgon* camera_argonSD = new SensitiveArgon("camera_lArSensitive", "camera_lArSensitiveHitCollection");
   SDman->AddNewDetector( camera_argonSD );   
   G4VSensitiveDetector* camera_mydet = SDman->FindSensitiveDetector("camera_lArSensitive");
       
@@ -114,7 +114,7 @@ void OptMenDetectorConstruction::ConstructSDandField()
         std::string trackerChamberSDname = auxItem->value;
         std::string trackerChamberHitCollectionName = trackerChamberSDname + "_collection";
 
-        OptMenSensor* aTrackerSD = new OptMenSensor(trackerChamberSDname, trackerChamberHitCollectionName, m_optmen_edepsim);
+        Sensor* aTrackerSD = new Sensor(trackerChamberSDname, trackerChamberHitCollectionName, m_optmen_edepsim);
         SDman->AddNewDetector( aTrackerSD );   
         G4VSensitiveDetector* mydet = SDman->FindSensitiveDetector(trackerChamberSDname);
       
@@ -132,7 +132,7 @@ void OptMenDetectorConstruction::ConstructSDandField()
 
 }
 
-G4LogicalVolume* OptMenDetectorConstruction::findLogicalDetector(G4LogicalVolume *l, std::string name) {
+G4LogicalVolume* DetectorConstruction::findLogicalDetector(G4LogicalVolume *l, std::string name) {
   G4LogicalVolumeStore* store = G4LogicalVolumeStore::GetInstance();
   unsigned int length = store->size();
   for (unsigned int iVol = 0; iVol < length; iVol++) {

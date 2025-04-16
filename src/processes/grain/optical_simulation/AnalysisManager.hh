@@ -2,8 +2,8 @@
 #define __CALAALYSISMANAGER_H__
 
 #include <globals.hh>
-#include "OptMenSensorHit.h"
-#include "OptMenSensor.h"
+#include "SensorHit.h"
+#include "Sensor.h"
 #include "G4GDMLParser.hh"
 #include "G4PhysicalVolumeStore.hh"
 
@@ -15,12 +15,12 @@ class CALPrimaryGeneratorAction;
 
 class G4_optmen_edepsim;
 
-class OptMenAnalysisManager
+class AnalysisManager
 {
 public:
 
-  OptMenAnalysisManager(G4_optmen_edepsim* optmen_edepsim);
-  virtual ~OptMenAnalysisManager();
+  AnalysisManager(G4_optmen_edepsim* optmen_edepsim);
+  virtual ~AnalysisManager();
   int _nCollections;
 
 public:
@@ -31,7 +31,7 @@ public:
 
   G4_optmen_edepsim* m_optmen_edepsim;
 private:
-  OptMenSensorHitCollection* GetHitsCollection(const G4String& hcName,const G4Event* event) const;
+  SensorHitCollection* GetHitsCollection(const G4String& hcName,const G4Event* event) const;
   
   std::vector<G4int> sensorCollID;
 
@@ -39,5 +39,5 @@ private:
   
 };
 
-#endif // __OptMenANALYSISMANAGER_H__
+#endif // __ANALYSISMANAGER_H__
 

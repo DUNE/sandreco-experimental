@@ -3,7 +3,7 @@
 
 #include "globals.hh"
 #include "G4VUserTrackInformation.hh"
-#include "OptMenAnalysisManager.hh"
+#include "AnalysisManager.hh"
 
 #include "TVector3.h"
 
@@ -16,11 +16,11 @@ using std::vector;
 class G4Track;
 class G4VHitsCollection;
 
-class OptMenUserTrackInformation : public G4VUserTrackInformation
+class UserTrackInformation : public G4VUserTrackInformation
 {
   public:
-    OptMenUserTrackInformation();
-    virtual ~OptMenUserTrackInformation();
+    UserTrackInformation();
+    virtual ~UserTrackInformation();
 
     int getId() {return track_id;}
     void setId(int id) {track_id = id;}

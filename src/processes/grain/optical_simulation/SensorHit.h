@@ -1,12 +1,12 @@
 /*
- * File:   OptMenSensorHit.h
+ * File:   SensorHit.h
  * Author: pozzato
  *
  * Created on April 11, 2014, 12:42 PM
  */
 
-#ifndef OptMenSENSORHIT_H
-#define OptMenSENSORHIT_H
+#ifndef SENSORHIT_H
+#define SENSORHIT_H
 
 #include "G4Allocator.hh"
 #include "G4THitsCollection.hh"
@@ -23,16 +23,16 @@
 
 class G4VTouchable;
 
-class OptMenSensorHit : public G4VHit {
+class SensorHit : public G4VHit {
  public:
-  OptMenSensorHit();
-  OptMenSensorHit(G4ThreeVector pArrive, G4ThreeVector pOrigin, G4ThreeVector pDirection, G4double pTime, G4double pEnergy, G4double pScatter, G4String camName, G4String productionVolume);
-  OptMenSensorHit(const OptMenSensorHit& orig);
-  virtual ~OptMenSensorHit();
+  SensorHit();
+  SensorHit(G4ThreeVector pArrive, G4ThreeVector pOrigin, G4ThreeVector pDirection, G4double pTime, G4double pEnergy, G4double pScatter, G4String camName, G4String productionVolume);
+  SensorHit(const SensorHit& orig);
+  virtual ~SensorHit();
 
-  const OptMenSensorHit& operator=(const OptMenSensorHit& right);
+  const SensorHit& operator=(const SensorHit& right);
 
-  G4int operator==(const OptMenSensorHit& right) const;
+  G4int operator==(const SensorHit& right) const;
 
   inline void* operator new(size_t);
   inline void operator delete(void* aHit);
@@ -89,21 +89,21 @@ class OptMenSensorHit : public G4VHit {
 // Type Definitions
 //--------------------------------------------------
 
-typedef G4THitsCollection<OptMenSensorHit> OptMenSensorHitCollection;
+typedef G4THitsCollection<SensorHit> SensorHitCollection;
 
-extern G4ThreadLocal G4Allocator<OptMenSensorHit>* OptMenSensorHitAllocator;
+extern G4ThreadLocal G4Allocator<SensorHit>* SensorHitAllocator;
 
 //--------------------------------------------------
 // Operator Overloads
 //--------------------------------------------------
 
-inline void* OptMenSensorHit::operator new(size_t) {
-  if (!OptMenSensorHitAllocator) OptMenSensorHitAllocator = new G4Allocator<OptMenSensorHit>;
-  return (void*)OptMenSensorHitAllocator->MallocSingle();
+inline void* SensorHit::operator new(size_t) {
+  if (!SensorHitAllocator) SensorHitAllocator = new G4Allocator<SensorHit>;
+  return (void*)SensorHitAllocator->MallocSingle();
 }
 
-inline void OptMenSensorHit::operator delete(void* aHit) {
-  OptMenSensorHitAllocator->FreeSingle((OptMenSensorHit*)aHit);
+inline void SensorHit::operator delete(void* aHit) {
+  SensorHitAllocator->FreeSingle((SensorHit*)aHit);
 }
 
-#endif /* OptMenSENSORHIT_H */
+#endif /* SENSORHIT_H */

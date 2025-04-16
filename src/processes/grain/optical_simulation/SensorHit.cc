@@ -1,15 +1,15 @@
 /*
- * File:   OptMenSensorHit.cpp
+ * File:   SensorHit.cpp
  * Author: pozzato
  *
  * Created on April 11, 2014, 12:42 PM
  */
 
-#include "OptMenSensorHit.h"
+#include "SensorHit.h"
 
-G4ThreadLocal G4Allocator<OptMenSensorHit>* OptMenSensorHitAllocator = 0;
+G4ThreadLocal G4Allocator<SensorHit>* SensorHitAllocator = 0;
 
-OptMenSensorHit::OptMenSensorHit() {
+SensorHit::SensorHit() {
   _arrivalTime = 0.;
   _posArrive = G4ThreeVector(0., 0., 0.);
   _direction = G4ThreeVector(0., 0., 0.);
@@ -19,7 +19,7 @@ OptMenSensorHit::OptMenSensorHit() {
   _productionVolume = "NULL_VOLUME";
 }
 
-OptMenSensorHit::OptMenSensorHit(G4ThreeVector pArrive, G4ThreeVector pOrigin, G4ThreeVector pDirection, G4double pTime,
+SensorHit::SensorHit(G4ThreeVector pArrive, G4ThreeVector pOrigin, G4ThreeVector pDirection, G4double pTime,
                        G4double pEnergy, G4double pScatter, G4String pCamName, G4String pProductionVolume) {
   _arrivalTime = pTime;
   _posArrive = pArrive;
@@ -31,11 +31,11 @@ OptMenSensorHit::OptMenSensorHit(G4ThreeVector pArrive, G4ThreeVector pOrigin, G
   _productionVolume = pProductionVolume;
 }
 
-OptMenSensorHit::OptMenSensorHit(const OptMenSensorHit& orig) : G4VHit() { *this = orig; }
+SensorHit::SensorHit(const SensorHit& orig) : G4VHit() { *this = orig; }
 
-OptMenSensorHit::~OptMenSensorHit() {}
+SensorHit::~SensorHit() {}
 
-const OptMenSensorHit& OptMenSensorHit::operator=(const OptMenSensorHit& right) {
+const SensorHit& SensorHit::operator=(const SensorHit& right) {
   _posArrive = right._posArrive;
   _posOrigin = right._posOrigin;
   _arrivalTime = right._arrivalTime;
@@ -47,7 +47,7 @@ const OptMenSensorHit& OptMenSensorHit::operator=(const OptMenSensorHit& right) 
   return *this;
 }
 
-G4int OptMenSensorHit::operator==(const OptMenSensorHit& right) const {
+G4int SensorHit::operator==(const SensorHit& right) const {
   return (_posArrive == right._posArrive && _posOrigin == right._posOrigin &&
           _arrivalTime == right._arrivalTime && _energy == right._energy && 
           _direction == right._direction && _scatter == right._scatter && 

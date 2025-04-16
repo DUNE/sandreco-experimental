@@ -17,12 +17,12 @@
 #include <G4THitsCollection.hh>
 #include <G4Version.hh>
 #include <numeric>
-#include "OptMenSensor.h"
-#include "OptMenSensitiveArgon.h"
-#include "OptMenSensorHit.h"
-#include "OptMenSensitiveArgonHit.h"
+#include "Sensor.h"
+#include "SensitiveArgon.h"
+#include "SensorHit.h"
+#include "SensitiveArgonHit.h"
 #include "G4RunManager.hh"
-#include "OptMenAnalysisManager.hh"
+#include "AnalysisManager.hh"
 
 
 #include <TROOT.h>
@@ -43,11 +43,11 @@ using std::vector;
 G4Mutex	beginOfEventMutex = G4MUTEX_INITIALIZER;
 G4Mutex	endOfEventMutex = G4MUTEX_INITIALIZER;
 
-OptMenAnalysisManager::OptMenAnalysisManager(G4_optmen_edepsim* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {}
+AnalysisManager::AnalysisManager(G4_optmen_edepsim* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {}
 
-OptMenAnalysisManager::~OptMenAnalysisManager() {}
+AnalysisManager::~AnalysisManager() {}
 
-void OptMenAnalysisManager::BeginOfRun() {
+void AnalysisManager::BeginOfRun() {
   UFW_DEBUG("Begin of run");
 
   auto& hits = ufw::context::instance<sand::grain::hits>(m_optmen_edepsim->outputVariableName());
@@ -69,19 +69,19 @@ void OptMenAnalysisManager::BeginOfRun() {
   }
 }
 
-void OptMenAnalysisManager::EndOfRun() {
+void AnalysisManager::EndOfRun() {
   G4cout << "End of run" << std::endl;
 }
 
-void OptMenAnalysisManager::BeginOfEvent(const G4Event *pEvent) {
+void AnalysisManager::BeginOfEvent(const G4Event *pEvent) {
   G4cout << "call to  CALAnalysisManager::BeginOfEvent: " << pEvent->GetEventID() << G4endl;
 }
 
-void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
-	std::cout << "call to OptMenAnalysisManager::EndOfEvent: " << pEvent->GetEventID() << std::endl;
+void AnalysisManager::EndOfEvent(const G4Event *pEvent) {
+	std::cout << "call to AnalysisManager::EndOfEvent: " << pEvent->GetEventID() << std::endl;
   
   G4HCofThisEvent *pHCofThisEvent = pEvent->GetHCofThisEvent();
-  OptMenSensorHitCollection *sensorHitsCollection = 0;
+  SensorHitCollection *sensorHitsCollection = 0;
   
   int eventID = pEvent->GetEventID();
   
@@ -95,9 +95,9 @@ void OptMenAnalysisManager::EndOfEvent(const G4Event *pEvent) {
 
   for (int i = 2; i < _nCollections; i++) {
     
-    OptMenSensorHit *sensorHit; 
+    SensorHit *sensorHit; 
     
-    sensorHitsCollection = (OptMenSensorHitCollection *)(pHCofThisEvent->GetHC(i));
+    sensorHitsCollection = (SensorHitCollection *)(pHCofThisEvent->GetHC(i));
     G4int totEntriesScint = sensorHitsCollection->entries();
     std::cout << i << " " << totEntriesScint << " " << sensorHitsCollection->GetName() << std::endl;
     

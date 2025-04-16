@@ -10,10 +10,10 @@
 #include <optical_simulation.hpp>
 #include <EdepReader/EdepReader.hpp>
 
-#include "OptMenDetectorConstruction.hh"
-#include "OptMenActionInitialization.hh"
-#include "OptMenAnalysisManager.hh"
-#include "OptMenPhysicsList.hh"
+#include "DetectorConstruction.hh"
+#include "ActionInitialization.hh"
+#include "AnalysisManager.hh"
+#include "PhysicsList.hh"
 
 
 #include <G4_optmen_runmanager/G4_optmen_runmanager.hpp>
@@ -56,13 +56,13 @@ void G4_optmen_edepsim::configure (const ufw::config& cfg) {
   auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
   UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
 
-  run_manager.SetUserInitialization(new OptMenDetectorConstruction(parser, this));
+  run_manager.SetUserInitialization(new DetectorConstruction(parser, this));
 
-  run_manager.SetUserInitialization(new OptMenPhysicsList);
+  run_manager.SetUserInitialization(new PhysicsList);
   
   // Set user action classes
-  OptMenAnalysisManager *pAnalysisManager = new OptMenAnalysisManager(this);
-  run_manager.SetUserInitialization(new OptMenActionInitialization(pAnalysisManager, this));
+  AnalysisManager *pAnalysisManager = new AnalysisManager(this);
+  run_manager.SetUserInitialization(new ActionInitialization(pAnalysisManager, this));
 
   run_manager.Initialize();
 }
