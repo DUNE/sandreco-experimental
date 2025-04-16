@@ -6,9 +6,6 @@
 
 #include <grain/photons.h>
 
-#include "Randomize.hh"
-#include "TSystem.h"
-
 
 class detector_response : public ufw::process {
 

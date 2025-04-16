@@ -1,6 +1,6 @@
-#include <iostream>
+#pragma once
 
-#include "TG4Event.h"
+#include <TG4Event.h>
 
 /**
  * @class EDEPTrajectoryPoint

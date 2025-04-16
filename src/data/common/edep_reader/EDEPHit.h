@@ -1,11 +1,7 @@
-#ifndef EDEPHIT_H
-#define EDEPHIT_H
+#pragma once
+#include <edep_reader/EDEPUtils.h>
 
-#include <iostream>
-
-#include "EDEPUtils.h"
-
-#include "TG4Event.h"
+#include <TG4Event.h>
 
 /**
  * @class EDEPHit
@@ -100,5 +96,3 @@ class EDEPHit {
  * @brief Alias for a map of component to vector of EDEPHit.
  */
 using EDEPHitsMap = std::map<component, std::vector<EDEPHit>>;
-
-#endif

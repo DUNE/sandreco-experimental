@@ -1,6 +1,6 @@
-#include <iostream>
+#pragma once
 
-#include "EDEPTrajectory.h"
+#include <edep_reader/EDEPTrajectory.h>
 
 // Binary search not implemented due to low counts of child elements
 

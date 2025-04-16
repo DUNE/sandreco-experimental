@@ -18,8 +18,7 @@
 
 #include <geant_run_manager/geant_run_manager.hpp>
 
-#include "Randomize.hh"
-#include "TSystem.h"
+#include <TFile.h>
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::optical_simulation)
 

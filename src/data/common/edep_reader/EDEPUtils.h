@@ -1,10 +1,8 @@
-#ifndef UTILS_EDEPREADER_H
-#define UTILS_EDEPREADER_H
+#pragma once
 
-#include <iostream>
+#include <map>
+#include <string>
 #include <initializer_list>
-
-#include "TG4Event.h"
 
 /// \file
 
@@ -31,5 +29,3 @@ extern std::initializer_list<std::string> drift_names;
 extern std::initializer_list<std::string> ecal_names;
 extern std::initializer_list<std::string> magnet_names;
 extern std::initializer_list<std::string> world_names;
-
-#endif

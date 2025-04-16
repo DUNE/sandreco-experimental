@@ -1,12 +1,12 @@
 add_library(geant_run_manager)
 
-include_directories(../../../../include)
-include_directories(../../../common)
-include_directories(.)
-
 find_package(Geant4 REQUIRED)
 
-target_sources(geant_run_manager PRIVATE geant_run_manager.cpp)
+target_sources(geant_run_manager PRIVATE
+    geant_run_manager.hpp
+    geant_run_manager.cpp)
+
+target_include_directories(geant_run_manager PRIVATE .)
 
 target_link_libraries(geant_run_manager ROOT::RIO ROOT::Tree ufw::ufw ${Geant4_LIBRARIES} z)
 

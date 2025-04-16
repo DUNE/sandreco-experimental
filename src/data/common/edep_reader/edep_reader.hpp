@@ -1,14 +1,12 @@
+#pragma once
+
 #include <ufw/data.hpp>
 
-#include "EDEPTree.h"
-#include <TFile.h>        // sorry Nico
-#include <TTreeReader.h>  // sorry Nico
-#include <TTree.h>        // sorry Nico
-
+#include <edep_reader/EDEPTree.h>
 
 class TG4Event;
-// class TFile;
-// class TTree;
+class TFile;
+class TTree;
 
 namespace sand {
   struct edep_reader : public EDEPTree, public ufw::data::base<ufw::data::complex_tag, 

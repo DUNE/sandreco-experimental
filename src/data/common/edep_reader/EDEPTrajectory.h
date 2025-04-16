@@ -1,10 +1,7 @@
-#ifndef EDEPTRAJECTORY_H
-#define EDEPTRAJECTORY_H
+#pragma once
 
-#include <iostream>
-
-#include "EDEPHit.h"
-#include "EDEPTrajectoryPoint.h"
+#include <edep_reader/EDEPHit.h>
+#include <edep_reader/EDEPTrajectoryPoint.h>
 
 /**
  * @class EDEPTrajectory
@@ -261,9 +258,3 @@ class EDEPTrajectory {
     std::string reaction_ = "";                          ///< String corresponding to the reaction that generated this trajectory.
 
 };
-
-
-
-
-
-#endif
