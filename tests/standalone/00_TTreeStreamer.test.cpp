@@ -3,7 +3,7 @@
 
 #include <ufw/config.hpp>
 #include <example1.h>
-#include <common/root/TTreeStreamer.hpp>
+#include <streamers/root/TTreeStreamer.hpp>
 
 #include <TFile.h>
 #include <TTree.h>

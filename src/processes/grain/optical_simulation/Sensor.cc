@@ -22,7 +22,7 @@
 #include "G4ios.hh"
 #include "G4Box.hh"
 
-Sensor::Sensor(const G4String& name, const G4String& hitsCollectionName, const G4_optmen_edepsim* optmen_edepsim)
+Sensor::Sensor(const G4String& name, const G4String& hitsCollectionName, const optical_simulation* optmen_edepsim)
     : G4VSensitiveDetector(name), _photonDetHitCollection(0), m_optmen_edepsim(optmen_edepsim) {
   G4cout << "_photonDetHitCollection:" << hitsCollectionName << G4endl;
   collectionName.insert(hitsCollectionName);
@@ -119,7 +119,7 @@ G4bool Sensor::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
               photonArrive);
 
 	//kill photons from the back (lens assembly is not sealed)
-	if(m_optmen_edepsim->opticsType() != G4_optmen_edepsim::OpticsType::MASK  && 
+	if(m_optmen_edepsim->opticsType() != optical_simulation::OpticsType::MASK  && 
              ( ((G4Box*)theTouchable->GetSolid())->GetZHalfLength() - photonArrive.z() > 0.01) ){
 	      //std::cout << "Killed from the back" << std::endl;	
               break;

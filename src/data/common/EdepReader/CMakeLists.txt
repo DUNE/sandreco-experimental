@@ -1,7 +1,7 @@
 add_library(EdepReader)
 
-include_directories(../../../include)
-include_directories(../../common)
+include_directories(../../../../include)
+include_directories(../../../common)
 include_directories(.)
 
 find_package(EDepSim NAMES EDepSim REQUIRED)

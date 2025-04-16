@@ -15,11 +15,11 @@
 class G4Step;
 class G4HCofThisEvent;
 
-class G4_optmen_edepsim;
+class optical_simulation;
 
 class Sensor : public G4VSensitiveDetector {
  public:
-  Sensor(const G4String &name, const G4String &hitsCollectionName, const G4_optmen_edepsim* optmen_edepsim);
+  Sensor(const G4String &name, const G4String &hitsCollectionName, const optical_simulation* optmen_edepsim);
   virtual ~Sensor();
   virtual void Initialize(G4HCofThisEvent *hitCollection);
 
@@ -34,7 +34,7 @@ class Sensor : public G4VSensitiveDetector {
 
  private:
   SensorHitCollection *_photonDetHitCollection;
-  const G4_optmen_edepsim* m_optmen_edepsim;
+  const optical_simulation* m_optmen_edepsim;
 };
 
 #endif /* SENSOR_H */

@@ -1,2 +1,2 @@
-add_subdirectory(G4_optmen_runmanager)
-add_subdirectory(EdepReader)
+add_subdirectory(grain)
+add_subdirectory(common)

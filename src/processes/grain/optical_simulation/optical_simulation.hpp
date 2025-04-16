@@ -14,14 +14,12 @@
 #include "AnalysisManager.hh"
 #include "PhysicsList.hh"
 
-#include <root/TTreeStreamer.hpp>
-
 #include "Randomize.hh"
 #include "TSystem.h"
 
-class G4_optmen_runmanager;
+class geant_run_manager;
 
-class G4_optmen_edepsim : public ufw::process {
+class optical_simulation : public ufw::process {
 
   public:
   enum OpticsType {
@@ -30,7 +28,7 @@ class G4_optmen_edepsim : public ufw::process {
     LENS_DOPED
   };
 
-  G4_optmen_edepsim();
+  optical_simulation();
   void configure (const ufw::config& cfg) override;
   // const ufw::var_type_map& products() const override;
   // const ufw::var_type_map& requirements() const override;
@@ -56,4 +54,4 @@ class G4_optmen_edepsim : public ufw::process {
     bool m_run_start;
 };
   
-UFW_REGISTER_PROCESS(G4_optmen_edepsim)
+UFW_REGISTER_PROCESS(optical_simulation)

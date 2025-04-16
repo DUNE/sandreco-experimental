@@ -55,7 +55,7 @@
 #include <ufw/context.hpp>
 #include <optical_simulation.hpp>
 
-PrimaryGeneratorAction::PrimaryGeneratorAction(G4_optmen_edepsim* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {
+PrimaryGeneratorAction::PrimaryGeneratorAction(optical_simulation* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {
 	fParticleTable = G4ParticleTable::GetParticleTable();
 	fParticleGun.SetParticleDefinition(fParticleTable->FindParticle("geantino"));
 }
@@ -214,7 +214,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     // but this is slow component only (fast is suppressed?)
     // LY = 0.25(fast) + 0.75(slow) + addition = 1.20
     int myXeAddition = 0;
-    if (m_optmen_edepsim->opticsType() == G4_optmen_edepsim::OpticsType::LENS_DOPED){
+    if (m_optmen_edepsim->opticsType() == optical_simulation::OpticsType::LENS_DOPED){
 
         double XeAddition = 0.2*myphotons;
         if(XeAddition < 20)     myXeAddition = int(G4Poisson(XeAddition) + 0.5);

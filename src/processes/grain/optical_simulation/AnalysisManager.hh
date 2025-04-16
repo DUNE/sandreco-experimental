@@ -13,13 +13,13 @@ class G4Step;
 
 class CALPrimaryGeneratorAction;
 
-class G4_optmen_edepsim;
+class optical_simulation;
 
 class AnalysisManager
 {
 public:
 
-  AnalysisManager(G4_optmen_edepsim* optmen_edepsim);
+  AnalysisManager(optical_simulation* optmen_edepsim);
   virtual ~AnalysisManager();
   int _nCollections;
 
@@ -29,7 +29,7 @@ public:
   virtual void BeginOfEvent(const G4Event *pEvent); 
   virtual void EndOfEvent(const G4Event *pEvent);
 
-  G4_optmen_edepsim* m_optmen_edepsim;
+  optical_simulation* m_optmen_edepsim;
 private:
   SensorHitCollection* GetHitsCollection(const G4String& hcName,const G4Event* event) const;
   

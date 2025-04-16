@@ -6,9 +6,6 @@
 
 #include <grain/photons.h>
 
-#include <G4_optmen_runmanager/G4_optmen_runmanager.hpp>
-#include <root/TTreeStreamer.hpp>
-
 #include "Randomize.hh"
 #include "TSystem.h"
 
@@ -21,11 +18,6 @@ class detector_response : public ufw::process {
   // const ufw::var_type_map& products() const override;
   // const ufw::var_type_map& requirements() const override;
   void run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) override;
-
-  
-  private:
-    int m_seed = 0;
-    G4String inputFile;
 };
   
   UFW_REGISTER_PROCESS(detector_response)

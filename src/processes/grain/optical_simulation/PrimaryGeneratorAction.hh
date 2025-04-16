@@ -55,7 +55,7 @@
 #include <EdepReader/EdepReader.hpp>
 
 class G4Event;
-class G4_optmen_edepsim;
+class optical_simulation;
 // class EDEPTree;
 // class EDEPHit;
 
@@ -66,7 +66,7 @@ class G4_optmen_edepsim;
 class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 {
   public:
-    PrimaryGeneratorAction(G4_optmen_edepsim* optmen_edepsim);
+    PrimaryGeneratorAction(optical_simulation* optmen_edepsim);
     virtual ~PrimaryGeneratorAction();
 
    ///public interface
@@ -110,7 +110,7 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 		// Global coordinates of the lAr volume.
 		double master[3] = {0, 0, 0};
 
-		G4_optmen_edepsim* m_optmen_edepsim;
+		optical_simulation* m_optmen_edepsim;
 
 		EDEPTree::const_iterator m_tree_it;
 		std::vector<EDEPHit>::const_iterator m_hits_it;

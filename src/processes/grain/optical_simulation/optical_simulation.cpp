@@ -16,15 +16,14 @@
 #include "PhysicsList.hh"
 
 
-#include <G4_optmen_runmanager/G4_optmen_runmanager.hpp>
-#include <root/TTreeStreamer.hpp>
+#include <geant_run_manager/geant_run_manager.hpp>
 
 #include "Randomize.hh"
 #include "TSystem.h"
 
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(G4_optmen_edepsim)
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(optical_simulation)
 
-void G4_optmen_edepsim::configure (const ufw::config& cfg) {
+void optical_simulation::configure (const ufw::config& cfg) {
   process::configure(cfg);
   
   m_energy_split_threshold = cfg.value("energy_split_threshold", m_energy_split_threshold);
@@ -53,7 +52,7 @@ void G4_optmen_edepsim::configure (const ufw::config& cfg) {
   UFW_DEBUG("Back to {}", std::filesystem::current_path().string());
   
 
-  auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
+  auto& run_manager = ufw::context::instance<geant_run_manager>();
   UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
 
   run_manager.SetUserInitialization(new DetectorConstruction(parser, this));
@@ -67,26 +66,26 @@ void G4_optmen_edepsim::configure (const ufw::config& cfg) {
   run_manager.Initialize();
 }
   
-G4_optmen_edepsim::G4_optmen_edepsim() : process({}, {{"cameras_out", "sand::grain::hits"}}) {
-  UFW_INFO("Creating a G4_optmen_edepsim process at {}", fmt::ptr(this));
+optical_simulation::optical_simulation() : process({}, {{"cameras_out", "sand::grain::hits"}}) {
+  UFW_INFO("Creating a optical_simulation process at {}", fmt::ptr(this));
 }
 
 
-void G4_optmen_edepsim::run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) {
+void optical_simulation::run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) {
   // CLHEP::HepRandom::setTheSeed(m_seed);
   // CLHEP::HepRandom::showEngineStatus();
   m_output_variable_name = outputs.at("cameras_out");
   m_run_start = true;
   m_new_iteration = true;
 
-  auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
+  auto& run_manager = ufw::context::instance<geant_run_manager>();
 
   UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
   run_manager.BeamOn(GetEventsNumber());
 }  
 
 
-int G4_optmen_edepsim::GetEventsNumber() {
+int optical_simulation::GetEventsNumber() {
   UFW_DEBUG("Computing the number of block for the event");
 	auto& tree = ufw::context::instance<sand::EdepReader>();
   int eventCount = 0;

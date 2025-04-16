@@ -42,7 +42,7 @@
 
 class G4GDMLParser;
 
-class G4_optmen_edepsim;
+class optical_simulation;
 
 struct logicalVolumeStruct {
   G4LogicalVolume* _logicalVolume;
@@ -57,7 +57,7 @@ struct logicalVolumeStruct {
 class DetectorConstruction : public G4VUserDetectorConstruction
 {
   public: 
-    DetectorConstruction(const G4GDMLParser& parser,  const G4_optmen_edepsim* optmen_edepsim);
+    DetectorConstruction(const G4GDMLParser& parser,  const optical_simulation* optmen_edepsim);
 
     virtual G4VPhysicalVolume *Construct();  
     virtual void ConstructSDandField();
@@ -70,7 +70,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     std::map<G4String, logicalVolumeStruct> logicalVolumesMap;
 
     G4LogicalVolumeStore *lstore;
-    const G4_optmen_edepsim* m_optmen_edepsim; 
+    const optical_simulation* m_optmen_edepsim; 
 
 };
 

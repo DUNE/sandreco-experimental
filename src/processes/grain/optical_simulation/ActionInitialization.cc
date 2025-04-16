@@ -33,7 +33,7 @@
 #include "EventAction.hh"
 #include "StackingAction.hh"
 
-ActionInitialization::ActionInitialization(AnalysisManager* mgr, G4_optmen_edepsim* optmen_edepsim)
+ActionInitialization::ActionInitialization(AnalysisManager* mgr, optical_simulation* optmen_edepsim)
  : G4VUserActionInitialization(), m_optmen_edepsim(optmen_edepsim)
 {
   _anMgr = mgr;

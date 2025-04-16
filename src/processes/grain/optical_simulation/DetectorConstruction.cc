@@ -38,7 +38,7 @@
  namespace { G4Mutex	sensitiveDetMutex = G4MUTEX_INITIALIZER; }
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-DetectorConstruction::DetectorConstruction(const G4GDMLParser& parser, const G4_optmen_edepsim* optmen_edepsim )
+DetectorConstruction::DetectorConstruction(const G4GDMLParser& parser, const optical_simulation* optmen_edepsim )
  : G4VUserDetectorConstruction(),
    fParser(parser),
    m_optmen_edepsim(optmen_edepsim)
