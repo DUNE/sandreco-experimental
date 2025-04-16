@@ -8,7 +8,7 @@
 
 #include <grain/photons.h>
 #include <optical_simulation.hpp>
-#include <EdepReader/EdepReader.hpp>
+#include <edep_reader/edep_reader.hpp>
 
 #include "DetectorConstruction.hh"
 #include "ActionInitialization.hh"
@@ -89,7 +89,7 @@ void optical_simulation::run(const ufw::var_id_map& inputs, const ufw::var_id_ma
 
 int optical_simulation::GetEventsNumber() {
   UFW_DEBUG("Computing the number of block for the event");
-	auto& tree = ufw::context::instance<sand::EdepReader>();
+	auto& tree = ufw::context::instance<sand::edep_reader>();
   int eventCount = 0;
 
 	for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {

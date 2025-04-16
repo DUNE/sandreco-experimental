@@ -71,7 +71,7 @@ void PrimaryGeneratorAction::ApplyTranslation(){
 }
 
 void PrimaryGeneratorAction::nextIteration() {
-    const auto& tree = ufw::context::instance<sand::EdepReader>();
+    const auto& tree = ufw::context::instance<sand::edep_reader>();
     
     if(m_optmen_edepsim->getStartRun()) {
         m_tree_it = tree.begin();

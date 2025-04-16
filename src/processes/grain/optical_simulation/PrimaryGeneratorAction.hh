@@ -52,7 +52,7 @@
 #include <TG4Event.h>
 #include <TG4HitSegment.h>
 
-#include <EdepReader/EdepReader.hpp>
+#include <edep_reader/edep_reader.hpp>
 
 class G4Event;
 
