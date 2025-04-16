@@ -2,7 +2,7 @@
 #include <ufw/context.hpp>
 #include <grain/photons.h>
 
-#include <G4_optmen_edepsim.hpp>
+#include <optical_simulation.hpp>
 
 #include <G4ElementTable.hh>
 #include <G4EmCalculator.hh>

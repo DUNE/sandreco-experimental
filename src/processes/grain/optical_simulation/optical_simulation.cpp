@@ -7,7 +7,7 @@
 #include <ufw/process.hpp>
 
 #include <grain/photons.h>
-#include <G4_optmen_edepsim.hpp>
+#include <optical_simulation.hpp>
 #include <EdepReader/EdepReader.hpp>
 
 #include "OptMenDetectorConstruction.hh"

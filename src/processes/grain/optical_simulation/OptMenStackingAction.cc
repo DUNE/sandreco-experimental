@@ -26,7 +26,7 @@
 #include "OptMenStackingAction.hh"
 
 #include <ufw/utils.hpp>
-#include <G4_optmen_edepsim.hpp>
+#include <optical_simulation.hpp>
 
 #include "G4VProcess.hh"
 #include "G4Track.hh"

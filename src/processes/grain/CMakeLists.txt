@@ -1,0 +1,2 @@
+add_subdirectory(optical_simulation)
+add_subdirectory(detector_response)

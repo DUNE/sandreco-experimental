@@ -4,7 +4,7 @@
  *
  * Created on April 1, 2014, 12:14 PM
  */
-#include <G4_optmen_edepsim.hpp>
+#include <optical_simulation.hpp>
 
 #include "OptMenSensor.h"
 

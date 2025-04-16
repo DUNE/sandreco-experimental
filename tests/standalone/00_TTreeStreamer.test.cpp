@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_CASE(streamer_write) {
   TTreeStreamer ts;
   ufw::config cfg;
   BOOST_TEST(ts.operation() == ufw::op_type::none);
-  cfg["uri"] = "../Testing/Temporary/f_00.root";
+  cfg["uri"] = "../../Testing/Temporary/f_00.root";
   cfg["tree"] = "mytree";
   ufw::type_id t("sand::example1");
   ts.configure(cfg, t.c_str(), ufw::op_type::wo);
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(streamer_read) {
   TTreeStreamer ts;
   ufw::config cfg;
   BOOST_TEST(ts.operation() == ufw::op_type::none);
-  cfg["uri"] = "../Testing/Temporary/f_00.root";
+  cfg["uri"] = "../../Testing/Temporary/f_00.root";
   cfg["tree"] = "mytree";
   ufw::type_id t("sand::example1");
   ts.configure(cfg, t.c_str(), ufw::op_type::ro);

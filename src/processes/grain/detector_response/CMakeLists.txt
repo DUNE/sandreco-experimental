@@ -1,8 +1,8 @@
 add_library(detector_response)
 
-include_directories(../../../include)
-include_directories(../../common)
-include_directories(../../data)
+include_directories(../../../../include)
+include_directories(../../../common)
+include_directories(../../../data)
 include_directories(.)
 
 file(GLOB SOURCES *.cc)

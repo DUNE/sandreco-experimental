@@ -1,2 +1,1 @@
-add_subdirectory(Geant4_example)
-add_subdirectory(detector_response)
+add_subdirectory(grain)

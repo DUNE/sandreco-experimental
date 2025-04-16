@@ -53,7 +53,7 @@
 #include "G4Poisson.hh"
 
 #include <ufw/context.hpp>
-#include <G4_optmen_edepsim.hpp>
+#include <optical_simulation.hpp>
 
 OptMenPrimaryGeneratorAction::OptMenPrimaryGeneratorAction(G4_optmen_edepsim* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {
 	fParticleTable = G4ParticleTable::GetParticleTable();
