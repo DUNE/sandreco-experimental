@@ -162,6 +162,7 @@ void OptMenPrimaryGeneratorAction::nextIteration() {
         m_tree_it++;
         m_new_iteration = true;
         nextIteration();
+        return;
     } else {
         UFW_DEBUG("Track {} has grain hits:", m_tree_it->GetId());
         UFW_DEBUG("Tree it -> operator: {}", fmt::ptr(m_tree_it.operator->()));
@@ -177,6 +178,7 @@ void OptMenPrimaryGeneratorAction::nextIteration() {
             m_hits_it = hit_vect.begin();
             m_new_iteration = false;
             UFW_DEBUG("Looking at hit {} in the first iteration at {}, from m_tree_it at {}..", m_hits_it->GetId(), fmt::ptr(&*(hit_vect.begin())), fmt::ptr(&m_tree_it));
+            return;
         } else {
             m_hits_it++;
             if (m_hits_it == hit_vect.end()) {
@@ -184,8 +186,10 @@ void OptMenPrimaryGeneratorAction::nextIteration() {
                 m_tree_it++;
                 m_new_iteration = true;
                 nextIteration();
+                return;
             }
             UFW_DEBUG("Looking at hit {} not in the first iteration at {}, from m_tree_it at {}.", m_hits_it->GetId(),  fmt::ptr(&*(hit_vect.begin())), fmt::ptr(&m_tree_it));
+            return;
         }
     }
 }
