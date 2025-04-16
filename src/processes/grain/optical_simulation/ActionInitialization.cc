@@ -33,6 +33,8 @@
 #include "EventAction.hh"
 #include "StackingAction.hh"
 
+namespace sand::grain {
+
 ActionInitialization::ActionInitialization(AnalysisManager* mgr, optical_simulation* optmen_edepsim)
  : G4VUserActionInitialization(), m_optmen_edepsim(optmen_edepsim)
 {
@@ -49,3 +51,4 @@ void ActionInitialization::Build() const
   SetUserAction(new EventAction(_anMgr));
   SetUserAction(new StackingAction(_anMgr));
 }  
+}

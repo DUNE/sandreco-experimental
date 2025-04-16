@@ -16,6 +16,7 @@ using std::vector;
 class G4Track;
 class G4VHitsCollection;
 
+namespace sand::grain {
 class UserTrackInformation : public G4VUserTrackInformation
 {
   public:
@@ -28,5 +29,5 @@ class UserTrackInformation : public G4VUserTrackInformation
   private:
     int track_id;
   };
-
+}
 #endif

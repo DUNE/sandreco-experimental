@@ -15,6 +15,7 @@
 class G4Step;
 class G4HCofThisEvent;
 
+namespace sand::grain {
 class SensitiveArgon : public G4VSensitiveDetector {
  public:
   SensitiveArgon(const G4String &name, const G4String &hitsCollectionName);
@@ -33,5 +34,5 @@ class SensitiveArgon : public G4VSensitiveDetector {
  private:
   SensitiveArgonHitCollection *_argonDetHitCollection;
 };
-
+}
 #endif /* SensitiveArgon_H */

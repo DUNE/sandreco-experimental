@@ -23,6 +23,7 @@
 
 class G4VTouchable;
 
+namespace sand::grain {
 class SensitiveArgonHit : public G4VHit {
  public:
   SensitiveArgonHit();
@@ -75,5 +76,5 @@ inline void* SensitiveArgonHit::operator new(size_t) {
 inline void SensitiveArgonHit::operator delete(void* aHit) {
   SensitiveArgonHitAllocator->FreeSingle((SensitiveArgonHit*)aHit);
 }
-
+}
 #endif /* SensitiveArgonHit_H */

@@ -16,6 +16,7 @@ using std::vector;
 class G4Track;
 class G4VHitsCollection;
 
+namespace sand::grain {
 class StackingAction : public G4UserStackingAction
 {
   public:
@@ -27,8 +28,7 @@ class StackingAction : public G4UserStackingAction
     virtual void PrepareNewEvent();
 
   private:
-
     AnalysisManager* _anMgr;
-  };
-
+};
+}
 #endif

@@ -23,6 +23,7 @@
 
 class G4VTouchable;
 
+namespace sand::grain {
 class SensorHit : public G4VHit {
  public:
   SensorHit();
@@ -105,5 +106,5 @@ inline void* SensorHit::operator new(size_t) {
 inline void SensorHit::operator delete(void* aHit) {
   SensorHitAllocator->FreeSingle((SensorHit*)aHit);
 }
-
+}
 #endif /* SENSORHIT_H */

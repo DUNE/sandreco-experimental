@@ -7,6 +7,7 @@
 
 #include "SensitiveArgonHit.h"
 
+namespace sand::grain {
 G4ThreadLocal G4Allocator<SensitiveArgonHit>* SensitiveArgonHitAllocator = 0;
 
 SensitiveArgonHit::SensitiveArgonHit() {
@@ -36,4 +37,5 @@ const SensitiveArgonHit& SensitiveArgonHit::operator=(const SensitiveArgonHit& r
 G4int SensitiveArgonHit::operator==(const SensitiveArgonHit& right) const {
   return (_depositedEnergy == right._depositedEnergy && _pdgCode == right._pdgCode &&
           _trackID == right._trackID && _hitPosition == right._hitPosition);
+}
 }

@@ -35,6 +35,7 @@
 #include "G4Trajectory.hh"
 #include "G4ios.hh"
 
+namespace sand::grain {
 EventAction::EventAction(AnalysisManager* mgr)
 : G4UserEventAction()
 {
@@ -53,3 +54,4 @@ void EventAction::EndOfEventAction(const G4Event* event)
 {
   _anMgr->EndOfEvent(event);
 }  
+}

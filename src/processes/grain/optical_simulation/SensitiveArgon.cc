@@ -20,6 +20,7 @@
 #include "G4ios.hh"
 #include "G4Box.hh"
 
+namespace sand::grain {
 SensitiveArgon::SensitiveArgon(const G4String& name, const G4String& hitsCollectionName)
     : G4VSensitiveDetector(name), _argonDetHitCollection(0) {
   G4cout << "_argonDetHitCollection:" << hitsCollectionName << G4endl;
@@ -79,3 +80,4 @@ G4bool SensitiveArgon::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
 }
 
 void SensitiveArgon::EndOfEvent(G4HCofThisEvent*) {}
+}

@@ -15,6 +15,7 @@
 class G4Step;
 class G4HCofThisEvent;
 
+namespace sand::grain {
 class optical_simulation;
 
 class Sensor : public G4VSensitiveDetector {
@@ -36,5 +37,5 @@ class Sensor : public G4VSensitiveDetector {
   SensorHitCollection *_photonDetHitCollection;
   const optical_simulation* m_optmen_edepsim;
 };
-
+}
 #endif /* SENSOR_H */

@@ -17,6 +17,9 @@
 #include "Randomize.hh"
 #include "TSystem.h"
 
+
+namespace sand::grain {
+
 class geant_run_manager;
 
 class optical_simulation : public ufw::process {
@@ -53,5 +56,6 @@ class optical_simulation : public ufw::process {
     bool m_new_iteration;
     bool m_run_start;
 };
-  
-UFW_REGISTER_PROCESS(optical_simulation)
+}
+
+UFW_REGISTER_PROCESS(sand::grain::optical_simulation)

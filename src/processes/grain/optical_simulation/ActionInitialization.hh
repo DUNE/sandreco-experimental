@@ -35,6 +35,7 @@
 
 class B4DetectorConstruction;
 
+namespace sand::grain {
 class ActionInitialization : public G4VUserActionInitialization
 {
   public:
@@ -47,7 +48,7 @@ class ActionInitialization : public G4VUserActionInitialization
     AnalysisManager *_anMgr;
     optical_simulation* m_optmen_edepsim;
 };
-
+}
 #endif
 
     

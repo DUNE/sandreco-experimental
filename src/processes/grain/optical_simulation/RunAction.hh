@@ -37,7 +37,7 @@
 class G4Run;
 
 /// Run action class
-
+namespace sand::grain {
 class RunAction : public G4UserRunAction
 {
   public:
@@ -51,5 +51,5 @@ class RunAction : public G4UserRunAction
     AnalysisManager* _anMgr;
 
 };
-
+}
 #endif

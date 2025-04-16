@@ -29,6 +29,26 @@
 #include "G4EmSaturation.hh"
 #include "G4LossTableManager.hh"
 
+#include "G4ComptonScattering.hh"
+#include "G4GammaConversion.hh"
+#include "G4PhotoElectricEffect.hh"
+
+#include "G4MuMultipleScattering.hh"
+#include "G4eMultipleScattering.hh"
+#include "G4hMultipleScattering.hh"
+
+#include "G4eBremsstrahlung.hh"
+#include "G4eIonisation.hh"
+#include "G4eplusAnnihilation.hh"
+
+#include "G4MuBremsstrahlung.hh"
+#include "G4MuIonisation.hh"
+#include "G4MuPairProduction.hh"
+
+#include "G4Decay.hh"
+#include "G4hIonisation.hh"
+
+namespace sand::grain {
 PhysicsList::PhysicsList() : G4VUserPhysicsList() {
   defaultCutValue = 1.0 * CLHEP::mm;  // to be defined...
   // RegisterPhysics(new G4EmStandardPhysics(0, "standard EM"));
@@ -91,26 +111,6 @@ void PhysicsList::ConstructProcess() {
   ConstructEM();
   ConstructOp();
 }
-
-#include "G4ComptonScattering.hh"
-#include "G4GammaConversion.hh"
-#include "G4PhotoElectricEffect.hh"
-
-#include "G4MuMultipleScattering.hh"
-#include "G4eMultipleScattering.hh"
-#include "G4hMultipleScattering.hh"
-
-#include "G4eBremsstrahlung.hh"
-#include "G4eIonisation.hh"
-#include "G4eplusAnnihilation.hh"
-
-#include "G4MuBremsstrahlung.hh"
-#include "G4MuIonisation.hh"
-#include "G4MuPairProduction.hh"
-
-#include "G4Decay.hh"
-#include "G4hIonisation.hh"
-
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 void PhysicsList::ConstructGeneral() {
@@ -232,4 +232,5 @@ void PhysicsList::ConstructOp() {
       pmanager->AddDiscreteProcess(fWLSProcess);
     }
   }
+}
 }

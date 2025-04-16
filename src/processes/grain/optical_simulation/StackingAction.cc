@@ -38,6 +38,7 @@
 
 #include <string.h>
 
+namespace sand::grain {
 StackingAction::StackingAction(AnalysisManager* mgr)
   :G4UserStackingAction()
 {
@@ -67,3 +68,4 @@ void StackingAction::NewStage()
 
 void StackingAction::PrepareNewEvent() {}
 
+}

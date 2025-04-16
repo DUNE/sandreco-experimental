@@ -55,6 +55,8 @@
 #include <EdepReader/EdepReader.hpp>
 
 class G4Event;
+
+namespace sand::grain {
 class optical_simulation;
 // class EDEPTree;
 // class EDEPHit;
@@ -115,4 +117,5 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 		EDEPTree::const_iterator m_tree_it;
 		std::vector<EDEPHit>::const_iterator m_hits_it;
 };
+}
 #endif

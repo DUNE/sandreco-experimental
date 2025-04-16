@@ -35,8 +35,7 @@
 #include "G4NistManager.hh"
 #include "G4GDMLParser.hh"
 
- namespace { G4Mutex	sensitiveDetMutex = G4MUTEX_INITIALIZER; }
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+namespace sand::grain {
 
 DetectorConstruction::DetectorConstruction(const G4GDMLParser& parser, const optical_simulation* optmen_edepsim )
  : G4VUserDetectorConstruction(),
@@ -142,4 +141,5 @@ G4LogicalVolume* DetectorConstruction::findLogicalDetector(G4LogicalVolume *l, s
     }
   }
   return l;
+}
 }

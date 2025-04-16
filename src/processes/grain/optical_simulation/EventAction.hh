@@ -36,7 +36,7 @@
 #include "globals.hh"
 
 /// Event action class
-
+namespace sand::grain {
 class EventAction : public G4UserEventAction
 {
   public:
@@ -49,4 +49,5 @@ class EventAction : public G4UserEventAction
   private:
     AnalysisManager* _anMgr;
 };
+}
 #endif

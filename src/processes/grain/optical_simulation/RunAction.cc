@@ -32,6 +32,7 @@
 #include "G4Run.hh"
 #include "G4RunManager.hh"
 
+namespace sand::grain {
 RunAction::RunAction(AnalysisManager* mgr)
  : G4UserRunAction()
 { 
@@ -55,4 +56,5 @@ void RunAction::BeginOfRunAction(const G4Run*)
 void RunAction::EndOfRunAction(const G4Run*)
 {
   _anMgr->EndOfRun();
+}
 }

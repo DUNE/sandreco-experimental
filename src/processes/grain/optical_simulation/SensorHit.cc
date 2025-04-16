@@ -7,6 +7,7 @@
 
 #include "SensorHit.h"
 
+namespace sand::grain {
 G4ThreadLocal G4Allocator<SensorHit>* SensorHitAllocator = 0;
 
 SensorHit::SensorHit() {
@@ -52,4 +53,5 @@ G4int SensorHit::operator==(const SensorHit& right) const {
           _arrivalTime == right._arrivalTime && _energy == right._energy && 
           _direction == right._direction && _scatter == right._scatter && 
           _camName == right._camName && _productionVolume == right._productionVolume);
+}
 }

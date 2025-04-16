@@ -40,9 +40,7 @@
 using std::string;
 using std::vector;
 
-G4Mutex	beginOfEventMutex = G4MUTEX_INITIALIZER;
-G4Mutex	endOfEventMutex = G4MUTEX_INITIALIZER;
-
+namespace sand::grain {
 AnalysisManager::AnalysisManager(optical_simulation* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {}
 
 AnalysisManager::~AnalysisManager() {}
@@ -128,4 +126,5 @@ void AnalysisManager::EndOfEvent(const G4Event *pEvent) {
   }
 
   G4cout << "End of event" << std::endl;
+}
 }

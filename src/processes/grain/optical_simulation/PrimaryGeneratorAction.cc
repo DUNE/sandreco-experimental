@@ -55,6 +55,7 @@
 #include <ufw/context.hpp>
 #include <optical_simulation.hpp>
 
+namespace sand::grain {
 PrimaryGeneratorAction::PrimaryGeneratorAction(optical_simulation* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {
 	fParticleTable = G4ParticleTable::GetParticleTable();
 	fParticleGun.SetParticleDefinition(fParticleTable->FindParticle("geantino"));
@@ -376,4 +377,5 @@ G4double PrimaryGeneratorAction::GetSingletTripletRatio(double myZ, double myDep
 
     return mySingletTripletRatio;
 
+}
 }

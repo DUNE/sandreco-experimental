@@ -21,7 +21,9 @@
 #include "Randomize.hh"
 #include "TSystem.h"
 
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(optical_simulation)
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::optical_simulation)
+
+namespace sand::grain {
 
 void optical_simulation::configure (const ufw::config& cfg) {
   process::configure(cfg);
@@ -99,4 +101,5 @@ int optical_simulation::GetEventsNumber() {
   UFW_DEBUG("Split into {} events.", eventCount);
 
 	return eventCount;
+}
 }

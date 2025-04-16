@@ -42,6 +42,7 @@
 
 class G4GDMLParser;
 
+namespace sand::grain {
 class optical_simulation;
 
 struct logicalVolumeStruct {
@@ -73,5 +74,5 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     const optical_simulation* m_optmen_edepsim; 
 
 };
-
+}
 #endif

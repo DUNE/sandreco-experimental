@@ -22,6 +22,7 @@ class G4OpRayleigh;
 class G4OpWLS;
 class G4OpMieHG;
 
+namespace sand::grain {
 class PhysicsList : public G4VModularPhysicsList {
  private:
 	 
@@ -36,5 +37,5 @@ class PhysicsList : public G4VModularPhysicsList {
   void ConstructOp();
   void ConstructGeneral();
 };
-
+}
 #endif /* PHYSICSLIST_H */

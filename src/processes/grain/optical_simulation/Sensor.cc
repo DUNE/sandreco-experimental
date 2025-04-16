@@ -22,6 +22,7 @@
 #include "G4ios.hh"
 #include "G4Box.hh"
 
+namespace sand::grain {
 Sensor::Sensor(const G4String& name, const G4String& hitsCollectionName, const optical_simulation* optmen_edepsim)
     : G4VSensitiveDetector(name), _photonDetHitCollection(0), m_optmen_edepsim(optmen_edepsim) {
   G4cout << "_photonDetHitCollection:" << hitsCollectionName << G4endl;
@@ -140,3 +141,4 @@ G4bool Sensor::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
 }
 
 void Sensor::EndOfEvent(G4HCofThisEvent*) {}
+}

@@ -7,12 +7,14 @@
 #include "G4GDMLParser.hh"
 #include "G4PhysicalVolumeStore.hh"
 
+
 class G4Run;
 class G4Event;
 class G4Step;
 
 class CALPrimaryGeneratorAction;
 
+namespace sand::grain {
 class optical_simulation;
 
 class AnalysisManager
@@ -38,6 +40,5 @@ private:
 
   
 };
-
+}
 #endif // __ANALYSISMANAGER_H__
-
