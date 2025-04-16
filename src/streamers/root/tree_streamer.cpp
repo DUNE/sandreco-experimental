@@ -6,16 +6,16 @@
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 
-#include <TTreeStreamer.hpp>
+#include <tree_streamer.hpp>
 
 #define UFW_IMPLEMENT_STREAMER_FOR_TYPE(type) \
 UFW_DECLARE_RTTI(type)
-#include <TTreeStreamerTypes.hpp>
+#include <tree_streamer_types.hpp>
 #undef UFW_IMPLEMENT_STREAMER_FOR_TYPE
 
 namespace sand::common::root {
 
-  TTreeStreamer::~TTreeStreamer() {
+  tree_streamer::~tree_streamer() {
     m_file->cd();
     m_tree->Write();
     m_file->Close();
@@ -23,7 +23,7 @@ namespace sand::common::root {
     delete m_file;
   }
 
-  void TTreeStreamer::configure(const ufw::config& cfg, const ufw::type_id& tp, ufw::op_type op) {
+  void tree_streamer::configure(const ufw::config& cfg, const ufw::type_id& tp, ufw::op_type op) {
     streamer::configure(cfg, tp, op);
     TClass* tcl = TClass::GetClass(tp.c_str());
     if (!tcl) {
@@ -41,7 +41,7 @@ namespace sand::common::root {
       opmode = "UPDATE";
       break;
     default:
-      UFW_ERROR("Mode {} is not supported by TTreeStreamer", op);
+      UFW_ERROR("Mode {} is not supported by tree_streamer", op);
       break;
     };
     m_file = new TFile(path().c_str(), opmode);
@@ -56,7 +56,7 @@ namespace sand::common::root {
     }
   }
 
-  void TTreeStreamer::attach(ufw::data::data_base& d) {
+  void tree_streamer::attach(ufw::data::data_base& d) {
     //you would think using a temporary here would be fine, and yet...
     m_branchaddr = &d;
     //remove any namespace from the branch name, for convenience.
@@ -73,16 +73,16 @@ namespace sand::common::root {
     streamer::attach(d);
   }
 
-  void TTreeStreamer::read(ufw::context_id i) {
+  void tree_streamer::read(ufw::context_id i) {
     m_file->cd();
     m_tree->GetEntry(i);
   }
 
-  void TTreeStreamer::write(ufw::context_id) {
+  void tree_streamer::write(ufw::context_id) {
     m_file->cd();
     m_tree->Fill();
   }
 
 }
 
-UFW_REGISTER_DYNAMIC_STREAMER_FACTORY(sand::common::root::TTreeStreamer)
+UFW_REGISTER_DYNAMIC_STREAMER_FACTORY(sand::common::root::tree_streamer)

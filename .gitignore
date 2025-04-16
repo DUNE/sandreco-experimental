@@ -3,6 +3,5 @@ install/
 *.idx
 .kateproject.build
 compile_commands.json
-src/common/root/TTreeStreamerLinkdef.h
-src/common/root/TTreeStreamerTypes.hpp
-src/processes/Geant4_example/*.root
+src/streamers/root/tree_streamer_linkdef.h
+src/streamers/root/tree_streamer_types.hpp

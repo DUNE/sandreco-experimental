@@ -7,10 +7,10 @@ class TTree;
 
 namespace sand::common::root {
 
-  class TTreeStreamer : public ufw::streamer {
+  class tree_streamer : public ufw::streamer {
 
   public:
-    ~TTreeStreamer();
+    ~tree_streamer();
 
     void configure(const ufw::config&, const ufw::type_id&, ufw::op_type) override;
 
@@ -29,4 +29,4 @@ namespace sand::common::root {
 
 }
 
-UFW_REGISTER_STREAMER(sand::common::root::TTreeStreamer)
+UFW_REGISTER_STREAMER(sand::common::root::tree_streamer)

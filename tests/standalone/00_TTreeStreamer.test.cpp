@@ -3,15 +3,15 @@
 
 #include <ufw/config.hpp>
 #include <example1.h>
-#include <streamers/root/TTreeStreamer.hpp>
+#include <streamers/root/tree_streamer.hpp>
 
 #include <TFile.h>
 #include <TTree.h>
 
-using sand::common::root::TTreeStreamer;
+using sand::common::root::tree_streamer;
 
 BOOST_AUTO_TEST_CASE(streamer_write) {
-  TTreeStreamer ts;
+  tree_streamer ts;
   ufw::config cfg;
   BOOST_TEST(ts.operation() == ufw::op_type::none);
   cfg["uri"] = "../../Testing/Temporary/f_00.root";
@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(streamer_write) {
 }
 
 BOOST_AUTO_TEST_CASE(streamer_read) {
-  TTreeStreamer ts;
+  tree_streamer ts;
   ufw::config cfg;
   BOOST_TEST(ts.operation() == ufw::op_type::none);
   cfg["uri"] = "../../Testing/Temporary/f_00.root";

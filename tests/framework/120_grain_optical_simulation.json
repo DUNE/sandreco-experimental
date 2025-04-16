@@ -23,7 +23,7 @@
       "prods" : {"cameras_out" : "pippo"}
     },
     {
-      "sand::common::root::TTreeStreamer" : { 
+      "sand::common::root::ttree_streamer" : { 
         "uri" : "/home/sand/sensors.root",
         "mode" : "RECREATE",
         "tree" : "cameras"
