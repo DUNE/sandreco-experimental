@@ -1,2 +1,3 @@
-add_subdirectory(standalone)
+add_subdirectory(data)
 add_subdirectory(framework)
+add_subdirectory(standalone)
