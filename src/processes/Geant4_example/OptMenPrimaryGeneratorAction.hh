@@ -66,22 +66,14 @@ class G4_optmen_edepsim;
 class OptMenPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 {
   public:
-    OptMenPrimaryGeneratorAction(const G4_optmen_edepsim* optmen_edepsim);
+    OptMenPrimaryGeneratorAction(G4_optmen_edepsim* optmen_edepsim);
     virtual ~OptMenPrimaryGeneratorAction();
 
    ///public interface
 		void GeneratePrimaries(G4Event *event) override;
 
 
-		///reads from root file
-		void ReadEDepSimEvent();
-        	//Get entry from EDepsim file
-		void GetEntry();
-
-		///apply translation to each step
 		void ApplyTranslation();
-		///returns true if outside LAr volume
-		bool ApplyVolumeCut(G4ThreeVector pos);
 
 		// Get lAr material info
 		void getMaterialProperties();
@@ -89,21 +81,14 @@ class OptMenPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 		//function for random generation
 		std::pair<G4ThreeVector,G4ThreeVector> GenerateRandomMomentumPolarization();
 
-    		//functions for fast/slow component
-    		G4double GetSingletTripletRatio(double myZ, double myDepEne, double VertexKinEne);
-    		G4double getERf90 (double ene);
-    		G4double GetLArNuclearQuenching(double myene);
-
-		// Clear vectors
-		void clear();
+		//functions for fast/slow component
+		G4double GetSingletTripletRatio(double myZ, double myDepEne, double VertexKinEne);
+		G4double getERf90 (double ene);
+		G4double GetLArNuclearQuenching(double myene);
 
 		void nextIteration();
 	
 	private:
-		int startingEntry;
-		bool found;
-
-		//OptMenPhotonGeneratorMessenger*   fTheMessenger;
 		G4ParticleGun                fParticleGun;
 		G4ParticleTable*             fParticleTable;
 
@@ -112,8 +97,8 @@ class OptMenPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 		TH1D* fastComponentHisto;
 		TH1D* slowComponentHisto;
 		double fTauFast;
-	        double fTauSlow;
-                G4double fScintillationYield;
+		double fTauSlow;
+		G4double fScintillationYield;
 
 		//////////////////////////////////////////////////////////////
 		// Declare the information to get from the EDepSim tree
@@ -125,45 +110,9 @@ class OptMenPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 		// Global coordinates of the lAr volume.
 		double master[3] = {0, 0, 0};
 
-		///Number of hits
-		G4int fNHits;
-		///Detector volume name
-		G4String fDetName; 
-		
-		///id primary track
-		std::vector<int> fPrimaryID;
-		std::map<int, int> fPrimaryPDG;
-                std::map<int, double> fInitialEnergy;
-
-		///id track of contributors
-		std::map<int,std::vector<int>> fContribID;
-
-		///start/stop 4-vectors
-		std::vector<TLorentzVector> fStart;
-		std::vector<TLorentzVector> fStop;
-		std::vector<G4ThreeVector> fStartTranslated;
-		std::vector<G4ThreeVector> fStopTranslated;
-		
-		///step Length
-		std::vector<double> fStepLength;
-
-		///energy loss
-		std::vector<double> fEnDep;
-		std::vector<double> fSecondaryEnDep;
-		double fTotEnDep;
-		double fTotSecondaryEnDep;
-		double tmpEnDep;
-		double tmpSecondaryEnDep;
-
-		int currentHit = 0;
-		int subEventNumber = 0;
-
-		const G4_optmen_edepsim* m_optmen_edepsim;
+		G4_optmen_edepsim* m_optmen_edepsim;
 
 		EDEPTree::const_iterator m_tree_it;
 		std::vector<EDEPHit>::const_iterator m_hits_it;
-		bool m_first_iteration = true;
-		bool m_new_iteration = true;
-
 };
 #endif

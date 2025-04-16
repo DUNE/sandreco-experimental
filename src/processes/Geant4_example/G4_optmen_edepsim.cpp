@@ -76,6 +76,8 @@ void G4_optmen_edepsim::run(const ufw::var_id_map& inputs, const ufw::var_id_map
   // CLHEP::HepRandom::setTheSeed(m_seed);
   // CLHEP::HepRandom::showEngineStatus();
   m_output_variable_name = outputs.at("cameras_out");
+  m_run_start = true;
+  m_new_iteration = true;
 
   auto& run_manager = ufw::context::instance<G4_optmen_runmanager>();
 

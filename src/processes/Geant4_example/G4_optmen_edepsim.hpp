@@ -39,6 +39,10 @@ class G4_optmen_edepsim : public ufw::process {
   OpticsType opticsType() const {return m_optics_type;}
   double energySplitThreshold() const {return m_energy_split_threshold;}
   int GetEventsNumber();
+  bool getStartRun() const {return m_run_start;}
+  void setStartRun(bool run_start) {m_run_start = run_start;}
+  bool getNewIteration() const {return m_new_iteration;}
+  void setNewIteration(bool new_iteration) {m_new_iteration = new_iteration;}
 
   mutable std::deque<int> track_ids;
   mutable std::deque<double> track_times;
@@ -48,6 +52,8 @@ class G4_optmen_edepsim : public ufw::process {
     OpticsType m_optics_type;
     std::filesystem::path m_geometry;
     double m_energy_split_threshold = 100; // MeV
+    bool m_new_iteration;
+    bool m_run_start;
 };
   
 UFW_REGISTER_PROCESS(G4_optmen_edepsim)

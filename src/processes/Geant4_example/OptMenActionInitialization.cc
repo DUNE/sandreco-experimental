@@ -33,7 +33,7 @@
 #include "OptMenEventAction.hh"
 #include "OptMenStackingAction.hh"
 
-OptMenActionInitialization::OptMenActionInitialization(OptMenAnalysisManager* mgr, const G4_optmen_edepsim* optmen_edepsim)
+OptMenActionInitialization::OptMenActionInitialization(OptMenAnalysisManager* mgr, G4_optmen_edepsim* optmen_edepsim)
  : G4VUserActionInitialization(), m_optmen_edepsim(optmen_edepsim)
 {
   _anMgr = mgr;

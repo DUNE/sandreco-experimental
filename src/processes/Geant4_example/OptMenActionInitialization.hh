@@ -38,14 +38,14 @@ class B4DetectorConstruction;
 class OptMenActionInitialization : public G4VUserActionInitialization
 {
   public:
-    OptMenActionInitialization(OptMenAnalysisManager* mgr, const G4_optmen_edepsim* optmen_edepsim);
+    OptMenActionInitialization(OptMenAnalysisManager* mgr, G4_optmen_edepsim* optmen_edepsim);
     virtual ~OptMenActionInitialization();
 
     virtual void Build() const;
 
   private:
     OptMenAnalysisManager *_anMgr;
-    const G4_optmen_edepsim* m_optmen_edepsim;
+    G4_optmen_edepsim* m_optmen_edepsim;
 };
 
 #endif
