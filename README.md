@@ -1,13 +1,35 @@
 # sandreco-experimental
 
-This is a new area for experimenting with porting sandreco to ufw and updating all public data structures
+This is a new area for experimenting with porting sandreco to ufw.
 
-## Repository organization
+## General information
 
-The basic organization of folders is dictated by the nature of a framework-based application:
- - public interfaces, i.e. mostly data strucutres used outside of sandreco, are declared in include/
- - private interfaces, that are not exposed outside of the framework, are in src/common/
- - utility code that is used in several modules but is not a module, also goes in src/common/
- - modules that wrap data structures, both public and private, are in individual subfolders of src/products/
- - top level algorithms are in individual subfolders of src/processes/
- 
+Each algorithm in ufw is wrapped in a process, while data structures can be complex or managed (see the ufw wiki for details).
+Additionally, streamers exist to provide custom I/O interfaces for managed types.
+
+Each algorithm, complex data and streamer needs to be its own module, which in concrete terms is a shared library (libmodulename.so or similar).
+Managed data on the other hand is not a module (as it is header only, by definition it does not have code that needs to be compiled).
+
+A module needs its own cmake which produces the shared library that will be loaded by ufwrun.
+For cleanliness, one cmake shall produce only one module.
+
+A module should have its own folder, placed according to these indications in the most suitable subfolder:
+
+ - Managed data, which will also be used for public interface classes, i.e. data structures used also outside of sandreco,
+   should be under include/.../
+ - Complex data can go in src/data/.../
+ - Algorithms go in src/processes/.../
+ - Streamers go in src/streamers/.../  You will probably never write one of these.
+
+The ... in the path indicated above may be either your subdetector folder, or a subfolder, if applicable.
+
+The main class of your module (and realistically also the other ones) should go in a namespace as well.
+Super general things can go in sand::, otherwise use your subdetector, lowercase sand::grain::, sand::ecal::, sand::stt:: and so on...
+The namespace becomes part of your module name, and must be used in the configuration files.
+
+## Automatic testing
+
+You can place a sample config.json that runs your module (and any ancillary modules used in your test) in tests/framework.
+It will be picked up by the testing system and run as part of the continuous integration.
+Only do this if you can supply a meaningful input test data that is reasonably small (under a few 100kb), as large binary files shall not be stored in baltig.
+If you have a justified need for a larger file, we can bake it into the CI image.
