@@ -1,0 +1,19 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-ldpath" : ["/usr/local/lib64"]
+  },
+  "globals" : {},
+  "contexts" : {
+    "keys" : 10,
+    "locals" : {}
+  },
+  "run" : [ {
+      "sand::root::tree_streamer" : { 
+        "uri" : "f_00.root",
+        "tree" : "test"
+      },
+      "write" : { "foo" : "sand::example1" }
+    }
+  ]
+}
