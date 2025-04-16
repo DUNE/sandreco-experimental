@@ -58,6 +58,9 @@
 OptMenPrimaryGeneratorAction::OptMenPrimaryGeneratorAction(const G4_optmen_edepsim* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {
 	fParticleTable = G4ParticleTable::GetParticleTable();
 	fParticleGun.SetParticleDefinition(fParticleTable->FindParticle("geantino"));
+
+    // Get lAr info
+    getMaterialProperties();
 }
 
 OptMenPrimaryGeneratorAction::~OptMenPrimaryGeneratorAction() {}
@@ -235,7 +238,8 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     // ReadEDepSimEvent();
 
     // // Read EdepSim energy deposits
-    GetEntry();
+    // GetEntry();
+
     nextIteration();
 
     tmpEnDep = 0;
@@ -245,22 +249,22 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     ApplyTranslation();
 
     // Get lAr info
-    getMaterialProperties();
+    // getMaterialProperties();
 
     // auto& tree = ufw::context::instance<sand::EdepReader>();
     // iauto& tree = ufw::context::instance<sand::EdepReader>();
     // int eventCount = 0;
   
-    //   for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
-  
-    //       if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
+    // for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
+
+    // if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
     //     eventCount += trj_it->GetHitMap().at(component::GRAIN).size();
-    //   }
-    //   }
-    if (fNHits > 0) {
-        std::cout << "Processing emitted photons from hit: " << currentHit << std::endl;
-        for (int i = currentHit; i < fNHits; i++) {
-            G4int myPDG = fPrimaryPDG[fPrimaryID[i]];
+    // }
+    // }
+    // if (fNHits > 0) {
+    //     std::cout << "Processing emitted photons from hit: " << currentHit << std::endl;
+        // for (int i = currentHit; i < fNHits; i++) {
+            G4int myPDG = m_hits_it->GetPrimaryId();
             G4ParticleDefinition *myParticle = G4ParticleTable::GetParticleTable()->FindParticle(myPDG);	
 
 	        //This is code from EDepSim to deal with nuclear PDGs
@@ -274,15 +278,15 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 		        	myParticle = ionTable->GetIon(ionZ,ionA);
                     if (!myParticle) {
                         UFW_WARN("Particle '{}' not found. Tried getIon({}, {})", myPDG, ionZ, ionA);
-                        continue;
+                        return;
                     }
 	        	}
 	        	else if (type == 20) {
                     // This is a pseudo-particle, so skip it
-	        		continue;
+	        		return;
 	        	} else {
                     UFW_WARN("Particle '{}' not found. type {} not supported", myPDG, type);
-                    continue;
+                    return;
 
                 }
 	        }
@@ -291,7 +295,7 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
             G4double myMass = myParticle->GetPDGMass();
 
             //initial kinetic energy of track
-            G4double myVertexKinEne = fInitialEnergy[fPrimaryID[i]] - myMass;                   
+            G4double myVertexKinEne = m_tree_it->GetInitialMomentum().E();
 
             // COMPUTATION FOR NUMBER of PHOTONS
             // The fraction of the energy deposit that ends up producing photons is already computed by EDepSim
@@ -299,13 +303,14 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
             // This ALREADY takes into account excitons and the fraction of recombinating ions 
             
             // photons (excitons + recombinating ions)
-            G4double myphotons = fSecondaryEnDep[i]*fScintillationYield;
+            G4double myphotons = m_hits_it->GetSecondaryDeposit() * fScintillationYield;
             
 	        int myNumPhotons = 0;
             if(myphotons < 20)     myNumPhotons = int(G4Poisson(myphotons) + 0.5);
             else                   myNumPhotons = int(G4RandGauss::shoot(myphotons, sqrt(myphotons))+0.5);
             if(myNumPhotons < 0)   myNumPhotons = 0 ;
      
+            UFW_DEBUG("Shooting {} photons", myNumPhotons);
             //TODO: check better sources
             // Xe-DOPING --> Xe-doping increases the overall LY to 1.20 pure LAr
             // but this is slow component only (fast is suppressed?)
@@ -320,7 +325,7 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
       	    }
 		
             // slow/fast components ratio
-            G4double mySingletTripletRatio = GetSingletTripletRatio(myZ, fEnDep[i], myVertexKinEne);
+            G4double mySingletTripletRatio = GetSingletTripletRatio(myZ, m_hits_it->GetEnergyDeposit(), myVertexKinEne);
 
             //G4cout << "Step from ID " << fPrimaryID.at(i) << " " << i << " / " << fNHits << G4endl;
             //G4cout << "Pos:" << fStartTranslated.at(i) << " -> " << fStopTranslated.at(i) << G4endl;;
@@ -343,14 +348,23 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
                 G4double random = G4UniformRand(); //random between 0 and 1
 
                 // Position
-                G4ThreeVector myPhotonPosition = fStartTranslated.at(i) + random*( fStopTranslated.at(i) - fStartTranslated.at(i) );
-                // UFW_INFO("POS: {}, {}, {}", fStartTranslated.at(i).X, fStartTranslated.at(i).Y, fStartTranslated.at(i).Z );
+                G4ThreeVector translated_start(m_hits_it->GetStart().X() - master[0], m_hits_it->GetStart().Y() - master[1], m_hits_it->GetStart().Z() - master[2]);
+                G4ThreeVector translated_stop(m_hits_it->GetStop().X() - master[0], m_hits_it->GetStop().Y() - master[1], m_hits_it->GetStop().Z() - master[2]);
+                G4ThreeVector myPhotonPosition = translated_start + random * (translated_stop - translated_start);
+
+                TVector3 translated_startaa(m_hits_it->GetStart().X() - master[0], m_hits_it->GetStart().Y() - master[1], m_hits_it->GetStart().Z() - master[2]);
+                TVector3 translated_stopaa(m_hits_it->GetStop().X() - master[0], m_hits_it->GetStop().Y() - master[1], m_hits_it->GetStop().Z() - master[2]);
+                TVector3 myPhotonPositionaa = translated_startaa + random * (translated_stopaa - translated_startaa);
+
+                UFW_INFO("POS: {}, {}, {}", myPhotonPositionaa.X(), myPhotonPositionaa.Y(), myPhotonPositionaa.Z());
+
 		        if(ApplyVolumeCut(myPhotonPosition)) continue; // skip if not in LAr
+                UFW_DEBUG("HERE");
                 fParticleGun.SetParticlePosition(myPhotonPosition);					
 
 	            // Time & Energy
                 // photonTime = Global Time ( + Recombination Time ) + Singlet/Triplet Time
-                G4double myPhotonTime = fStart.at(i).T() + random*(fStop.at(i).T() - fStart.at(i).T());
+                G4double myPhotonTime = m_hits_it->GetStart().T() + random*(m_hits_it->GetStop().T() - m_hits_it->GetStart().T());
                 G4double mySampledEnergy = 0;
 
                 // applies scintillation constant according to singlet/triplet ratio
@@ -393,72 +407,75 @@ void OptMenPrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
                 G4double random = G4UniformRand(); //random between 0 and 1
 
                 // Position
-                G4ThreeVector myPhotonPosition = fStartTranslated.at(i) + random*( fStopTranslated.at(i) - fStartTranslated.at(i) );
+                G4ThreeVector translated_start(m_hits_it->GetStart().X() - master[0], m_hits_it->GetStart().Y() - master[1], m_hits_it->GetStart().Z() - master[2]);
+                G4ThreeVector translated_stop(m_hits_it->GetStop().X() - master[0], m_hits_it->GetStop().Y() - master[1], m_hits_it->GetStop().Z() - master[2]);
+                G4ThreeVector myPhotonPosition = translated_start + random * (translated_stop - translated_start);
 		        if(ApplyVolumeCut(myPhotonPosition)) continue; // skip if not in LAr
                 fParticleGun.SetParticlePosition(myPhotonPosition);					
 
 	            // Time & Energy
                 // (slow component only)
-                G4double myPhotonTime = fStart.at(i).T() + random*(fStop.at(i).T() - fStart.at(i).T()) - fTauSlow * log( G4UniformRand() );
+                G4double myPhotonTime = m_hits_it->GetStart().T() + random*(m_hits_it->GetStop().T() - m_hits_it->GetStart().T()) - fTauSlow * log( G4UniformRand() );
                 G4double mySampledEnergy = slowComponentHisto->GetRandom();				
 
                 fParticleGun.SetParticleEnergy(mySampledEnergy);
                 fParticleGun.SetParticleTime(myPhotonTime);		
 
-                //SHOOT PHOTON!!
+                UFW_DEBUG("SHOOT PHOTON!!");
                 fParticleGun.GeneratePrimaryVertex(event);
 	        }
 	
-	        tmpEnDep += fEnDep[i];
-            tmpSecondaryEnDep += fSecondaryEnDep[i];
-            currentHit++;
+	        // tmpEnDep += fEnDep[i];
+            // tmpSecondaryEnDep += fSecondaryEnDep[i];
+            // currentHit++;
 
-            if (currentHit == fNHits) {
-                currentHit = 0;
-                std::cout << "Reached end of lAr hits. Resetting currentHit to " << currentHit << std::endl;
-                break;
-            }
+            // if (currentHit == fNHits) {
+            //     currentHit = 0;
+            //     std::cout << "Reached end of lAr hits. Resetting currentHit to " << currentHit << std::endl;
+            //     break;
+            // }
 
-            if (tmpEnDep > m_optmen_edepsim->energySplitThreshold()) {
-                std::cout << "Reached " <<  tmpEnDep << " MeV. CurrentHit: " << currentHit << std::endl;
-                break;
-            }			
-        }
-    } else {
-        if (fNHits > 0) {
-            for (int i = currentHit; i < fNHits; i++) {
-                tmpEnDep += fEnDep[i];
-                tmpSecondaryEnDep += fSecondaryEnDep[i];
-                currentHit++;
+            // if (tmpEnDep > m_optmen_edepsim->energySplitThreshold()) {
+            //     std::cout << "Reached " <<  tmpEnDep << " MeV. CurrentHit: " << currentHit << std::endl;
+            //     break;
+            // }			
+        // }
+    // } 
+    // else {
+    //     if (fNHits > 0) {
+    //         for (int i = currentHit; i < fNHits; i++) {
+    //             tmpEnDep += fEnDep[i];
+    //             tmpSecondaryEnDep += fSecondaryEnDep[i];
+    //             currentHit++;
 
-                G4ParticleDefinition* particleDefinition = G4ParticleTable::GetParticleTable()->FindParticle("geantino");
-                fParticleGun.SetParticleDefinition(particleDefinition);
-                fParticleGun.SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
-                fParticleGun.SetParticleEnergy(1*GeV);
-                fParticleGun.SetParticlePosition(G4ThreeVector(0., 0., -500));
-                fParticleGun.GeneratePrimaryVertex(event);
+    //             G4ParticleDefinition* particleDefinition = G4ParticleTable::GetParticleTable()->FindParticle("geantino");
+    //             fParticleGun.SetParticleDefinition(particleDefinition);
+    //             fParticleGun.SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
+    //             fParticleGun.SetParticleEnergy(1*GeV);
+    //             fParticleGun.SetParticlePosition(G4ThreeVector(0., 0., -500));
+    //             fParticleGun.GeneratePrimaryVertex(event);
                 
-                if (currentHit == fNHits) {
-                    currentHit = 0;
-                    std::cout << "Reached end of not processed event. Resetting currentHit to " << currentHit << std::endl;
-                    break;
-                }
+    //             if (currentHit == fNHits) {
+    //                 currentHit = 0;
+    //                 std::cout << "Reached end of not processed event. Resetting currentHit to " << currentHit << std::endl;
+    //                 break;
+    //             }
 
-                if (tmpEnDep > m_optmen_edepsim->energySplitThreshold()) {
-                    std::cout << "Reached " <<  tmpEnDep << " MeV. CurrentHit: " << currentHit << std::endl;
-                    break;
-                }		
-            }
-        } else {
-            G4ParticleDefinition* particleDefinition = G4ParticleTable::GetParticleTable()->FindParticle("geantino");
-            fParticleGun.SetParticleDefinition(particleDefinition);
-            fParticleGun.SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
-            fParticleGun.SetParticleEnergy(1*GeV);
-            fParticleGun.SetParticlePosition(G4ThreeVector(0., 0., -500));
-            fParticleGun.GeneratePrimaryVertex(event);
-        }
+    //             if (tmpEnDep > m_optmen_edepsim->energySplitThreshold()) {
+    //                 std::cout << "Reached " <<  tmpEnDep << " MeV. CurrentHit: " << currentHit << std::endl;
+    //                 break;
+    //             }		
+    //         }
+    //     } else {
+    //         G4ParticleDefinition* particleDefinition = G4ParticleTable::GetParticleTable()->FindParticle("geantino");
+    //         fParticleGun.SetParticleDefinition(particleDefinition);
+    //         fParticleGun.SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
+    //         fParticleGun.SetParticleEnergy(1*GeV);
+    //         fParticleGun.SetParticlePosition(G4ThreeVector(0., 0., -500));
+    //         fParticleGun.GeneratePrimaryVertex(event);
+    //     }
         
-    }
+    // }
 
     clear();
     std::cout << "---------> Fine generazione fotoni <---------------" << std::endl;
