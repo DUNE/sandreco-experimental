@@ -8,7 +8,7 @@
 #include <TFile.h>
 #include <TTree.h>
 
-using sand::common::root::tree_streamer;
+using sand::root::tree_streamer;
 
 BOOST_AUTO_TEST_CASE(streamer_write) {
   tree_streamer ts;

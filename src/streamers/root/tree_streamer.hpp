@@ -5,7 +5,7 @@ class TTree;
 
 #include <ufw/streamer.hpp>
 
-namespace sand::common::root {
+namespace sand::root {
 
   class tree_streamer : public ufw::streamer {
 
@@ -29,4 +29,4 @@ namespace sand::common::root {
 
 }
 
-UFW_REGISTER_STREAMER(sand::common::root::tree_streamer)
+UFW_REGISTER_STREAMER(sand::root::tree_streamer)

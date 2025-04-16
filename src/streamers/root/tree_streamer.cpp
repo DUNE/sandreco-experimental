@@ -13,7 +13,7 @@ UFW_DECLARE_RTTI(type)
 #include <tree_streamer_types.hpp>
 #undef UFW_IMPLEMENT_STREAMER_FOR_TYPE
 
-namespace sand::common::root {
+namespace sand::root {
 
   tree_streamer::~tree_streamer() {
     m_file->cd();
@@ -85,4 +85,4 @@ namespace sand::common::root {
 
 }
 
-UFW_REGISTER_DYNAMIC_STREAMER_FACTORY(sand::common::root::tree_streamer)
+UFW_REGISTER_DYNAMIC_STREAMER_FACTORY(sand::root::tree_streamer)
