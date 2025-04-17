@@ -4,27 +4,20 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
+#include <detector_response.hpp>
 #include <grain/photons.h>
 
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::detector_response)
 
-class detector_response : public ufw::process {
-
-  public:
-  detector_response();
-  void configure (const ufw::config& cfg) override;
-  void run() override;
-};
-  
-  UFW_REGISTER_PROCESS(detector_response)
-  UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(detector_response)
-
-  void detector_response::configure (const ufw::config& cfg) {
-    process::configure(cfg);
-    
-  }
+namespace sand::grain {
 
   detector_response::detector_response() : process({{"hits", "sand::grain::hits"}}, {}) {
     UFW_INFO("Creating a detector_response process at {}", fmt::ptr(this));
+  }
+
+  void detector_response::configure (const ufw::config& cfg) {
+    process::configure(cfg); 
+    m_sipm_cell = cfg.value("sipm_cell", 3.2); 
   }
 
   void detector_response::run() {
@@ -36,5 +29,6 @@ class detector_response : public ufw::process {
         // UFW_INFO("Position: {}", p.pos.X());
       }
     }
+  }
 
-}  
+}
