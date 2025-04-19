@@ -38,9 +38,7 @@
 #include "G4SystemOfUnits.hh"
 #include <cmath>
 
-#include "TH1D.h"
 #include "G4Navigator.hh"
-#include "G4MaterialPropertiesTable.hh"
 #include "G4TransportationManager.hh"
 #include "G4VPhysicalVolume.hh"
 #include "G4Poisson.hh"
@@ -54,10 +52,7 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(optical_simulation* optmen_edepsi
 	fParticleGun.SetParticleDefinition(fParticleTable->FindParticle("geantino"));
 }
 
-PrimaryGeneratorAction::~PrimaryGeneratorAction() {
-    delete fastComponentHisto;
-    delete slowComponentHisto;
-}
+PrimaryGeneratorAction::~PrimaryGeneratorAction() {}
 
 void PrimaryGeneratorAction::ApplyTranslation(){
     // TODO: use the geoManager as soon as it is available
@@ -67,7 +62,7 @@ void PrimaryGeneratorAction::ApplyTranslation(){
 }
 
 void PrimaryGeneratorAction::nextIteration() {
-    const auto& tree = ufw::context::current()->instance<sand::edep_reader>();
+    const auto& tree = m_optmen_edepsim->instance<sand::edep_reader>();
     
     if(m_optmen_edepsim->getStartRun()) {
         m_tree_it = tree.begin();
@@ -151,7 +146,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     event->SetEventID(ufw::context::current()->id());
 
     // Get lAr info
-    getMaterialProperties();
+    m_optmen_edepsim->properties();
     
     nextIteration();
     
@@ -197,7 +192,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     // This ALREADY takes into account excitons and the fraction of recombinating ions 
     
     // photons (excitons + recombinating ions)
-    G4double myphotons = m_hits_it->GetSecondaryDeposit() * fScintillationYield;
+    G4double myphotons = m_hits_it->GetSecondaryDeposit() * m_optmen_edepsim->properties().m_scintillation_yield;
     
     int myNumPhotons = 0;
     if(myphotons < 20)     myNumPhotons = int(G4Poisson(myphotons) + 0.5);
@@ -258,12 +253,12 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
             if( G4UniformRand() < 0.5 ) continue; //skip, don't emit
         }*/
 
-            myPhotonTime -= fTauFast * log( G4UniformRand() );
-            mySampledEnergy = fastComponentHisto->GetRandom();				
+            myPhotonTime -= m_optmen_edepsim->properties().m_tau_fast * log(G4UniformRand());
+            mySampledEnergy = m_optmen_edepsim->properties().m_fast_component_distribution->GetRandom();
         }
         else{
-            myPhotonTime -= fTauSlow * log( G4UniformRand() );
-            mySampledEnergy = slowComponentHisto->GetRandom();				
+            myPhotonTime -= m_optmen_edepsim->properties().m_tau_slow * log(G4UniformRand());
+            mySampledEnergy = m_optmen_edepsim->properties().m_slow_component_distribution->GetRandom();
         }
 
         fParticleGun.SetParticleEnergy(mySampledEnergy);
@@ -295,8 +290,8 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 
         // Time & Energy
         // (slow component only)
-        G4double myPhotonTime = m_hits_it->GetStart().T() + random*(m_hits_it->GetStop().T() - m_hits_it->GetStart().T()) - fTauSlow * log( G4UniformRand() );
-        G4double mySampledEnergy = slowComponentHisto->GetRandom();				
+        G4double myPhotonTime = m_hits_it->GetStart().T() + random*(m_hits_it->GetStop().T() - m_hits_it->GetStart().T()) - m_optmen_edepsim->properties().m_tau_slow * log(G4UniformRand());
+        G4double mySampledEnergy = m_optmen_edepsim->properties().m_slow_component_distribution->GetRandom();
 
         fParticleGun.SetParticleEnergy(mySampledEnergy);
         fParticleGun.SetParticleTime(myPhotonTime);		
@@ -305,29 +300,6 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     }
     UFW_DEBUG("Completed photons generation for hit {}", m_hits_it->GetId());
 }
-
-void PrimaryGeneratorAction::getMaterialProperties() {
-
-    G4NistManager* manager = G4NistManager::Instance();
-    G4Material* mat = manager->FindOrBuildMaterial("G4_lAr");
-    G4MaterialPropertiesTable* matTable = mat->GetMaterialPropertiesTable();
-    G4MaterialPropertyVector* property;
-
-    property = matTable->GetProperty("FASTCOMPONENT");
-    fastComponentHisto = new TH1D("FASTCOMPONENT", "FASTCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(), property->GetMaxEnergy());
-    for (int i = 0; i < property->GetVectorLength(); i++) 
-        fastComponentHisto->SetBinContent(i + 1, property->Value(property->Energy(i)));
-
-    property = matTable->GetProperty("SLOWCOMPONENT");
-    slowComponentHisto = new TH1D("SLOWCOMPONENT", "SLOWCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(), property->GetMaxEnergy());
-    for (int i = 0; i < property->GetVectorLength(); i++) 
-        slowComponentHisto->SetBinContent(i + 1, property->Value(property->Energy(i)));
-
-    fTauFast = matTable->GetConstProperty("FASTTIMECONSTANT");
-    fTauSlow = matTable->GetConstProperty("SLOWTIMECONSTANT");
-    fScintillationYield = matTable->GetConstProperty("SCINTILLATIONYIELD");
-}
-
 
 /////////////////////////////////////////////////////////////////////////////////
 //funzioni per determinare SINGLET to TRIPLET ratio necessario per la scelta

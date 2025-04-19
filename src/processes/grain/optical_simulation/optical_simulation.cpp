@@ -10,11 +10,13 @@
 #include <optical_simulation.hpp>
 #include <edep_reader/edep_reader.hpp>
 
+#include "G4NistManager.hh"
+#include "G4Material.hh"
+#include "G4MaterialPropertiesTable.hh"
 #include "DetectorConstruction.hh"
 #include "ActionInitialization.hh"
 #include "AnalysisManager.hh"
 #include "PhysicsList.hh"
-
 
 #include <geant_run_manager/geant_run_manager.hpp>
 
@@ -91,5 +93,33 @@ int optical_simulation::GetEventsNumber() {
 
   return eventCount;
 }
+
+  const optical_simulation::properties_t& optical_simulation::properties() {
+    //Lazy initiallization addresses problem with accessing ??something?? outside of PrimaryGeneratorAction??
+    if (!m_properties) {
+      init_properties();
+    }
+    return *m_properties;
+  }
+
+  void optical_simulation::init_properties() {
+    m_properties.reset(new properties_t);
+    G4NistManager* manager = G4NistManager::Instance();
+    G4Material* mat = manager->FindOrBuildMaterial("G4_lAr");
+    G4MaterialPropertiesTable* matTable = mat->GetMaterialPropertiesTable();
+    G4MaterialPropertyVector* property = matTable->GetProperty("FASTCOMPONENT");
+    m_properties->m_fast_component_distribution.reset(new TH1D("FASTCOMPONENT", "FASTCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(), property->GetMaxEnergy()));
+    for (int i = 0; i < property->GetVectorLength(); i++) {
+      m_properties->m_fast_component_distribution->SetBinContent(i + 1, property->Value(property->Energy(i)));
+    }
+    property = matTable->GetProperty("SLOWCOMPONENT");
+    m_properties->m_slow_component_distribution.reset(new TH1D("SLOWCOMPONENT", "SLOWCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(), property->GetMaxEnergy()));
+    for (int i = 0; i < property->GetVectorLength(); i++) {
+      m_properties->m_slow_component_distribution->SetBinContent(i + 1, property->Value(property->Energy(i)));
+    }
+    m_properties->m_tau_fast = matTable->GetConstProperty("FASTTIMECONSTANT");
+    m_properties->m_tau_slow = matTable->GetConstProperty("SLOWTIMECONSTANT");
+    m_properties->m_scintillation_yield = matTable->GetConstProperty("SCINTILLATIONYIELD");
+  }
 
 }

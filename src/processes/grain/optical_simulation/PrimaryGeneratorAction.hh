@@ -71,9 +71,6 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 
 
 		void ApplyTranslation();
-
-		// Get lAr material info
-		void getMaterialProperties();
 		
 		//function for random generation
 		std::pair<G4ThreeVector,G4ThreeVector> GenerateRandomMomentumPolarization();
@@ -88,14 +85,6 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 	private:
 		G4ParticleGun                fParticleGun;
 		G4ParticleTable*             fParticleTable;
-
-	
-    // lAr info
-		TH1D* fastComponentHisto;
-		TH1D* slowComponentHisto;
-		double fTauFast;
-		double fTauSlow;
-		G4double fScintillationYield;
 
 		//////////////////////////////////////////////////////////////
 		// Declare the information to get from the EDepSim tree
