@@ -11,21 +11,21 @@ namespace sand {
   edep_reader::edep_reader() : EDEPTree() {}
 }
 
-ufw::data::factory<sand::edep_reader>::factory(const ufw::config& cfg) :
-  input_file(TFile::Open(cfg.at("uri").template get<std::string>().c_str())),
-  event(new TG4Event()) {
-  
-    UFW_INFO("Crated file {} at {} in {}", "input_file", fmt::ptr(input_file), cfg.at("uri").template get<std::string>().c_str());
-
-
+ufw::data::factory<sand::edep_reader>::factory(const ufw::config& cfg) : input_file(nullptr), event(new TG4Event()) {
+  auto path = cfg.path_at("uri");
+  input_file.reset(TFile::Open(path.c_str()));
   input_tree = input_file->Get<TTree>("EDepSimEvents");
-	
   if(!input_tree){
-		UFW_ERROR("EDepSim tree not found!");
-	}
-
-  input_tree->SetBranchAddress("Event", &event);
+    UFW_ERROR("EDepSim tree not found in file '{}'.", path.c_str());
+  }
+  TBranch* br = input_tree->GetBranch("Event");
+  if(!br){
+    UFW_ERROR("EDepSim branch \"Event\" not found in file '{}'.", path.c_str());
+  }
+  br->SetAddress(&event);
 }
+
+ufw::data::factory<sand::edep_reader>::~factory() = default;
 
 sand::edep_reader& ufw::data::factory<sand::edep_reader>::instance(ufw::context_id i) {
   if (m_id != i) {

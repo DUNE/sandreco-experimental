@@ -15,7 +15,7 @@ UFW_DECLARE_RTTI(type)
 
 namespace sand::root {
 
-  tree_streamer::tree_streamer() : m_file(nullptr), m_tree(nullptr), m_branchaddr(nullptr), m_id(), m_last_entry(0) {
+  tree_streamer::tree_streamer() : m_file(nullptr), m_tree(nullptr), m_branchaddr(nullptr), m_id(), m_last_entry(-1) {
     m_id_ptr = &m_id;
   }
 
@@ -92,7 +92,7 @@ namespace sand::root {
     if (m_id == id) {
       return;
     }
-    m_file->cd();
+    m_file->cd(); //TODO figure out why removing these causes crash at program exit
     long entries = m_tree->GetEntries();
     //linear search
     while (++m_last_entry < entries) {

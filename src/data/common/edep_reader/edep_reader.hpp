@@ -24,6 +24,7 @@ template <>
 class ufw::data::factory<sand::edep_reader> {
   public:
     factory(const ufw::config&);
+    ~factory();
     sand::edep_reader& instance(ufw::context_id);
 
   private:
