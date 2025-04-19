@@ -40,7 +40,6 @@
 #include <vector>
 #include <list>
 
-#include <TFile.h>
 #include "TTreeReader.h"
 #include "TH1D.h"
 #include "TTreeReaderValue.h"

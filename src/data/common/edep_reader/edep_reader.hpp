@@ -24,6 +24,7 @@ template <>
 class ufw::data::factory<sand::edep_reader> {
   public:
     factory(const ufw::config&);
+    ~factory();
     sand::edep_reader& instance(ufw::context_id);
 
   private:
@@ -31,7 +32,7 @@ class ufw::data::factory<sand::edep_reader> {
     std::unique_ptr<TFile> input_file;
     TTree* input_tree;
     TG4Event* event;
-    ufw::context_id m_id = -1;
+    ufw::context_id m_id;
   
 };
 
