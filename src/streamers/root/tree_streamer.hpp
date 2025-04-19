@@ -1,0 +1,38 @@
+#pragma once
+
+class TFile;
+class TTree;
+
+#include <ufw/streamer.hpp>
+
+namespace sand::root {
+
+  class tree_streamer : public ufw::streamer {
+
+  public:
+    tree_streamer();
+
+    ~tree_streamer();
+
+    void configure(const ufw::config&, const ufw::type_id&, ufw::op_type) override;
+
+    void attach(ufw::data::data_base&) override;
+
+    void read(ufw::context_id) override;
+
+    void write(ufw::context_id) override;
+
+  private:
+    std::unique_ptr<TFile> m_file;
+    TTree* m_tree;
+    void* m_branchaddr;
+    ufw::context_id m_id;
+    ufw::context_id* m_id_ptr;
+    long m_last_entry;
+    static constexpr char s_id_brname[] = "context_id";
+
+  };
+
+}
+
+UFW_REGISTER_STREAMER(sand::root::tree_streamer)

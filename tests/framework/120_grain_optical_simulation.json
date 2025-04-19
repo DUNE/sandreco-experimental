@@ -1,0 +1,38 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-ldpath" : ["/usr/local/lib64"]
+  },
+  "globals" : {
+    "sand::grain::geant_run_manager" : {}
+  },
+  "contexts" : {
+    "keys" : [14, 31, 70],
+    "locals" : {
+      "sand::edep_reader" : {"uri" : "/home/sand/events-in-GRAIN_LAr_lv.1.edep-sim.root"}
+    }
+  },
+  "run" : [
+    {
+      "sand::grain::optical_simulation" : { 
+        "seed" : 111,
+        "geometry" : "/home/sand/geometry/main.gdml",
+        "energy_split_threshold" : 100
+      },
+      "reqs" : {},
+      "prods" : {"hits" : "foo"}
+    },
+    {
+      "sand::root::tree_streamer" : { 
+        "uri" : "/home/sand/sensors.root",
+        "tree" : "cameras"
+      },
+      "write" : { "foo" : "sand::grain::hits"}
+    },
+    {
+      "detector_response" : {},
+      "reqs" : {"hits" : "foo"},
+      "prods" : {}
+    }
+  ]
+}

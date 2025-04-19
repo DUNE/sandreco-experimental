@@ -1,0 +1,41 @@
+#ifndef PHYSICSLIST_H
+#define PHYSICSLIST_H
+
+#include <G4EmStandardPhysics.hh>
+#include <G4VModularPhysicsList.hh>
+#include "globals.hh"
+
+#include "G4Cerenkov.hh"
+#include "G4OpAbsorption.hh"
+#include "G4OpBoundaryProcess.hh"
+#include "G4OpMieHG.hh"
+#include "G4OpRayleigh.hh"
+#include "G4OpWLS.hh"
+#include "G4Scintillation.hh"
+
+class G4Cerenkov;
+class G4Scintillation;
+class G4OpBoundaryProcess;
+class G4OpBoundary;
+class G4OpAbsorption;
+class G4OpRayleigh;
+class G4OpWLS;
+class G4OpMieHG;
+
+namespace sand::grain {
+class PhysicsList : public G4VModularPhysicsList {
+ private:
+	 
+ public:
+  PhysicsList();
+  virtual ~PhysicsList();
+  virtual void setCuts();
+
+  virtual void ConstructParticle();
+  virtual void ConstructProcess();
+  void ConstructEM();
+  void ConstructOp();
+  void ConstructGeneral();
+};
+}
+#endif /* PHYSICSLIST_H */

@@ -1,2 +1,3 @@
-add_subdirectory(Geant4_example)
-add_subdirectory(time_slicing)
+
+add_subdirectory(grain)
+

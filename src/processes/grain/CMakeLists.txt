@@ -1,0 +1,3 @@
+add_subdirectory(optical_simulation)
+add_subdirectory(detector_response)
+add_subdirectory(time_slicing)
