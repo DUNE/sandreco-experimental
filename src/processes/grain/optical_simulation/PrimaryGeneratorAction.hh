@@ -41,13 +41,7 @@
 #include "G4ParticleTable.hh"
 #include "G4NistManager.hh"
 
-#include "TH1D.h"
-#include "TLorentzVector.h"
-#include "TGeoManager.h"
-
 #include "Randomize.hh"
-#include <vector>
-#include <optional>
 
 #include <TG4Event.h>
 #include <TG4HitSegment.h>
@@ -55,6 +49,7 @@
 #include <edep_reader/edep_reader.hpp>
 
 class G4Event;
+class TH1D;
 
 namespace sand::grain {
 class optical_simulation;
@@ -76,9 +71,6 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 
 
 		void ApplyTranslation();
-
-		// Get lAr material info
-		void getMaterialProperties();
 		
 		//function for random generation
 		std::pair<G4ThreeVector,G4ThreeVector> GenerateRandomMomentumPolarization();
@@ -93,14 +85,6 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 	private:
 		G4ParticleGun                fParticleGun;
 		G4ParticleTable*             fParticleTable;
-
-	
-    // lAr info
-		TH1D* fastComponentHisto;
-		TH1D* slowComponentHisto;
-		double fTauFast;
-		double fTauSlow;
-		G4double fScintillationYield;
 
 		//////////////////////////////////////////////////////////////
 		// Declare the information to get from the EDepSim tree

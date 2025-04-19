@@ -10,11 +10,13 @@
 #include <optical_simulation.hpp>
 #include <edep_reader/edep_reader.hpp>
 
+#include "G4NistManager.hh"
+#include "G4Material.hh"
+#include "G4MaterialPropertiesTable.hh"
 #include "DetectorConstruction.hh"
 #include "ActionInitialization.hh"
 #include "AnalysisManager.hh"
 #include "PhysicsList.hh"
-
 
 #include <geant_run_manager/geant_run_manager.hpp>
 
@@ -51,8 +53,7 @@ void optical_simulation::configure (const ufw::config& cfg) {
   UFW_DEBUG("Back to {}", std::filesystem::current_path().string());
   
 
-  auto& run_manager = ufw::context::instance<geant_run_manager>();
-  UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
+  auto& run_manager = instance<geant_run_manager>();
 
   run_manager.SetUserInitialization(new DetectorConstruction(parser, this));
 
@@ -69,34 +70,56 @@ optical_simulation::optical_simulation() : process({}, {{"hits", "sand::grain::h
   UFW_INFO("Creating a optical_simulation process at {}", fmt::ptr(this));
 }
 
-
-void optical_simulation::run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) {
+void optical_simulation::run() {
   // CLHEP::HepRandom::setTheSeed(m_seed);
   // CLHEP::HepRandom::showEngineStatus();
-  m_output_variable_name = outputs.at("hits");
   m_run_start = true;
   m_new_iteration = true;
 
-  auto& run_manager = ufw::context::instance<geant_run_manager>();
-
-  UFW_INFO("Accessed instance of run manager at: {}", fmt::ptr(&run_manager));
-  run_manager.BeamOn(GetEventsNumber());
+  instance<geant_run_manager>().BeamOn(GetEventsNumber());
 }  
-
 
 int optical_simulation::GetEventsNumber() {
   UFW_DEBUG("Computing the number of block for the event");
-	auto& tree = ufw::context::instance<sand::edep_reader>();
+  const auto& tree = get<sand::edep_reader>();
   int eventCount = 0;
 
-	for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
-
-		if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
+  for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
+    if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
       eventCount += trj_it->GetHitMap().at(component::GRAIN).size();
     }
-	}
+  }
   UFW_DEBUG("Split into {} events.", eventCount);
 
-	return eventCount;
+  return eventCount;
 }
+
+  const optical_simulation::properties_t& optical_simulation::properties() {
+    //Lazy initiallization addresses problem with accessing ??something?? outside of PrimaryGeneratorAction??
+    if (!m_properties) {
+      init_properties();
+    }
+    return *m_properties;
+  }
+
+  void optical_simulation::init_properties() {
+    m_properties.reset(new properties_t);
+    G4NistManager* manager = G4NistManager::Instance();
+    G4Material* mat = manager->FindOrBuildMaterial("G4_lAr");
+    G4MaterialPropertiesTable* matTable = mat->GetMaterialPropertiesTable();
+    G4MaterialPropertyVector* property = matTable->GetProperty("FASTCOMPONENT");
+    m_properties->m_fast_component_distribution.reset(new TH1D("FASTCOMPONENT", "FASTCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(), property->GetMaxEnergy()));
+    for (int i = 0; i < property->GetVectorLength(); i++) {
+      m_properties->m_fast_component_distribution->SetBinContent(i + 1, property->Value(property->Energy(i)));
+    }
+    property = matTable->GetProperty("SLOWCOMPONENT");
+    m_properties->m_slow_component_distribution.reset(new TH1D("SLOWCOMPONENT", "SLOWCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(), property->GetMaxEnergy()));
+    for (int i = 0; i < property->GetVectorLength(); i++) {
+      m_properties->m_slow_component_distribution->SetBinContent(i + 1, property->Value(property->Energy(i)));
+    }
+    m_properties->m_tau_fast = matTable->GetConstProperty("FASTTIMECONSTANT");
+    m_properties->m_tau_slow = matTable->GetConstProperty("SLOWTIMECONSTANT");
+    m_properties->m_scintillation_yield = matTable->GetConstProperty("SCINTILLATIONYIELD");
+  }
+
 }
