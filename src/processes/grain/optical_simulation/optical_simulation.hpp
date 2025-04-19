@@ -33,10 +33,7 @@ class optical_simulation : public ufw::process {
 
   optical_simulation();
   void configure (const ufw::config& cfg) override;
-  // const ufw::var_type_map& products() const override;
-  // const ufw::var_type_map& requirements() const override;
-  void run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) override;
-  const ufw::public_id& outputVariableName() const {return m_output_variable_name;}
+  void run() override;
   OpticsType opticsType() const {return m_optics_type;}
   double energySplitThreshold() const {return m_energy_split_threshold;}
   int GetEventsNumber();
@@ -49,7 +46,6 @@ class optical_simulation : public ufw::process {
   mutable std::deque<double> track_times;
 
   private:
-    ufw::public_id m_output_variable_name;
     OpticsType m_optics_type;
     std::filesystem::path m_geometry;
     double m_energy_split_threshold = 100; // MeV

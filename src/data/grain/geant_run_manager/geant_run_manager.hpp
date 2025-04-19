@@ -11,7 +11,7 @@
 namespace sand::grain {
 
 struct geant_run_manager : public G4RunManager, public ufw::data::base<ufw::data::complex_tag, 
-                                                                          ufw::data::singleton_tag, 
+                                                                          ufw::data::unique_tag, 
                                                                           ufw::data::global_tag> {
   public:
     explicit geant_run_manager(const ufw::config&);

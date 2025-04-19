@@ -70,10 +70,9 @@ optical_simulation::optical_simulation() : process({}, {{"hits", "sand::grain::h
 }
 
 
-void optical_simulation::run(const ufw::var_id_map& inputs, const ufw::var_id_map& outputs) {
+void optical_simulation::run() {
   // CLHEP::HepRandom::setTheSeed(m_seed);
   // CLHEP::HepRandom::showEngineStatus();
-  m_output_variable_name = outputs.at("hits");
   m_run_start = true;
   m_new_iteration = true;
 

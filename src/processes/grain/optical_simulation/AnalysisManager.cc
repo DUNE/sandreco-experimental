@@ -16,26 +16,20 @@
 #include <G4SDManager.hh>
 #include <G4THitsCollection.hh>
 #include <G4Version.hh>
-#include <numeric>
 #include "Sensor.h"
 #include "SensitiveArgon.h"
 #include "SensorHit.h"
-#include "SensitiveArgonHit.h"
 #include "G4RunManager.hh"
 #include "AnalysisManager.hh"
 
 
 #include <TROOT.h>
-#include "TSystem.h"
 
 
 #include <string>
 #include <vector>
 
 #include <iostream>
-#include <memory>
-#include <fstream>
-#include <stdio.h>
 
 using std::string;
 using std::vector;
@@ -48,7 +42,7 @@ AnalysisManager::~AnalysisManager() {}
 void AnalysisManager::BeginOfRun() {
   UFW_DEBUG("Begin of run");
 
-  auto& hits = ufw::context::instance<sand::grain::hits>(m_optmen_edepsim->outputVariableName());
+  auto& hits = m_optmen_edepsim->set<sand::grain::hits>("hits");
 
   // TODO: use info from grain geomanager
   for (auto p : *G4PhysicalVolumeStore::GetInstance()) {
@@ -61,14 +55,14 @@ void AnalysisManager::BeginOfRun() {
   }
 
   if (sensorCollID.size() == 0) {
-	  G4SDManager *pSDManager = G4SDManager::GetSDMpointer();
-	  _nCollections = pSDManager->GetCollectionCapacity();
-	  std::cout << "_nCollections: " << _nCollections << std::endl;
+    G4SDManager *pSDManager = G4SDManager::GetSDMpointer();
+    _nCollections = pSDManager->GetCollectionCapacity();
+    std::cout << "_nCollections: " << _nCollections << std::endl;
   }
 }
 
 void AnalysisManager::EndOfRun() {
-  G4cout << "End of run" << std::endl;
+  UFW_DEBUG("End of run");
 }
 
 void AnalysisManager::BeginOfEvent(const G4Event *pEvent) {
@@ -82,8 +76,8 @@ void AnalysisManager::EndOfEvent(const G4Event *pEvent) {
   SensorHitCollection *sensorHitsCollection = 0;
   
   int eventID = pEvent->GetEventID();
-  
-  auto& hits = ufw::context::instance<sand::grain::hits>(m_optmen_edepsim->outputVariableName());
+
+  auto& hits = m_optmen_edepsim->set<sand::grain::hits>("hits");
 
   // Retrieving info of detected photons
   G4SDManager *pSDManager = G4SDManager::GetSDMpointer();
