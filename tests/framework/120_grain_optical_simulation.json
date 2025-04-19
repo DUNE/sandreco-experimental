@@ -30,7 +30,7 @@
       "write" : { "foo" : "sand::grain::hits"}
     },
     {
-      "detector_response" : {},
+      "sand::grain::detector_response" : {},
       "reqs" : {"hits" : "foo"},
       "prods" : {}
     }
