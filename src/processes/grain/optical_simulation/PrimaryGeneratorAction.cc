@@ -37,17 +37,10 @@
 #include "PrimaryGeneratorAction.hh"
 #include "G4SystemOfUnits.hh"
 #include <cmath>
-#include <vector>
-#include <list>
 
-#include "TTreeReader.h"
 #include "TH1D.h"
-#include "TTreeReaderValue.h"
-#include "TSystem.h"
-#include "TGeoEltu.h"
 #include "G4Navigator.hh"
 #include "G4MaterialPropertiesTable.hh"
-#include "TTreeReaderArray.h"
 #include "G4TransportationManager.hh"
 #include "G4VPhysicalVolume.hh"
 #include "G4Poisson.hh"
@@ -61,7 +54,10 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(optical_simulation* optmen_edepsi
 	fParticleGun.SetParticleDefinition(fParticleTable->FindParticle("geantino"));
 }
 
-PrimaryGeneratorAction::~PrimaryGeneratorAction() {}
+PrimaryGeneratorAction::~PrimaryGeneratorAction() {
+    delete fastComponentHisto;
+    delete slowComponentHisto;
+}
 
 void PrimaryGeneratorAction::ApplyTranslation(){
     // TODO: use the geoManager as soon as it is available
@@ -71,7 +67,7 @@ void PrimaryGeneratorAction::ApplyTranslation(){
 }
 
 void PrimaryGeneratorAction::nextIteration() {
-    const auto& tree = ufw::context::instance<sand::edep_reader>();
+    const auto& tree = ufw::context::current()->instance<sand::edep_reader>();
     
     if(m_optmen_edepsim->getStartRun()) {
         m_tree_it = tree.begin();
@@ -152,7 +148,7 @@ std::pair<G4ThreeVector,G4ThreeVector> PrimaryGeneratorAction::GenerateRandomMom
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 
-    event->SetEventID(ufw::context::current());
+    event->SetEventID(ufw::context::current()->id());
 
     // Get lAr info
     getMaterialProperties();
