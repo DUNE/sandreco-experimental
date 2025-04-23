@@ -21,11 +21,6 @@ namespace sand {
       edep_reader();
       friend class ufw::data::factory<sand::edep_reader>;
 
-    public:
-      const TG4HitSegment& at(std::size_t) const;
-
-      const std::size_t size() const;
-
   };
 
 }

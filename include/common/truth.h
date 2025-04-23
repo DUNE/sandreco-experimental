@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #ifndef __CLING__
 #include <ufw/index.hpp>
 
@@ -7,10 +9,13 @@ class TG4HitSegment;
 
 namespace sand {
 
-  extern const TG4HitSegment& get_truth_at(const size_t& i);
-  extern bool check_truth_at(const size_t& i);
+  struct truth_adapter {
+    using value_type = const TG4HitSegment;
+    using index_type = std::size_t;
+    static value_type& at(const index_type&);
+    static bool valid(const index_type&);
+  };
 
-  using truth_adapter = ufw::data::collection_adapter<const TG4HitSegment, size_t, get_truth_at, check_truth_at>;
   using truth_index = ufw::data::index<truth_adapter>;
 
 }

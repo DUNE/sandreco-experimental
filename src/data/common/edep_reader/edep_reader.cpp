@@ -10,21 +10,13 @@
 
 namespace sand {
   edep_reader::edep_reader() : EDEPTree() {}
-  
-  const TG4HitSegment& edep_reader::at(std::size_t) const {
+
+  truth_adapter::value_type& truth_adapter::at(const index_type&) {
     UFW_FATAL("Not yet implemented");
   }
 
-  const std::size_t edep_reader::size() const {
+  bool truth_adapter::valid(const index_type&) {
     UFW_FATAL("Not yet implemented");
-  }
-
-  const TG4HitSegment& get_truth_at(const size_t& i) {
-    return ufw::context::current()->instance<edep_reader>().at(i);
-  }
-
-  bool check_truth_at(const size_t& i) {
-    return i < ufw::context::current()->instance<edep_reader>().size();
   }
 
 }
