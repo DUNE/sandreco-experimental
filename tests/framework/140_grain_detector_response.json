@@ -22,9 +22,10 @@
         "sand::grain::detector_response_fast" : {
             "matrix_rows": 32,
             "matrix_columns": 32,
-            "sipm_cell": 3.2, 
+            "sipm_active_size": 3.0,
+            "sipm_border": 0.1, 
             "seed": 1111, 
-            "pde": 0.5},
+            "pde": 0.2},
         "reqs" : {"hits" : "foo"},
         "prods" : {"digi": "pippo"}
       },
