@@ -2,20 +2,32 @@
 
 #include <ufw/data.hpp>
 
+#include <common/truth.h>
+
 #include <edep_reader/EDEPTree.h>
 
+class TG4HitSegment;
 class TG4Event;
 class TFile;
 class TTree;
 
 namespace sand {
-  struct edep_reader : public EDEPTree, public ufw::data::base<ufw::data::complex_tag, 
-                                              ufw::data::unique_tag, 
-                                              ufw::data::context_tag> {
+
+  struct edep_reader : public EDEPTree, public ufw::data::base<ufw::data::complex_tag,
+                                                               ufw::data::unique_tag,
+                                                               ufw::data::context_tag> {
+
+    private:
+      edep_reader();
+      friend class ufw::data::factory<sand::edep_reader>;
 
     public:
-      explicit edep_reader();
+      const TG4HitSegment& at(std::size_t) const;
+
+      const std::size_t size() const;
+
   };
+
 }
 
 UFW_DECLARE_COMPLEX_DATA(sand::edep_reader);
@@ -35,5 +47,3 @@ class ufw::data::factory<sand::edep_reader> {
     ufw::context_id m_id;
   
 };
-
-

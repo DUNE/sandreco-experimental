@@ -112,7 +112,6 @@ void AnalysisManager::EndOfEvent(const G4Event *pEvent) {
         ph.pos.SetXYZT(sensorHit->arrivalPos().getX(), sensorHit->arrivalPos().getY(),
                         sensorHit->arrivalPos().getZ(), sensorHit->arrivalTime());
         ph.scatter = sensorHit->scatter();
-        ph.hit = -1;
 
         camera_it->photons.push_back(ph);
       }

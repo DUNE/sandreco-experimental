@@ -3,12 +3,30 @@
 
 #include <ufw/data.hpp>
 #include <ufw/config.hpp>
+#include <ufw/context.hpp>
 
 #include <edep_reader/edep_reader.hpp>
 
 
 namespace sand {
   edep_reader::edep_reader() : EDEPTree() {}
+  
+  const TG4HitSegment& edep_reader::at(std::size_t) const {
+    UFW_FATAL("Not yet implemented");
+  }
+
+  const std::size_t edep_reader::size() const {
+    UFW_FATAL("Not yet implemented");
+  }
+
+  const TG4HitSegment& get_truth_at(const size_t& i) {
+    return ufw::context::current()->instance<edep_reader>().at(i);
+  }
+
+  bool check_truth_at(const size_t& i) {
+    return i < ufw::context::current()->instance<edep_reader>().size();
+  }
+
 }
 
 ufw::data::factory<sand::edep_reader>::factory(const ufw::config& cfg) : input_file(nullptr), event(new TG4Event()) {

@@ -20,8 +20,10 @@ namespace sand::root {
   }
 
   tree_streamer::~tree_streamer() {
-    m_file->cd();
-    m_tree->Write(0, TObject::kOverwrite);
+    if (operation() & ufw::op_type::wo) {
+      m_file->cd();
+      m_tree->Write(0, TObject::kOverwrite);
+    }
     m_file->Close();
     //delete m_tree; //deleted in close
   }
