@@ -1,0 +1,41 @@
+{
+    "ufw" : {
+      "ufw-loglevel" : "debug",
+      "ufw-ldpath" : ["/usr/local/lib64"]
+    },
+    "globals" : {
+    },
+    "contexts" : {
+      "keys" : [14],
+      "locals" : {
+      }
+    },
+    "run" : [
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "/home/sand/sensors.root",
+          "tree" : "cameras"
+        },
+        "read" : { "foo" : "sand::grain::hits"}
+      },
+      {
+        "sand::grain::detector_response_fast" : {
+            "matrix_rows": 32,
+            "matrix_columns": 32,
+            "sipm_active_size": 3.0,
+            "sipm_border": 0.1, 
+            "seed": 1111, 
+            "pde": 0.2},
+        "reqs" : {"hits" : "foo"},
+        "prods" : {"digi": "pippo"}
+      },
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "/home/sand/detresp.root",
+          "tree" : "cameras"
+        },
+        "write" : { "pippo" : "sand::grain::digi"}
+      }
+    ]
+  }
+  

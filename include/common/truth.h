@@ -29,10 +29,13 @@ namespace sand {
 
   struct true_hits {
 #ifdef __CLING__
-    std::vector<size_t> hits;
+    std::set<size_t> hits;
+    inline void add(size_t i) { hits.emplace(i); }
 #else //__CLING__
-    std::vector<truth_index> hits;
+    std::set<truth_index> hits;
+    inline void add(truth_index i) { hits.emplace(i); }
 #endif //__CLING__
   };
+
 
 }
