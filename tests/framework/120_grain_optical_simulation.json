@@ -28,11 +28,6 @@
         "tree" : "cameras"
       },
       "write" : { "foo" : "sand::grain::hits"}
-    },
-    {
-      "sand::grain::detector_response_fast" : {},
-      "reqs" : {"hits" : "foo"},
-      "prods" : {}
     }
   ]
 }
