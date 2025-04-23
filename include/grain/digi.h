@@ -8,7 +8,7 @@
 namespace sand::grain {
 
   struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct channel : public sand::true_hits
+    struct photoelectron : public sand::true_hits
     {
        uint16_t channel_id;
        double time_rising_edge;
@@ -16,15 +16,16 @@ namespace sand::grain {
        double charge;
     };
 
-    struct image
+    struct camera
     {
-      uint16_t camera_id;  // or std::string camera_name;
-      std::vector<channel> channels;
+      uint16_t camera_id;  
+      std::string camera_name;
+      std::vector<photoelectron> photoelectrons;
     };
 
-    using image_list = std::vector<digi::image>;
+    using camera_list = std::vector<camera>;
 
-    image_list images;
+    camera_list cameras;
 
   };
 

@@ -6,7 +6,7 @@
     "globals" : {
     },
     "contexts" : {
-      "keys" : [14, 31, 70],
+      "keys" : [14],
       "locals" : {
       }
     },
@@ -19,11 +19,21 @@
         "read" : { "foo" : "sand::grain::hits"}
       },
       {
-        "sand::grain::detector_response" : {
-            "matrix_shape": [32,32],
-            "sipm_cell": 3.2}, 
+        "sand::grain::detector_response_fast" : {
+            "matrix_rows": 32,
+            "matrix_columns": 32,
+            "sipm_cell": 3.2, 
+            "seed": 1111, 
+            "pde": 0.5},
         "reqs" : {"hits" : "foo"},
-        "prods" : {}
+        "prods" : {"digi": "pippo"}
+      },
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "/home/sand/detresp.root",
+          "tree" : "cameras"
+        },
+        "write" : { "pippo" : "sand::grain::digi"}
       }
     ]
   }

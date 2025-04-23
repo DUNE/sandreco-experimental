@@ -10,6 +10,8 @@ namespace sand {
 
   struct true_hits {
     std::vector<int> hits;
+    inline void add(int i) { hits.push_back(i);}
   };
+
 
 }
