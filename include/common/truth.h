@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #ifndef __CLING__
 #include <ufw/index.hpp>
 
