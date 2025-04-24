@@ -11,13 +11,8 @@ namespace sand::grain {
     static constexpr size_t ROWS = 32;
 
     struct pixel : public sand::true_hits {
-      double amplitude;
+      double amplitude = 0.0;
       //do we want also time of first photon?
-      inline void add(const pixel& other){
-        amplitude+= other.amplitude;
-        // handle time of first photon 
-        //if (other.first_time < this->first_time) this->first_time = other.first_time;
-      }
     };
 
     struct picture {

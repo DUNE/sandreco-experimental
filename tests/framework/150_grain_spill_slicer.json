@@ -20,11 +20,19 @@
       },
       {
         "sand::grain::time_slicing" : {
-            "slice_times": [0.0, 200.0, 500.0] 
+            "slice_times": [0.0, 500.0] 
         },
         "reqs" : {"digi" : "foo"},
-        "prods" : {}
+        "prods" : {"pictures": "pippo"}
+      },
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "/home/sand/images.root",
+          "tree" : "cameras"
+        },
+        "write" : { "pippo" : "sand::grain::pictures"}
       }
+
     ]
   }
   

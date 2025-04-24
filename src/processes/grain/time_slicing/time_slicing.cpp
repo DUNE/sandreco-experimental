@@ -31,7 +31,7 @@ namespace sand::grain {
   }
 
 
-  time_slicing::time_slicing() : process({{"digi", "sand::grain::digi"}}, {}) {
+  time_slicing::time_slicing() : process({{"digi", "sand::grain::digi"}}, {{"pictures", "sand::grain::pictures"}}) {
     UFW_INFO("Creating a time_slicing process at {}", fmt::ptr(this));
   }
 
@@ -39,7 +39,7 @@ namespace sand::grain {
   void time_slicing::run() {
     const auto& digis_in = get<digi>("digi");
     UFW_DEBUG("Camera images size: {}.", digis_in.cameras.size());
-    //auto& images_out = set<pictures>("image");
+    auto& images_out = set<pictures>("pictures");
     
 
     for (int img_idx = 0; img_idx < m_slice_times.size()-1; img_idx++ ) {
@@ -55,8 +55,10 @@ namespace sand::grain {
           UFW_DEBUG("channel id: {}, time: {}", pe.channel_id, pe.time_rising_edge);
           if (pe.time_rising_edge >= m_slice_times[img_idx] && pe.time_rising_edge < m_slice_times[img_idx+1]){
               UFW_DEBUG("pe to be assigned to image {}", img_idx);
+              cam_image.channels[img_idx].amplitude += pe.charge;
           }  
         }
+        images_out.pictures.emplace_back(cam_image);
       }
     }
   }
