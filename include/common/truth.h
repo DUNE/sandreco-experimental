@@ -36,9 +36,11 @@ namespace sand {
 #ifdef __CLING__
     std::set<size_t> hits;
     inline void add(size_t i) { hits.emplace(i); }
+    inline void add(const std::set<size_t>& set) { hits.insert(set.begin(), set.end()); }
 #else //__CLING__
     std::set<truth_index> hits;
     inline void add(truth_index i) { hits.emplace(i); }
+    inline void add(const std::set<truth_index>& set) { hits.insert(set.begin(), set.end()); }
 #endif //__CLING__
   };
 
