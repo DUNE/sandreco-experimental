@@ -55,7 +55,7 @@ namespace sand::grain {
           UFW_DEBUG("channel id: {}, time: {}", pe.channel_id, pe.time_rising_edge);
           if (pe.time_rising_edge >= m_slice_times[img_idx] && pe.time_rising_edge < m_slice_times[img_idx+1]){
               UFW_DEBUG("pe to be assigned to image {}", img_idx);
-              cam_image.channels[img_idx].amplitude += pe.charge;
+              cam_image.channels[pe.channel_id].amplitude += pe.charge;
           }  
         }
         images_out.pictures.emplace_back(cam_image);
