@@ -18,24 +18,45 @@ namespace sand::grain {
 
   private:
     int m_seed = 0;
+    std::vector<double> m_slice_times;
+    
   };
 
   void time_slicing::configure (const ufw::config& cfg) {
     process::configure(cfg);
+    for (auto time: cfg.at("slice_times") ) {
+      m_slice_times.push_back(time);
+    }
+  
   }
+
 
   time_slicing::time_slicing() : process({{"digi", "sand::grain::digi"}}, {}) {
     UFW_INFO("Creating a time_slicing process at {}", fmt::ptr(this));
   }
 
-  void time_slicing::run() {
-    const auto& digis = get<sand::grain::digi>("digi");
-    UFW_INFO("Camera images size: {}.", digis.images.size());
 
-    for (auto& i : digis.images) {
-      UFW_INFO("Image {}", i.camera_id);
-      for (auto& c : i.channels) {
-        // UFW_INFO("Position: {}", p.pos.X());
+  void time_slicing::run() {
+    const auto& digis_in = get<digi>("digi");
+    UFW_DEBUG("Camera images size: {}.", digis_in.cameras.size());
+    //auto& images_out = set<pictures>("image");
+    
+
+    for (int img_idx = 0; img_idx < m_slice_times.size()-1; img_idx++ ) {
+      UFW_DEBUG("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx+1]);
+      for (auto& cam : digis_in.cameras) {
+        UFW_DEBUG("Camera {} {}", cam.camera_id, cam.camera_name);
+        pictures::picture cam_image; 
+        cam_image.camera_id = cam.camera_id;
+        //cam_image.camera_name = cam.camera_name;
+        cam_image.time_begin = m_slice_times[img_idx];
+        cam_image.time_end = m_slice_times[img_idx+1];
+        for (auto& pe : cam.photoelectrons) {
+          UFW_DEBUG("channel id: {}, time: {}", pe.channel_id, pe.time_rising_edge);
+          if (pe.time_rising_edge >= m_slice_times[img_idx] && pe.time_rising_edge < m_slice_times[img_idx+1]){
+              UFW_DEBUG("pe to be assigned to image {}", img_idx);
+          }  
+        }
       }
     }
   }

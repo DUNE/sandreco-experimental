@@ -9,7 +9,7 @@
   "contexts" : {
     "keys" : [14, 31, 70],
     "locals" : {
-      "sand::edep_reader" : {"uri" : "/home/sand/events-in-GRAIN_LAr_lv.1.edep-sim.root"}
+      "sand::edep_reader" : {"uri" : "/home/sand/events-in-GRAIN_LAr_lv.10.edep-sim.root"}
     }
   },
   "run" : [

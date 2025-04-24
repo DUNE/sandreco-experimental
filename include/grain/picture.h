@@ -5,20 +5,27 @@
 
 namespace sand::grain {
 
-  struct pictures : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
+  struct pictures :ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
 
-    static constexpr size_t heigth = 32;
-    static constexpr size_t width = 32;
+    static constexpr size_t COLS = 32;
+    static constexpr size_t ROWS = 32;
 
     struct pixel : public sand::true_hits {
       double amplitude;
+      //do we want also time of first photon?
+      inline void add(const pixel& other){
+        amplitude+= other.amplitude;
+        // handle time of first photon 
+        //if (other.first_time < this->first_time) this->first_time = other.first_time;
+      }
     };
 
     struct picture {
-      uint16_t camera_id;  // or std::string camera_name;
-      double first_time; //time of the first photon
-      double last_time; //time after the last photon
-      std::array<pixel, heigth * width> channels;
+      uint16_t camera_id;
+      std::string camera_name;
+      double time_begin; // begin of slice
+      double time_end; // end of slice
+      std::array<pixel, COLS * ROWS> channels;
     };
 
     using picture_list = std::vector<picture>;
@@ -28,3 +35,5 @@ namespace sand::grain {
   };
 
 }
+
+UFW_DECLARE_MANAGED_DATA(sand::grain::pictures)
