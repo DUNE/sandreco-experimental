@@ -9,9 +9,9 @@ namespace sand::grain {
 
   //We cannot quite use SMatrix as is because its default initialization does not support non-numeric types.
   template <typename T>
-  class pixel_array : public ROOT::Math::SMatrix<T, camera_width, camera_height> {
+  class pixel_array : public ROOT::Math::SMatrix<T, camera_height, camera_width> {
   public:
-    pixel_array() : ROOT::Math::SMatrix<T, camera_width, camera_height>(ROOT::Math::SMatrixNoInit()) {}
+    pixel_array() : ROOT::Math::SMatrix<T, camera_height, camera_width>(ROOT::Math::SMatrixNoInit()) {}
   };
 
 }
