@@ -17,7 +17,7 @@
     {
       "sand::grain::optical_simulation" : { 
         "seed" : 111,
-        "geometry" : "geometry/grain/masks-3mm/main.gdml",
+        "geometry" : "geometries/grain/masks-3mm/main.gdml",
         "energy_split_threshold" : 100
       },
       "reqs" : {},
