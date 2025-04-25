@@ -21,26 +21,30 @@ namespace sand::grain {
       double time_end; // end of slice
       pixel_array<pixel> pixels;
     public:
-      inline pixel_array<double> amplitude_array() const;
-      inline pixel_array<double> time_array() const;
+      template <typename T>
+      pixel_array<T> amplitude_array() const;
+      template <typename T>
+      pixel_array<T> time_array() const;
       inline sand::true_hits all_hits() const;
 
     };
 
     using image_list = std::vector<image>;
 
-    image_list pictures;
+    image_list images;
 
   };
 
-  inline pixel_array<double> images::image::amplitude_array() const {
-    pixel_array<double> ret;
+  template <typename T>
+  pixel_array<T> images::image::amplitude_array() const {
+    pixel_array<T> ret;
     std::transform(pixels.begin(), pixels.end(), ret.begin(), [](const pixel& p){ return p.amplitude; });
     return ret;
   }
 
-  inline pixel_array<double> images::image::time_array() const {
-    pixel_array<double> ret;
+  template <typename T>
+  pixel_array<T> images::image::time_array() const {
+    pixel_array<T> ret;
     std::transform(pixels.begin(), pixels.end(), ret.begin(), [](const pixel& p){ return p.time_first; });
     return ret;
   }

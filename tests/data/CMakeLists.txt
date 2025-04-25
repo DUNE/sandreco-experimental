@@ -4,5 +4,5 @@ list(REMOVE_ITEM DATA "CMakeLists.txt")
 
 install(
   FILES ${DATA}
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/sandreco/test/data"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/sandreco/data/test"
   )

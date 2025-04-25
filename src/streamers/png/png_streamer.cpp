@@ -64,11 +64,13 @@ namespace sand::png {
   }
 
   void png_streamer::write(ufw::context_id id) {
+    auto folder = path().parent_path().string();
     auto basename = path().stem().string();
     auto ext = path().extension().string();
-    for (const auto& img : m_images->pictures) {
-      auto filename = basename + '_' + img.camera_name + '_' + std::to_string(id) + ext;
+    for (const auto& img : m_images->images) {
+      auto filename = folder + '/' + basename + '_' + img.camera_name + '_' + std::to_string(id) + ext;
       FILE* fp = fopen(filename.c_str(), "wb");
+      UFW_DEBUG("Opening file for {} at {}, named {}", img.camera_name, id, filename);
       png_structp pngstruct = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
       png_infop info = png_create_info_struct(pngstruct);
       if (setjmp(png_jmpbuf(pngstruct))) {
@@ -76,12 +78,12 @@ namespace sand::png {
         UFW_ERROR("Error during png creation.");
       }
       png_init_io(pngstruct, fp);
-      // Output is 16bit depth, grayscale format.
       png_set_IHDR(pngstruct, info, sand::grain::pixel_array<double>::kCols, sand::grain::pixel_array<double>::kRows,
-                   16, PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+                   8, PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
       png_set_swap(pngstruct);
       png_write_info(pngstruct, info);
-      auto array = img.amplitude_array();
+      auto array = img.amplitude_array<uint8_t>();
+      UFW_DEBUG("Writing image data for {} at {}, pixel average = {}", img.camera_name, id, [&array](){ return std::accumulate(array.begin(), array.end(), 0.0); }());
       for (int i = 0; i != sand::grain::pixel_array<double>::kRows; ++i) {
         auto vec = array.Row(i);
         png_bytep row_ptr = reinterpret_cast<png_bytep>(vec.Array());
