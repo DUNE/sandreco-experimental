@@ -28,7 +28,7 @@ void optical_simulation::configure (const ufw::config& cfg) {
   process::configure(cfg);
   
   m_energy_split_threshold = cfg.value("energy_split_threshold", m_energy_split_threshold);
-  m_geometry = cfg.at("geometry").template get<std::string>().c_str();
+  m_geometry = cfg.path_at("geometry");
   
   if (m_geometry.string().find("lenses") != std::string::npos) {
     m_optics_type = OpticsType::LENS;
