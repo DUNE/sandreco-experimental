@@ -42,8 +42,8 @@ void optical_simulation::configure (const ufw::config& cfg) {
   
   auto starting_path = std::filesystem::current_path();
   UFW_DEBUG("Starting path {}", std::filesystem::current_path().string());
+  UFW_DEBUG("Setting path {}", m_geometry.parent_path().string());
   std::filesystem::current_path(m_geometry.parent_path());
-  UFW_DEBUG("Current path {}", std::filesystem::current_path().string());
   G4GDMLParser parser;
   parser.SetOverlapCheck(true);
   parser.SetStripFlag(false);
