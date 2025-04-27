@@ -23,8 +23,6 @@ class detector_response_fast : public ufw::process {
         digi::camera assign_to_pixel(const hits::camera& c);
 
     private:
-        int m_matrix_rows;
-        int m_matrix_columns;
         double m_sipm_size;
         double m_sipm_active_size;
         double m_sipm_border;

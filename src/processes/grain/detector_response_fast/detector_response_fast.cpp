@@ -4,10 +4,11 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
-#include <detector_response_fast.hpp>
+#include <grain/grain.h>
 #include <grain/photons.h>
 #include <grain/digi.h>
 
+#include <detector_response_fast.hpp>
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::detector_response_fast)
 
@@ -19,17 +20,13 @@ namespace sand::grain {
 
   void detector_response_fast::configure (const ufw::config& cfg) {
     process::configure(cfg); 
-    
-    m_matrix_rows = cfg.value("matrix_rows", 32);
-    m_matrix_columns = cfg.value("matrix_columns", 32);
     m_sipm_active_size = cfg.at("sipm_active_size");
     m_sipm_border = cfg.at("sipm_border");
     m_pde = cfg.at("pde");
     m_rng_engine.seed(cfg.at("seed"));
-    
     m_sipm_size = m_sipm_active_size + 2 * m_sipm_border; 
-    m_matrix_height = m_matrix_rows * m_sipm_size;
-    m_matrix_width = m_matrix_columns * m_sipm_size; 
+    m_matrix_height = camera_height * m_sipm_size;
+    m_matrix_width = camera_width * m_sipm_size; 
   }
 
 
@@ -59,33 +56,33 @@ digi::camera detector_response_fast::assign_to_pixel(const hits::camera& h_cam) 
     double interaction_probability = m_uniform(m_rng_engine);
     m_stat_photons_processed++;
     if (interaction_probability < m_pde) {
-      double shifted_pos_x = p.pos.X() + m_matrix_width/2;
-      double shifted_pos_y = - p.pos.Y() + m_matrix_height/2;
+      double shifted_pos_x = p.pos.X() + m_matrix_width * 0.5;
+      double shifted_pos_y = - p.pos.Y() + m_matrix_height * 0.5;
       int col = static_cast<int>(shifted_pos_x / m_sipm_size);
       int row = static_cast<int>(shifted_pos_y / m_sipm_size);
-      UFW_DEBUG("Photon position: {}, {}, assigned to channel {},{}", p.pos.X(), p.pos.Y(), row, col);
+      UFW_DEBUG("Photon position: {}, {}, assigned to channel {}, {}", p.pos.X(), p.pos.Y(), row, col);
       // check matrix boundaries 
-      if (col >= 0 && col < m_matrix_columns && row >= 0 && row < m_matrix_rows) {
+      if (col >= 0 && col < camera_width && row >= 0 && row < camera_height) {
         // check sipm borders
-        if ( shifted_pos_x > col * m_sipm_size + m_sipm_border && shifted_pos_x < (col+1) * m_sipm_size - m_sipm_border   &&
-             shifted_pos_y > row * m_sipm_size + m_sipm_border && shifted_pos_y < (row+1) * m_sipm_size - m_sipm_border  ) {
+        if (shifted_pos_x > col * m_sipm_size + m_sipm_border && shifted_pos_x < (col + 1) * m_sipm_size - m_sipm_border &&
+            shifted_pos_y > row * m_sipm_size + m_sipm_border && shifted_pos_y < (row + 1) * m_sipm_size - m_sipm_border) {
           t.add(p.hit);
           UFW_DEBUG("Photon is inside sipm");
-          uint16_t sipm_idx = row * m_matrix_columns + col;
+          uint16_t sipm_idx = row * camera_width + col;
           digi::photoelectron pe{t, sipm_idx, p.pos.T(), NAN, 1.0};
           dg_cam.photoelectrons.emplace_back(pe);
           m_stat_photons_accepted++;
         } else {
           UFW_DEBUG("Photon {}, {} is outside sipm {}, {}", shifted_pos_x, shifted_pos_y, col * m_sipm_size, row * m_sipm_size);
           m_stat_photons_discarded++;
-        }   
+        }
       } else {
         UFW_DEBUG("Photon {}, {} is outside sipm {}, {}", shifted_pos_x, shifted_pos_y, col * m_sipm_size, row * m_sipm_size);
         m_stat_photons_discarded++;
-      }  
+      }
     } else {
       m_stat_photons_discarded++;
-    }  
+    }
   }
   return dg_cam;
 }

@@ -6,7 +6,7 @@
     "globals" : {
     },
     "contexts" : {
-      "keys" : 5,
+      "keys" : 2,
       "locals" : {
       }
     },
@@ -20,8 +20,6 @@
       },
       {
         "sand::grain::detector_response_fast" : {
-            "matrix_rows": 32,
-            "matrix_columns": 32,
             "sipm_active_size": 3.0,
             "sipm_border": 0.1, 
             "seed": 1111, 
