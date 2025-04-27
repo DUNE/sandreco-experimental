@@ -27,9 +27,9 @@
         "prods" : {"images": "pippo"}
       },
       {
-        "sand::root::tree_streamer" : { 
-          "uri" : "test/images.root",
-          "tree" : "cameras"
+        "sand::png::png_streamer" : { 
+          "uri" : "/home/sand/pngs/img.png",
+          "scale" : 10
         },
         "write" : { "pippo" : "sand::grain::images"}
       }
