@@ -68,6 +68,7 @@ digi::camera detector_response_fast::assign_to_pixel(const hits::camera& h_cam) 
             shifted_pos_y > row * m_sipm_size + m_sipm_border && shifted_pos_y < (row + 1) * m_sipm_size - m_sipm_border) {
           t.add(p.hit);
           UFW_DEBUG("Photon is inside sipm");
+          //consistent indexing: Row Major
           uint16_t sipm_idx = row * camera_width + col;
           digi::photoelectron pe{t, sipm_idx, p.pos.T(), NAN, 1.0};
           dg_cam.photoelectrons.emplace_back(pe);

@@ -57,6 +57,7 @@ namespace sand::grain {
           m_stat_photons_processed++;
           if (pe.time_rising_edge >= m_slice_times[img_idx] && pe.time_rising_edge < m_slice_times[img_idx + 1]) {
               UFW_DEBUG("pe to be assigned to image {}", img_idx);
+              //consistent indexing: Row Major
               cam_image.pixels.Array()[pe.channel_id].amplitude += pe.charge;
               m_stat_photons_accepted++;
           } else {
