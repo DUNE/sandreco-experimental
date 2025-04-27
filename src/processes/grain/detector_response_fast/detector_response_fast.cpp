@@ -60,24 +60,24 @@ digi::camera detector_response_fast::assign_to_pixel(const hits::camera& h_cam) 
       double shifted_pos_y = - p.pos.Y() + m_matrix_height * 0.5;
       int col = static_cast<int>(shifted_pos_x / m_sipm_size);
       int row = static_cast<int>(shifted_pos_y / m_sipm_size);
-      UFW_DEBUG("Photon position: {}, {}, assigned to channel {}, {}", p.pos.X(), p.pos.Y(), row, col);
+      //UFW_DEBUG("Photon position: {}, {}, assigned to channel {}, {}", p.pos.X(), p.pos.Y(), row, col);
       // check matrix boundaries 
       if (col >= 0 && col < camera_width && row >= 0 && row < camera_height) {
         // check sipm borders
         if (shifted_pos_x > col * m_sipm_size + m_sipm_border && shifted_pos_x < (col + 1) * m_sipm_size - m_sipm_border &&
             shifted_pos_y > row * m_sipm_size + m_sipm_border && shifted_pos_y < (row + 1) * m_sipm_size - m_sipm_border) {
           t.add(p.hit);
-          UFW_DEBUG("Photon is inside sipm");
+          //UFW_DEBUG("Photon is inside sipm");
           uint16_t sipm_idx = row * camera_width + col;
           digi::photoelectron pe{t, sipm_idx, p.pos.T(), NAN, 1.0};
           dg_cam.photoelectrons.emplace_back(pe);
           m_stat_photons_accepted++;
         } else {
-          UFW_DEBUG("Photon {}, {} is outside sipm {}, {}", shifted_pos_x, shifted_pos_y, col * m_sipm_size, row * m_sipm_size);
+          //UFW_DEBUG("Photon {}, {} is outside sipm {}, {}", shifted_pos_x, shifted_pos_y, col * m_sipm_size, row * m_sipm_size);
           m_stat_photons_discarded++;
         }
       } else {
-        UFW_DEBUG("Photon {}, {} is outside sipm {}, {}", shifted_pos_x, shifted_pos_y, col * m_sipm_size, row * m_sipm_size);
+        //UFW_DEBUG("Photon {}, {} is outside matrix", shifted_pos_x, shifted_pos_y);
         m_stat_photons_discarded++;
       }
     } else {

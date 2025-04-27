@@ -53,10 +53,10 @@ namespace sand::grain {
         cam_image.time_begin = m_slice_times[img_idx];
         cam_image.time_end = m_slice_times[img_idx + 1];
         for (auto& pe : cam.photoelectrons) {
-          UFW_DEBUG("channel id: {}, time: {}", pe.channel_id, pe.time_rising_edge);
+          //UFW_DEBUG("channel id: {}, time: {}", pe.channel_id, pe.time_rising_edge);
           m_stat_photons_processed++;
           if (pe.time_rising_edge >= m_slice_times[img_idx] && pe.time_rising_edge < m_slice_times[img_idx + 1]) {
-              UFW_DEBUG("pe to be assigned to image {}", img_idx);
+              //UFW_DEBUG("pe to be assigned to image {}", img_idx);
               cam_image.pixels.Array()[pe.channel_id].amplitude += pe.charge;
               m_stat_photons_accepted++;
           } else {
