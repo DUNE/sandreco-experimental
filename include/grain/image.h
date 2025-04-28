@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <memory>
 #include <ufw/data.hpp>
 #include <common/truth.h>
 #include <grain/grain.h>
@@ -21,6 +22,7 @@ namespace sand::grain {
       double time_end; // end of slice
       pixel_array<pixel> pixels;
     public:
+      inline void blank(); //call blank if you are not already assigning every pixel
       template <typename T>
       pixel_array<T> amplitude_array() const;
       template <typename T>
@@ -34,6 +36,10 @@ namespace sand::grain {
     image_list images;
 
   };
+
+  inline void images::image::blank() {
+    std::uninitialized_fill(pixels.begin(), pixels.end(), pixel{{}, 0., NAN});
+  }
 
   template <typename T>
   pixel_array<T> images::image::amplitude_array() const {

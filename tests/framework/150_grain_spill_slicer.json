@@ -17,21 +17,21 @@
           "uri" : "test/detresp.root",
           "tree" : "cameras"
         },
-        "read" : { "foo" : "sand::grain::digi"}
+        "read" : { "digis" : "sand::grain::digi"}
       },
       {
         "sand::grain::time_slicing" : {
             "slice_times": [0.0, 20000.0]
         },
-        "reqs" : {"digi" : "foo"},
-        "prods" : {"images": "pippo"}
+        "reqs" : {"digi" : "digis"},
+        "prods" : {"images": "imgs"}
       },
       {
-        "sand::png::png_streamer" : { 
-          "uri" : "/home/sand/pngs/img.png",
-          "scale" : 10
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/images.root",
+          "tree" : "cameras"
         },
-        "write" : { "pippo" : "sand::grain::images"}
+        "write" : { "imgs" : "sand::grain::images"}
       }
     ]
   }

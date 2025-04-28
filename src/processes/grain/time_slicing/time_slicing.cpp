@@ -47,7 +47,8 @@ namespace sand::grain {
       UFW_INFO("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx + 1]);
       for (auto& cam : digis_in.cameras) {
         UFW_DEBUG("Camera {} {}", cam.camera_id, cam.camera_name);
-        images::image cam_image; 
+        images::image cam_image;
+        cam_image.blank();
         cam_image.camera_id = cam.camera_id;
         cam_image.camera_name = cam.camera_name;
         cam_image.time_begin = m_slice_times[img_idx];
