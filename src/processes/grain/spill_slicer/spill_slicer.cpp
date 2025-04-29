@@ -9,10 +9,10 @@
 
 namespace sand::grain {
 
-  class time_slicing : public ufw::process {
+  class spill_slicer : public ufw::process {
 
   public:
-    time_slicing();
+    spill_slicer();
     void configure (const ufw::config& cfg) override;
     void run() override;
 
@@ -25,7 +25,7 @@ namespace sand::grain {
     
   };
 
-  void time_slicing::configure (const ufw::config& cfg) {
+  void spill_slicer::configure (const ufw::config& cfg) {
     process::configure(cfg);
     for (auto time: cfg.at("slice_times") ) {
       m_slice_times.push_back(time);
@@ -33,11 +33,11 @@ namespace sand::grain {
   
   }
 
-  time_slicing::time_slicing() : process({{"digi", "sand::grain::digi"}}, {{"images", "sand::grain::images"}}) {
-    UFW_INFO("Creating a time_slicing process at {}", fmt::ptr(this));
+  spill_slicer::spill_slicer() : process({{"digi", "sand::grain::digi"}}, {{"images", "sand::grain::images"}}) {
+    UFW_INFO("Creating a spill_slicer process at {}", fmt::ptr(this));
   }
 
-  void time_slicing::run() {
+  void spill_slicer::run() {
     m_stat_photons_processed = 0;
     m_stat_photons_accepted = 0;
     m_stat_photons_discarded = 0;
@@ -78,5 +78,5 @@ namespace sand::grain {
 
 }
 
-UFW_REGISTER_PROCESS(sand::grain::time_slicing)
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::time_slicing)
+UFW_REGISTER_PROCESS(sand::grain::spill_slicer)
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::spill_slicer)

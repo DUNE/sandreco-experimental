@@ -20,7 +20,7 @@
         "read" : { "digis" : "sand::grain::digi"}
       },
       {
-        "sand::grain::time_slicing" : {
+        "sand::grain::spill_slicer" : {
             "slice_times": [0.0, 20000.0]
         },
         "reqs" : {"digi" : "digis"},

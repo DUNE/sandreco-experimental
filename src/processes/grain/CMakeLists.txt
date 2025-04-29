@@ -1,3 +1,3 @@
 add_subdirectory(optical_simulation)
 add_subdirectory(detector_response_fast)
-add_subdirectory(time_slicing)
+add_subdirectory(spill_slicer)
