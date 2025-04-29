@@ -59,6 +59,7 @@ namespace sand::grain {
           if (pe.time_rising_edge >= m_slice_times[img_idx] && pe.time_rising_edge < m_slice_times[img_idx + 1]) {
               //UFW_DEBUG("pe to be assigned to image {}", img_idx);
               //consistent indexing: Row Major
+              cam_image.pixels.Array()[pe.channel_id].add(pe.hits);
               cam_image.pixels.Array()[pe.channel_id].amplitude += pe.charge;
               if (std::isnan(cam_image.pixels.Array()[pe.channel_id].time_first)) {
                 cam_image.pixels.Array()[pe.channel_id].time_first = pe.time_rising_edge;
