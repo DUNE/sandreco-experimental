@@ -60,6 +60,11 @@ namespace sand::grain {
               //UFW_DEBUG("pe to be assigned to image {}", img_idx);
               //consistent indexing: Row Major
               cam_image.pixels.Array()[pe.channel_id].amplitude += pe.charge;
+              if (std::isnan(cam_image.pixels.Array()[pe.channel_id].time_first)) {
+                cam_image.pixels.Array()[pe.channel_id].time_first = pe.time_rising_edge;
+              } else if (cam_image.pixels.Array()[pe.channel_id].time_first > pe.time_rising_edge) {
+                cam_image.pixels.Array()[pe.channel_id].time_first = pe.time_rising_edge;
+              }
               m_stat_photons_accepted++;
           } else {
             m_stat_photons_discarded++;
