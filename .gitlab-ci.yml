@@ -3,21 +3,20 @@ image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
 build:
   stage: build
   script:
+    - mkdir install
     - mkdir build
-    - cd build
-    - cmake -S .. -B . -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF
+    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=./install
     - make -j8
 
   artifacts:
     paths:
-      - include/*
-      - build/*
+      - install/lib64/*
+      - tests/framework/*
 
 # run tests using the binaries built above
 test:
   stage: test
   script:
-    - cd build
-    - make install
+    - cp install/lib64/* /usr/local/lib64/
     - source /usr/local/bin/geant4.sh
     - ctest --output-on-failure
