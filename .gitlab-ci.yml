@@ -10,6 +10,7 @@ build:
 
   artifacts:
     paths:
+      - src/streamers/root/tree_streamer_types.hpp
       - install/lib64/*
       - build/CTestTestfile.cmake
       - build/tests/*
