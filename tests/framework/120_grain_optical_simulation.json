@@ -8,7 +8,7 @@
     "sand::grain::geant_run_manager" : {}
   },
   "contexts" : {
-    "keys" : [14, 31, 70],
+    "keys" : 2,
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
     }

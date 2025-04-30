@@ -1,9 +1,11 @@
 #pragma once
 
-#include <ufw/data.hpp>
-#include <common/truth.h>
 #include <vector>
 #include <cstdint>
+
+#include <ufw/data.hpp>
+#include <common/truth.h>
+#include <grain/grain.h>
 
 namespace sand::grain {
 
