@@ -11,7 +11,7 @@ build:
   artifacts:
     paths:
       - install/lib64/*
-      - tests/framework/*
+      - build/tests/*
 
 # run tests using the binaries built above
 test:
@@ -19,4 +19,4 @@ test:
   script:
     - cp -r install/lib64/* /usr/local/lib64/
     - source /usr/local/bin/geant4.sh
-    - ctest --output-on-failure
+    - cd build && ctest --output-on-failure
