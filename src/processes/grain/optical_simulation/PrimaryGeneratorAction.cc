@@ -57,11 +57,8 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction() {}
 
 void PrimaryGeneratorAction::ApplyTranslation(){
     const auto& geom = m_optmen_edepsim->instance<geomanager>();
-    geom.grain();
-    // TODO: use the geoManager as soon as it is available
-    master[0]= 0;
-    master[1]= -2384.73;
-    master[2]= 22381;
+    auto c = geom.grain().centre();
+    c.GetCoordinates(master);
 }
 
 void PrimaryGeneratorAction::nextIteration() {

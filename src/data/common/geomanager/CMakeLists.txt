@@ -2,7 +2,15 @@ add_library(geomanager)
 
 find_package(ROOT REQUIRED COMPONENTS Geom Physics Matrix MathCore RIO Tree)
 
-target_sources(geomanager PRIVATE geomanager.hpp geomanager.cpp)
+target_sources(geomanager PRIVATE
+               drift_manager.hpp
+               ecal_manager.hpp
+               grain_manager.hpp
+               grain_manager.cpp
+               stt_manager.hpp
+               tracker_manager.hpp
+               geomanager.hpp
+               geomanager.cpp)
 
 target_include_directories(geomanager PRIVATE . .. ${CMAKE_SOURCE_DIR}/include)
 

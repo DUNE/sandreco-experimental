@@ -18,6 +18,7 @@
     }
   },
   "globals" : {
+    "sand::geomanager" : { "geometry" : "test/grain.edepsim.root" },
     "sand::grain::geant_run_manager" : {}
   },
   "contexts" : {
