@@ -45,6 +45,7 @@
 
 #include <ufw/context.hpp>
 #include <optical_simulation.hpp>
+#include <geomanager/grain_manager.hpp>
 
 namespace sand::grain {
 PrimaryGeneratorAction::PrimaryGeneratorAction(optical_simulation* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {
@@ -55,6 +56,8 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(optical_simulation* optmen_edepsi
 PrimaryGeneratorAction::~PrimaryGeneratorAction() {}
 
 void PrimaryGeneratorAction::ApplyTranslation(){
+    const auto& geom = m_optmen_edepsim->instance<geomanager>();
+    geom.grain();
     // TODO: use the geoManager as soon as it is available
     master[0]= 0;
     master[1]= -2384.73;
