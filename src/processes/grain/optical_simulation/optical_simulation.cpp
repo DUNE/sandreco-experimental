@@ -28,7 +28,7 @@ void optical_simulation::configure (const ufw::config& cfg) {
   process::configure(cfg);
   
   m_energy_split_threshold = cfg.value("energy_split_threshold", m_energy_split_threshold);
-  m_geometry = cfg.at("geometry").template get<std::string>().c_str();
+  m_geometry = cfg.path_at("geometry");
   
   if (m_geometry.string().find("lenses") != std::string::npos) {
     m_optics_type = OpticsType::LENS;
@@ -42,8 +42,8 @@ void optical_simulation::configure (const ufw::config& cfg) {
   
   auto starting_path = std::filesystem::current_path();
   UFW_DEBUG("Starting path {}", std::filesystem::current_path().string());
+  UFW_DEBUG("Setting path {}", m_geometry.parent_path().string());
   std::filesystem::current_path(m_geometry.parent_path());
-  UFW_DEBUG("Current path {}", std::filesystem::current_path().string());
   G4GDMLParser parser;
   parser.SetOverlapCheck(true);
   parser.SetStripFlag(false);

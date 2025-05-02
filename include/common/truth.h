@@ -9,10 +9,13 @@ class TG4HitSegment;
 
 namespace sand {
 
-  extern const TG4HitSegment& get_truth_at(const size_t& i);
-  extern bool check_truth_at(const size_t& i);
+  struct truth_adapter {
+    using value_type = const TG4HitSegment;
+    using index_type = std::size_t;
+    static value_type& at(const index_type&);
+    static bool valid(const index_type&);
+  };
 
-  using truth_adapter = ufw::data::collection_adapter<const TG4HitSegment, size_t, get_truth_at, check_truth_at>;
   using truth_index = ufw::data::index<truth_adapter>;
 
 }
@@ -33,9 +36,11 @@ namespace sand {
 #ifdef __CLING__
     std::set<size_t> hits;
     inline void add(size_t i) { hits.emplace(i); }
+    inline void add(const std::set<size_t>& set) { hits.insert(set.begin(), set.end()); }
 #else //__CLING__
     std::set<truth_index> hits;
     inline void add(truth_index i) { hits.emplace(i); }
+    inline void add(const std::set<truth_index>& set) { hits.insert(set.begin(), set.end()); }
 #endif //__CLING__
   };
 

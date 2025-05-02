@@ -1,22 +1,23 @@
 {
   "ufw" : {
     "ufw-loglevel" : "debug",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
     "ufw-ldpath" : ["/usr/local/lib64"]
   },
   "globals" : {
     "sand::grain::geant_run_manager" : {}
   },
   "contexts" : {
-    "keys" : [14, 31, 70],
+    "keys" : 2,
     "locals" : {
-      "sand::edep_reader" : {"uri" : "/home/sand/events-in-GRAIN_LAr_lv.1.edep-sim.root"}
+      "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
     }
   },
   "run" : [
     {
       "sand::grain::optical_simulation" : { 
         "seed" : 111,
-        "geometry" : "/home/sand/geometry/main.gdml",
+        "geometry" : "geometries/grain/masks-3mm/main.gdml",
         "energy_split_threshold" : 100
       },
       "reqs" : {},
@@ -24,15 +25,10 @@
     },
     {
       "sand::root::tree_streamer" : { 
-        "uri" : "/home/sand/sensors.root",
+        "uri" : "test/sensors.root",
         "tree" : "cameras"
       },
       "write" : { "foo" : "sand::grain::hits"}
-    },
-    {
-      "sand::grain::detector_response_fast" : {},
-      "reqs" : {"hits" : "foo"},
-      "prods" : {}
     }
   ]
 }

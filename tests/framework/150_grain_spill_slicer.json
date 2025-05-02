@@ -14,26 +14,24 @@
     "run" : [
       {
         "sand::root::tree_streamer" : { 
-          "uri" : "test/sensors.root",
-          "tree" : "cameras"
-        },
-        "read" : { "foo" : "sand::grain::hits"}
-      },
-      {
-        "sand::grain::detector_response_fast" : {
-            "sipm_active_size": 3.0,
-            "sipm_border": 0.1, 
-            "seed": 1111, 
-            "pde": 0.2},
-        "reqs" : {"hits" : "foo"},
-        "prods" : {"digi": "pippo"}
-      },
-      {
-        "sand::root::tree_streamer" : { 
           "uri" : "test/detresp.root",
           "tree" : "cameras"
         },
-        "write" : { "pippo" : "sand::grain::digi"}
+        "read" : { "digis" : "sand::grain::digi"}
+      },
+      {
+        "sand::grain::spill_slicer" : {
+            "slice_times": [0.0, 20000.0]
+        },
+        "reqs" : {"digi" : "digis"},
+        "prods" : {"images": "imgs"}
+      },
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/images.root",
+          "tree" : "cameras"
+        },
+        "write" : { "imgs" : "sand::grain::images"}
       }
     ]
   }
