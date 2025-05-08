@@ -1,5 +1,3 @@
-#include <TGeoManager.h>
-
 #include <grain_manager.hpp>
 
 namespace sand {

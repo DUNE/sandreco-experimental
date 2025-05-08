@@ -17,7 +17,7 @@ namespace sand {
     };
 
   public:
-    tracker_manager(const geomanager&);
+    tracker_manager(const geomanager&, const path&);
 
   };
 
