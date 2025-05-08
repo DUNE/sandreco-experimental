@@ -1,5 +1,7 @@
 build*/
+cmake-build-*/
 install/
+.idea/
 *.idx
 .kateproject.build
 compile_commands.json
