@@ -63,6 +63,9 @@ namespace sand {
       UFW_ERROR("Cannot find valid TGeoManager in {}.", filepath.c_str());
     }
     m_grain.reset(new grain_manager(*this));
+    m_ecal.reset(new ecal_manager(*this));
+    m_tracker.reset(new drift_manager(*this));
+    m_tracker.reset(new stt_manager(*this));
   }
 
   geomanager::~geomanager() = default;

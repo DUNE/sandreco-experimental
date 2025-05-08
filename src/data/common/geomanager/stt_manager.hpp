@@ -4,7 +4,10 @@
 
 namespace sand {
 
-  class geomanager::stt_manager : public geomanager::tracker_manager {
+  class geomanager::stt_manager : public tracker_manager {
+
+  public:
+    stt_manager(const geomanager&);
 
   };
 

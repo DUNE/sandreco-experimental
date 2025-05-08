@@ -14,6 +14,20 @@ namespace sand {
   class geomanager : ufw::data::base<ufw::data::complex_tag, ufw::data::unique_tag, ufw::data::global_tag> {
 
   public:
+    /**
+     * A global unique identifier for all active elements in the detector
+     */
+    class guid {
+
+    private:
+      union {
+        uint64_t m_raw;
+        struct { uint16_t m_detid; uint16_t m_modid; uint32_t m_chid; } m_daq_id;
+      } m_data;
+
+    };
+
+    class subdetector_manager;
     class ecal_manager;
     class grain_manager;
     class tracker_manager;

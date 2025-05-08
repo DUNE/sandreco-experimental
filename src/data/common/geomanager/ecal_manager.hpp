@@ -1,14 +1,13 @@
 #pragma once
 
-#include <geomanager/geomanager.hpp>
+#include <geomanager/subdetector_manager.hpp>
 
 namespace sand {
 
-  class geomanager::ecal_manager {
+  class geomanager::ecal_manager : public subdetector_manager {
 
   public:
-    ecal_manager(const ecal_manager&) = delete;
-    ecal_manager& operator = (const ecal_manager&) = delete;
+    ecal_manager(const geomanager&);
 
   };
 
