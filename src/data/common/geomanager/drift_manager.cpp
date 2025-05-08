@@ -2,6 +2,6 @@
 
 namespace sand {
 
-  geomanager::drift_manager::drift_manager(const geomanager& gm) : tracker_manager(gm, "") {}
+  geomanager::drift_manager::drift_manager(const geomanager& gm) : tracker_manager(gm, "sand_inner_volume_PV_0/") {}
 
 }
