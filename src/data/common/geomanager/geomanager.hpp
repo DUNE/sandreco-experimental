@@ -27,6 +27,7 @@ namespace sand {
       using std::string::operator=;
       path& operator /= (const std::string_view&);
       path operator / (const std::string_view& rhs) const { path p(*this); return p /= rhs; }
+      std::string_view token(std::size_t) const;
     };
 
   public:
@@ -49,11 +50,14 @@ namespace sand {
 
     const path& root_path() const { return m_root_path; }
 
+    TGeoManager* root_gm() const { return m_root_gm; }
+
   private:
     std::unique_ptr<grain_manager> m_grain;
     std::unique_ptr<ecal_manager> m_ecal;
     std::unique_ptr<tracker_manager> m_tracker;
     path m_root_path;
+    TGeoManager* m_root_gm;
 
   };
 

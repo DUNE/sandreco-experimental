@@ -7,7 +7,7 @@ namespace sand {
   class geomanager::grain_manager {
 
   public:
-    grain_manager(const geomanager&, TGeoManager*);
+    grain_manager(const geomanager&);
     grain_manager(const grain_manager&) = delete;
     grain_manager& operator = (const grain_manager&) = delete;
 
