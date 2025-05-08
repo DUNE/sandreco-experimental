@@ -19,6 +19,9 @@ namespace sand {
      */
     class guid {
 
+    public:
+      uint64_t raw() const { return m_data.m_raw; }
+
     private:
       union {
         uint64_t m_raw;
@@ -44,6 +47,22 @@ namespace sand {
       std::string_view token(std::size_t) const;
     };
 
+    class path_not_found : public ufw::exception {
+    public:
+      path_not_found(const path& p) : exception("Cannot find path '{}' in geometry.", p.c_str()) {}
+    };
+
+    class invalid_guid : public ufw::exception {
+    public:
+      invalid_guid(guid g) : exception("GUID {:x} is not a valid identifier.", g.raw()) {}
+    };
+
+    class invalid_position : public ufw::exception {
+    public:
+      invalid_position(pos_3d pos) : exception("No object found at position ({}, {}, {}).", pos.x(), pos.y(), pos.z()) {}
+      invalid_position(std::string_view type, pos_3d pos) : exception("No {} found at position ({}, {}, {}).", type, pos.x(), pos.y(), pos.z()) {}
+    };
+
   public:
     explicit geomanager(const ufw::config&);
 
@@ -56,6 +75,7 @@ namespace sand {
     const tracker_manager& tracker() const { return *m_tracker; }
 
   private:
+    friend class subdetector_manager;
     friend class ecal_manager;
     friend class grain_manager;
     friend class tracker_manager;
