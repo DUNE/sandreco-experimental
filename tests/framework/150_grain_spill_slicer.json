@@ -21,7 +21,8 @@
       },
       {
         "sand::grain::spill_slicer" : {
-            "slice_times": [0.0, 20000.0]
+            "min_response_counts": 50,
+            "delta_ns_for_comparison": 1000
         },
         "reqs" : {"digi" : "digis"},
         "prods" : {"images": "imgs"}
