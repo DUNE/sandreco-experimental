@@ -1,0 +1,21 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : ["/usr/local/lib64"]
+  },
+  "globals" : {},
+  "contexts" : {
+    "keys" : [2],
+    "locals" : {
+      "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
+    }
+  },
+  "run": [
+    {
+      "sand::fake_reco::fake_reco": {},
+      "reqs" : {},
+      "prods": {}
+    }
+  ]
+}
