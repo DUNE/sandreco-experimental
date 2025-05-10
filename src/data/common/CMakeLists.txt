@@ -1,2 +1,3 @@
 add_subdirectory(edep_reader)
 add_subdirectory(geomanager)
+add_subdirectory(root_tgeomanager)
