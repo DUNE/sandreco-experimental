@@ -40,6 +40,7 @@ namespace sand {
       inline pos_3d to_master(pos_3d) const;
     };
 
+  private:
     struct geonav_deleter {
       geonav_deleter(root_tgeomanager*);
       void operator () (tgeonav*);
