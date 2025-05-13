@@ -14,21 +14,11 @@ namespace sand {
   class root_tgeomanager : ufw::data::base<ufw::data::complex_tag, ufw::data::unique_tag, ufw::data::global_tag> {
 
   public:
-
-    class path : public std::string {
-    public:
-      using std::string::string;
-      using std::string::operator=;
-      path& operator /= (const std::string_view&);
-      path operator / (const std::string_view& rhs) const { path p(*this); return p /= rhs; }
-      std::string_view token(std::size_t) const;
-    };
-
     class tgeonav : public TGeoNavigator {
     //NEVER ADD DATA MEMBERS HERE
     public:
       using TGeoNavigator::TGeoNavigator;
-      inline void cd(const path&);
+      inline void cd(const geo_path&);
       inline TGeoNode* get_node() const;
       TGeoNode* find_node(pos_3d p) { return FindNode(p.x(), p.y(), p.z()); }
       inline TGeoNode* node_at(pos_3d p);
@@ -50,7 +40,7 @@ namespace sand {
 
     class path_not_found : public ufw::exception {
     public:
-      path_not_found(const path& p) : exception("Cannot find path '{}' in geometry.", p.c_str()) {}
+      path_not_found(const geo_path& p) : exception("Cannot find path '{}' in geometry.", p.c_str()) {}
     };
 
     class invalid_position : public ufw::exception {
@@ -71,7 +61,7 @@ namespace sand {
 
   };
 
-  inline void root_tgeomanager::tgeonav::cd(const path& p) {
+  inline void root_tgeomanager::tgeonav::cd(const geo_path& p) {
     if (!TGeoNavigator::cd(p.c_str())) {
       UFW_EXCEPT(path_not_found, p);
     }

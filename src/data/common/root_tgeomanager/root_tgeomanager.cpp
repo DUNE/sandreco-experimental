@@ -31,43 +31,4 @@ namespace sand {
     return std::unique_ptr<root_tgeomanager::tgeonav, root_tgeomanager::geonav_deleter>(nav, this);
   }
 
-  root_tgeomanager::path& root_tgeomanager::path::operator /= (const std::string_view& sv) {
-    if (empty()) {
-      assign(sv);
-      return *this;
-    }
-    if (sv.empty()) {
-      return *this;
-    }
-    if (back() == '/') {
-      if (sv.front() == '/') {
-        append(sv.substr(1));
-      } else {
-        append(sv);
-      }
-    } else {
-      if (sv.front() == '/') {
-        append(sv);
-      } else {
-        reserve(size() + 1 + sv.size());
-        push_back('/');
-        append(sv);
-      }
-    }
-    return *this;
-  }
-
-  std::string_view root_tgeomanager::path::token(std::size_t i) const {
-    std::size_t start = 0;
-    std::size_t stop = 0;
-     while (i--) {
-       start = find('/', start + 1);
-    }
-    stop = find('/', start + 1);
-    if (stop == std::string::npos) {
-      stop = size();
-    }
-    return std::string_view(data() + start + 1, stop - start - 1);
-  }
-
 }
