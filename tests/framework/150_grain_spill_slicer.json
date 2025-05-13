@@ -21,7 +21,7 @@
       },
       {
         "sand::grain::spill_slicer" : {
-            "min_response_counts": 50,
+            "min_response_signal": 8,
             "delta_ns_for_comparison": 1000
         },
         "reqs" : {"digi" : "digis"},

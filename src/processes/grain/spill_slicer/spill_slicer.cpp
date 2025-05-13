@@ -23,7 +23,7 @@ namespace sand::grain {
 
   private:
     int m_seed = 0;
-    uint32_t m_min_response_counts;
+    uint32_t m_min_response_signal;
     double m_delta_ns_for_comparison;
     //std::vector<double> m_slice_times;
     uint64_t m_stat_photons_processed;
@@ -37,19 +37,19 @@ namespace sand::grain {
     // for (auto time: cfg.at("slice_times") ) {
     //   m_slice_times.push_back(time);
     // }
-    m_min_response_counts = cfg.at("min_response_counts");
+    m_min_response_signal = cfg.at("min_response_signal");
     m_delta_ns_for_comparison = cfg.at("delta_ns_for_comparison");
   }
 
   std::vector<double> spill_slicer::compute_slice_times() {
     // Place times into bins
     const int n_bins{100};
-    const double min_time{0};
-    const double max_time{20000}; //ns
+    const double min_time{0.0};
+    const double max_time{20000.0}; //ns
     const double bin_width{(max_time - min_time)/n_bins};
     
-    std::array<uint64_t, n_bins> binned_times;
-    binned_times.fill(0);
+    std::array<double, n_bins> binned_times;
+    binned_times.fill(0.0);
 
     const auto& digis_in = get<digi>("digi");
     for (auto& cam : digis_in.cameras) {
@@ -57,7 +57,7 @@ namespace sand::grain {
         double time{pe.time_rising_edge};
         if (time >= min_time && time < max_time) {
           size_t bin_index = static_cast<size_t>((time - min_time) / bin_width);
-          binned_times[bin_index]++;
+          binned_times[bin_index] += pe.charge;
         }
         else {
           UFW_DEBUG("Digi in camera {} {} is out of time window for slicing (t = {} ns)", cam.camera_id, cam.camera_name, time);
@@ -72,7 +72,7 @@ namespace sand::grain {
     for (size_t i = n_close_bins; i < n_bins - n_close_bins; ++i) {
         uint64_t left_max = *std::max_element(binned_times.begin() + i - n_close_bins, binned_times.begin() + i);
         uint64_t right_max = *std::max_element(binned_times.begin() + i + 1, binned_times.begin() + i + n_close_bins + 1);
-        if (binned_times[i] > left_max && binned_times[i] > right_max && binned_times[i] >= m_min_response_counts) {
+        if (binned_times[i] > left_max && binned_times[i] > right_max && binned_times[i] >= m_min_response_signal) {
             slice_edges.push_back(static_cast<double>(i) * bin_width);
         }
     }
