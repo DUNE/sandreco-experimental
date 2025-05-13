@@ -8,11 +8,12 @@
 #include <ufw/process.hpp>
 
 namespace sand::fake_reco {
-    class fake_reco : public ufw::process {
-    public:
-        fake_reco();
-        void run() override;
-    };
+  class fake_reco : public ufw::process {
+  public:
+    fake_reco();
+
+    void run() override;
+  };
 } // namespace sand::fake_reco
 
 UFW_REGISTER_PROCESS(sand::fake_reco::fake_reco);
