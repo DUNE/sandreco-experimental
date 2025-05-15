@@ -16,8 +16,10 @@ namespace sand::fake_reco {
   }
 
   void fake_reco::run() {
+    // Read input
     const auto &inputTree = get<edep_reader>();
 
+    // Just logging some values
     std::size_t childrenTrajectoriesCount = inputTree.GetChildrenTrajectories().size();
 
     UFW_DEBUG("Reading root trajectory with id: {}", inputTree.GetId());
