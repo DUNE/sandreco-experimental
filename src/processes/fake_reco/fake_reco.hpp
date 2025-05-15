@@ -12,6 +12,7 @@ namespace sand::fake_reco {
   public:
     fake_reco();
 
+    void configure (const ufw::config& cfg) override;
     void run() override;
   };
 } // namespace sand::fake_reco
