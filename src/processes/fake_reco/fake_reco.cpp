@@ -9,8 +9,10 @@
 #include "fake_reco.hpp"
 
 namespace sand::fake_reco {
-  fake_reco::fake_reco(): process{{}, {}} {
-    UFW_DEBUG("fake_reco process created");
+  fake_reco::fake_reco(): process{{}, {}} {}
+
+  void fake_reco::configure(const ufw::config &cfg) {
+    process::configure(cfg);
   }
 
   void fake_reco::run() {
