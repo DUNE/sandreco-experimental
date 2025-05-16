@@ -8,7 +8,7 @@
 
 namespace sand::tracker {
 
-  struct tracklets : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
+  struct tracklet_map : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
     struct tracklet
     {
       double x;
@@ -23,11 +23,10 @@ namespace sand::tracker {
     };
 
     using tracklet_collection = std::vector<tracklet>;
-
-    tracklet_collection tracklets;
-
+    
+    std::map<double, tracklet_collection> tracklets;
   };
 
 }
 
-UFW_DECLARE_MANAGED_DATA(sand::tracker::tracklets)
+UFW_DECLARE_MANAGED_DATA(sand::tracker::tracklet_map)
