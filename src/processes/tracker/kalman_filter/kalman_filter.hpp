@@ -4,11 +4,11 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
-#include <grain/photons.h>
-#include <grain/digi.h>
+#include <tracker/tracklets.h>
+#include <tracker/tracks.h>
 #include <random>
 
-namespace sand::grain {
+namespace sand::tracker {
 
 class kalman_filter : public ufw::process {
 
@@ -26,4 +26,4 @@ class kalman_filter : public ufw::process {
     
 }
 
-UFW_REGISTER_PROCESS(sand::grain::kalman_filter)
+UFW_REGISTER_PROCESS(sand::tracker::kalman_filter)
