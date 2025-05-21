@@ -1,10 +1,10 @@
 #pragma once
 
-#include <geomanager/subdetector_manager.hpp>
+#include <geoinfo/subdetector_info.hpp>
 
 namespace sand {
 
-  class geomanager::tracker_manager : public subdetector_manager {
+  class geoinfo::tracker_info : public subdetector_info {
 
   public:
     struct wire {
@@ -17,7 +17,7 @@ namespace sand {
     };
 
   public:
-    tracker_manager(const geomanager&, const path&);
+    tracker_info(const geoinfo&, const geo_path&);
 
   };
 

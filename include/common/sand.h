@@ -75,15 +75,16 @@ namespace sand {
     return std::string_view(data() + start + 1, stop - start - 1);
   }
 
+  enum subdetector_t : uint8_t {
+    DRIFT = 0,
+    ECAL = 1,
+    GRAIN = 2,
+    STT = 3,
+    MUON = 4,
+    NONE = 255
+  };
+
   struct geo_id {
-    enum subdetector_t : uint8_t {
-      DRIFT = 0,
-      ECAL = 1,
-      GRAIN = 2,
-      STT = 3,
-      MUON = 4,
-      NONE = 255
-    };
     union {
       struct {
         uint8_t reserved___0;
@@ -134,7 +135,7 @@ namespace sand {
     union {
       struct {
         uint8_t reserved___0;
-        geo_id::subdetector_t subdetector;
+        subdetector_t subdetector;
         uint8_t link;
         uint8_t padding___1;
         uint32_t channel;

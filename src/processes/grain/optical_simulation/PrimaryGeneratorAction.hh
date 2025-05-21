@@ -47,6 +47,7 @@
 #include <TG4HitSegment.h>
 
 #include <edep_reader/edep_reader.hpp>
+#include <common/sand.h>
 
 class G4Event;
 class TH1D;
@@ -90,11 +91,8 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
 		// Declare the information to get from the EDepSim tree
 		//////////////////////////////////////////////////////////////
 
-		// Local coordinates of the lAr volume.
-		double local[3] = {0, 0, 0};
-
 		// Global coordinates of the lAr volume.
-		double master[3] = {0, 0, 0};
+		pos_3d m_centre;
 
 		optical_simulation* m_optmen_edepsim;
 

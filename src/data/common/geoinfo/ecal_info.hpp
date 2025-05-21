@@ -1,10 +1,10 @@
 #pragma once
 
-#include <geomanager/subdetector_manager.hpp>
+#include <geoinfo/subdetector_info.hpp>
 
 namespace sand {
 
-  class geomanager::ecal_manager : public subdetector_manager {
+  class geoinfo::ecal_info : public subdetector_info {
 
   public:
     enum class cell_type {
@@ -12,21 +12,21 @@ namespace sand {
     };
 
     struct cell {
-      guid id;
+      geo_id id;
       pos_3d centre;
       double length;
       cell_type type;
     };
 
   public:
-    ecal_manager(const geomanager&);
+    ecal_info(const geoinfo&);
 
     const cell& at(pos_3d);
 
-    const cell& at(guid);
+    const cell& at(geo_id);
 
   private:
-    std::map<guid, cell> m_cells;
+    std::map<geo_id, cell> m_cells;
 
   };
 

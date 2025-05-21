@@ -4,6 +4,7 @@
 #include <ufw/data.hpp>
 #include <common/sand.h>
 
+#include <TGeoManager.h>
 #include <TGeoNavigator.h>
 
 namespace sand {
@@ -111,3 +112,5 @@ namespace sand {
   }
 
 }
+
+UFW_DECLARE_COMPLEX_DATA(sand::root_tgeomanager);

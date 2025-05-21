@@ -45,7 +45,7 @@
 
 #include <ufw/context.hpp>
 #include <optical_simulation.hpp>
-#include <geomanager/grain_manager.hpp>
+#include <geoinfo/grain_info.hpp>
 
 namespace sand::grain {
 PrimaryGeneratorAction::PrimaryGeneratorAction(optical_simulation* optmen_edepsim) : m_optmen_edepsim(optmen_edepsim) {
@@ -56,9 +56,8 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(optical_simulation* optmen_edepsi
 PrimaryGeneratorAction::~PrimaryGeneratorAction() {}
 
 void PrimaryGeneratorAction::ApplyTranslation(){
-    const auto& geom = m_optmen_edepsim->instance<geomanager>();
-    auto c = geom.grain().centre();
-    c.GetCoordinates(master);
+    const auto& geom = m_optmen_edepsim->instance<geoinfo>();
+    m_centre = geom.grain().centre();
 }
 
 void PrimaryGeneratorAction::nextIteration() {
@@ -230,8 +229,8 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
         G4double random = G4UniformRand(); //random between 0 and 1
 
         // Position
-        G4ThreeVector translated_start(m_hits_it->GetStart().X() - master[0], m_hits_it->GetStart().Y() - master[1], m_hits_it->GetStart().Z() - master[2]);
-        G4ThreeVector translated_stop(m_hits_it->GetStop().X() - master[0], m_hits_it->GetStop().Y() - master[1], m_hits_it->GetStop().Z() - master[2]);
+        G4ThreeVector translated_start(m_hits_it->GetStart().X() - m_centre.x(), m_hits_it->GetStart().Y() - m_centre.y(), m_hits_it->GetStart().Z() - m_centre.z());
+        G4ThreeVector translated_stop(m_hits_it->GetStop().X() - m_centre.x(), m_hits_it->GetStop().Y() - m_centre.y(), m_hits_it->GetStop().Z() - m_centre.z());
         G4ThreeVector myPhotonPosition = translated_start + random * (translated_stop - translated_start);
 
         if(!isInArgon(myPhotonPosition)) continue; // skip if not in LAr
@@ -282,8 +281,8 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
         G4double random = G4UniformRand(); //random between 0 and 1
 
         // Position
-        G4ThreeVector translated_start(m_hits_it->GetStart().X() - master[0], m_hits_it->GetStart().Y() - master[1], m_hits_it->GetStart().Z() - master[2]);
-        G4ThreeVector translated_stop(m_hits_it->GetStop().X() - master[0], m_hits_it->GetStop().Y() - master[1], m_hits_it->GetStop().Z() - master[2]);
+        G4ThreeVector translated_start(m_hits_it->GetStart().X() - m_centre.x(), m_hits_it->GetStart().Y() - m_centre.y(), m_hits_it->GetStart().Z() - m_centre.z());
+        G4ThreeVector translated_stop(m_hits_it->GetStop().X() - m_centre.x(), m_hits_it->GetStop().Y() - m_centre.y(), m_hits_it->GetStop().Z() - m_centre.z());
         G4ThreeVector myPhotonPosition = translated_start + random * (translated_stop - translated_start);
         if(!isInArgon(myPhotonPosition)) continue; // skip if not in LAr
         fParticleGun.SetParticlePosition(myPhotonPosition);					
