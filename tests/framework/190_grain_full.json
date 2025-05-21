@@ -2,7 +2,20 @@
   "ufw" : {
     "ufw-loglevel" : "debug",
     "ufw-basepath" : "/usr/local/share/sandreco/data",
-    "ufw-ldpath" : ["/usr/local/lib64"]
+    "ufw-ldpath" : ["/usr/local/lib64"],
+    "ufw-env" : {
+      "G4NEUTRONHPDATA": "/usr/local/share/Geant4-10.6.3/data/G4NDL4.6",
+      "G4LEDATA": "/usr/local/share/Geant4-10.6.3/data/G4EMLOW7.9.1",
+      "G4LEVELGAMMADATA": "/usr/local/share/Geant4-10.6.3/data/PhotonEvaporation5.5",
+      "G4RADIOACTIVEDATA": "/usr/local/share/Geant4-10.6.3/data/RadioactiveDecay5.4",
+      "G4PARTICLEXSDATA": "/usr/local/share/Geant4-10.6.3/data/G4PARTICLEXS2.1",
+      "G4PIIDATA": "/usr/local/share/Geant4-10.6.3/data/G4PII1.3",
+      "G4REALSURFACEDATA": "/usr/local/share/Geant4-10.6.3/data/RealSurface2.1.1",
+      "G4SAIDXSDATA": "/usr/local/share/Geant4-10.6.3/data/G4SAIDDATA2.0",
+      "G4ABLADATA": "/usr/local/share/Geant4-10.6.3/data/G4ABLA3.1",
+      "G4INCLDATA": "/usr/local/share/Geant4-10.6.3/data/G4INCL1.0",
+      "G4ENSDFSTATEDATA": "/usr/local/share/Geant4-10.6.3/data/G4ENSDFSTATE2.2"
+    }
   },
   "globals" : {
     "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
