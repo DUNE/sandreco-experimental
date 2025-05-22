@@ -7,7 +7,7 @@ namespace sand {
   class geoinfo::grain_info : public subdetector_info {
 
   public:
-    grain_info(const geoinfo&);
+    grain_info(const geoinfo&, const std::string&);
 
     virtual ~grain_info();
 

@@ -19,6 +19,7 @@
 #include "PhysicsList.hh"
 
 #include <geant_run_manager/geant_run_manager.hpp>
+#include <geant_gdml_parser/geant_gdml_parser.hpp>
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::optical_simulation)
 
@@ -28,34 +29,23 @@ void optical_simulation::configure (const ufw::config& cfg) {
   process::configure(cfg);
   
   m_energy_split_threshold = cfg.value("energy_split_threshold", m_energy_split_threshold);
-  m_geometry = cfg.path_at("geometry");
+  m_geometry = cfg.at("geometry");
   
-  if (m_geometry.string().find("lenses") != std::string::npos) {
+  if (m_geometry.find("lenses") != std::string::npos) {
     m_optics_type = OpticsType::LENS;
-    if (m_geometry.string().find("Xe") != std::string::npos) {
+    if (m_geometry.find("Xe") != std::string::npos) {
       m_optics_type = OpticsType::LENS_DOPED;
     }
   } else {
     m_optics_type = OpticsType::MASK;
   }
   UFW_INFO("Optics type {}", m_optics_type);
-  
-  auto starting_path = std::filesystem::current_path();
-  UFW_DEBUG("Starting path {}", std::filesystem::current_path().string());
-  UFW_DEBUG("Setting path {}", m_geometry.parent_path().string());
-  std::filesystem::current_path(m_geometry.parent_path());
-  G4GDMLParser parser;
-  parser.SetOverlapCheck(true);
-  parser.SetStripFlag(false);
-  UFW_DEBUG("Reading geometry file: {}", m_geometry.filename().string());
-  parser.Read(m_geometry.filename().c_str(), false);
-  std::filesystem::current_path(starting_path);
-  UFW_DEBUG("Back to {}", std::filesystem::current_path().string());
-  
+
+  auto& gdml = instance<geant_gdml_parser>(ufw::public_id(m_geometry));
 
   auto& run_manager = instance<geant_run_manager>();
 
-  run_manager.SetUserInitialization(new DetectorConstruction(parser, this));
+  run_manager.SetUserInitialization(new DetectorConstruction(gdml, this));
 
   run_manager.SetUserInitialization(new PhysicsList);
   

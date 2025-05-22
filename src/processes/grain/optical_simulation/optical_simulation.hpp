@@ -56,7 +56,7 @@ class geant_run_manager;
 
   private:
     OpticsType m_optics_type;
-    std::filesystem::path m_geometry;
+    std::string m_geometry;
     double m_energy_split_threshold = 100; // MeV
     bool m_new_iteration;
     bool m_run_start;

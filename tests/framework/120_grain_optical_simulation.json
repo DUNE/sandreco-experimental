@@ -19,8 +19,12 @@
   },
   "globals" : {
     "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
-    "sand::geoinfo" : {},
-    "sand::grain::geant_run_manager" : {}
+    "sand::geoinfo" : { "grain_geometry" : "gdml-masks" },
+    "sand::grain::geant_run_manager" : {},
+    "sand::grain::geant_gdml_parser" : {
+      "gdml-masks" : { "path" : "geometries/grain/masks-3mm/main.gdml" },
+      "gdml-lenses" : {}
+    }
   },
   "contexts" : {
     "keys" : 2,
@@ -32,7 +36,7 @@
     {
       "sand::grain::optical_simulation" : { 
         "seed" : 111,
-        "geometry" : "geometries/grain/masks-3mm/main.gdml",
+        "geometry" : "gdml-masks",
         "energy_split_threshold" : 100
       },
       "reqs" : {},
