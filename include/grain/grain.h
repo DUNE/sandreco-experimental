@@ -14,4 +14,11 @@ namespace sand::grain {
     pixel_array() : ROOT::Math::SMatrix<T, camera_height, camera_width>(ROOT::Math::SMatrixNoInit()) {}
   };
 
+  enum optics_type : uint8_t {
+    mask = 1,
+    mura = 2,
+    lens = 4,
+    doped = 8,
+  };
+
 }
