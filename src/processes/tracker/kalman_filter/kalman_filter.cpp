@@ -25,21 +25,34 @@ namespace sand::tracker {
 
   void kalman_filter::run() {
 
-    const auto& tracklets_in = get<tracklet_map>("tracklet_map");
+    const auto& tracklets_in = get<tracklet_map>("tracklet_map");    
+    auto& tracks_out = set<tracks>("tracks");
 
     for(auto& tracklet_collection : tracklets_in.tracklets) {
 
       UFW_DEBUG("Tracklet plane: {}.", tracklet_collection.first);
+      tracker::tracks::track_collection track_collection;
 
       for(const auto& tracklet : tracklet_collection.second) {
 
         UFW_DEBUG("Tracklet x: {}, theta_x: {}, y: {}, theta_y: {}",
                   tracklet.x, tracklet.theta_x, tracklet.y, tracklet.theta_y);
 
+        tracker::tracks::track new_track;
+        new_track.x = tracklet.x;
+        new_track.theta_x = tracklet.theta_x;
+        new_track.y = tracklet.y;
+        new_track.theta_y = tracklet.theta_y;
+        new_track.min = tracklet.min;
+        new_track.err_x = tracklet.err_x;
+        new_track.err_theta_x = tracklet.err_theta_x;
+        new_track.err_y = tracklet.err_y;
+        new_track.err_theta_y = tracklet.err_theta_y;
+        track_collection.push_back(new_track);
       }
+      tracks_out.track_map[tracklet_collection.first] = track_collection;
     }
 
-    auto& tracks_out = set<tracks>("tracks");
     
   }
 

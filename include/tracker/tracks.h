@@ -23,8 +23,8 @@ namespace sand::tracker {
     };
 
     using track_collection = std::vector<track>;
-
-    track_collection tracks;
+    
+    std::map<double, track_collection> track_map;
 
   };
 
