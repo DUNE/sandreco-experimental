@@ -15,6 +15,33 @@ namespace sand {
       }
     };
 
+    void print_geom(const G4VPhysicalVolume* pv, std::string depth = "") {
+      if (!pv) {
+        return;
+      }
+      auto rot = pv->GetObjectRotationValue();
+      auto tran = pv->GetObjectTranslation ();
+      UFW_DEBUG("{}- {} (PV) is at [{}, {}, {}], [[{}, {}, {}], [{}, {}, {}], [{}, {}, {}]]", depth, pv->GetName(), tran.x(), tran.y(), tran.z(), 
+                rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
+      auto lv = pv->GetLogicalVolume();
+      auto solid = lv->GetSolid();
+      UFW_DEBUG("{}- {} (LV) has solid of type {}.", depth, lv->GetName(), solid->GetEntityType());
+      depth += ' ';
+      for (int i = 0; i != lv->GetNoDaughters(); ++i) {
+        print_geom(lv->GetDaughter(i), depth);
+      }
+    }
+
+    const G4VPhysicalVolume* find_by_name(const G4VPhysicalVolume* pv, std::string_view name) {
+      auto lv = pv->GetLogicalVolume();
+      for (int i = 0; i != lv->GetNoDaughters(); ++i) {
+        if (lv->GetDaughter(i)->GetName() == name) {
+          return lv->GetDaughter(i);
+        }
+      }
+      UFW_ERROR("No volume named '{}' was found.", name);
+    }
+
   }
 
   static constexpr char s_grain_path[] = "sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0";
@@ -22,12 +49,32 @@ namespace sand {
   geoinfo::grain_info::grain_info(const geoinfo& gi, const std::string& inner_geom) : subdetector_info(gi, s_grain_path) {
     UFW_INFO("Reading grain geometry details from {}.", inner_geom);
     auto& gdml = ufw::context::current()->instance<grain::geant_gdml_parser>(ufw::public_id(inner_geom));
+    auto world = gdml.GetWorldVolume();
+    auto vessel_ext_physical = find_by_name(world, "vessel_ext_physical");
+    auto air_physical = find_by_name(vessel_ext_physical, "air_physical");
+    auto vessel_int_physical = find_by_name(air_physical, "vessel_int_physical");
+    auto lar_physical = find_by_name(vessel_int_physical, "lar_physical");
+    auto lar_logical = lar_physical->GetLogicalVolume();
+    m_mask_cameras.reserve(lar_logical->GetNoDaughters());
+    for (int i = 0; i != lar_logical->GetNoDaughters(); ++i) {
+      auto camera = lar_logical->GetDaughter(i);
+      if (camera->GetLogicalVolume()->GetName() != "cam_volume") {
+        continue;
+      }
+      auto rot = camera->GetObjectRotationValue();
+      auto tran = camera->GetObjectTranslation ();
+      UFW_DEBUG("{} (PV) is at [{:.3f}, {:.3f}, {:.3f}], [[{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}]]", camera->GetName(), tran.x(), tran.y(), tran.z(), 
+                rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
+      mask_camera mc{uint8_t(i), uint8_t(grain::mask), xform_3d(), grain::pixel_array<rect_f>{}, 0.0, 0.0, rect_f{}, std::array<rect_f, grain::camera_width * grain::camera_height / 2>{}};
+      m_mask_cameras.emplace_back(mc);
+    }
     UFW_DEBUG("Printing auxmap");
     for (const auto& [vol, list]: *gdml.GetAuxMap()) {
       UFW_DEBUG("Logical volume '{}' at {} has {} auxiliary info.", vol->GetName(), fmt::ptr(vol), list.size());
       print_auxlist(list);
     }
     UFW_DEBUG("End of auxmap");
+    UFW_FATAL("break");
   }
 
   geoinfo::grain_info::~grain_info() = default;
