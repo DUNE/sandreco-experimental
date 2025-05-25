@@ -21,7 +21,6 @@ namespace sand {
     struct camera {
       uint8_t id;
       uint8_t optics;
-      uint8_t padding___[6];
       xform_3d cam_xform; //direction and orientation tbd
       grain::pixel_array<rect_f> sipm_active_areas; //plane tbd
       double sipm_offset;
