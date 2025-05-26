@@ -7,6 +7,11 @@
 #include <grain/digi.h>
 #include <grain/image.h>
 
+#include <array>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+
 namespace sand::grain {
 
   class spill_slicer : public ufw::process {
@@ -17,20 +22,74 @@ namespace sand::grain {
     void run() override;
 
   private:
-    int m_seed = 0;
-    std::vector<double> m_slice_times;
+    double m_min_response_signal;
+    double m_delta_ns_for_comparison;
     uint64_t m_stat_photons_processed;
     uint64_t m_stat_photons_accepted;
     uint64_t m_stat_photons_discarded;
+    std::vector<double> m_slice_times;
+    int m_seed = 0;
+    bool m_use_algo;
+
+    void compute_slice_times();
     
   };
 
   void spill_slicer::configure (const ufw::config& cfg) {
     process::configure(cfg);
-    for (auto time: cfg.at("slice_times") ) {
+    m_slice_times.clear();
+    for (auto time: cfg.value("slice_times", m_slice_times)) {
       m_slice_times.push_back(time);
     }
-  
+    if (m_slice_times.size() > 1) { // At least 2 edges for 1 slice
+      UFW_DEBUG("Using slice times from parameters");
+      m_use_algo = false;
+    }
+    else {
+      UFW_DEBUG("Using slicing algorithm");
+      m_use_algo = true;
+      m_min_response_signal = cfg.at("min_response_signal");
+      m_delta_ns_for_comparison = cfg.at("delta_ns_for_comparison");
+    }
+  }
+
+  void spill_slicer::compute_slice_times() {
+    // Place times into bins
+    const int n_bins{100};
+    const double min_time{0.0};
+    const double max_time{20000.0}; //ns
+    const double bin_width{(max_time - min_time)/n_bins};
+    
+    std::array<double, n_bins> binned_times;
+    binned_times.fill(0.0);
+
+    const auto& digis_in = get<digi>("digi");
+    for (auto& cam : digis_in.cameras) {
+      for (auto& pe : cam.photoelectrons) {
+        double time{pe.time_rising_edge};
+        if (time >= min_time && time < max_time) {
+          size_t bin_index = static_cast<size_t>(std::floor((time - min_time) / bin_width));
+          binned_times[bin_index] += pe.charge;
+        }
+        else {
+          UFW_WARN("Digi in camera {} {} is out of time window for slicing (t = {} ns)", cam.camera_id, cam.camera_name, time);
+        }
+      }
+    }
+
+    // Go through bins to find slice_edges
+    const size_t n_close_bins = static_cast<size_t>(m_delta_ns_for_comparison / bin_width);
+    m_slice_times.clear();
+    m_slice_times.push_back(min_time);
+    for (size_t i = n_close_bins; i < n_bins - n_close_bins; ++i) {
+      auto center = binned_times.begin() + i;
+      uint64_t left_max = *std::max_element(center - n_close_bins, center);
+      uint64_t right_max = *std::max_element(center + 1, center + n_close_bins + 1);
+      if (binned_times[i] > left_max && binned_times[i] > right_max && binned_times[i] >= m_min_response_signal) {
+          m_slice_times.push_back(static_cast<double>(i) * bin_width);
+      }
+    }
+    m_slice_times.push_back(max_time);
   }
 
   spill_slicer::spill_slicer() : process({{"digi", "sand::grain::digi"}}, {{"images", "sand::grain::images"}}) {
@@ -43,6 +102,10 @@ namespace sand::grain {
     m_stat_photons_discarded = 0;
     const auto& digis_in = get<digi>("digi");
     auto& images_out = set<images>("images");
+    if (m_use_algo) {
+      m_slice_times.clear();
+      compute_slice_times();
+    }
     for (int img_idx = 0; img_idx < m_slice_times.size() - 1; img_idx++) {
       UFW_INFO("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx + 1]);
       for (auto& cam : digis_in.cameras) {

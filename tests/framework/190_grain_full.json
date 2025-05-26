@@ -23,27 +23,45 @@
     "sand::grain::geant_run_manager" : {}
   },
   "contexts" : {
-    "keys" : 2,
+    "keys" : 5,
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
     }
   },
   "run" : [
     {
-      "sand::grain::optical_simulation" : { 
+      "sand::grain::optical_simulation" : {
         "seed" : 111,
         "geometry" : "geometries/grain/masks-3mm/main.gdml",
         "energy_split_threshold" : 100
       },
       "reqs" : {},
-      "prods" : {"hits" : "foo"}
+      "prods" : {"hits" : "grain_hits"}
     },
-    {
-      "sand::root::tree_streamer" : { 
-        "uri" : "test/sensors.root",
-        "tree" : "cameras"
+      {
+        "sand::grain::detector_response_fast" : {
+            "matrix_rows": 32,
+            "matrix_columns": 32,
+            "sipm_active_size": 3.0,
+            "sipm_border": 0.1,
+            "seed": 1111,
+            "pde": 0.2},
+        "reqs" : {"hits" : "grain_hits"},
+        "prods" : {"digi": "grain_digits"}
       },
-      "write" : { "foo" : "sand::grain::hits"}
-    }
+      {
+        "sand::grain::spill_slicer" : {
+            "slice_times": [0.0, 20000.0]
+        },
+        "reqs" : {"digi" : "grain_digits"},
+        "prods" : {"images": "grain_images"}
+      },
+      {
+        "sand::root::tree_streamer" : {
+          "uri" : "test/images.root",
+          "tree" : "cameras"
+        },
+        "write" : { "grain_images" : "sand::grain::images"}
+      }
   ]
 }

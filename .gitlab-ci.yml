@@ -20,5 +20,4 @@ test:
   stage: test
   script:
     - cp -r install/lib64/* /usr/local/lib64/
-    - source /usr/local/bin/geant4.sh
     - cd build && ctest --output-on-failure
