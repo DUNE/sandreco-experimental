@@ -20,4 +20,5 @@ test:
   stage: test
   script:
     - cp -r install/lib64/* /usr/local/lib64/
+    - cp install/share/sandreco/data/test/* /usr/local/share/sandreco/data/test/
     - cd build && ctest --output-on-failure
