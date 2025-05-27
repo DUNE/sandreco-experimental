@@ -72,7 +72,6 @@ namespace sand {
       print_auxlist(list);
     }
     UFW_DEBUG("End of auxmap");
-    UFW_FATAL("break");
   }
 
 }
