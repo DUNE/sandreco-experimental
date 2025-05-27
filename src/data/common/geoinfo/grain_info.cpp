@@ -74,7 +74,6 @@ namespace sand {
       print_auxlist(list);
     }
     UFW_DEBUG("End of auxmap");
-    UFW_FATAL("break");
   }
 
   geoinfo::grain_info::~grain_info() = default;
