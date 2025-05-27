@@ -12,6 +12,7 @@ build:
     paths:
       - src/streamers/root/tree_streamer_types.hpp
       - install/lib64/*
+      - install/share/sandreco/data/test/*
       - build/CTestTestfile.cmake
       - build/tests/*
 
@@ -20,5 +21,5 @@ test:
   stage: test
   script:
     - cp -r install/lib64/* /usr/local/lib64/
-    - cp -r /builds/dune/sandreco-experimental/install/share/sandreco/data/test/* /usr/local/share/sandreco/data/test/
+    - cp -r install/share/sandreco/data/test/* /usr/local/share/sandreco/data/test/
     - cd build && ctest --output-on-failure
