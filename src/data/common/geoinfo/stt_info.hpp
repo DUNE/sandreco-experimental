@@ -7,6 +7,11 @@ namespace sand {
   class geoinfo::stt_info : public tracker_info {
 
   public:
+    struct wire : public tracker_info::wire {
+      double straw_radius;
+    };
+
+  public:
     stt_info(const geoinfo&);
 
   };
