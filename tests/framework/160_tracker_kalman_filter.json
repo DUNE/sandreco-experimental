@@ -17,13 +17,14 @@
           "uri" : "test/tracklets_file.root",
           "tree" : "tracklets_tree"
         },
-        "read" : { "tracklet_map" : "sand::tracker::tracklet_map"}
+        "read" : { "tracklet_map" : "sand::tracker::tracklet_map", "s_particle_infos" : "sand::tracker::s_particle_infos" }
       },
       {
         "sand::tracker::kalman_filter" : {
             "trackletinfo_placeholder": 0.0
         },
-        "reqs" : {"tracklet_map" : "tracklet_map"},
+        "reqs" : {"tracklet_map" : "tracklet_map" , 
+                  "s_particle_infos" : "s_particle_infos"},
         "prods" : {"tracks" : "tracks"}
       },
       {

@@ -6,6 +6,7 @@
 
 #include <tracker/tracklet_map.h>
 #include <tracker/tracks.h>
+#include <tracker/s_particle_infos.h>
 
 #include <kalman_filter.hpp>
 
@@ -13,7 +14,7 @@ UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::tracker::kalman_filter)
 
 namespace sand::tracker {
 
-  kalman_filter::kalman_filter() : process({{"tracklet_map", "sand::tracker::tracklet_map"}}, {{"tracks", "sand::tracker::tracks"}}) {
+  kalman_filter::kalman_filter() : process({{"tracklet_map", "sand::tracker::tracklet_map"} , {"s_particle_infos", "sand::tracker::s_particle_infos"}}, {{"tracks", "sand::tracker::tracks"}}) {
     UFW_DEBUG("Creating a kalman_filter process at {}", fmt::ptr(this));
   }
 
@@ -25,7 +26,8 @@ namespace sand::tracker {
 
   void kalman_filter::run() {
 
-    const auto& tracklets_in = get<tracklet_map>("tracklet_map");    
+    const auto& tracklets_in = get<tracklet_map>("tracklet_map"); 
+    const auto& s_particle_infos_in = get<s_particle_infos>("s_particle_infos");   
     auto& tracks_out = set<tracks>("tracks");
 
     for(auto& tracklet_collection : tracklets_in.tracklets) {
