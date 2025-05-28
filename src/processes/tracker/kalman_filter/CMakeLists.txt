@@ -1,6 +1,12 @@
 add_library(kalman_filter)
 
-target_sources(kalman_filter PRIVATE kalman_filter.cpp)
+file(GLOB SOURCES *.cc)
+file(GLOB HEADERS *.hh)
+
+target_sources(kalman_filter PRIVATE 
+              kalman_filter.cpp
+              ${HEADERS}
+              ${SOURCES})
 
 target_include_directories(kalman_filter PRIVATE . ${CMAKE_SOURCE_DIR}/include)
 

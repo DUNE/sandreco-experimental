@@ -9,6 +9,7 @@
 #include <tracker/s_particle_infos.h>
 
 #include <kalman_filter.hpp>
+#include <Track.hh>
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::tracker::kalman_filter)
 
