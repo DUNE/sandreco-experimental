@@ -1,5 +1,4 @@
-#ifndef SANDKFTRACK_H
-#define SANDKFTRACK_H
+#pragma once
 
 #include <common/truth.h>
 #include <common/sand.h>
@@ -55,8 +54,20 @@ namespace sand::tracker {
             double getY() const {return y_;};
     };
 
+    class Track {
+        private:
+            std::vector<TrackStep> steps_;
+        public:
+            const std::vector<TrackStep>& getSteps() const {return steps_; };
+            const TrackStep& getStep(int index) const {return steps_.at(index); };
+            void addStep(TrackStep state) { steps_.push_back(state); };
+            void setStage(int index, TrackStep::TrackStateStage stage, State state) { steps_.at(index).setStage(stage, state); };
+            void setInnovation(int index, std::vector<double> innovation) { steps_.at(index).setInnovation(innovation); };
+            void setZ(int index, double z){steps_.at(index).setZ(z); };
+            void setX(int index, double x){steps_.at(index).setX(x); };
+            void setY(int index, double y){steps_.at(index).setY(y); };
+            void setClusterIDForState(int index, channel_id cluster_id) { steps_.at(index).setClusterIDForThisState(cluster_id); };
+            void removeLastStep() { steps_.erase(steps_.end()-1); };
+            void Clear() {steps_.clear();}
+    };
 }
-
-
-
-#endif

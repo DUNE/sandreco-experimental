@@ -1,5 +1,4 @@
 #include "Track.hh"
-#include "State.hh"
 
 namespace sand::tracker {
 

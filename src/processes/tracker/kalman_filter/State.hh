@@ -1,11 +1,12 @@
-#ifndef SANDKFSTATE_H
-#define SANDKFSTATE_H
+#pragma once
 
 #include "TMatrixD.h"
 
 namespace sand::tracker {
 
     using StateCovarianceMatrix = TMatrixD;
+    using Measurement = TMatrixD;
+    using Prediction  = TMatrixD;
 
     class StateVector {
 
@@ -86,6 +87,3 @@ namespace sand::tracker {
 
 }
 
-
-
-#endif
