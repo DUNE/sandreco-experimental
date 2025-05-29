@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Track.hh"
+
 #include "tracker/tracklet_map.h"
 #include "tracker/s_particle_infos.h"
 #include "common/sand.h"
+
 #include "TMath.h"
 
 namespace sand::tracker {
@@ -23,7 +25,7 @@ namespace sand::tracker {
             kHorizontal
             };
             Orientation getOrientation() {return current_orientation_;};
-            pos_3d getDirectiveCosinesFromStateVector(const StateVector& state_vector);
+            mom_3d getDirectiveCosinesFromStateVector(const StateVector& state_vector);
             double getPhiFromTheta(double theta, int charge) { return theta - charge * 0.5*TMath::Pi(); };
             double getThetaFromPhi(double phi, int charge) { return phi + charge * 0.5*TMath::Pi(); };
             double getThetaFromPhi(const StateVector& state_vector) { return getThetaFromPhi(state_vector.phi(), state_vector.charge()); };
