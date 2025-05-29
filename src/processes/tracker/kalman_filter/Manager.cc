@@ -38,18 +38,18 @@ namespace sand::tracker {
         propagatorMatrix[2][0] = dInvCRDx(stateVector, nextPhi, dZ, dE, particle_mass);     
         propagatorMatrix[2][1] = dInvCRDy(stateVector, nextPhi, dZ, dE, particle_mass);     
         propagatorMatrix[2][2] = dInvCRDInvCR(stateVector, nextPhi, dZ, dE, particle_mass); 
-        propagatorMatrix[2][3] = dInvCRDTanl(stateVector, nextPhi, dZ, dE, particle_mass);  
-        propagatorMatrix[2][4] = dInvCRDPhi(stateVector, nextPhi, dZ, dE, particle_mass);   
-        propagatorMatrix[3][0] = dTanlDx(stateVector, nextPhi, dZ, dE, particle_mass);      
-        propagatorMatrix[3][1] = dTanlDy(stateVector, nextPhi, dZ, dE, particle_mass);      
-        propagatorMatrix[3][2] = dTanlDInvCR(stateVector, nextPhi, dZ, dE, particle_mass);
-        propagatorMatrix[3][3] = dTanlDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
-        propagatorMatrix[3][4] = dTanlDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
-        propagatorMatrix[4][0] = dPhiDx(stateVector, nextPhi, dZ, dE, particle_mass);
-        propagatorMatrix[4][1] = dPhiDy(stateVector, nextPhi, dZ, dE, particle_mass);
-        propagatorMatrix[4][2] = dPhiDInvCR(stateVector, nextPhi, dZ, dE, particle_mass);
-        propagatorMatrix[4][3] = dPhiDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
-        propagatorMatrix[4][4] = dPhiDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
+        // propagatorMatrix[2][3] = dInvCRDTanl(stateVector, nextPhi, dZ, dE, particle_mass);  
+        // propagatorMatrix[2][4] = dInvCRDPhi(stateVector, nextPhi, dZ, dE, particle_mass);   
+        // propagatorMatrix[3][0] = dTanlDx(stateVector, nextPhi, dZ, dE, particle_mass);      
+        // propagatorMatrix[3][1] = dTanlDy(stateVector, nextPhi, dZ, dE, particle_mass);      
+        // propagatorMatrix[3][2] = dTanlDInvCR(stateVector, nextPhi, dZ, dE, particle_mass);
+        // propagatorMatrix[3][3] = dTanlDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
+        // propagatorMatrix[3][4] = dTanlDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
+        // propagatorMatrix[4][0] = dPhiDx(stateVector, nextPhi, dZ, dE, particle_mass);
+        // propagatorMatrix[4][1] = dPhiDy(stateVector, nextPhi, dZ, dE, particle_mass);
+        // propagatorMatrix[4][2] = dPhiDInvCR(stateVector, nextPhi, dZ, dE, particle_mass);
+        // propagatorMatrix[4][3] = dPhiDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
+        // propagatorMatrix[4][4] = dPhiDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
         return propagatorMatrix;
     }
 }
