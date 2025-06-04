@@ -8,6 +8,7 @@ namespace sand {
 
   public:
     struct wire : public tracker_info::wire {
+      geo_id geo; ///< The unique geometry identifier
       double straw_radius;
     };
 

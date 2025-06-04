@@ -23,7 +23,7 @@ namespace sand {
   std::size_t geoinfo::tracker_info::wire::segment(pos_3d x) const {
     double t = x.x() - std::min(head.x(), tail.x());
     std::size_t i = 0;
-    while (i != s_max_wire_spacers && parent->spacers[i] > t) {
+    while (i != s_max_wire_spacers && spacers[i] > t) {
       ++i;
     }
     return i;
@@ -33,6 +33,10 @@ namespace sand {
 
   void geoinfo::tracker_info::add_plane(plane_ptr&& p) {
     m_planes.emplace_back(std::move(p));
+  }
+
+  void geoinfo::tracker_info::add_volume(const geo_path& p, const gas_volume& v) {
+    m_volumes[p] = v;
   }
 
 }
