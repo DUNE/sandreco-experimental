@@ -12,6 +12,11 @@ namespace sand {
       double straw_radius;
     };
 
+    struct station : public tracker_info::station {
+      wire_list x_view() const;
+      wire_list y_view() const;
+    };
+
   public:
     stt_info(const geoinfo&);
 

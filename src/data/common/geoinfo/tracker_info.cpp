@@ -31,8 +31,8 @@ namespace sand {
 
   geoinfo::tracker_info::tracker_info(const geoinfo& gi, const geo_path& p) : subdetector_info(gi, p) {}
 
-  void geoinfo::tracker_info::add_plane(plane_ptr&& p) {
-    m_planes.emplace_back(std::move(p));
+  void geoinfo::tracker_info::add_station(station_ptr&& p) {
+    m_stations.emplace_back(std::move(p));
   }
 
   void geoinfo::tracker_info::add_volume(const geo_path& p, const gas_volume& v) {
