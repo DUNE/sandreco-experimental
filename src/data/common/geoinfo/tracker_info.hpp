@@ -38,6 +38,7 @@ namespace sand {
       pos_3d head; ///< The readout end of the wire
       pos_3d tail; ///< The termination end of the wire
       double hv; ///< The bias voltage
+      double max_radius; ///< The maximum drift distance
       catenary_array catenaries; ///< Maximum deflection downwards at the centre of the segment between two spacers, north to south
       spacer_array spacers; ///< Horizontal coordinates of wire spacers, north to south
       double angle() const { return std::atan2(direction().y(), direction().x()); } //signed angle w.r.t. horizontal north to south direction
