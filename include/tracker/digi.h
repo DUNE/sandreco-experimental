@@ -1,3 +1,13 @@
+/**
+ * @file digi.h
+ * @author fbattist (federico.battisti@bo.infn.it)
+ * @brief The standard tracker digitization data structure.
+ * @version 0.1
+ * @date 2025-06-12
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #pragma once
 
 #include <vector>
