@@ -29,6 +29,7 @@ namespace sand {
       void set_track(pos_3d p, dir_3d d) { InitTrack(p.x(), p.y(), p.z(), d.x(), d.y(), d.z()); }
       inline pos_3d to_local(pos_3d) const;
       inline pos_3d to_master(pos_3d) const;
+      template <typename Func> void for_each_node(Func&& f) const;
     };
 
   private:
@@ -109,6 +110,14 @@ namespace sand {
     LocalToMaster(l, m);
     ret.SetCoordinates(m);
     return ret;
+  }
+
+  template <typename Func> void root_tgeomanager::tgeonav::for_each_node(Func&& f) const {
+    auto node = GetCurrentNode();
+    int nd = node->GetNdaughters();
+    for (int i = 0; i != nd; ++i) {
+      std::forward<Func>(f)(const_cast<const TGeoNode*>(node->GetDaughter(i)));
+    }
   }
 
 }
