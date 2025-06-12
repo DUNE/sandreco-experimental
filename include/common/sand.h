@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include <Math/Rotation3D.h>
+#include <Math/Transform3D.h>
 #include <Math/Vector3D.h>
 #include <Math/Vector4D.h>
 #include <Math/SVector.h>
@@ -18,6 +20,9 @@ namespace sand {
 
   using mom_3d = ROOT::Math::XYZVector;
   using mom_4d = ROOT::Math::PxPyPzEVector;
+
+  using rot_3d = ROOT::Math::Rotation3D;
+  using xform_3d = ROOT::Math::Transform3D;
 
   class geo_path : public std::string {
 
