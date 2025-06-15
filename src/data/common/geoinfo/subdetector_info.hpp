@@ -13,6 +13,10 @@ namespace sand {
 
     const pos_3d& centre() const { return m_centre; }
 
+    virtual geo_id id(const geo_path&) const = 0;
+
+    virtual geo_path path(geo_id) const = 0;
+
   protected:
     const geoinfo& info() { return r_info; }
 

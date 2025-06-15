@@ -52,12 +52,20 @@ namespace sand {
     using wire_ptr = std::unique_ptr<const wire>;
     using wire_list = std::vector<const wire*>;
 
+    enum target_material : uint8_t {
+      TRKONLY = 0,
+      C3H6 = 1,
+      CARBON = 2,
+      NONE = 255,
+    };
+
     struct station {
       pos_3d top_north; ///< Top right (looking towards FD) of the sensitive volume
       pos_3d top_south; ///< Top left (looking towards FD) of the sensitive volume
       pos_3d bottom_south;
       pos_3d bottom_north;
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
+      target_material target;
       pos_3d centre() const { return (top_north + top_south + bottom_south + bottom_north) / 4.0; }
       template <typename Func> wire_list select(Func&& f) const {
         wire_list wl;
@@ -70,6 +78,7 @@ namespace sand {
       }
     };
 
+  protected:
     using station_ptr = std::unique_ptr<const station>;
 
     struct gas_volume {
@@ -82,10 +91,14 @@ namespace sand {
   public:
     tracker_info(const geoinfo&, const geo_path&);
 
+    virtual ~tracker_info();
+
   protected:
     void add_station(station_ptr&&);
 
     void add_volume(const geo_path&, const gas_volume&);
+
+    const station* at(std::size_t i) const { return m_stations.at(i).get(); }
 
   private:
     std::vector<station_ptr> m_stations;

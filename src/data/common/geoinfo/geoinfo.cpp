@@ -33,4 +33,30 @@ namespace sand {
 
   geoinfo::~geoinfo() = default;
 
+  geo_id geoinfo::id(const geo_path& gp) const {
+    geo_id gi;
+    return gi;
+  }
+
+  geo_path geoinfo::path(geo_id gi) const {
+    geo_path gp(m_root_path);
+    switch (gi.subdetector) {
+    case DRIFT:
+    case STT:
+      gp /= m_tracker->path(gi);
+      break;
+    case ECAL:
+      gp /= m_ecal->path(gi);
+      break;
+    case GRAIN:
+      gp /= m_grain->path(gi);
+      break;
+    case MUON:
+    case NONE:
+    default:
+      UFW_ERROR("Subdetector '{}' not supported.", gi.subdetector);
+    }
+    return gp;
+  }
+
 }

@@ -31,6 +31,8 @@ namespace sand {
 
   geoinfo::tracker_info::tracker_info(const geoinfo& gi, const geo_path& p) : subdetector_info(gi, p) {}
 
+  geoinfo::tracker_info::~tracker_info() = default;
+
   void geoinfo::tracker_info::add_station(station_ptr&& p) {
     m_stations.emplace_back(std::move(p));
   }

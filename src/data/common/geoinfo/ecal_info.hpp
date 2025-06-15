@@ -25,6 +25,10 @@ namespace sand {
 
     const cell& at(geo_id);
 
+    geo_id id(const geo_path&) const override;
+
+    geo_path path(geo_id) const override;
+
   private:
     std::map<geo_id, cell> m_cells;
 
