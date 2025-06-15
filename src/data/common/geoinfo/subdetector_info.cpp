@@ -11,4 +11,6 @@ namespace sand {
     m_centre = nav->to_master({0.0, 0.0, 0.0});
   }
 
+  geoinfo::subdetector_info::~subdetector_info() = default;
+
 }

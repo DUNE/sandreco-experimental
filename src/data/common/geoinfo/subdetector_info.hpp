@@ -11,6 +11,8 @@ namespace sand {
     subdetector_info(const subdetector_info&) = delete;
     subdetector_info& operator = (const subdetector_info&) = delete;
 
+    virtual ~subdetector_info();
+
     const pos_3d& centre() const { return m_centre; }
 
     virtual geo_id id(const geo_path&) const = 0;

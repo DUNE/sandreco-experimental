@@ -6,6 +6,8 @@ namespace sand {
 
   geoinfo::grain_info::grain_info(const geoinfo& gi) : subdetector_info(gi, s_grain_path) {}
 
+  geoinfo::grain_info::~grain_info() = default;
+
   geo_id geoinfo::grain_info::id(const geo_path& gp) const {
     geo_id gi;
     if (gp == s_grain_path) {

@@ -21,6 +21,8 @@ namespace sand {
   public:
     ecal_info(const geoinfo&);
 
+    virtual ~ecal_info();
+
     const cell& at(pos_3d);
 
     const cell& at(geo_id);

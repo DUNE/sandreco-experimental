@@ -27,6 +27,8 @@ namespace sand {
     //UFW_FATAL("stt");
   }
 
+  geoinfo::stt_info::~stt_info() = default;
+
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;
     

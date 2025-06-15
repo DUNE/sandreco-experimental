@@ -16,6 +16,8 @@ namespace sand {
   public:
     drift_info(const geoinfo&);
 
+    virtual ~drift_info();
+
     geo_id id(const geo_path&) const override;
 
     geo_path path(geo_id) const override;
