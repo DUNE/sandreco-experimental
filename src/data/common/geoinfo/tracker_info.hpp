@@ -93,6 +93,8 @@ namespace sand {
 
     virtual ~tracker_info();
 
+    using subdetector_info::path;
+
   protected:
     void add_station(station_ptr&&);
 

@@ -27,6 +27,8 @@ namespace sand {
 
     const cell& at(geo_id);
 
+    using subdetector_info::path;
+
     geo_id id(const geo_path&) const override;
 
     geo_path path(geo_id) const override;

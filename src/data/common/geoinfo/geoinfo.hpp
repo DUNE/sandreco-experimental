@@ -3,8 +3,6 @@
 #include <ufw/data.hpp>
 #include <common/sand.h>
 
-class Tgeoinfo;
-
 namespace sand {
 
   /**

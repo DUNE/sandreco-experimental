@@ -14,7 +14,6 @@ namespace sand {
     //pl->top_north
     nav->cd(path);
     nav->for_each_node([&](auto node) {
-      UFW_INFO("Child {}", node->GetName());
       gas_volume gv;
       //gv.w = ...
       //get the transorm of this shape, find position of wire
@@ -58,7 +57,7 @@ namespace sand {
   geo_path geoinfo::stt_info::path(geo_id gi) const {
     //TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
-    geo_path gp = subdetector_info::path();
+    geo_path gp = path();
     auto stat = at(gi.stt.supermodule);
     std::string module_name;
     switch (stat->target) {
