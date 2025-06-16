@@ -4,7 +4,7 @@
 
 namespace sand {
 
-  geoinfo::subdetector_info::subdetector_info(const geoinfo& gi, const geo_path& subpath) : r_info(gi) {
+  geoinfo::subdetector_info::subdetector_info(const geoinfo& gi, const geo_path& subpath) : r_info(gi), m_path(subpath) {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
     nav->cd(r_info.root_path() / subpath);

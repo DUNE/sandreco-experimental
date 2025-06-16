@@ -31,14 +31,34 @@ namespace sand {
 
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;
-    
+    auto path = gp - subdetector_info::path();
+    gi.subdetector = STT;
+    //abuse the bad notation here, module/plane/straw
+    std::string straw(path.token(2));
+    auto i1 = straw.find('_');
+    auto i2 = straw.find('_', i1 + 1);
+    auto i3 = straw.find('_', i2 + 1);
+    auto i4 = straw.find('_', i3 + 1);
+    auto i5 = straw.find('_', i4 + 1);
+    if (i5 != std::string::npos) {
+      gi.stt.supermodule = std::stoi(straw.substr(i1, i2 - i1 - 1));
+      gi.stt.plane = 0;
+      if (straw.at(i3 - 1) == 'Y') {
+        gi.stt.plane = 1;
+      } else if (path.token(1).back() == '1') {
+        gi.stt.plane = 2;
+      }
+      gi.stt.tube = std::stoi(straw.substr(i5));
+    } else {
+      UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
+    }
     return gi;
   }
 
   geo_path geoinfo::stt_info::path(geo_id gi) const {
     //TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
-    geo_path gp(s_stt_path);
+    geo_path gp = subdetector_info::path();
     auto stat = at(gi.stt.supermodule);
     std::string module_name;
     switch (stat->target) {

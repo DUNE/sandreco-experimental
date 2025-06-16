@@ -19,11 +19,14 @@ namespace sand {
 
     virtual geo_path path(geo_id) const = 0;
 
+    geo_path path() const { return m_path; }
+
   protected:
     const geoinfo& info() { return r_info; }
 
   private:
     const geoinfo& r_info;
+    geo_path m_path;
     pos_3d m_centre;
 
   };

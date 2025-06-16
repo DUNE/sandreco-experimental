@@ -40,6 +40,13 @@ namespace sand {
       return p /= rhs;
     }
 
+    inline geo_path& operator -= (const geo_path&);
+
+    geo_path operator - (const geo_path& rhs) const {
+      geo_path p(*this);
+      return p -= rhs;
+    }
+    
     inline std::string_view token(std::size_t) const;
 
   };
@@ -69,6 +76,18 @@ namespace sand {
         push_back('/');
         append(sv);
       }
+    }
+    return *this;
+  }
+
+  /**
+   * Removes a path @e prefix from this path if and only if @p sub matches the start of this path.
+   * 
+   * @returns the remaining path element.
+   */
+  inline geo_path& geo_path::operator -= (const geo_path& sub) {
+    if (std::string_view(sub.data(), sub.size()) == sub) {
+      erase(0, sub.size());
     }
     return *this;
   }

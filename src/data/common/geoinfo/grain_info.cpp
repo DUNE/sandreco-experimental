@@ -10,17 +10,17 @@ namespace sand {
 
   geo_id geoinfo::grain_info::id(const geo_path& gp) const {
     geo_id gi;
-    if (gp == s_grain_path) {
+    if (gp == subdetector_info::path()) {
       gi.subdetector = GRAIN;
     } else {
-      UFW_ERROR("Incorrect path for GRAIN, expected '{}', got '{}'.", s_grain_path, gp);
+      UFW_ERROR("Incorrect path for GRAIN, expected '{}', got '{}'.", subdetector_info::path(), gp);
     }
     return gi;
   }
 
   geo_path geoinfo::grain_info::path(geo_id gi) const {
     UFW_ASSERT(gi.subdetector == GRAIN, "Subdetector must be GRAIN");
-    return s_grain_path;
+    return subdetector_info::path();
   }
 
 }
