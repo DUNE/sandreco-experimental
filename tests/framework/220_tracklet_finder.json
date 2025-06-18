@@ -1,0 +1,38 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : ["/usr/local/lib64"]
+  },
+  "globals" : {
+    "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
+    "sand::geoinfo" : {}
+  },
+  "contexts" : {
+    "keys" : 2,
+    "locals" : {
+      "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
+    }
+  },
+  "run" : [
+    {
+      "sand::root::tree_streamer" : { 
+        "uri" : "test/sttdigis.root",
+        "tree" : "digi"
+      },
+      "read" : { "sttdigis" : "sand::tracker::digi"}
+    },
+    {
+      "sand::tracker::tracklet_finder" : {},
+      "reqs" : {"digi": "sttdigis"},
+      "prods" : {"tracklets" : "stttracklets"}
+    },
+    {
+      "sand::root::tree_streamer" : { 
+        "uri" : "test/tracklets.root",
+        "tree" : "tracklets"
+      },
+      "write" : { "stttracklets" : "sand::tracker::tracklets"}
+    }
+  ]
+}

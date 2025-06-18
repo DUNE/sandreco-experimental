@@ -6,15 +6,17 @@
 
 #include <tracklet_finder.hpp>
 
+#include <geoinfo/tracker_info.hpp>
+
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::tracker::tracklet_finder)
 
 namespace sand::tracker {
 
-  tracklet_finder::tracklet_finder() : process({{"digits", "sand::tracker::digi"}}, {{"tracklets", "sand::tracker::tracklet_collection"}}) {
+  tracklet_finder::tracklet_finder() : process({{"digi", "sand::tracker::digi"}}, {{"tracklets", "sand::tracker::tracklets"}}) {
     UFW_DEBUG("Creating a tracklet_finder process at {}", fmt::ptr(this));
   }
 
-  void tracklet_finder::configure (const ufw::config& cfg) {
+  void tracklet_finder::configure(const ufw::config& cfg) {
     process::configure(cfg); 
 
   }
