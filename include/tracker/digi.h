@@ -1,26 +1,6 @@
-/**
- * @file digi.h
- * @author fbattist (federico.battisti@bo.infn.it)
- * @brief The standard tracker digitization data structure.
- * @version 0.1
- * @date 2025-06-12
- * 
- * @copyright Copyright (c) 2025
- * 
- */
 #pragma once
 
 #include <vector>
-#include <cstdint>
-
-#include <ufw/data.hpp>
-#include <common/truth.h>
-#include <common/sand.h>
-
-#pragma once
-
-#include <vector>
-#include <cstdint>
 
 #include <ufw/data.hpp>
 #include <common/truth.h>
@@ -30,40 +10,35 @@ namespace sand::tracker {
 
   /**
    * @brief Represents a digitized collection of signals in the tracker subsystem.
-   *
-   * Inherits from:
-   * - sand::true_hits: Base class representing true simulation hits.
-   * - ufw::data::base: Provides data handling with managed, instanced, and context tags.
    */
-  struct digi : public sand::true_hits,
-                ufw::data::base<ufw::data::managed_tag,
-                                ufw::data::instanced_tag,
-                                ufw::data::context_tag> {
+  struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
 
     /**
      * @brief A signal recorded by a tracker channel.
      */
-    struct signal {
+    struct signal : public true_hits {
       /**
        * @brief The readout channel associated with the signal.
        */
       channel_id channel;
 
       /**
-       * @brief Time-to-digital converter (TDC) value.
-       * @unit nanoseconds (ns)
+       * @brief Time of the signal rising edge, measured since the nominal start of the spill.
+       * @unit calibrated nanoseconds
        */
-      double tdc;
+      double time_rising_edge;
 
       /**
-       * @brief Analog-to-digital converter (ADC) value.
-       * @unit ADC counts (arbitrary units)
+       * @brief Charge integral
+       * @unit calibrated electrons
        */
-      double adc;
+      double charge;
     };
 
-    using signal_collection = std::vector<signal>;
-    signal_collection signals;
+    using signal_list = std::vector<signal>;
+
+    signal_list signals;
+
   };
 }
 

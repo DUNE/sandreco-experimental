@@ -6,7 +6,7 @@
 
 namespace sand::tracker {
 
-  struct tracklet_collection : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
+  struct tracklets : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
 
     struct tracklet {
       pos_3d offset; ///< position of centre of tracklet, in global coordinates
@@ -17,10 +17,11 @@ namespace sand::tracker {
     };
 
     using tracklet_list = std::vector<tracklet>;
+
     tracklet_list tracklets;
 
   };
 
 }
 
-UFW_DECLARE_MANAGED_DATA(sand::tracker::tracklet_collection)
+UFW_DECLARE_MANAGED_DATA(sand::tracker::tracklets)
