@@ -21,9 +21,17 @@ namespace sand {
   public:
     ecal_info(const geoinfo&);
 
+    virtual ~ecal_info();
+
     const cell& at(pos_3d);
 
     const cell& at(geo_id);
+
+    using subdetector_info::path;
+
+    geo_id id(const geo_path&) const override;
+
+    geo_path path(geo_id) const override;
 
   private:
     std::map<geo_id, cell> m_cells;

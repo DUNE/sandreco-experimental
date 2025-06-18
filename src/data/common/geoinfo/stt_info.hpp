@@ -7,7 +7,26 @@ namespace sand {
   class geoinfo::stt_info : public tracker_info {
 
   public:
+    struct wire : public tracker_info::wire {
+      geo_id geo; ///< The unique geometry identifier
+      double straw_radius;
+    };
+
+    struct station : public tracker_info::station {
+      wire_list x_view() const;
+      wire_list y_view() const;
+    };
+
+  public:
     stt_info(const geoinfo&);
+
+    virtual ~stt_info();
+
+    using subdetector_info::path;
+
+    geo_id id(const geo_path&) const override;
+
+    geo_path path(geo_id) const override;
 
   };
 

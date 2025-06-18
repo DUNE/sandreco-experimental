@@ -1,0 +1,23 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : ["/usr/local/lib64"],
+    "ufw-env" : {}
+  },
+  "globals" : {
+    "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
+    "sand::geoinfo" : {}
+  },
+  "contexts" : {
+    "keys" : 1,
+    "locals" : {}
+  },
+  "run" : [
+    {
+      "sand::common::geoinfo_test" : { "geometry" : "geometries/grain/masks-3mm/main.gdml" },
+      "reqs" : {},
+      "prods" : {}
+    }
+  ]
+}
