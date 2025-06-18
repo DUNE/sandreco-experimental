@@ -8,7 +8,7 @@ namespace sand {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
     nav->cd(r_info.root_path() / subpath);
-    m_centre = nav->to_master({0.0, 0.0, 0.0});
+    m_centre = nav->to_master(pos_3d{0.0, 0.0, 0.0});
   }
 
   geoinfo::subdetector_info::~subdetector_info() = default;

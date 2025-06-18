@@ -2,6 +2,10 @@
 #include <ufw/context.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 
+#include <TGeoMatrix.h>
+#include <TGeoBBox.h>
+#include <TGeoTube.h>
+
 namespace sand {
 
   static constexpr char s_stt_path[] = "sand_inner_volume_PV_0/STTtracker_PV_0";
@@ -9,21 +13,85 @@ namespace sand {
   geoinfo::stt_info::stt_info(const geoinfo& gi) : tracker_info(gi, s_stt_path) {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
-    auto path =  gi.root_path() / "sand_inner_volume_PV_0/STTtracker_PV_0/TrkMod_00_PV_0/TrkMod_00_planeXX_PV_1";
-    station_ptr pl(new station);
-    //pl->top_north
-    nav->cd(path);
-    nav->for_each_node([&](auto node) {
-      gas_volume gv;
-      //gv.w = ...
-      //get the transorm of this shape, find position of wire
-      //then create wire, add it to station, and assign to gv.w
-      gv.p = pl.get();
-      gv.gas = "boh";
-      gv.gas_pressure = -999.;
-      add_volume(path / node->GetName(), gv);
+    auto sttpath =  gi.root_path() / path();
+    nav->cd(sttpath);
+    nav->for_each_node([&](auto supermod) {
+      std::string smodname = supermod->GetName();
+      UFW_DEBUG("Parsing STT module '{}' ...", smodname);
+      nav->cd(sttpath / smodname);
+      auto stat = std::make_unique<station>();
+      target_material tgt;
+      if (smodname.find("TrkMod_") == 0) {
+        tgt = TRKONLY;
+      } else if (smodname.find("C3H6Mod_") == 0) {
+        tgt = C3H6;
+      } else if (smodname.find("CMod_") == 0) {
+        tgt = CARBON;
+      } else {
+        UFW_ERROR("STT module '{}' has unrecognized material.", smodname);
+      }
+      stat->target = tgt;
+      TGeoBBox* plane_shape = dynamic_cast<TGeoBBox*>(supermod->GetVolume()->GetShape());
+      if (!plane_shape) {
+        UFW_ERROR("STT module '{}' has invalid shape.", smodname);
+      }
+      auto matrix = nav->get_hmatrix();
+      double* tran = matrix.GetTranslation();
+      double* rot = matrix.GetRotationMatrix();
+      UFW_DEBUG("The centre of the module is at {:.2f}, {:.2f}, {:.2f}.", tran[0], tran[1], tran[2]);
+      UFW_DEBUG("The rotation of the module is {:.2f}, {:.2f}, {:.2f}.", rot[0], rot[1], rot[2]);
+      UFW_DEBUG("The rotation of the module is {:.2f}, {:.2f}, {:.2f}.", rot[3], rot[4], rot[5]);
+      UFW_DEBUG("The rotation of the module is {:.2f}, {:.2f}, {:.2f}.", rot[6], rot[7], rot[8]);
+      pos_3d centre;
+      centre.SetCoordinates(tran);
+      dir_3d halfsize(plane_shape->GetDX(), plane_shape->GetDY(), plane_shape->GetDZ());
+      dir_3d boxcorner = nav->to_master(halfsize);
+      boxcorner.SetZ(0); //we ignore the thickness here.
+      stat->top_north = centre + boxcorner;
+      stat->bottom_south = centre - boxcorner;
+      boxcorner.SetX(-boxcorner.x());
+      stat->top_south = centre + boxcorner;
+      stat->bottom_north = centre - boxcorner;
+      nav->for_each_node([&](auto plane) {
+        //The plane does not carry useful information for us.
+        std::string plname = plane->GetName();
+        if (plname.find("plane") == std::string::npos) { //other stuff, targets, ...
+          return;
+        }
+        UFW_DEBUG(" Parsing STT plane '{}' ...", plname);
+        nav->cd(sttpath / smodname / plname);
+        nav->for_each_node([&](auto tube) {
+          std::string tname = tube->GetName();
+          UFW_DEBUG("   Parsing STT tube '{}' ...", tname);
+          nav->cd(sttpath / smodname / plname / tname);
+          /*FIXME why is this a TGeoTubeSeg??? the straws are simple tubes*/
+          TGeoTubeSeg* tube_shape = dynamic_cast<TGeoTubeSeg*>(tube->GetVolume()->GetShape());
+          if (!tube_shape) {
+            UFW_ERROR("STT tube '{}' has invalid shape.", tname);
+          }
+          auto matrix = nav->get_hmatrix();
+          double* tran = matrix.GetTranslation();
+          double* rot = matrix.GetRotationMatrix();
+          pos_3d centre;
+          centre.SetCoordinates(tran);
+          dir_3d halfsize(0, 0, tube_shape->GetDZ());
+          dir_3d globalhalfsize = nav->to_master(halfsize);
+          auto w = std::make_unique<wire>();
+          w->parent = stat.get();
+          w->head = centre + globalhalfsize;
+          w->tail = centre - globalhalfsize;
+          w->max_radius = tube_shape->GetRmax();
+          stat->wires.emplace_back();
+          UFW_DEBUG("    The centre of the tube is at {:.2f}, {:.2f}, {:.2f}.", tran[0], tran[1], tran[2]);
+          UFW_DEBUG("    The rotation of the tube is {:.2f}, {:.2f}, {:.2f}.", rot[0], rot[1], rot[2]);
+          UFW_DEBUG("    The rotation of the tube is {:.2f}, {:.2f}, {:.2f}.", rot[3], rot[4], rot[5]);
+          UFW_DEBUG("    The rotation of the tube is {:.2f}, {:.2f}, {:.2f}.", rot[6], rot[7], rot[8]);
+          UFW_DEBUG("    The head of the tube is at {:.2f}, {:.2f}, {:.2f}.", w->head.x(), w->head.y(), w->head.z());
+          UFW_DEBUG("    The tail of the tube is at {:.2f}, {:.2f}, {:.2f}.", w->tail.x(), w->tail.y(), w->tail.z());
+        } );
+      } );
+      add_station(station_ptr(std::move(stat)));
     } );
-    //UFW_FATAL("stt");
   }
 
   geoinfo::stt_info::~stt_info() = default;

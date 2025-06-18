@@ -10,6 +10,12 @@
 #include <geoinfo/ecal_info.hpp>
 #include <geoinfo/tracker_info.hpp>
 
+template <> struct fmt::formatter<sand::pos_3d>: formatter<string_view> {
+  auto format(sand::pos_3d c, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "({:.2f}, {:.2f}, {:.2f})", c.x(), c.y(), c.z());
+  }
+};
+
 namespace sand::common {
 
   class geoinfo_test : public ufw::process {
@@ -36,6 +42,10 @@ namespace sand::common {
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
+    int i = 0;
+    for (const auto& s : gi.tracker().stations()) {
+      UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} wires;\n - target material {}", i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, s->wires.size(), s->target);
+    }
   }
 
 }

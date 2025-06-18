@@ -33,7 +33,7 @@ namespace sand {
       };
       using catenary_array = std::array<catenary, s_max_wire_spacers + 1>;
       using spacer_array = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X coordinate, starting from north.
-      const station* const parent; ///< The parent station
+      const station* parent; ///< The parent station
       channel_id channel; ///< The unique daq identifier
       pos_3d head; ///< The readout end of the wire
       pos_3d tail; ///< The termination end of the wire
@@ -94,6 +94,8 @@ namespace sand {
     virtual ~tracker_info();
 
     using subdetector_info::path;
+
+    const std::vector<station_ptr>& stations() const { return m_stations; }
 
   protected:
     void add_station(station_ptr&&);
