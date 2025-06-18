@@ -3,8 +3,6 @@
 #include <ufw/data.hpp>
 #include <common/sand.h>
 
-class Tgeoinfo;
-
 namespace sand {
 
   /**
@@ -48,6 +46,10 @@ namespace sand {
     const grain_info& grain() const { return *m_grain; }
 
     const tracker_info& tracker() const { return *m_tracker; }
+
+    geo_id id(const geo_path&) const;
+
+    geo_path path(geo_id) const;
 
   private:
     friend class subdetector_info;

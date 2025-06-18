@@ -24,6 +24,9 @@ namespace sand {
   using rot_3d = ROOT::Math::Rotation3D;
   using xform_3d = ROOT::Math::Transform3D;
 
+  /**
+   * Class to represet a geometry path, supports safe concatenation via @p operator /.
+   */
   class geo_path : public std::string {
 
   public:
@@ -37,10 +40,20 @@ namespace sand {
       return p /= rhs;
     }
 
+    inline geo_path& operator -= (const geo_path&);
+
+    geo_path operator - (const geo_path& rhs) const {
+      geo_path p(*this);
+      return p -= rhs;
+    }
+    
     inline std::string_view token(std::size_t) const;
 
   };
 
+  /**
+   * Appends @p sv to this with the correct amount of '/' characters.
+   */
   inline geo_path& geo_path::operator /= (const std::string_view& sv) {
     if (empty()) {
       assign(sv);
@@ -67,6 +80,21 @@ namespace sand {
     return *this;
   }
 
+  /**
+   * Removes a path @e prefix from this path if and only if @p sub matches the start of this path.
+   * 
+   * @returns the remaining path element.
+   */
+  inline geo_path& geo_path::operator -= (const geo_path& sub) {
+    if (std::string_view(sub.data(), sub.size()) == sub) {
+      erase(0, sub.size());
+    }
+    return *this;
+  }
+
+  /**
+   * @returns the @p i-th element of the path.
+   */
   inline std::string_view geo_path::token(std::size_t i) const {
     std::size_t start = 0;
     std::size_t stop = 0;
@@ -80,6 +108,9 @@ namespace sand {
     return std::string_view(data() + start + 1, stop - start - 1);
   }
 
+  /**
+   * Subdetector type enumeration
+   */
   enum subdetector_t : uint8_t {
     DRIFT = 0,
     ECAL = 1,
@@ -89,6 +120,11 @@ namespace sand {
     NONE = 255
   };
 
+  /**
+   * Unique identifier for elements of the detector geometry as known by Geant.
+   * There is a 1-1 correspondence between the geo_path of a sensitive detector and a geo_id.
+   * Prefer geo_id as a key, as it is substantially faster to compare.
+   */
   struct geo_id {
     union {
       struct {
@@ -110,7 +146,8 @@ namespace sand {
           ENDCAP_CURVE_TOP = 2,
           ENDCAP_CURVE_BOT = 3,
           ENDCAP_HOR_TOP = 4,
-          ENDCAP_HOR_BOT = 5
+          ENDCAP_HOR_BOT = 5,
+          NONE = 255
         };
         uint8_t reserved___0;
         subdetector_t subdetector;
@@ -136,6 +173,9 @@ namespace sand {
     };
   };
 
+  /**
+   * Unique identifier for channels as known by the data acquisition system.
+   */
   struct channel_id {
     union {
       struct {
