@@ -41,4 +41,43 @@ namespace sand {
     m_volumes[p] = v;
   }
 
+  double geoinfo::tracker_info::minimum_distance(const wire& w1, const wire& w2) {
+    dir_3d s = w1.direction();
+    dir_3d r = w2.direction();
+    dir_3d diff = dir_3d(w1.head - w2.head);
+    double ss = s.Dot(s);
+    double sr = s.Dot(r);
+    double rr = r.Dot(r);
+    double sd = s.Dot(diff);
+    double rd = r.Dot(diff);
+    double det = ss * rr - sr * sr;
+    if (std::fabs(det) > 1e-9) { // non parallel segments
+      double t1 = (sr * rd - rr * sd) / det;
+      double t2 = (ss * rd - sr * sd) / det;
+      t1 = std::clamp(t1, 0.0, 1.0);
+      t2 = std::clamp(t2, 0.0, 1.0);
+      pos_3d p1 = w1.head + t1 * w1.direction();
+      pos_3d p2 = w2.head + t2 * w2.direction();
+      if (t1 == 0 || t1 == 1) {
+        dir_3d ap = dir_3d(p1 - w2.head);
+        t2 = ap.Dot(r) / rr;
+        t2 = std::clamp(t2, 0.0, 1.0);
+      }
+      if (t2 == 0 || t2 == 1) {
+        dir_3d ap = dir_3d(p2 - w1.head);
+        t1 = ap.Dot(s) / ss;
+        t1 = std::clamp(t1, 0.0, 1.0);
+      }
+      p1 = w1.head + t1 * w1.direction();
+      p2 = w2.head + t2 * w2.direction();
+      return std::sqrt((p1 - p2).Mag2());
+    } else { // parallel segments
+      double t = rd / r.Mag2();
+      pos_3d p = w2.head + t * r;
+      return std::sqrt((w1.head - p).Mag2());
+    }
+
+
+  }
+
 }

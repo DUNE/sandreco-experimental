@@ -43,7 +43,7 @@ namespace sand {
       spacer_array spacers; ///< Horizontal coordinates of wire spacers, north to south
       double angle() const { return std::atan2(direction().y(), direction().x()); } //signed angle w.r.t. horizontal north to south direction
       // ROOT went through the trouble of defining a separate position and direction vector, only to f***up the only operator where the difference matters....
-      dir_3d direction() const { return dir_3d(head - tail); } ///< direction pointing towards the readout end, not normalized
+      dir_3d direction() const { return dir_3d(tail - head); } ///< direction pointing towards from head to tail, not normalized
       double length() const { return std::sqrt(direction().Mag2()); } ///< length of the line between 
       pos_3d actual(pos_3d) const;
       std::size_t segment(pos_3d x) const;
@@ -96,6 +96,8 @@ namespace sand {
     using subdetector_info::path;
 
     const std::vector<station_ptr>& stations() const { return m_stations; }
+
+    static double minimum_distance(const wire&, const wire&);
 
   protected:
     void add_station(station_ptr&&);
