@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <geoinfo/subdetector_info.hpp>
 
 namespace sand {
@@ -29,7 +30,7 @@ namespace sand {
     struct wire {
       struct catenary {
         pos_3d minimum;
-        double a;
+        double a = INFINITY;
       };
       using catenary_array = std::array<catenary, s_max_wire_spacers + 1>;
       using spacer_array = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X coordinate, starting from north.

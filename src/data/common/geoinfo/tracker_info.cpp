@@ -12,8 +12,10 @@ namespace sand {
     auto seg = segment(measured);
     catenary cat = catenaries[seg];
     auto real = measured;
-    auto yoff = cat.a * std::cosh((measured.x() - cat.minimum.x()) / cat.a) - cat.a;
-    real.SetY(measured.y() + yoff);
+    if (std::isfinite(cat.a)) {
+      auto yoff = cat.a * std::cosh((measured.x() - cat.minimum.x()) / cat.a) - cat.a;
+      real.SetY(measured.y() + yoff);
+    }
     return real;
   }
 
