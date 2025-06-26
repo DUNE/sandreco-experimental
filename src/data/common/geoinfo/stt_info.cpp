@@ -8,7 +8,7 @@
 
 namespace sand {
 
-  static constexpr char s_stt_path[] = "sand_inner_volume_PV_0/STTtracker_PV_0";
+  static constexpr char s_stt_path[] = "sand_inner_volume_0/STTtracker_0";
 
   geoinfo::stt_info::stt_info(const geoinfo& gi) : tracker_info(gi, s_stt_path) {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
@@ -57,24 +57,35 @@ namespace sand {
         nav->for_each_node([&](auto tube) {
           std::string tname = tube->GetName();
           nav->cd(sttpath / smodname / plname / tname);
-          /*FIXME why is this a TGeoTubeSeg??? the straws are simple tubes*/
-          TGeoTubeSeg* tube_shape = dynamic_cast<TGeoTubeSeg*>(tube->GetVolume()->GetShape());
-          if (!tube_shape) {
-            UFW_ERROR("STT tube '{}' has invalid shape.", tname);
+          /*FIXED to support both TGeoTubeSeg and TGeoTube used in more recent geometries*/
+          TGeoShape* generic_tube_shape = tube->GetVolume()->GetShape();
+
+          auto process_tube = [&](auto* tube_shape) {
+              auto matrix = nav->get_hmatrix();
+              double* tran = matrix.GetTranslation();
+              double* rot = matrix.GetRotationMatrix();
+              pos_3d centre;
+              centre.SetCoordinates(tran);
+              dir_3d halfsize(0, 0, tube_shape->GetDZ());
+              dir_3d globalhalfsize = nav->to_master(halfsize);
+              auto w = std::make_unique<wire>();
+              w->parent = stat.get();
+              w->head = centre + globalhalfsize;
+              w->tail = centre - globalhalfsize;
+              w->max_radius = tube_shape->GetRmax();
+              stat->wires.emplace_back(std::move(w));
+          };
+
+          if (auto* tube_shape = dynamic_cast<TGeoTube*>(generic_tube_shape)) {
+              process_tube(tube_shape);
           }
-          auto matrix = nav->get_hmatrix();
-          double* tran = matrix.GetTranslation();
-          double* rot = matrix.GetRotationMatrix();
-          pos_3d centre;
-          centre.SetCoordinates(tran);
-          dir_3d halfsize(0, 0, tube_shape->GetDZ());
-          dir_3d globalhalfsize = nav->to_master(halfsize);
-          auto w = std::make_unique<wire>();
-          w->parent = stat.get();
-          w->head = centre + globalhalfsize;
-          w->tail = centre - globalhalfsize;
-          w->max_radius = tube_shape->GetRmax();
-          stat->wires.emplace_back(std::move(w));
+          else if (auto* tube_seg = dynamic_cast<TGeoTubeSeg*>(generic_tube_shape)) {
+              process_tube(tube_seg);
+          }
+          else {
+              UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
+          }
+
         } );
       } );
       add_station(station_ptr(std::move(stat)));
@@ -129,21 +140,21 @@ namespace sand {
       UFW_ERROR("Target material '{}' unsupported.", stat->target);
     }
     module_name += fmt::format("{:02}", gi.stt.supermodule);
-    gp /= module_name + "_PV_0";
+    gp /= module_name + "_0";
     if (gi.stt.plane == 0) {
       module_name += "_planeXX";
-      gp /= module_name + "_PV_0";
+      gp /= module_name + "_0";
     } else if (gi.stt.plane == 1) {
       module_name += "_planeXX";
-      gp /= module_name + "_PV_0";
+      gp /= module_name + "_0";
     } else if (gi.stt.plane == 1 && stat->target == TRKONLY) {
       module_name += "_planeXX";
-      gp /= module_name + "_PV_1";
+      gp /= module_name + "_1";
     } else {
       UFW_ERROR("Plane '{}' unsupported.", gi.stt.plane);
     }
     //TODO check max tube for this layer
-    gp /= module_name + fmt::format("_PV_{}", gi.stt.tube);
+    gp /= module_name + fmt::format("_{}", gi.stt.tube);
     return gp;
   }
 
