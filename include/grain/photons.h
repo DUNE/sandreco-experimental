@@ -12,7 +12,7 @@ namespace sand::grain {
   struct hits : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
     struct photon : public true_hit
     {
-      pos_4d pos;
+      vec_4d pos;
       pos_3d origin;
       mom_4d p;
       double scatter;

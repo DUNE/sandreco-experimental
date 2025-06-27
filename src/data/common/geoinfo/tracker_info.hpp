@@ -43,8 +43,7 @@ namespace sand {
       catenary_array catenaries; ///< Maximum deflection downwards at the centre of the segment between two spacers, north to south
       spacer_array spacers; ///< Horizontal coordinates of wire spacers, north to south
       double angle() const { return std::atan2(direction().y(), direction().x()); } //signed angle w.r.t. horizontal north to south direction
-      // ROOT went through the trouble of defining a separate position and direction vector, only to f***up the only operator where the difference matters....
-      dir_3d direction() const { return dir_3d(tail - head); } ///< direction pointing towards from head to tail, not normalized
+      dir_3d direction() const { return tail - head; } ///< direction pointing towards from head to tail, not normalized
       double length() const { return std::sqrt(direction().Mag2()); } ///< length of the line between 
       pos_3d actual(pos_3d) const;
       std::size_t segment(pos_3d x) const;
@@ -67,7 +66,6 @@ namespace sand {
       pos_3d bottom_north;
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
-      pos_3d centre() const { return (top_north + top_south + bottom_south + bottom_north) / 4.0; }
       template <typename Func> wire_list select(Func&& f) const {
         wire_list wl;
         for (const auto& wp : wires) {
