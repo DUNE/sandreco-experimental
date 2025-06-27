@@ -10,6 +10,11 @@ namespace sand {
 
   static constexpr char s_drift_path[] = "sand_inner_volume_0/SANDtracker_0";
 
+  /**
+   * @brief Construct a new geoinfo::drift info::drift info object
+   * 
+   * @param gi 
+   */
   geoinfo::drift_info::drift_info(const geoinfo& gi) : tracker_info(gi, s_drift_path) {
     //UFW_FATAL("drift");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
@@ -128,8 +133,10 @@ namespace sand {
 
   geoinfo::drift_info::~drift_info() = default;
 
-  geo_id geoinfo::drift_info::id(const geo_path&) const {
+  geo_id geoinfo::drift_info::id(const geo_path& gp) const {
     geo_id gi;
+    auto path = gp - subdetector_info::path();
+    UFW_INFO("Drift path: {}", path);
     return gi;
   }
 

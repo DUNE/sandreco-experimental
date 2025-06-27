@@ -99,6 +99,7 @@ namespace sand {
     auto path = gp - subdetector_info::path();
     gi.subdetector = STT;
     //abuse the bad notation here, module/plane/straw
+    if(path.find("PV_") != std::string::npos) {
     std::string straw(path.token(2));
     auto i1 = straw.find('_');
     auto i2 = straw.find('_', i1 + 1);
@@ -106,16 +107,34 @@ namespace sand {
     auto i4 = straw.find('_', i3 + 1);
     auto i5 = straw.find('_', i4 + 1);
     if (i5 != std::string::npos) {
-      gi.stt.supermodule = std::stoi(straw.substr(i1, i2 - i1 - 1));
+      gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
       gi.stt.plane = 0;
       if (straw.at(i3 - 1) == 'Y') {
         gi.stt.plane = 1;
       } else if (path.token(1).back() == '1') {
         gi.stt.plane = 2;
       }
-      gi.stt.tube = std::stoi(straw.substr(i5));
+      gi.stt.tube = std::stoi(straw.substr(i5 + 1));
     } else {
       UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
+    }
+    } else { // new notation with no PV_
+      std::string straw(path.token(1));
+      auto i1 = straw.find('_');
+      auto i2 = straw.find('_', i1 + 1);
+      auto i3 = straw.find('_', i2 + 1);
+      if (i3 != std::string::npos) {
+        gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
+        gi.stt.plane = 0;
+        if (straw.at(i2 - 1) == 'Y') {
+          gi.stt.plane = 1;
+        } else if (path.token(0).back() == '1') {
+          gi.stt.plane = 2;
+        }
+        gi.stt.tube = std::stoi(straw.substr(i3 + 1));
+      } else {
+        UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
+      }
     }
     return gi;
   }
