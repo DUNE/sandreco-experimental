@@ -12,14 +12,12 @@
 
 namespace sand {
 
-  using pos_3d = ROOT::Math::XYZVector;
-  using pos_4d = ROOT::Math::XYZTVector;
+  using pos_3d = ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>>;
+  using dir_3d = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<double>>;
+  using vec_4d = ROOT::Math::PxPyPzEVector;
 
-  using dir_3d = ROOT::Math::DisplacementVector3D<ROOT::Math::XYZVector, ROOT::Math::DefaultCoordinateSystemTag>;
-  using dir_4d = ROOT::Math::DisplacementVector3D<ROOT::Math::XYZTVector, ROOT::Math::DefaultCoordinateSystemTag>;
-
-  using mom_3d = ROOT::Math::XYZVector;
-  using mom_4d = ROOT::Math::PxPyPzEVector;
+  using mom_3d = dir_3d;
+  using mom_4d = vec_4d;
 
   using rot_3d = ROOT::Math::Rotation3D;
   using xform_3d = ROOT::Math::Transform3D;
