@@ -136,7 +136,23 @@ namespace sand {
   geo_id geoinfo::drift_info::id(const geo_path& gp) const {
     geo_id gi;
     auto path = gp - subdetector_info::path();
-    UFW_INFO("Drift path: {}", path);
+    gi.subdetector = DRIFT;
+    //abuse the bad notation here, module/plane/straw
+    std::string straw(path.token(1));
+    auto i1 = straw.find('_');
+    auto i2 = straw.find('_', i1 + 1);
+    auto i3 = straw.find('_', i2 + 1);
+    if (i3 != std::string::npos) {
+      gi.drift.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
+      gi.drift.plane = 0;
+      if (straw.at(i2 - 1) == 'Y') {
+        gi.drift.plane = 1;
+      } else if (path.token(0).back() == '1') {
+        gi.drift.plane = 2;
+      }
+    } else {
+      UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
+    }
     return gi;
   }
 

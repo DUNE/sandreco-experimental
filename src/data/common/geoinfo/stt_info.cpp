@@ -118,20 +118,25 @@ namespace sand {
     } else {
       UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
     }
-    } else { // new notation with no PV_
-      std::string straw(path.token(1));
+    } else { // root geometry notation with no PV
+      std::string straw(path.token(2));
       auto i1 = straw.find('_');
       auto i2 = straw.find('_', i1 + 1);
       auto i3 = straw.find('_', i2 + 1);
       if (i3 != std::string::npos) {
         gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
         gi.stt.plane = 0;
-        if (straw.at(i2 - 1) == 'Y') {
+        if (straw.at(i3 - 1) == 'Y') {
           gi.stt.plane = 1;
         } else if (path.token(0).back() == '1') {
           gi.stt.plane = 2;
         }
-        gi.stt.tube = std::stoi(straw.substr(i3 + 1));
+        size_t pos = straw.find('#');
+        if (pos != std::string::npos) {       
+          gi.stt.tube = std::stoi(straw.substr(pos+1));
+        } else {
+          gi.stt.tube = 0;
+        }
       } else {
         UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
       }
@@ -143,6 +148,7 @@ namespace sand {
     //TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
     geo_path gp = path();
+    std::string placement = (gp.find("_PV") != std::string::npos)? "_PV" : ""; // check if we are using the new or old notation
     auto stat = at(gi.stt.supermodule);
     std::string module_name;
     switch (stat->target) {
@@ -159,21 +165,24 @@ namespace sand {
       UFW_ERROR("Target material '{}' unsupported.", stat->target);
     }
     module_name += fmt::format("{:02}", gi.stt.supermodule);
-    gp /= module_name + "_0";
+
+    gp /= module_name + placement + "_0";
     if (gi.stt.plane == 0) {
       module_name += "_planeXX";
-      gp /= module_name + "_0";
+      gp /= module_name + placement + "_0";
     } else if (gi.stt.plane == 1) {
+      module_name += "_planeYY";
+      gp /= module_name + placement + "_0";
+    } else if (gi.stt.plane == 2 && stat->target == TRKONLY) {
       module_name += "_planeXX";
-      gp /= module_name + "_0";
-    } else if (gi.stt.plane == 1 && stat->target == TRKONLY) {
-      module_name += "_planeXX";
-      gp /= module_name + "_1";
+      if(placement == "PV_") gp /= module_name + placement + "_1";
+      else  gp /= module_name + "#1";
     } else {
       UFW_ERROR("Plane '{}' unsupported.", gi.stt.plane);
     }
     //TODO check max tube for this layer
-    gp /= module_name + fmt::format("_{}", gi.stt.tube);
+    if(placement == "_PV") gp /= module_name + "_straw_PV_" + gi.stt.tube;
+    else gp /= module_name + "_straw_0" + (gi.stt.tube == 0 ? "" : fmt::format("#{}", gi.stt.tube));
     return gp;
   }
 

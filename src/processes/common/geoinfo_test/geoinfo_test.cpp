@@ -43,14 +43,20 @@ namespace sand::common {
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
     int i = 0;
-    if(gi.tracker().path().find("STT")){
-      const geo_path STTpath = "sand_inner_volume_0/STTtracker_0/CMod_02_0/CMod_02_planeXX_0/CMod_02_planeXXstraw_0";
-      auto ID = gi.tracker().id(STTpath); // simple test on gi.id()
-      UFW_INFO("ID function test (SubdetectorID: {}; PlaneID: {}; TubeID: {})", ID.subdetector, ID.stt.plane, ID.stt.tube); // simple test on gi.id()      
-      
-      const geo_path STTpath_old = "sand_inner_volume_PV_0/STTtracker_PV_0/CMod_02_PV_0/CMod_02_planeXX_PV_0/CMod_02_planeXX_straw_PV_0";
-      auto ID_old = gi.tracker().id(STTpath_old); // simple test on gi.id()
-      UFW_INFO("ID function test (SubdetectorID: {}; PlaneID: {}; TubeID: {})", ID_old.subdetector, ID_old.stt.plane, ID_old.stt.tube); // simple test on gi.id()
+    if(gi.tracker().path().find("STT") != std::string::npos) {
+      if(gi.tracker().path().find("PV") != std::string::npos) {
+        const geo_path STTpath = "sand_inner_volume_PV_0/STTtracker_PV_0/CMod_02_PV_0/CMod_02_planeYY_PV_0/CMod_02_planeYY_straw_PV_5";
+        UFW_INFO("Testing STT path->ID and ID->path functions using as input: '{}'", STTpath);
+        auto ID_old = gi.tracker().id(STTpath); // simple test on gi.id()
+        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID_old.subdetector, ID_old.stt.supermodule, ID_old.stt.plane, ID_old.stt.tube); // simple test on gi.id()
+        UFW_INFO("ID path: '{}'", gi.tracker().path(ID_old));
+      } else {
+        const geo_path STTpath = "sand_inner_volume_0/STTtracker_0/CMod_02_0/CMod_02_planeYY_0/CMod_02_planeYY_straw_0#5";
+        UFW_INFO("Testing STT path->ID and ID->path functions using as input: '{}'", STTpath);
+        auto ID = gi.tracker().id(STTpath); // simple test on gi.id()
+        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector, ID.stt.supermodule, ID.stt.plane, ID.stt.tube); // simple test on gi.id()  
+        UFW_INFO("ID path: '{}'", gi.tracker().path(ID));  
+      }   
 
       for (const auto& s : gi.tracker().stations()) {
         auto nhor = s->select([](auto& w){ return std::fmod(w.angle(), M_PI) < 1e-3; }).size();
@@ -58,8 +64,6 @@ namespace sand::common {
         UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} horizontal and {} vertical wires;\n - target material {}", i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
       }
     } else {
-      const geo_path driftpath = "/volWorld/rockBox_lv_0/volDetEnclosure_0/volSAND_0/MagIntVol_volume_0/sand_inner_volume_0/SANDtracker_0/SuperMod_X0_0/CMod_X0_0/CDriftChamber_X0_0/CDriftModule_1_X0_0/CDriftModule_1_X0_Fwire_0#2";
-      auto ID = gi.id(driftpath); // simple test on gi.id()
       for (const auto& s : gi.tracker().stations()) {
         auto nhor = s->select([](auto& w){ return std::fmod(w.angle(), M_PI) < 1e-3; }).size();
         auto nver = s->select([](auto& w){ return !std::fmod(w.angle(), M_PI) < 1e-3 && std::fmod(w.angle(), M_PI_2) < 1e-3; }).size();
