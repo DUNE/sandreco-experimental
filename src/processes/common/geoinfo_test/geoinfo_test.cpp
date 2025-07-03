@@ -64,6 +64,12 @@ namespace sand::common {
         UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} horizontal and {} vertical wires;\n - target material {}", i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
       }
     } else {
+      const geo_path Driftpath = "sand_inner_volume_0/SANDtracker_0/SuperMod_B_0#1/C3H6Mod_B_0#2/C3H6DriftChamber_B_0/C3H6DriftModule_1_B_0/C3H6DriftModule_1_B_Fwire_0#1";
+      const geo_path Driftpath_trk = "sand_inner_volume_0/SANDtracker_0/Trk_0/TrkDrift_0/CDriftModule_1_0/CDriftModule_1_Fwire_0#1";
+      UFW_INFO("Testing Drift path->ID and ID->path functions using as input: '{}'", Driftpath);
+      auto ID = gi.tracker().id(Driftpath);
+      UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {})", ID.subdetector, ID.drift.supermodule, ID.drift.plane);
+      UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
       for (const auto& s : gi.tracker().stations()) {
         auto nhor = s->select([](auto& w){ return std::fmod(w.angle(), M_PI) < 1e-3; }).size();
         auto nver = s->select([](auto& w){ return !std::fmod(w.angle(), M_PI) < 1e-3 && std::fmod(w.angle(), M_PI_2) < 1e-3; }).size();

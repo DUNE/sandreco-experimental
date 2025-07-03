@@ -138,26 +138,126 @@ namespace sand {
     auto path = gp - subdetector_info::path();
     gi.subdetector = DRIFT;
     //abuse the bad notation here, module/plane/straw
-    std::string straw(path.token(1));
-    auto i1 = straw.find('_');
-    auto i2 = straw.find('_', i1 + 1);
-    auto i3 = straw.find('_', i2 + 1);
-    if (i3 != std::string::npos) {
-      gi.drift.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
-      gi.drift.plane = 0;
-      if (straw.at(i2 - 1) == 'Y') {
-        gi.drift.plane = 1;
-      } else if (path.token(0).back() == '1') {
-        gi.drift.plane = 2;
-      }
+    std::string supermodpath(path.token(0));
+    // UFW_INFO("supermodule path: '{}'", supermodpath);
+
+
+    auto tgt_ct = 0;
+    auto trk_ct = 0;
+    bool is_trk = 0;
+
+    if (supermodpath.find("X0")!= std::string::npos) {
+      tgt_ct = 0;
+    } else if (supermodpath.find("X1")!= std::string::npos) {
+      tgt_ct = 1;
+    } else if (supermodpath.find("C")!= std::string::npos && supermodpath.find("1") == std::string::npos) {
+      tgt_ct = 2;
+    } else if (supermodpath.find("C")!= std::string::npos && supermodpath.find("1") != std::string::npos){
+      tgt_ct = 3;
+    } else if (supermodpath.find("Trk")!= std::string::npos){
+      tgt_ct = 4;
+      is_trk = true;
+    } else if (supermodpath.find("B")!= std::string::npos && supermodpath.find("1") == std::string::npos) {
+      tgt_ct = 4;
+      trk_ct = 1; //this is a tracker only module
+    } else if (supermodpath.find("B")!= std::string::npos && supermodpath.find("1") != std::string::npos) {
+      tgt_ct = 5;
+      trk_ct = 1;
+    } else if (supermodpath.find("A")!= std::string::npos && supermodpath.find("1") == std::string::npos) {
+      tgt_ct = 6;
+      trk_ct = 1;
+    } else if (supermodpath.find("A")!= std::string::npos && supermodpath.find("1") != std::string::npos) {
+      tgt_ct = 7;
+      trk_ct = 1;
     } else {
-      UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
+      UFW_ERROR("Supermodule path '{}' is not recognized.", supermodpath);
     }
+
+    std::string modpath(path.token(1));
+    auto mod_ct = 0;
+    if (modpath.find("CMod") != std::string::npos || modpath.find("TrkDrift") != std::string::npos) {
+      mod_ct = 0; //Carbon
+    } else if (modpath.find("C3H6Mod") != std::string::npos ) {
+      size_t pos = modpath.find('#');
+      auto a = 0;
+      if (pos != std::string::npos) a = std::stoi(modpath.substr(pos+1));
+      mod_ct = 1 + a; //C3H6
+    } else {
+      UFW_ERROR("Drift module path '{}' is not recognized.", modpath);
+    }
+    gi.drift.supermodule = tgt_ct * 10 + trk_ct + mod_ct; //supermodule is a combination of target and module
+
+    std::string wire_path(is_trk? path.token(3):path.token(4));
+    //UFW_INFO("Wire path: '{}'", wire_path);
+    auto i1 = wire_path.find('_');
+    auto i2 = wire_path.find('_', i1 + 1);
+    auto plane = std::stoi(wire_path.substr(i1 + 1, i2 - i1 - 1));
+    auto dir = (wire_path.find("Fwire")== std::string::npos) ? 0 : 1;
+    gi.drift.plane = 2 * plane + dir;
+    
     return gi;
   }
 
-  geo_path geoinfo::drift_info::path(geo_id) const {
-    geo_path gp;
+  geo_path geoinfo::drift_info::path(geo_id gi) const {
+
+    UFW_ASSERT(gi.subdetector == DRIFT, "Subdetector must be DRIFT");
+    geo_path gp = path();
+    auto stat = at(gi.drift.supermodule);
+
+    int val = gi.drift.supermodule;
+    bool is_trk = (val==40) ? true : false; //tracker-only supermodule
+    if (val >= 40) val -= 1;
+    int tgt_ct = val / 10;
+    int mod_ct = val - tgt_ct * 10;
+
+    int plane = gi.drift.plane / 2;
+    int dir = gi.drift.plane % 2;  // 0 = Swire, 1 = Fwire
+    std::string wire_type = (dir == 0) ? "Swire" : "Fwire";
+
+    std::string supermod_name;
+    //UFW_INFO("tgt_ct: {}, mod_ct: {}, plane: {}, dir: {}", tgt_ct, mod_ct, plane, dir);
+    switch (tgt_ct) {
+      case 0: supermod_name = "SuperMod_X0_0"; break;
+      case 1: supermod_name = "SuperMod_X1_0"; break;
+      case 2: supermod_name = "SuperMod_C_0"; break;
+      case 3: 
+        if (is_trk) supermod_name = "Trk_0"; 
+        else supermod_name = "SuperMod_C_0#1"; 
+        break;
+      case 4:
+        supermod_name = "SuperMod_B_0"; break;
+      case 5: supermod_name = "SuperMod_B_0#1"; break;
+      case 6: supermod_name = "SuperMod_A_0"; break;
+      case 7: supermod_name = "SuperMod_A_0#1"; break;
+      default: UFW_ERROR("Supermodule index '{}' is not recognized.", val);
+    }
+    
+    gp /= supermod_name;
+
+    if(supermod_name == "Trk_0"){
+      gp /= "TrkDrift_0";
+      gp /= "CDriftModule_" + std::to_string(plane) + "_0";
+      gp /= "CDriftModule_" + std::to_string(plane) + "_" + wire_type + "_0" ;
+    } else {
+      auto i1 = supermod_name.find('_');
+      auto i2 = supermod_name.find('_', i1 + 1);
+      std::string sm_ID(supermod_name.substr(i1 + 1, i2 - i1 - 1));
+      std::string module_name;
+      switch (stat->target) {
+      case C3H6:
+        module_name = "C3H6";
+        break;
+      case CARBON:
+        module_name = "C";
+        break;
+      default:
+        UFW_ERROR("Target material '{}' unsupported.", stat->target);
+      }
+      gp /= module_name + "Mod_" +sm_ID + "_0" + (mod_ct > 1 ?("#" + std::to_string(mod_ct - 1)):"");
+      gp /= module_name + "DriftChamber_" + sm_ID + "_0";
+      gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + "_0";
+      gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + "_" + wire_type + "_0";
+    }
     return gp;
   }
 
