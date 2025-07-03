@@ -178,10 +178,16 @@ namespace sand {
     if (modpath.find("CMod") != std::string::npos || modpath.find("TrkDrift") != std::string::npos) {
       mod_ct = 0; //Carbon
     } else if (modpath.find("C3H6Mod") != std::string::npos ) {
-      size_t pos = modpath.find('#');
-      auto a = 0;
-      if (pos != std::string::npos) a = std::stoi(modpath.substr(pos+1));
-      mod_ct = 1 + a; //C3H6
+      mod_ct = 1; //C3H6
+      if (modpath.find('#')!= std::string::npos){
+        size_t pos = modpath.find('#');
+        auto a = std::stoi(modpath.substr(pos+1));
+        mod_ct += a; //C3H6
+      } else if (modpath.find("PV_")!= std::string::npos){
+        size_t pos = modpath.find("PV_");
+        auto a = std::stoi(modpath.substr(pos+3));
+        mod_ct += a; //C3H6
+      }
     } else {
       UFW_ERROR("Drift module path '{}' is not recognized.", modpath);
     }
@@ -203,6 +209,7 @@ namespace sand {
     UFW_ASSERT(gi.subdetector == DRIFT, "Subdetector must be DRIFT");
     geo_path gp = path();
     auto stat = at(gi.drift.supermodule);
+    std::string placement = (gp.find("_PV") != std::string::npos)? "_PV" : "";
 
     int val = gi.drift.supermodule;
     bool is_trk = (val==40) ? true : false; //tracker-only supermodule
@@ -217,27 +224,27 @@ namespace sand {
     std::string supermod_name;
     //UFW_INFO("tgt_ct: {}, mod_ct: {}, plane: {}, dir: {}", tgt_ct, mod_ct, plane, dir);
     switch (tgt_ct) {
-      case 0: supermod_name = "SuperMod_X0_0"; break;
-      case 1: supermod_name = "SuperMod_X1_0"; break;
-      case 2: supermod_name = "SuperMod_C_0"; break;
+      case 0: supermod_name = "SuperMod_X0"+placement+"_0"; break;
+      case 1: supermod_name = "SuperMod_X1"+placement+"_0"; break;
+      case 2: supermod_name = "SuperMod_C"+placement+"_0"; break;
       case 3: 
-        if (is_trk) supermod_name = "Trk_0"; 
-        else supermod_name = "SuperMod_C_0#1"; 
+        if (is_trk) supermod_name = "Trk"+placement+"_0"; 
+        else supermod_name = "SuperMod_C"+((placement=="")?"_0#1":placement+"_1"); 
         break;
       case 4:
-        supermod_name = "SuperMod_B_0"; break;
-      case 5: supermod_name = "SuperMod_B_0#1"; break;
-      case 6: supermod_name = "SuperMod_A_0"; break;
-      case 7: supermod_name = "SuperMod_A_0#1"; break;
+        supermod_name = "SuperMod_B"+placement+"_0"; break;
+      case 5: supermod_name = "SuperMod_B"+((placement=="")?"_0#1":placement+"_1"); break;
+      case 6: supermod_name = "SuperMod_A"+placement+"_0"; break;
+      case 7: supermod_name = "SuperMod_A"+((placement=="")?"_0#1":placement+"_1"); break;
       default: UFW_ERROR("Supermodule index '{}' is not recognized.", val);
     }
     
     gp /= supermod_name;
 
-    if(supermod_name == "Trk_0"){
-      gp /= "TrkDrift_0";
-      gp /= "CDriftModule_" + std::to_string(plane) + "_0";
-      gp /= "CDriftModule_" + std::to_string(plane) + "_" + wire_type + "_0" ;
+    if(supermod_name.find("Trk") != std::string::npos){
+      gp /= "TrkDrift"+placement+"_0";
+      gp /= "CDriftModule_" + std::to_string(plane) + placement + "_0";
+      gp /= "CDriftModule_" + std::to_string(plane) + "_" + wire_type + placement+"_0" ;
     } else {
       auto i1 = supermod_name.find('_');
       auto i2 = supermod_name.find('_', i1 + 1);
@@ -253,10 +260,11 @@ namespace sand {
       default:
         UFW_ERROR("Target material '{}' unsupported.", stat->target);
       }
-      gp /= module_name + "Mod_" +sm_ID + "_0" + (mod_ct > 1 ?("#" + std::to_string(mod_ct - 1)):"");
-      gp /= module_name + "DriftChamber_" + sm_ID + "_0";
-      gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + "_0";
-      gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + "_" + wire_type + "_0";
+      if (placement=="") gp /= module_name + "Mod_" +sm_ID + "_0" + (mod_ct > 1 ?("#" + std::to_string(mod_ct - 1)):"");
+      else gp /= module_name + "Mod_" + sm_ID + placement + "_" + std::to_string(mod_ct-1);
+      gp /= module_name + "DriftChamber_" + sm_ID + placement + "_0";
+      gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + placement + "_0";
+      gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + "_" + wire_type + placement + "_0";
     }
     return gp;
   }

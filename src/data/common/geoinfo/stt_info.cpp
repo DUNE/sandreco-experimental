@@ -148,7 +148,7 @@ namespace sand {
     //TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
     geo_path gp = path();
-    std::string placement = (gp.find("_PV") != std::string::npos)? "_PV" : ""; // check if we are using the new or old notation
+    std::string placement = (gp.find("_PV") != std::string::npos)? "_PV" : ""; // check if we are using the edepsim or ROOT geometry notation
     auto stat = at(gi.stt.supermodule);
     std::string module_name;
     switch (stat->target) {
