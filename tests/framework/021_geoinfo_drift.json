@@ -6,7 +6,7 @@
     "ufw-env" : {}
   },
   "globals" : {
-    "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
+    "sand::root_tgeomanager" : { "geometry" : "test/sand-drift-events.10.edep.root" },
     "sand::geoinfo" : {}
   },
   "contexts" : {
@@ -15,7 +15,7 @@
   },
   "run" : [
     {
-      "sand::common::geoinfo_test" : {"test_path" : "sand_inner_volume_PV_0/STTtracker_PV_0/CMod_02_PV_0/CMod_02_planeYY_PV_0/CMod_02_planeYY_straw_PV_5"},
+      "sand::common::geoinfo_test" : { "test_path" : "sand_inner_volume_PV_0/SANDtracker_PV_0/SuperMod_B_PV_1/C3H6Mod_B_PV_2/C3H6DriftChamber_B_PV_0/C3H6DriftModule_1_B_PV_0/C3H6DriftModule_1_B_Fwire_PV_1"},
       "reqs" : {},
       "prods" : {}
     }

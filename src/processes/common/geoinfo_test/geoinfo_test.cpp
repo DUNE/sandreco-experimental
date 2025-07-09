@@ -24,11 +24,15 @@ namespace sand::common {
     geoinfo_test();
     void configure (const ufw::config& cfg) override;
     void run() override;
+
+  private:
+    geo_path m_test_path;
     
   };
 
   void geoinfo_test::configure (const ufw::config& cfg) {
     process::configure(cfg);
+    m_test_path = std::string(cfg.at("test_path"));
     UFW_INFO("Configuring geoinfo_test at {}.", fmt::ptr(this));
   }
 
@@ -44,36 +48,13 @@ namespace sand::common {
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
 
 
-    if(gi.tracker().path().find("STT") != std::string::npos) {
-      if(gi.tracker().path().find("PV") != std::string::npos) {
-        const geo_path STTpath = "sand_inner_volume_PV_0/STTtracker_PV_0/CMod_02_PV_0/CMod_02_planeYY_PV_0/CMod_02_planeYY_straw_PV_5";
-        UFW_INFO("Testing STT path->ID and ID->path functions using as input: '{}'", STTpath);
-        auto ID = gi.tracker().id(STTpath); // simple test on gi.id()
-        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector, ID.stt.supermodule, ID.stt.plane, ID.stt.tube); // simple test on gi.id()
-        UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
-      } else {
-        const geo_path STTpath = "sand_inner_volume_0/STTtracker_0/CMod_02_0/CMod_02_planeYY_0/CMod_02_planeYY_straw_0#5";
-        UFW_INFO("Testing STT path->ID and ID->path functions using as input: '{}'", STTpath);
-        auto ID = gi.tracker().id(STTpath); // simple test on gi.id()
-        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector, ID.stt.supermodule, ID.stt.plane, ID.stt.tube); // simple test on gi.id()  
-        UFW_INFO("ID path: '{}'", gi.tracker().path(ID));  
-      }   
+    if(!m_test_path.empty()) {
+      UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
+      auto ID = gi.tracker().id(m_test_path); 
+      UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector, ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
+      UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
     } else {
-      if(gi.tracker().path().find("PV") != std::string::npos) {
-        const geo_path Driftpath = "sand_inner_volume_PV_0/SANDtracker_PV_0/SuperMod_B_PV_1/C3H6Mod_B_PV_2/C3H6DriftChamber_B_PV_0/C3H6DriftModule_1_B_PV_0/C3H6DriftModule_1_B_Fwire_PV_1";
-        const geo_path Driftpath_trk = "sand_inner_volume_PV_0/SANDtracker_PV_0/Trk_PV_0/TrkDrift_PV_0/CDriftModule_1_PV_0/CDriftModule_1_Fwire_PV_1";
-        UFW_INFO("Testing Drift path->ID and ID->path functions using as input: '{}'", Driftpath_trk);
-        auto ID = gi.tracker().id(Driftpath_trk);
-        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {})", ID.subdetector, ID.drift.supermodule, ID.drift.plane);
-        UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
-      }else{
-        const geo_path Driftpath = "sand_inner_volume_0/SANDtracker_0/SuperMod_B_0#1/C3H6Mod_B_0#2/C3H6DriftChamber_B_0/C3H6DriftModule_1_B_0/C3H6DriftModule_1_B_Fwire_0#1";
-        const geo_path Driftpath_trk = "sand_inner_volume_0/SANDtracker_0/Trk_0/TrkDrift_0/CDriftModule_1_0/CDriftModule_1_Fwire_0#1";
-        UFW_INFO("Testing Drift path->ID and ID->path functions using as input: '{}'", Driftpath);
-        auto ID = gi.tracker().id(Driftpath);
-        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {})", ID.subdetector, ID.drift.supermodule, ID.drift.plane);
-        UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
-      }      
+      UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
     }
 
     int i = 0;
