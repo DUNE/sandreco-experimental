@@ -24,11 +24,15 @@ namespace sand::common {
     geoinfo_test();
     void configure (const ufw::config& cfg) override;
     void run() override;
+
+  private:
+    geo_path m_test_path;
     
   };
 
   void geoinfo_test::configure (const ufw::config& cfg) {
     process::configure(cfg);
+    m_test_path = std::string(cfg.at("test_path"));
     UFW_INFO("Configuring geoinfo_test at {}.", fmt::ptr(this));
   }
 
@@ -42,12 +46,23 @@ namespace sand::common {
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
+
+
+    if(!m_test_path.empty()) {
+      UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
+      auto ID = gi.tracker().id(m_test_path); 
+      UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector, ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
+      UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
+    } else {
+      UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
+    }
+
     int i = 0;
     for (const auto& s : gi.tracker().stations()) {
-      auto nhor = s->select([](auto& w){ return std::fmod(w.angle(), M_PI) < 1e-3; }).size();
-      auto nver = s->select([](auto& w){ return !std::fmod(w.angle(), M_PI) < 1e-3 && std::fmod(w.angle(), M_PI_2) < 1e-3; }).size();
-      UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} horizontal and {} vertical wires;\n - target material {}", i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
-    }
+        auto nhor = s->select([](auto& w){ return std::fmod(w.angle(), M_PI) < 1e-3; }).size();
+        auto nver = s->select([](auto& w){ return !std::fmod(w.angle(), M_PI) < 1e-3 && std::fmod(w.angle(), M_PI_2) < 1e-3; }).size();
+        UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} horizontal and {} vertical wires;\n - target material {}", i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
+      }
   }
 
 }
