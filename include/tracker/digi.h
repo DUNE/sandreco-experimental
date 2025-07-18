@@ -17,15 +17,6 @@
 #include <common/truth.h>
 #include <common/sand.h>
 
-#pragma once
-
-#include <vector>
-#include <cstdint>
-
-#include <ufw/data.hpp>
-#include <common/truth.h>
-#include <common/sand.h>
-
 namespace sand::tracker {
 
   /**

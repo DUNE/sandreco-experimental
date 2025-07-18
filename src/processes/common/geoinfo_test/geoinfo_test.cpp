@@ -41,7 +41,7 @@ namespace sand::common {
   }
 
   void geoinfo_test::run() {
-    const auto& gi = instance<geoinfo>();
+    const auto& gi = get<geoinfo>();
     UFW_INFO("Running a geoinfo_test process at {}."), fmt::ptr(this);
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
