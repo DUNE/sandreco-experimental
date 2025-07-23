@@ -48,9 +48,11 @@ namespace sand::stt {
       const auto& hit_map = trj.GetHitMap();
       sand::tracker::digi::signal signal;
       signal.adc = 0.0;
+      try {
       for (const auto& hit : hit_map.at(component::STRAW)){
         signal.adc += hit.GetEnergyDeposit();
       }
+      }catch(std::exception&){}
       digi.signals.push_back(signal);
     }
 
