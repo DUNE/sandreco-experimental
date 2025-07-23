@@ -133,6 +133,9 @@ namespace sand {
    * There is a 1-1 correspondence between the geo_path of a sensitive detector and a geo_id.
    * Prefer geo_id as a key, as it is substantially faster to compare.
    */
+#ifdef __CLING__
+  using geo_id = uint64_t;
+#else //__CLING__
   struct geo_id {
     union {
       struct {
@@ -181,9 +184,13 @@ namespace sand {
     };
   };
 
+#endif //__CLING__
   /**
    * Unique identifier for channels as known by the data acquisition system.
    */
+#ifdef __CLING__
+  using channel_id = uint64_t;
+#else //__CLING__
   struct channel_id {
     using link_t = uint8_t;
     using channel_t = uint32_t;
@@ -198,5 +205,7 @@ namespace sand {
       uint64_t raw = -1;
     };
   };
+
+#endif //__CLING__
 
 }
