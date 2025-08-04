@@ -65,6 +65,7 @@ namespace sand {
       auto tran = camera->GetObjectTranslation ();
       UFW_DEBUG("{} (PV) is at [{:.3f}, {:.3f}, {:.3f}], [[{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}]]", camera->GetName(), tran.x(), tran.y(), tran.z(), 
                 rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
+      //rot_3d loc2glob(rot);
       mask_camera mc{uint8_t(i), uint8_t(grain::mask), xform_3d(), grain::pixel_array<rect_f>{}, 0.0, 0.0, rect_f{}, std::array<rect_f, grain::camera_width * grain::camera_height / 2>{}};
       m_mask_cameras.emplace_back(mc);
     }

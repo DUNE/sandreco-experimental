@@ -13,13 +13,13 @@ namespace sand {
 
     virtual ~subdetector_info();
 
-    const pos_3d& centre() const { return m_centre; }
-
     virtual geo_id id(const geo_path&) const = 0;
 
     virtual geo_path path(geo_id) const = 0;
 
     geo_path path() const { return m_path; }
+
+    const xform_3d& transform() const { return m_transform; }
 
   protected:
     const geoinfo& info() { return r_info; }
@@ -27,7 +27,7 @@ namespace sand {
   private:
     const geoinfo& r_info;
     geo_path m_path;
-    pos_3d m_centre;
+    xform_3d m_transform;
 
   };
 

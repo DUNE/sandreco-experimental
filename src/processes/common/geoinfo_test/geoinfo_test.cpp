@@ -16,6 +16,15 @@ template <> struct fmt::formatter<sand::pos_3d>: formatter<string_view> {
   }
 };
 
+template <> struct fmt::formatter<sand::xform_3d>: formatter<string_view> {
+  auto format(sand::xform_3d xfrm, format_context& ctx) const -> format_context::iterator {
+    double d[12];
+    xfrm.GetComponents(d);
+    return fmt::format_to(ctx.out(), "[{:.2f}, {:.2f}, {:.2f}], [[{:.2f}, {:.2f}, {:.2f}], [{:.2f}, {:.2f}, {:.2f}], [{:.2f}, {:.2f}, {:.2f}]]",
+                                       d[3], d[7], d[11], d[0], d[1], d[2], d[4], d[5], d[6], d[8], d[9], d[10]);
+  }
+};
+
 namespace sand::common {
 
   class geoinfo_test : public ufw::process {
@@ -40,8 +49,11 @@ namespace sand::common {
     const auto& gi = instance<geoinfo>();
     UFW_INFO("Running a geoinfo_test process at {}."), fmt::ptr(this);
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
+    UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
+    UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
+    UFW_INFO("TRACKER position: '{}'", gi.tracker().transform());
     int i = 0;
     for (const auto& s : gi.tracker().stations()) {
       auto nhor = s->select([](auto& w){ return std::fmod(w.angle(), M_PI) < 1e-3; }).size();
