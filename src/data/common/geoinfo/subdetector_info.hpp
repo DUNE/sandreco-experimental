@@ -19,6 +19,9 @@ namespace sand {
 
     geo_path path() const { return m_path; }
 
+    /**
+     * @returns A transformation matrix that takes a vector from local to global coordinates.
+     */
     const xform_3d& transform() const { return m_transform; }
 
   protected:

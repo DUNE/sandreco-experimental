@@ -16,6 +16,12 @@ template <> struct fmt::formatter<sand::pos_3d>: formatter<string_view> {
   }
 };
 
+template <> struct fmt::formatter<sand::dir_3d>: formatter<string_view> {
+  auto format(sand::dir_3d c, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "({:.2f}, {:.2f}, {:.2f})", c.x(), c.y(), c.z());
+  }
+};
+
 template <> struct fmt::formatter<sand::xform_3d>: formatter<string_view> {
   auto format(sand::xform_3d xfrm, format_context& ctx) const -> format_context::iterator {
     double d[12];
@@ -50,6 +56,12 @@ namespace sand::common {
     UFW_INFO("Running a geoinfo_test process at {}."), fmt::ptr(this);
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
+    for (const auto& cam : gi.grain().mask_cameras()) {
+      auto cam2glob = gi.grain().transform() * cam.transform;
+      auto centre = cam2glob * pos_3d{0., 0., 0.};
+      auto aim = cam2glob * dir_3d{0., 0., 1.};
+      UFW_INFO("Camera {} [{}]:\n - centre: [{}];\n - view direction: [{}]\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
+    }
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());

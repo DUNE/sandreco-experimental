@@ -61,12 +61,14 @@ namespace sand {
       if (camera->GetLogicalVolume()->GetName() != "cam_volume") {
         continue;
       }
-      auto rot = camera->GetObjectRotationValue();
-      auto tran = camera->GetObjectTranslation ();
+      auto rot = camera->GetObjectRotationValue(); //GetObjectRotation is not thread safe (!)
+      auto tran = camera->GetObjectTranslation();
       UFW_DEBUG("{} (PV) is at [{:.3f}, {:.3f}, {:.3f}], [[{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}]]", camera->GetName(), tran.x(), tran.y(), tran.z(), 
                 rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
-      //rot_3d loc2glob(rot);
-      mask_camera mc{uint8_t(i), uint8_t(grain::mask), xform_3d(), grain::pixel_array<rect_f>{}, 0.0, 0.0, rect_f{}, std::array<rect_f, grain::camera_width * grain::camera_height / 2>{}};
+      xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
+                         rot.yx(), rot.yy(), rot.yz(), tran.y(),
+                         rot.zx(), rot.zy(), rot.zz(), tran.z());
+      mask_camera mc{camera->GetName(), uint8_t(i), uint8_t(grain::mask), loc2grain, grain::pixel_array<rect_f>{}, 0.0, 0.0, rect_f{}, std::vector<rect_f>{}};
       m_mask_cameras.emplace_back(mc);
     }
     UFW_DEBUG("Printing auxmap");

@@ -19,21 +19,32 @@ namespace sand {
     };
 
     struct camera {
+      /// Unique camera name
+      std::string name;
+      /// Unique camera id
       uint8_t id;
+      /// Bitmask of sand::grain::optics_type
       uint8_t optics;
-      xform_3d cam_xform; //direction and orientation tbd
-      grain::pixel_array<rect_f> sipm_active_areas; //plane tbd
-      double sipm_offset;
+      /**
+       * Transforms local to grain coordinates. All other coordinates are in the local system
+       * Local has z as the camera axis, with the light coming from z+
+       * The centre is in the middle of the camera volume, so the sipms will have a negative
+       * z position, while mask/lens will be at positive z.
+       */
+      xform_3d transform;
+      /// These rects are on the xy plane with z = z_sipm
+      grain::pixel_array<rect_f> sipm_active_areas;
+      double z_sipm;
     };
 
     struct lens_camera : public camera {
-
+      double z_lens;
     };
 
     struct mask_camera : public camera {
-      double mask_offset;
+      double z_mask;
       rect_f box_perimeter;
-      std::array<rect_f, grain::camera_width * grain::camera_height / 2> holes;
+      std::vector<rect_f> holes;
     };
 
   public:
@@ -49,6 +60,10 @@ namespace sand {
 
     template <typename Camera>
     std::enable_if_t<std::is_base_of_v<camera, Camera>, const Camera&> at(uint8_t);
+
+    std::vector<lens_camera> lens_cameras() const { return m_lens_cameras; }
+
+    std::vector<mask_camera> mask_cameras() const { return m_mask_cameras; }
 
   private:
     std::vector<lens_camera> m_lens_cameras;

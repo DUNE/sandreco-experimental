@@ -12,6 +12,9 @@
 
 namespace sand {
 
+  /**
+   * Position and direction vectors. For 3D space, note the difference between positions and directions.
+   */
   using pos_3d = ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>>;
   using dir_3d = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<double>>;
   using vec_4d = ROOT::Math::PxPyPzEVector;
@@ -20,6 +23,13 @@ namespace sand {
   using mom_4d = vec_4d;
 
   using rot_3d = ROOT::Math::Rotation3D;
+  /**
+   * xform_3d is the best tool for coordinate system transformation. It is used by multiplying a vector
+   * in the original coordinate system to obtain one in the new system: x' = T * x.
+   * The inverse transform can be used for the opposite transformation x = T.Inverse() * x'
+   * It correctly handles positions and directions, by applying both rotation and translation to the former,
+   * and only rotation to ther latter.
+   */
   using xform_3d = ROOT::Math::Transform3D;
 
   /**
