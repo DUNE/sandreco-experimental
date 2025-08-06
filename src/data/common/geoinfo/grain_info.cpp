@@ -42,8 +42,31 @@ namespace sand {
       UFW_ERROR("No volume named '{}' was found.", name);
     }
 
-    grain::pixel_array<geoinfo::grain_info::rect_f> parse_pixels(const G4VPhysicalVolume* pv) {
+    grain::pixel_array<geoinfo::grain_info::rect_f> parse_pixels(const G4VPhysicalVolume* sipms, const G4GDMLAuxMapType* auxmap) {
+      //FIXME This parser assumes the file is well formed
       grain::pixel_array<geoinfo::grain_info::rect_f> pixels;
+      pos_3d centre(sipms->GetObjectTranslation());
+      auto sipms_lv = sipms->GetLogicalVolume();
+      auto auxlist = auxmap->find(sipms_lv)->second;
+      auxlist = *auxlist.at(0).auxList;
+      auto cellcount = std::atoi(auxlist.at(0).value);
+      auto cellsize = std::atof(auxlist.at(1).value);
+      auto celledge = std::atof(auxlist.at(2).value);
+      auto box = dynamic_cast<G4Box*>(sipms_lv->GetSolid());
+      double sx = box->GetXHalfLength();
+      double sy = box->GetYHalfLength();
+      double y = sy + centre.y();
+      for (int i = 0; i != cellcount; ++i) {
+        double x = -sx + centre.x();
+        for (int j = 0; j != cellcount; ++j) {
+          pixels[i][j].left = x;
+          pixels[i][j].top = y;
+          pixels[i][j].right = x + cellsize;
+          pixels[i][j].bottom = y - cellsize;
+          x += cellsize + celledge;
+        }
+        y -= cellsize + celledge;
+      }
       return pixels;
     }
 
@@ -73,7 +96,9 @@ namespace sand {
       xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
                          rot.yx(), rot.yy(), rot.yz(), tran.y(),
                          rot.zx(), rot.zy(), rot.zz(), tran.z());
-      mask_camera mc{camera->GetName(), uint8_t(i), uint8_t(grain::mask), loc2grain, parse_pixels(camera), 0.0, 0.0, rect_f{}, std::vector<rect_f>{}};
+      auto sipms = find_by_name(camera, "cameraAssembly_photoDetector");
+      auto mask = find_by_name(camera, "cameraAssembly_mask");
+      mask_camera mc{camera->GetName(), uint8_t(i), uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()), sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{}, std::vector<rect_f>{}};
       m_mask_cameras.emplace_back(mc);
     }
     UFW_DEBUG("Printing auxmap");

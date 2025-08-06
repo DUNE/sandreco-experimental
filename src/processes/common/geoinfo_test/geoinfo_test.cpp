@@ -62,6 +62,12 @@ namespace sand::common {
       auto aim = cam2glob * dir_3d{0., 0., 1.};
       UFW_INFO("Camera {} [{}]:\n - centre: [{}];\n - view direction: [{}]\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
     }
+    auto pix_spam = gi.grain().mask_cameras().front();
+    for (int i = 0; i != 32; ++i) {
+      for (int j = 0; j != 32; ++j) {
+        UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas[i][j].left, pix_spam.sipm_active_areas[i][j].top, pix_spam.sipm_active_areas[i][j].right, pix_spam.sipm_active_areas[i][j].bottom);
+      }
+    }
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
