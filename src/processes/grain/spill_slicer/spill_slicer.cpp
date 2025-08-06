@@ -108,7 +108,6 @@ namespace sand::grain {
       UFW_INFO("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx + 1]);
       size_t offset = images_out.size();
       for (auto& signal : digis_in.signals) {
-        UFW_DEBUG("Processing signal in channel {}.", signal.channel.raw);
         auto id = signal.channel.link;
         auto it = std::find_if(images_out.begin() + offset, images_out.end(), [id](auto& img) { return img.camera_id == id; } );
         if (it == images_out.end()) {

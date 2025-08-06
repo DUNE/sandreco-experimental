@@ -55,7 +55,7 @@ namespace sand::grain {
             //consistent indexing: Row Major
             channel_id ch;
             ch.subdetector = GRAIN;
-            ch.link = photon.camera;
+            ch.link = photon.camera_id;
             ch.channel = row * camera_width + col;
             digi::signal pe{truth, ch, photon.pos.T(), NAN, 1.0};
             digi_out.signals.emplace_back(pe);

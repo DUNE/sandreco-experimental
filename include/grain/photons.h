@@ -17,7 +17,7 @@ namespace sand::grain {
       mom_4d p;
       double scatter;
       bool inside_camera;
-      channel_id::link_t camera;
+      channel_id::link_t camera_id;
     };
 
     using photon_collection = std::vector<photon>;
