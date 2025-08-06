@@ -133,10 +133,13 @@ namespace sand {
    * There is a 1-1 correspondence between the geo_path of a sensitive detector and a geo_id.
    * Prefer geo_id as a key, as it is substantially faster to compare.
    */
-#ifdef __CLING__
-  using geo_id = uint64_t;
-#else //__CLING__
   struct geo_id {
+    using supermodule_t = uint8_t;
+    using plane_t = uint8_t;
+    using tube_t = uint8_t;
+    //ROOT reports an internal error when generating a dictionary for this anonymous union.
+    //Since we don't care too much, we can just pretend it is just an int.
+#ifndef __CLING__
     union {
       struct {
         uint8_t reserved___0;
@@ -146,8 +149,8 @@ namespace sand {
       struct {
         uint8_t reserved___0;
         subdetector_t subdetector;
-        uint8_t supermodule;
-        uint8_t plane;
+        supermodule_t supermodule;
+        plane_t plane;
         uint8_t padding___1[4];
       } drift;
       struct {
@@ -162,9 +165,9 @@ namespace sand {
         };
         uint8_t reserved___0;
         subdetector_t subdetector;
-        uint8_t supermodule;
+        supermodule_t supermodule;
         region_t region;
-        uint8_t plane;
+        plane_t plane;
         uint8_t padding___1[3];
       } ecal;
       struct {
@@ -175,25 +178,27 @@ namespace sand {
       struct {
         uint8_t reserved___0;
         subdetector_t subdetector;
-        uint8_t supermodule;
-        uint8_t plane;
-        uint16_t tube;
+        supermodule_t supermodule;
+        plane_t plane;
+        tube_t tube;
         uint8_t padding___1[2];
       } stt;
       uint64_t raw = -1;
     };
+#else //__CLING__
+  uint64_t raw = -1;
+#endif //__CLING__
   };
 
-#endif //__CLING__
   /**
    * Unique identifier for channels as known by the data acquisition system.
    */
-#ifdef __CLING__
-  using channel_id = uint64_t;
-#else //__CLING__
   struct channel_id {
     using link_t = uint8_t;
     using channel_t = uint32_t;
+    //ROOT reports an internal error when generating a dictionary for this anonymous union.
+    //Since we don't care too much, we can just pretend it is just an int.
+#ifndef __CLING__
     union {
       struct {
         uint8_t reserved___0;
@@ -204,8 +209,10 @@ namespace sand {
       } /*any*/;
       uint64_t raw = -1;
     };
+#else //__CLING__
+    uint64_t raw = -1;
+#endif //__CLING__
   };
 
-#endif //__CLING__
 
 }
