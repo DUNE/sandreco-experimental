@@ -185,13 +185,15 @@ namespace sand {
    * Unique identifier for channels as known by the data acquisition system.
    */
   struct channel_id {
+    using link_t = uint8_t;
+    using channel_t = uint32_t;
     union {
       struct {
         uint8_t reserved___0;
         subdetector_t subdetector;
-        uint8_t link;
+        link_t link;
         uint8_t padding___1;
-        uint32_t channel;
+        channel_t channel;
       } /*any*/;
       uint64_t raw = -1;
     };

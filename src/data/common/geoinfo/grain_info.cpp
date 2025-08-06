@@ -42,6 +42,11 @@ namespace sand {
       UFW_ERROR("No volume named '{}' was found.", name);
     }
 
+    grain::pixel_array<geoinfo::grain_info::rect_f> parse_pixels(const G4VPhysicalVolume* pv) {
+      grain::pixel_array<geoinfo::grain_info::rect_f> pixels;
+      return pixels;
+    }
+
   }
 
   static constexpr char s_grain_path[] = "sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0";
@@ -68,7 +73,7 @@ namespace sand {
       xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
                          rot.yx(), rot.yy(), rot.yz(), tran.y(),
                          rot.zx(), rot.zy(), rot.zz(), tran.z());
-      mask_camera mc{camera->GetName(), uint8_t(i), uint8_t(grain::mask), loc2grain, grain::pixel_array<rect_f>{}, 0.0, 0.0, rect_f{}, std::vector<rect_f>{}};
+      mask_camera mc{camera->GetName(), uint8_t(i), uint8_t(grain::mask), loc2grain, parse_pixels(camera), 0.0, 0.0, rect_f{}, std::vector<rect_f>{}};
       m_mask_cameras.emplace_back(mc);
     }
     UFW_DEBUG("Printing auxmap");
@@ -94,6 +99,32 @@ namespace sand {
   geo_path geoinfo::grain_info::path(geo_id gi) const {
     UFW_ASSERT(gi.subdetector == GRAIN, "Subdetector must be GRAIN");
     return path();
+  }
+
+  const geoinfo::grain_info::camera& geoinfo::grain_info::at(channel_id::link_t id) const {
+    auto comp = [id](auto cam){ return cam.id == id; };
+    auto it = std::find_if(m_lens_cameras.begin(), m_lens_cameras.end(), comp);
+    if (it != m_lens_cameras.end()) {
+      return *it;
+    }
+    auto it2 = std::find_if(m_mask_cameras.begin(), m_mask_cameras.end(), comp);
+    if (it2 != m_mask_cameras.end()) {
+      return *it2;
+    }
+    UFW_ERROR("No camera of any type found with id = {}.", int(id));
+  }
+
+  const geoinfo::grain_info::camera& geoinfo::grain_info::at(const std::string& name) const {
+    auto comp = [name](auto cam){ return cam.name == name; };
+    auto it = std::find_if(m_lens_cameras.begin(), m_lens_cameras.end(), comp);
+    if (it != m_lens_cameras.end()) {
+      return *it;
+    }
+    auto it2 = std::find_if(m_mask_cameras.begin(), m_mask_cameras.end(), comp);
+    if (it2 != m_mask_cameras.end()) {
+      return *it2;
+    }
+    UFW_ERROR("No camera of any type found with name = '{}'.", name);
   }
 
 }

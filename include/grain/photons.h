@@ -17,18 +17,11 @@ namespace sand::grain {
       mom_4d p;
       double scatter;
       bool inside_camera;
+      channel_id::link_t camera;
     };
 
-    struct camera
-    {
-      uint16_t camera_id; 
-      std::string camera_name;
-      std::vector<photon> photons;
-    };
-
-    using camera_list = std::vector<camera>;
-
-    camera_list cameras;
+    using photon_collection = std::vector<photon>;
+    photon_collection photons;
 
   };
 

@@ -22,7 +22,7 @@ namespace sand {
       /// Unique camera name
       std::string name;
       /// Unique camera id
-      uint8_t id;
+      channel_id::link_t id;
       /// Bitmask of sand::grain::optics_type
       uint8_t optics;
       /**
@@ -58,8 +58,15 @@ namespace sand {
 
     geo_path path(geo_id) const override;
 
+    const camera& at(channel_id::link_t) const;
+
+    const camera& at(const std::string&) const;
+
     template <typename Camera>
-    std::enable_if_t<std::is_base_of_v<camera, Camera>, const Camera&> at(uint8_t);
+    std::enable_if_t<std::is_base_of_v<camera, Camera>, const Camera&> at(channel_id::link_t);
+
+    template <typename Camera>
+    std::enable_if_t<std::is_base_of_v<camera, Camera>, const Camera&> at(const std::string&);
 
     std::vector<lens_camera> lens_cameras() const { return m_lens_cameras; }
 
@@ -72,20 +79,37 @@ namespace sand {
   };
 
   template <typename Camera>
-  std::enable_if_t<std::is_base_of_v<geoinfo::grain_info::camera, Camera>, const Camera&> geoinfo::grain_info::at(uint8_t id) {
-    auto comp = [](auto cam, auto id){ return cam.id < id; };
+  std::enable_if_t<std::is_base_of_v<geoinfo::grain_info::camera, Camera>, const Camera&> geoinfo::grain_info::at(channel_id::link_t id) {
+    auto comp = [id](auto cam){ return cam.id == id; };
     if constexpr (std::is_same_v<Camera, lens_camera>) {
-      auto it = std::lower_bound(m_lens_cameras.begin(), m_lens_cameras.end(), id, comp);
-      if (it != m_lens_cameras.end() && it->id == id) {
+      auto it = std::find_if(m_lens_cameras.begin(), m_lens_cameras.end(), comp);
+      if (it != m_lens_cameras.end()) {
         return *it;
       }
     } else {
-      auto it = std::lower_bound(m_mask_cameras.begin(), m_mask_cameras.end(), id, comp);
-      if (it != m_mask_cameras.end() && it->id == id) {
+      auto it = std::find_if(m_mask_cameras.begin(), m_mask_cameras.end(), comp);
+      if (it != m_mask_cameras.end()) {
         return *it;
       }
     }
     UFW_ERROR("No camera of the required type found with id = {}.", int(id));
+  }
+
+  template <typename Camera>
+  std::enable_if_t<std::is_base_of_v<geoinfo::grain_info::camera, Camera>, const Camera&> geoinfo::grain_info::at(const std::string& name) {
+    auto comp = [name](auto cam){ return cam.name == name; };
+    if constexpr (std::is_same_v<Camera, lens_camera>) {
+      auto it = std::find_if(m_lens_cameras.begin(), m_lens_cameras.end(), comp);
+      if (it != m_lens_cameras.end()) {
+        return *it;
+      }
+    } else {
+      auto it = std::find_if(m_mask_cameras.begin(), m_mask_cameras.end(), comp);
+      if (it != m_mask_cameras.end()) {
+        return *it;
+      }
+    }
+    UFW_ERROR("No camera of the required type found with name = '{}'.", name);
   }
 
 }
