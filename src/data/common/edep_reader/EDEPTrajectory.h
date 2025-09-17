@@ -148,7 +148,7 @@ class EDEPTrajectory {
    * @brief Get the trajectory points associated with this trajectory.
    * @return All trajectory points associated with this trajectory ordered by increasing times.
    */
-  std::vector<EDEPTrajectoryPoint> GetTrajectoryPointsVect();
+  std::vector<EDEPTrajectoryPoint> GetTrajectoryPointsVect() const;
 
   // Setters
 

@@ -622,14 +622,14 @@ std::vector<EDEPTrajectoryPoint>& EDEPTrajectory::GetLastPointsInDetector(compon
   return last_points_.at(component_name);
 }
 
-std::vector<EDEPTrajectoryPoint> EDEPTrajectory::GetTrajectoryPointsVect() {
+std::vector<EDEPTrajectoryPoint> EDEPTrajectory::GetTrajectoryPointsVect() const {
   std::vector<EDEPTrajectoryPoint> points;
   for (auto& comp : trajectory_points_) {
     points.insert(points.end(), comp.second.begin(), comp.second.end());
   }
 
   std::sort(points.begin(), points.end(),
-            [](EDEPTrajectoryPoint i, EDEPTrajectoryPoint j) { return i.GetPosition().T() < j.GetPosition().T(); });
+            [](const EDEPTrajectoryPoint& i, const EDEPTrajectoryPoint& j) { return i.GetPosition().T() < j.GetPosition().T(); });
 
   return points;
 }
