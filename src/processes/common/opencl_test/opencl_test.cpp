@@ -32,9 +32,8 @@ namespace sand::common {
       cl_command_queue m_queue;  
       cl_program m_program; 
       cl_kernel m_kernel;
-      const size_t m_array_size = 1000;
+      const size_t m_array_size = 50000000;
       std::mt19937 m_rng_engine;
-      std::uniform_real_distribution<> m_uniform;   
     };
   
     void opencl_test::configure (const ufw::config& cfg) {
@@ -110,11 +109,24 @@ namespace sand::common {
       clEnqueueReadBuffer(m_queue, bufC, CL_TRUE, 0, m_array_size * sizeof(float), C_gpu, 0, NULL, NULL );
 
       // sequential vector addition on host for comparison
-      for (int i = 0; i < m_array_size; i++){
+      for (size_t i = 0; i < m_array_size; i++){
         C_cpu[i] = A[i] + B[i]; 
       } 
 
-      // TODO: compare cpu and gpu results, add timing 
+      // validate result (allow tiny FP error)
+      double max_abs_err = 0.0;
+      for (size_t i = 0; i < m_array_size; i++){
+        double e = std::abs(double(C_cpu[i]) - double(C_gpu[i]));
+        if (e > max_abs_err)
+          max_abs_err = e; 
+      }
+      if (max_abs_err > 1e-6)
+        UFW_INFO("Results between sequential sum on host and device differ!");
+      else
+        UFW_INFO("Results between sequential sum on host and device match.");
+      UFW_DEBUG("Max absolute error: {}", max_abs_err);
+  
+      // TODO: add timing for benchmark 
     }
   
     void opencl_test::create_device() {       
