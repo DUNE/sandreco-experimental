@@ -14,7 +14,9 @@
     "run" : [
       {
         "sand::common::opencl_test" : {
-          "seed": 1111},
+          "seed": 1111,
+          "array_size": 50000000
+        },
         "reqs" : {},
         "prods" : {}
       }

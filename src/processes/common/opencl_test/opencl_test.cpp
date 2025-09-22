@@ -7,6 +7,7 @@
 #define CL_TARGET_OPENCL_VERSION 220
 #include <CL/cl.h>
 #include <random>
+#include <chrono>
 
 
 namespace sand::common {
@@ -32,14 +33,18 @@ namespace sand::common {
       cl_command_queue m_queue;  
       cl_program m_program; 
       cl_kernel m_kernel;
-      const size_t m_array_size = 50000000;
       std::mt19937 m_rng_engine;
+      size_t m_array_size;
+      const size_t m_local_size = 256;
+      size_t m_global_size;
     };
-  
+    
     void opencl_test::configure (const ufw::config& cfg) {
       process::configure(cfg);
       m_rng_engine.seed(cfg.at("seed"));
-      //m_test_path = std::string(cfg.at("test_path"));
+      m_array_size = cfg.at("array_size"); 
+      m_global_size = ceil(m_array_size / (float)m_local_size) * m_local_size; 
+      UFW_INFO("Summing two arrays with size : {} MB", m_array_size * sizeof(float) / int(1 << 20));
     }
   
     opencl_test::opencl_test() : process({}, {}) {
@@ -47,17 +52,15 @@ namespace sand::common {
     }
   
     void opencl_test::run() {
-      cl_int err;
-      float *A, *B, *C_gpu, *C_cpu; 
       // GPU setup
-      size_t local_size = 256;
-      size_t global_size = ceil(m_array_size/(float)local_size)*local_size; 
+      cl_int err;
       create_device();
       print_device_info();
       create_ctx_queue();
       build_kernel();
       
-      // create input data
+      // allocate host memory and create input data
+      float *A, *B, *C_gpu, *C_cpu; 
       A = (float*)malloc(sizeof(float)*m_array_size);
       B = (float*)malloc(sizeof(float)*m_array_size);
       C_cpu = (float*)malloc(sizeof(float)*m_array_size);
@@ -77,7 +80,7 @@ namespace sand::common {
       else
         UFW_DEBUG("Buffers created.");
       
-        // set kernel args
+      // set kernel args
       err = clSetKernelArg(m_kernel, 0, sizeof(cl_mem), &bufA);
       err |= clSetKernelArg(m_kernel, 1, sizeof(cl_mem), &bufB);
       err |= clSetKernelArg(m_kernel, 2, sizeof(cl_mem), &bufC);
@@ -89,7 +92,8 @@ namespace sand::common {
       else 
         UFW_DEBUG("Kernel arguments set.");
       
-        // copy buffers to device 
+      // copy buffers to device 
+      auto t0 = std::chrono::high_resolution_clock::now();
       err = clEnqueueWriteBuffer(m_queue, bufA, CL_FALSE, 0, sizeof(float) * m_array_size, A, 0, NULL, NULL);  
       err |= clEnqueueWriteBuffer(m_queue, bufB, CL_FALSE, 0, sizeof(float) * m_array_size, B, 0, NULL, NULL);  
       if (err != CL_SUCCESS)
@@ -97,21 +101,36 @@ namespace sand::common {
       else
         UFW_DEBUG("Copied buffers to device.");
       
-        // execute the kernel
-      err = clEnqueueNDRangeKernel(m_queue, m_kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
+      // execute the kernel
+      cl_event ev;
+      err = clEnqueueNDRangeKernel(m_queue, m_kernel, 1, NULL, &m_global_size, &m_local_size, 0, NULL, &ev);
       if (err != CL_SUCCESS)
         UFW_ERROR("Failed to enqueue kernel.");
       else
         UFW_DEBUG("Kernel enqueued.");
       
-        // blocking read of results
-      clFinish(m_queue);
+      clWaitForEvents(1, &ev);
       clEnqueueReadBuffer(m_queue, bufC, CL_TRUE, 0, m_array_size * sizeof(float), C_gpu, 0, NULL, NULL );
+      UFW_DEBUG("Copied results from device to host.");
+      
+      auto t1 = std::chrono::high_resolution_clock::now();
+      double gpu_wall_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+      cl_ulong qstart = 0, qend = 0;
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(qstart), &qstart, nullptr);
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(qend), &qend, nullptr);
+      double gpu_kernel_ms = 1e-6 * double(qend - qstart); // ns -> ms
 
       // sequential vector addition on host for comparison
+      auto t2 = std::chrono::high_resolution_clock::now();
       for (size_t i = 0; i < m_array_size; i++){
         C_cpu[i] = A[i] + B[i]; 
       } 
+      auto t3 = std::chrono::high_resolution_clock::now();
+      double cpu_ms = std::chrono::duration<double, std::milli>(t3 - t2).count();
+
+      UFW_INFO("CPU serial time: {} ms", cpu_ms);
+      UFW_INFO("GPU wall time (copy to gpu -> enqueue -> finish -> copy result): {} ms", gpu_wall_ms);
+      UFW_INFO("GPU kernel time (from profiling): {} ms", gpu_kernel_ms);
 
       // validate result (allow tiny FP error)
       double max_abs_err = 0.0;
@@ -125,8 +144,6 @@ namespace sand::common {
       else
         UFW_INFO("Results between sequential sum on host and device match.");
       UFW_DEBUG("Max absolute error: {}", max_abs_err);
-  
-      // TODO: add timing for benchmark 
     }
   
     void opencl_test::create_device() {       
@@ -149,7 +166,9 @@ namespace sand::common {
       m_context = clCreateContext(NULL, 1, &m_device, NULL, NULL, &err);
       if (err != CL_SUCCESS)
         UFW_ERROR("Could not create a context.");
-      m_queue = clCreateCommandQueueWithProperties(m_context, m_device, 0, &err);
+      // enable time profiling in queue: openCL API > 2.0 wants null-terminated properties list
+      const cl_queue_properties props[] = {CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0};  
+      m_queue = clCreateCommandQueueWithProperties(m_context, m_device, props, &err);
       if (err != CL_SUCCESS)
         UFW_ERROR("Could not create a command queue.");
       else
