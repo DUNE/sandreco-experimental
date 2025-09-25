@@ -1,2 +1,3 @@
 add_subdirectory(geoinfo_test)
+add_subdirectory(genie_reader_test)
 add_subdirectory(opencl_test)
