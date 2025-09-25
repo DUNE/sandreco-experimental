@@ -25,6 +25,7 @@ namespace sand::common {
       void print_device_info();
       void build_kernel();
       void cleanup();
+      double time_profile(cl_event ev);
 
     private:
       cl_platform_id m_platform;
@@ -94,7 +95,8 @@ namespace sand::common {
       
       // copy buffers to device 
       auto t0 = std::chrono::high_resolution_clock::now();
-      err = clEnqueueWriteBuffer(m_queue, bufA, CL_FALSE, 0, sizeof(float) * m_array_size, A, 0, NULL, NULL);  
+      cl_event ev_writebuf;
+      err = clEnqueueWriteBuffer(m_queue, bufA, CL_FALSE, 0, sizeof(float) * m_array_size, A, 0, NULL, &ev_writebuf);  
       err |= clEnqueueWriteBuffer(m_queue, bufB, CL_FALSE, 0, sizeof(float) * m_array_size, B, 0, NULL, NULL);  
       if (err != CL_SUCCESS)
         UFW_ERROR("Failed to copy buffers.");
@@ -102,23 +104,26 @@ namespace sand::common {
         UFW_DEBUG("Copied buffers to device.");
       
       // execute the kernel
-      cl_event ev;
-      err = clEnqueueNDRangeKernel(m_queue, m_kernel, 1, NULL, &m_global_size, &m_local_size, 0, NULL, &ev);
+      cl_event ev_kernel_execution;
+      err = clEnqueueNDRangeKernel(m_queue, m_kernel, 1, NULL, &m_global_size, &m_local_size, 0, NULL, &ev_kernel_execution);
       if (err != CL_SUCCESS)
         UFW_ERROR("Failed to enqueue kernel.");
       else
         UFW_DEBUG("Kernel enqueued.");
       
-      clWaitForEvents(1, &ev);
-      clEnqueueReadBuffer(m_queue, bufC, CL_TRUE, 0, m_array_size * sizeof(float), C_gpu, 0, NULL, NULL );
+      cl_event ev_copy_from_device;
+      clEnqueueReadBuffer(m_queue, bufC, CL_FALSE, 0, m_array_size * sizeof(float), C_gpu, 1, &ev_kernel_execution, &ev_copy_from_device );
+      clWaitForEvents(1, &ev_copy_from_device);
+
       UFW_DEBUG("Copied results from device to host.");
       
+      // some profiling 
       auto t1 = std::chrono::high_resolution_clock::now();
       double gpu_wall_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
-      cl_ulong qstart = 0, qend = 0;
-      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(qstart), &qstart, nullptr);
-      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(qend), &qend, nullptr);
-      double gpu_kernel_ms = 1e-6 * double(qend - qstart); // ns -> ms
+
+      auto gpu_kernel_ms = time_profile(ev_kernel_execution);
+      auto gpu_copy_kernel_ms = time_profile(ev_writebuf);
+      auto gpu_copy_result_ms = time_profile(ev_copy_from_device);
 
       // sequential vector addition on host for comparison
       auto t2 = std::chrono::high_resolution_clock::now();
@@ -130,7 +135,9 @@ namespace sand::common {
 
       UFW_INFO("CPU serial time: {} ms", cpu_ms);
       UFW_INFO("GPU wall time (copy to gpu -> enqueue -> finish -> copy result): {} ms", gpu_wall_ms);
+      UFW_INFO("Copy 1 array to GPU (from profiling): {} ms", gpu_copy_kernel_ms);
       UFW_INFO("GPU kernel time (from profiling): {} ms", gpu_kernel_ms);
+      UFW_INFO("Copy result from GPU (from profiling): {} ms", gpu_copy_result_ms);
 
       // validate result (allow tiny FP error)
       double max_abs_err = 0.0;
@@ -146,6 +153,14 @@ namespace sand::common {
       UFW_DEBUG("Max absolute error: {}", max_abs_err);
     }
   
+    double opencl_test::time_profile(cl_event ev) {
+      cl_ulong qstart = 0, qend = 0;
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(qstart), &qstart, nullptr);
+      clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(qend), &qend, nullptr);
+      double gpu_ms = 1e-6 * double(qend - qstart); // ns -> ms
+      return gpu_ms;
+    } 
+
     void opencl_test::create_device() {       
       cl_int err;
       err = clGetPlatformIDs(1, &m_platform, NULL);
