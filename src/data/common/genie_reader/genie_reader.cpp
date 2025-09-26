@@ -47,6 +47,31 @@ ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_
   brEvtVtx->SetAddress(&EvtVtx);
   brEvtCode->SetAddress(&EvtCode);
   brEvtFlags->SetAddress(&EvtFlags);
+  
+
+  TBranch* brStdHepN = input_tree->GetBranch("StdHepN");
+  TBranch* brStdHepPdg = input_tree->GetBranch("StdHepPdg");
+  TBranch* brStdHepStatus = input_tree->GetBranch("StdHepStatus");
+  TBranch* brStdHepRescat = input_tree->GetBranch("StdHepRescat");
+  TBranch* brStdHepX4 = input_tree->GetBranch("StdHepX4");
+  TBranch* brStdHepP4 = input_tree->GetBranch("StdHepP4");
+  TBranch* brStdHepPolz = input_tree->GetBranch("StdHepPolz");
+  TBranch* brStdHepFd = input_tree->GetBranch("StdHepFd");
+  TBranch* brStdHepLd = input_tree->GetBranch("StdHepLd");
+  TBranch* brStdHepFm = input_tree->GetBranch("StdHepFm");
+  TBranch* brStdHepLm = input_tree->GetBranch("StdHepLm");
+  brStdHepN->SetAddress(&StdHepN);
+  brStdHepPdg->SetAddress(&StdHepPdg);
+  brStdHepStatus->SetAddress(&StdHepStatus);
+  brStdHepRescat->SetAddress(&StdHepRescat);
+  brStdHepX4->SetAddress(&StdHepX4);
+  brStdHepP4->SetAddress(&StdHepP4);
+  brStdHepPolz->SetAddress(&StdHepPolz);
+  brStdHepFd->SetAddress(&StdHepFd);
+  brStdHepLd->SetAddress(&StdHepLd);
+  brStdHepFm->SetAddress(&StdHepFm);
+  brStdHepLm->SetAddress(&StdHepLm);
+
 }
 
 ufw::data::factory<sand::genie_reader>::~factory() = default;
@@ -57,7 +82,10 @@ sand::genie_reader& ufw::data::factory<sand::genie_reader>::instance(ufw::contex
     reader.event(EvtNum, EvtXSec, EvtDXSec, 
                  EvtKPS, EvtWght, EvtProb,
                  EvtVtx, EvtCode, EvtFlags);
-    
+    reader.stdHep(StdHepN, StdHepPdg, StdHepStatus, 
+                  StdHepRescat, StdHepX4, StdHepP4, 
+                  StdHepPolz, StdHepFd, StdHepLd, 
+                  StdHepFm, StdHepLm);
     m_id = i;
   }
   return reader;
