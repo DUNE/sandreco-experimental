@@ -13,13 +13,21 @@
 
 namespace sand::fake_reco {
 
+    caf::SRInteraction empty_interaction_from_vertex(const EDEPTree& vertex);
+
     caf::SRRecoParticle
     reco_particle_from_edep_trajectory(const EDEPTrajectory& particle);
 
     caf::SRTrueParticle
     true_particle_from_edep_trajectory(const EDEPTrajectory& particle);
 
-        class fake_reco : public ufw::process {
+    void fill_sr_interaction(caf::SRInteraction& interaction,
+                             const caf::SRRecoParticle& particle);
+
+    void fill_sr_true_interaction(caf::SRTrueInteraction& interaction,
+                                  const caf::SRTrueParticle& particle);
+
+    class fake_reco : public ufw::process {
     public:
         fake_reco();
 
