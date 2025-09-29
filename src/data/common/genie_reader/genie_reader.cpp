@@ -9,7 +9,7 @@
 
 
 namespace sand {
-  genie_reader::genie_reader() : GenieWrapper() {}
+  genie_reader::genie_reader() {}
 
   truth_adapter::value_type& truth_adapter::at(const index_type&) {
     UFW_FATAL("Not yet implemented");
@@ -210,33 +210,35 @@ ufw::data::factory<sand::genie_reader>::~factory() = default;
 sand::genie_reader& ufw::data::factory<sand::genie_reader>::instance(ufw::context_id i) {
   if (m_id != i) {
     input_tree->GetEntry(i);
-    reader.event(EvtNum, EvtXSec, EvtDXSec, 
-                 EvtKPS, EvtWght, EvtProb,
-                 EvtVtx, EvtCode, EvtFlags);
-    reader.stdHep(StdHepN, StdHepPdg, StdHepStatus, 
-                  StdHepRescat, StdHepX4, StdHepP4, 
-                  StdHepPolz, StdHepFd, StdHepLd, 
-                  StdHepFm, StdHepLm);
-    reader.numiFlux(NumiFluxRun, NumiFluxEvtno, NumiFluxNdxdz, 
-                    NumiFluxNdydz, NumiFluxNpz, NumiFluxNenergy, 
-                    NumiFluxNdxdznea, NumiFluxNdydznea, NumiFluxNenergyn, 
-                    NumiFluxNwtnear, NumiFluxNdxdzfar, NumiFluxNdydzfar, 
-                    NumiFluxNenergyf, NumiFluxNwtfar, NumiFluxNorig, 
-                    NumiFluxNdecay, NumiFluxNtype, NumiFluxVx, NumiFluxVy, 
-                    NumiFluxVz, NumiFluxPdpx, NumiFluxPdpy, NumiFluxPdpz, 
-                    NumiFluxPpdxdz, NumiFluxPpdydz, NumiFluxPppz, 
-                    NumiFluxPpenergy, NumiFluxPpmedium, NumiFluxPtype, 
-                    NumiFluxPpvx, NumiFluxPpvy, NumiFluxPpvz, NumiFluxMuparpx, 
-                    NumiFluxMuparpy, NumiFluxMuparpz, NumiFluxMupare, 
-                    NumiFluxNecm, NumiFluxNimpwt, NumiFluxXpoint, 
-                    NumiFluxYpoint, NumiFluxZpoint, NumiFluxTvx, 
-                    NumiFluxTvy, NumiFluxTvz, NumiFluxTpx, NumiFluxTpy, 
-                    NumiFluxTpz, NumiFluxTptype, NumiFluxTgen, 
-                    NumiFluxTgptype, NumiFluxTgppx, NumiFluxTgppy, 
-                    NumiFluxTgppz, NumiFluxTprivx, NumiFluxTprivy, 
-                    NumiFluxTprivz, NumiFluxBeamx, NumiFluxBeamy, 
-                    NumiFluxBeamz, NumiFluxBeampx, NumiFluxBeampy, 
-                    NumiFluxBeampz);
+    reader.event_ = {EvtNum, EvtXSec, EvtDXSec, 
+                     EvtKPS, EvtWght, EvtProb,
+                     EvtVtx, EvtCode, EvtFlags};
+
+    reader.stdHep_ = StdHep(StdHepN, StdHepPdg, StdHepStatus, 
+                            StdHepRescat, StdHepX4, StdHepP4, 
+                            StdHepPolz, StdHepFd, StdHepLd, 
+                            StdHepFm, StdHepLm);
+
+    reader.numiFlux_ = {NumiFluxRun, NumiFluxEvtno, NumiFluxNdxdz, 
+                        NumiFluxNdydz, NumiFluxNpz, NumiFluxNenergy, 
+                        NumiFluxNdxdznea, NumiFluxNdydznea, NumiFluxNenergyn, 
+                        NumiFluxNwtnear, NumiFluxNdxdzfar, NumiFluxNdydzfar, 
+                        NumiFluxNenergyf, NumiFluxNwtfar, NumiFluxNorig, 
+                        NumiFluxNdecay, NumiFluxNtype, NumiFluxVx, NumiFluxVy, 
+                        NumiFluxVz, NumiFluxPdpx, NumiFluxPdpy, NumiFluxPdpz, 
+                        NumiFluxPpdxdz, NumiFluxPpdydz, NumiFluxPppz, 
+                        NumiFluxPpenergy, NumiFluxPpmedium, NumiFluxPtype, 
+                        NumiFluxPpvx, NumiFluxPpvy, NumiFluxPpvz, NumiFluxMuparpx, 
+                        NumiFluxMuparpy, NumiFluxMuparpz, NumiFluxMupare, 
+                        NumiFluxNecm, NumiFluxNimpwt, NumiFluxXpoint, 
+                        NumiFluxYpoint, NumiFluxZpoint, NumiFluxTvx, 
+                        NumiFluxTvy, NumiFluxTvz, NumiFluxTpx, NumiFluxTpy, 
+                        NumiFluxTpz, NumiFluxTptype, NumiFluxTgen, 
+                        NumiFluxTgptype, NumiFluxTgppx, NumiFluxTgppy, 
+                        NumiFluxTgppz, NumiFluxTprivx, NumiFluxTprivy, 
+                        NumiFluxTprivz, NumiFluxBeamx, NumiFluxBeamy, 
+                        NumiFluxBeamz, NumiFluxBeampx, NumiFluxBeampy, 
+                        NumiFluxBeampz};
     m_id = i;
   }
   return reader;
