@@ -55,7 +55,7 @@ class ufw::data::factory<sand::genie_reader> {
     int StdHepPdg;
     int StdHepStatus;
     int StdHepRescat;
-    static const int kNPmax = 250;
+    constexpr static int kNPmax = 250;
     double StdHepX4[kNPmax][4];
     double StdHepP4[kNPmax][4];
     double StdHepPolz[kNPmax][3];
