@@ -30,6 +30,7 @@ namespace sand::common {
     const auto& reader = get<sand::genie_reader>();
     auto event = reader.event();
     auto stdHep = reader.stdHep();
+    auto numiFlux = reader.numiFlux();
     UFW_INFO("Event num {}", event.EvtNum_);
     UFW_INFO("Event vertex {}, {}, {}, {}.", event.EvtVtx_[0], event.EvtVtx_[1],
                                              event.EvtVtx_[2], event.EvtVtx_[3]);
@@ -38,6 +39,8 @@ namespace sand::common {
     UFW_INFO("StdHep N {}.", stdHep.N_);
     UFW_INFO("StdHep P4 {}, {}, {}, {}.", stdHep.P4_[0][0], stdHep.P4_[0][1], 
                                           stdHep.P4_[0][2], stdHep.P4_[0][3]);
+    UFW_INFO("NumiFlux Run {}.", numiFlux.Run_);
+    UFW_INFO("NumiFlux Ndxdz {}.", numiFlux.Ndxdz_);
 
   }
 }
