@@ -26,7 +26,13 @@ ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_
   input_file.reset(TFile::Open(path.c_str()));
   input_tree = input_file->Get<TTree>("gRooTracker");
   if(!input_tree){
-    UFW_ERROR("gRooTracker tree not found in file '{}'.", path.c_str());
+    UFW_DEBUG("gRooTracker tree not found in file '{}'.", path.c_str());
+    UFW_DEBUG("Trying the edepsim path.", path.c_str());
+    
+    input_tree = input_file->Get<TTree>("DetSimPassThru/gRooTracker");
+    if(!input_tree){
+      UFW_ERROR("gRooTracker tree not found in file '{}'.", path.c_str());
+    }
   }
 
   TBranch* brEvtNum   = input_tree->GetBranch("EvtNum");
