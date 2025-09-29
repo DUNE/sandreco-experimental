@@ -28,9 +28,9 @@ namespace sand::common {
 
   void genie_reader_test::run() {
     const auto& reader = get<sand::genie_reader>();
-    auto event = reader.event();
-    auto stdHep = reader.stdHep();
-    auto numiFlux = reader.numiFlux();
+    auto event = reader.event_;
+    auto stdHep = reader.stdHep_;
+    auto numiFlux = reader.numiFlux_;
     UFW_INFO("Event num {}", event.EvtNum_);
     UFW_INFO("Event vertex {}, {}, {}, {}.", event.EvtVtx_[0], event.EvtVtx_[1],
                                              event.EvtVtx_[2], event.EvtVtx_[3]);
