@@ -9,7 +9,6 @@
 #include <random>
 #include <chrono>
 
-
 namespace sand::common {
 
     class opencl_test : public ufw::process {
@@ -28,7 +27,7 @@ namespace sand::common {
       double time_profile(cl_event ev);
 
     private:
-      cl_platform_id m_platform;
+      cl_platform_id m_platform[4];
       cl_device_id m_device;
       cl_context m_context;
       cl_command_queue m_queue;  
@@ -44,8 +43,8 @@ namespace sand::common {
       process::configure(cfg);
       m_rng_engine.seed(cfg.at("seed"));
       m_array_size = cfg.at("array_size"); 
-      m_global_size = ceil(m_array_size / (float)m_local_size) * m_local_size; 
-      UFW_INFO("Summing two arrays with size : {} MB", m_array_size * sizeof(float) / int(1 << 20));
+      m_global_size = std::ceil(m_array_size / float(m_local_size)) * m_local_size;
+      UFW_INFO("Summing two arrays with size : {} MB", m_array_size * sizeof(float) / uint(1 << 20));
     }
   
     opencl_test::opencl_test() : process({}, {}) {
@@ -61,11 +60,10 @@ namespace sand::common {
       build_kernel();
       
       // allocate host memory and create input data
-      float *A, *B, *C_gpu, *C_cpu; 
-      A = (float*)malloc(sizeof(float)*m_array_size);
-      B = (float*)malloc(sizeof(float)*m_array_size);
-      C_cpu = (float*)malloc(sizeof(float)*m_array_size);
-      C_gpu = (float*)malloc(sizeof(float)*m_array_size); 
+      std::unique_ptr<float[]> A(new float[m_array_size]);
+      std::unique_ptr<float[]> B(new float[m_array_size]);
+      std::unique_ptr<float[]> C_cpu(new float[m_array_size]);
+      std::unique_ptr<float[]> C_gpu(new float[m_array_size]);
       std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
       for (size_t i = 0; i < m_array_size; i++){
         A[i] = dist(m_rng_engine);
@@ -96,8 +94,8 @@ namespace sand::common {
       // copy buffers to device 
       auto t0 = std::chrono::high_resolution_clock::now();
       cl_event ev_writebuf;
-      err = clEnqueueWriteBuffer(m_queue, bufA, CL_FALSE, 0, sizeof(float) * m_array_size, A, 0, NULL, &ev_writebuf);  
-      err |= clEnqueueWriteBuffer(m_queue, bufB, CL_FALSE, 0, sizeof(float) * m_array_size, B, 0, NULL, NULL);  
+      err = clEnqueueWriteBuffer(m_queue, bufA, CL_FALSE, 0, sizeof(float) * m_array_size, A.get(), 0, NULL, &ev_writebuf);
+      err |= clEnqueueWriteBuffer(m_queue, bufB, CL_FALSE, 0, sizeof(float) * m_array_size, B.get(), 0, NULL, NULL);
       if (err != CL_SUCCESS)
         UFW_ERROR("Failed to copy buffers.");
       else
@@ -112,13 +110,12 @@ namespace sand::common {
         UFW_DEBUG("Kernel enqueued.");
       
       cl_event ev_copy_from_device;
-      clEnqueueReadBuffer(m_queue, bufC, CL_FALSE, 0, m_array_size * sizeof(float), C_gpu, 1, &ev_kernel_execution, &ev_copy_from_device );
+      clEnqueueReadBuffer(m_queue, bufC, CL_FALSE, 0, m_array_size * sizeof(float), C_gpu.get(), 1, &ev_kernel_execution, &ev_copy_from_device );
       clWaitForEvents(1, &ev_copy_from_device);
+      auto t1 = std::chrono::high_resolution_clock::now();
 
       UFW_DEBUG("Copied results from device to host.");
-      
-      // some profiling 
-      auto t1 = std::chrono::high_resolution_clock::now();
+      // some profiling
       double gpu_wall_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
 
       auto gpu_kernel_ms = time_profile(ev_kernel_execution);
@@ -140,13 +137,11 @@ namespace sand::common {
       UFW_INFO("Copy result from GPU (from profiling): {} ms", gpu_copy_result_ms);
 
       // validate result (allow tiny FP error)
-      double max_abs_err = 0.0;
+      float max_abs_err = 0.f;
       for (size_t i = 0; i < m_array_size; i++){
-        double e = std::abs(double(C_cpu[i]) - double(C_gpu[i]));
-        if (e > max_abs_err)
-          max_abs_err = e; 
+        max_abs_err = std::max(max_abs_err, std::abs(C_cpu[i] - C_gpu[i]));
       }
-      if (max_abs_err > 1e-6)
+      if (max_abs_err > 1e-6f)
         UFW_INFO("Results between sequential sum on host and device differ!");
       else
         UFW_INFO("Results between sequential sum on host and device match.");
@@ -154,7 +149,8 @@ namespace sand::common {
     }
   
     double opencl_test::time_profile(cl_event ev) {
-      cl_ulong qstart = 0, qend = 0;
+      cl_ulong qstart = 0;
+      cl_ulong qend = 0;
       clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(qstart), &qstart, nullptr);
       clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(qend), &qend, nullptr);
       double gpu_ms = 1e-6 * double(qend - qstart); // ns -> ms
@@ -163,17 +159,24 @@ namespace sand::common {
 
     void opencl_test::create_device() {       
       cl_int err;
-      err = clGetPlatformIDs(1, &m_platform, NULL);
-      if (err < 0) 
+      err = clGetPlatformIDs(4, m_platform, NULL);
+      if (err != CL_SUCCESS)
         UFW_ERROR("Could not identify a platform.");
       // access a device, look for a GPU first
-      err = clGetDeviceIDs(m_platform, CL_DEVICE_TYPE_GPU, 1, &m_device, NULL);
-      if (err == CL_DEVICE_NOT_FOUND)   // switch to CPU
-        err = clGetDeviceIDs(m_platform, CL_DEVICE_TYPE_CPU, 1, &m_device, NULL);
-      if (err < 0) 
+      int i = 0;
+      do {
+        err = clGetDeviceIDs(m_platform[i++], CL_DEVICE_TYPE_GPU, 1, &m_device, NULL);
+      } while (err != CL_SUCCESS);
+      if (err == CL_DEVICE_NOT_FOUND) {  // switch to CPU
+        i = 0;
+        do {
+          err = clGetDeviceIDs(m_platform[i++], CL_DEVICE_TYPE_CPU, 1, &m_device, NULL);
+        } while (err != CL_SUCCESS);
+      }
+      if (err != CL_SUCCESS)
         UFW_ERROR("Could not access any devices.");
       else 
-        UFW_INFO("Device found");
+        UFW_DEBUG("Device found");
     }
 
     void opencl_test::create_ctx_queue(){
@@ -195,8 +198,10 @@ namespace sand::common {
         size_t sz = 0;
         clGetDeviceInfo(d, param, 0, nullptr, &sz);
         std::string s(sz, '\0');
-        clGetDeviceInfo(d, param, sz, &s[0], nullptr);
-        if (!s.empty() && s.back() == '\0') s.pop_back();
+        clGetDeviceInfo(d, param, sz, s.data(), nullptr);
+        if (!s.empty() && s.back() == '\0') {
+          s.pop_back();
+        }
         return s;
       };  
       
@@ -211,7 +216,7 @@ namespace sand::common {
       clGetDeviceInfo(m_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(wg), &wg, nullptr);
       cl_ulong mem;
       clGetDeviceInfo(m_device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(mem), &mem, nullptr);
-      UFW_INFO("Device compute units: {}, Max work-group size: {}, Global memory (bytes): {}", cu, wg, mem);      
+      UFW_INFO("Device compute units: {}, Max work-group size: {}, Global memory (MB): {}", cu, wg, mem / (1 << 20));
     }
 
     void opencl_test::build_kernel(){
@@ -236,7 +241,7 @@ namespace sand::common {
         clGetProgramBuildInfo(m_program, m_device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &logsz);      
         std::string log(logsz, '\0');
         clGetProgramBuildInfo(m_program, m_device, CL_PROGRAM_BUILD_LOG, logsz, &log[0], nullptr);
-        UFW_ERROR("Failed to build program:\n {}", log); 
+        UFW_ERROR("Failed to build program:\n {}", log);
         cleanup();
       }
       else
