@@ -48,10 +48,11 @@ namespace sand::common {
     }
   
     opencl_test::opencl_test() : process({}, {}) {
-      UFW_DEBUG("Creating a opencl_test process at {}.", fmt::ptr(this));
+      UFW_DEBUG("Creating an opencl_test process at {}.", fmt::ptr(this));
     }
   
     void opencl_test::run() {
+      UFW_DEBUG("Running an opencl_test process at {}.", fmt::ptr(this));
       // GPU setup
       cl_int err;
       create_device();
@@ -69,6 +70,16 @@ namespace sand::common {
         A[i] = dist(m_rng_engine);
         B[i] = dist(m_rng_engine);
       }
+
+      // sequential vector addition on host for comparison
+      auto t2 = std::chrono::high_resolution_clock::now();
+      for (size_t i = 0; i < m_array_size; i++){
+        C_cpu[i] = A[i] + B[i]; 
+      }
+      auto t3 = std::chrono::high_resolution_clock::now();
+      double cpu_ms = std::chrono::duration<double, std::milli>(t3 - t2).count();
+
+      UFW_DEBUG("Completed reference comparison.");
       
       // create device buffers 
       cl_mem bufA = clCreateBuffer(m_context, CL_MEM_READ_ONLY, m_array_size * sizeof(float), NULL, &err);
@@ -121,14 +132,6 @@ namespace sand::common {
       auto gpu_kernel_ms = time_profile(ev_kernel_execution);
       auto gpu_copy_kernel_ms = time_profile(ev_writebuf);
       auto gpu_copy_result_ms = time_profile(ev_copy_from_device);
-
-      // sequential vector addition on host for comparison
-      auto t2 = std::chrono::high_resolution_clock::now();
-      for (size_t i = 0; i < m_array_size; i++){
-        C_cpu[i] = A[i] + B[i]; 
-      } 
-      auto t3 = std::chrono::high_resolution_clock::now();
-      double cpu_ms = std::chrono::duration<double, std::milli>(t3 - t2).count();
 
       UFW_INFO("CPU serial time: {} ms", cpu_ms);
       UFW_INFO("GPU wall time (copy to gpu -> enqueue -> finish -> copy result): {} ms", gpu_wall_ms);
