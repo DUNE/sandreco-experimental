@@ -45,6 +45,8 @@ namespace sand::common {
       m_array_size = cfg.at("array_size"); 
       m_global_size = std::ceil(m_array_size / float(m_local_size)) * m_local_size;
       UFW_INFO("Summing two arrays with size : {} MB", m_array_size * sizeof(float) / uint(1 << 20));
+      create_device();
+      print_device_info();
     }
   
     opencl_test::opencl_test() : process({}, {}) {
@@ -55,8 +57,6 @@ namespace sand::common {
       UFW_DEBUG("Running an opencl_test process at {}.", fmt::ptr(this));
       // GPU setup
       cl_int err;
-      create_device();
-      print_device_info();
       create_ctx_queue();
       build_kernel();
       
