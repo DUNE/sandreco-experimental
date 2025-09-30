@@ -27,7 +27,8 @@ namespace sand::common {
       double time_profile(cl_event ev);
 
     private:
-      cl_platform_id m_platform[4];
+      static constexpr size_t s_max_platforms = 4;
+      cl_platform_id m_platform[s_max_platforms];
       cl_device_id m_device;
       cl_context m_context;
       cl_command_queue m_queue;  
@@ -161,25 +162,27 @@ namespace sand::common {
     } 
 
     void opencl_test::create_device() {       
-      cl_int err;
-      err = clGetPlatformIDs(4, m_platform, NULL);
+      cl_int err;    
+      cl_uint n_plats;
+      cl_uint n_devs;
+      err = clGetPlatformIDs(s_max_platforms, m_platform, &n_plats);
       if (err != CL_SUCCESS)
         UFW_ERROR("Could not identify a platform.");
       // access a device, look for a GPU first
       int i = 0;
       do {
-        err = clGetDeviceIDs(m_platform[i++], CL_DEVICE_TYPE_GPU, 1, &m_device, NULL);
-      } while (err != CL_SUCCESS);
+        err = clGetDeviceIDs(m_platform[i++], CL_DEVICE_TYPE_GPU, 1, &m_device, &n_devs);
+      } while (err != CL_SUCCESS && i <n_plats);
       if (err == CL_DEVICE_NOT_FOUND) {  // switch to CPU
         i = 0;
         do {
-          err = clGetDeviceIDs(m_platform[i++], CL_DEVICE_TYPE_CPU, 1, &m_device, NULL);
-        } while (err != CL_SUCCESS);
+          err = clGetDeviceIDs(m_platform[i++], CL_DEVICE_TYPE_CPU, 1, &m_device, &n_devs);
+        } while (err != CL_SUCCESS && i <n_plats);
       }
       if (err != CL_SUCCESS)
         UFW_ERROR("Could not access any devices.");
       else 
-        UFW_DEBUG("Device found");
+        UFW_DEBUG("Platform with {} devices found.", n_devs);
     }
 
     void opencl_test::create_ctx_queue(){
