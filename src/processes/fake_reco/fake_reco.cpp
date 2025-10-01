@@ -2,18 +2,19 @@
 // Created by paolo on 08/05/2025.
 //
 
-#include <ufw/factory.hpp>
+#include "fake_reco.hpp"
 
 #include "caf_handlers/interactions.hpp"
 #include "caf_handlers/particles.hpp"
 
+#include <edep_reader/edep_reader.hpp>
+#include <genie_reader/genie_reader.hpp>
+
+#include <ufw/factory.hpp>
+
 #include <duneanaobj/StandardRecord/StandardRecord.h>
 // #include <duneanaobj/StandardRecord/SRTrueParticle.h>
 // #include <duneanaobj/StandardRecord/SRRecoParticle.h>
-
-#include <edep_reader/edep_reader.hpp>
-
-#include "fake_reco.hpp"
 
 namespace sand::fake_reco {
 
@@ -24,6 +25,7 @@ void fake_reco::configure(const ufw::config& cfg) { process::configure(cfg); }
 void fake_reco::run() {
     // Read input
     const auto& inputTree = get<edep_reader>();
+    const auto& genie = get<genie_reader>();
 
     // Just logging some values
     [[maybe_unused]] std::size_t childrenTrajectoriesCount =
