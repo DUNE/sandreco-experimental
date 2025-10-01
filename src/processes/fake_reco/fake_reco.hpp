@@ -5,9 +5,9 @@
 #ifndef FAKE_RECO_HPP
 #define FAKE_RECO_HPP
 
-#include <ufw/process.hpp>
-
 #include <edep_reader/edep_reader.hpp>
+
+#include <ufw/process.hpp>
 
 namespace sand::fake_reco {
 
