@@ -30,6 +30,7 @@ namespace sand::common {
     const auto& reader = get<sand::genie_reader>();
     auto event = reader.event_;
     auto stdHep = reader.stdHep_;
+    auto nuParent = reader.nuParent_;
     auto numiFlux = reader.numiFlux_;
     UFW_INFO("Event num {}", event.EvtNum_);
     UFW_INFO("Event vertex {}, {}, {}, {}.", event.EvtVtx_[0], event.EvtVtx_[1],
@@ -39,8 +40,20 @@ namespace sand::common {
     UFW_INFO("StdHep N {}.", stdHep.N_);
     UFW_INFO("StdHep P4 {}, {}, {}, {}.", stdHep.P4_[0][0], stdHep.P4_[0][1], 
                                           stdHep.P4_[0][2], stdHep.P4_[0][3]);
-    UFW_INFO("NumiFlux Run {}.", numiFlux.Run_);
-    UFW_INFO("NumiFlux Ndxdz {}.", numiFlux.Ndxdz_);
+    
+    if (numiFlux.valid_) {
+      UFW_INFO("NumiFlux Run {}.", numiFlux.Run_);
+      UFW_INFO("NumiFlux Ndxdz {}.", numiFlux.Ndxdz_);
+    } else {
+      UFW_DEBUG("Invalid NumiFlux.");
+    }
+
+    if (nuParent.valid_) {
+      UFW_INFO("NuParent Pdg {}.", nuParent.Pdg_);
+      UFW_INFO("NuParent DecMode {}.", nuParent.DecMode_);
+    } else {
+      UFW_DEBUG("Invalid NuParent.");
+    }
 
   }
 }
