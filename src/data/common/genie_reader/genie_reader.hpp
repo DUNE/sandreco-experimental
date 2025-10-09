@@ -41,15 +41,18 @@ class ufw::data::factory<sand::genie_reader> {
     TTree* input_tree;
     ufw::context_id m_id;
 
+    bool hasNuParent = false;
+    bool hasNumiFlux = false;
+
     int EvtNum;
+    TBits* EvtFlags;
+    TObjString* EvtCode;
     double EvtXSec;
     double EvtDXSec;
     double EvtKPS;
     double EvtWght;
     double EvtProb;
     double EvtVtx[4];
-    TObjString* EvtCode;
-    TBits* EvtFlags;
 
     int StdHepN;
     int StdHepPdg;
@@ -63,6 +66,14 @@ class ufw::data::factory<sand::genie_reader> {
     int StdHepLd[kNPmax];
     int StdHepFm[kNPmax];
     int StdHepLm[kNPmax];
+
+    int NuParentPdg;
+    int NuParentDecMode;
+    double NuParentDecP4[4];
+    double NuParentDecX4[4];
+    double NuParentProP4[4];
+    double NuParentProX4[4];
+    int NuParentProNVtx;
 
     int NumiFluxRun;
     int NumiFluxEvtno;

@@ -58,6 +58,41 @@ struct StdHep {
     std::vector<int> Lm_;
 };
 
+struct NuParent {
+  NuParent() = default;
+  
+  NuParent(int Pdg, int DecMode,
+         double DecP4[4], double DecX4[4],
+         double ProP4[4], double ProX4[4],
+         int ProNVtx) 
+         : Pdg_(Pdg), DecMode_(DecMode), 
+           DecP4_(4), DecX4_(4), 
+           ProP4_(4), ProX4_(4),
+           ProNVtx_(ProNVtx), 
+           valid_(true)
+        {
+          for (int i = 0; i < 4; i++) {
+            DecP4_[i] = DecP4[i];
+            DecX4_[i] = DecX4[i];
+            ProP4_[i] = ProP4[i];
+            ProX4_[i] = ProX4[i];
+          }
+        }
+
+  int Pdg_;
+  int DecMode_;
+  
+  std::vector<double> DecP4_;
+  std::vector<double> DecX4_;
+  std::vector<double> ProP4_;
+  std::vector<double> ProX4_;
+  
+  int ProNVtx_;
+
+  bool valid_ = false;
+};
+
+
 struct NumiFlux {
   int Run_;
   int Evtno_;
@@ -121,10 +156,13 @@ struct NumiFlux {
   double Beampx_;
   double Beampy_;
   double Beampz_;
+  
+  bool valid_ = false;
 };
 
 struct GenieWrapper {
   GRooTrackerEvent event_;
   StdHep stdHep_;
+  NuParent nuParent_;
   NumiFlux numiFlux_;
 };
