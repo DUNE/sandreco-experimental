@@ -9,7 +9,7 @@
   "contexts" : {
     "keys" : 5,
     "locals" : {
-      "sand::genie_reader" : {"uri" : "/home/sand/sandreco-experimental/tests/sand-events.6.gtrac.root"}
+      "sand::genie_reader" : {"uri" : "test/grain.edepsim.root"}
     }
   },
   "run" : [
