@@ -47,6 +47,9 @@ namespace sand {
       std::vector<rect_f> holes;
     };
 
+    using size_3d = dir_3d;
+    using size_3i = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<size_t>>;
+
   public:
     grain_info(const geoinfo&, const std::string&);
 
@@ -55,6 +58,9 @@ namespace sand {
     using subdetector_info::path;
 
     geo_id id(const geo_path&) const override;
+
+    size_3d inner_vessel_size() const;
+
 
     geo_path path(geo_id) const override;
 
