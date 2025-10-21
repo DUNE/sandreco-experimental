@@ -6,6 +6,8 @@
 
 #include <grain/grain.h>
 
+class G4VSolid;
+
 namespace sand {
 
   class geoinfo::grain_info : public subdetector_info {
@@ -72,9 +74,27 @@ namespace sand {
 
     std::vector<mask_camera> mask_cameras() const { return m_mask_cameras; }
 
+    dir_3d fiducial_bbox() const {
+      return m_fiducial_aabb;
+    }
+
+    dir_3d LAr_bbox() const {
+      return m_LAr_aabb;
+    }
+
+    dir_3d vessel_bbox() const {
+      return m_vessel_aabb;
+    }
+
+    grain::voxel_array<uint8_t> fiducial_voxels(dir_3d pitch) const;
+
   private:
     std::vector<lens_camera> m_lens_cameras;
     std::vector<mask_camera> m_mask_cameras;
+    dir_3d m_fiducial_aabb;
+    dir_3d m_LAr_aabb;
+    dir_3d m_vessel_aabb;
+    G4VSolid* m_fiducial_solid;
 
   };
 

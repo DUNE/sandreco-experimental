@@ -30,6 +30,7 @@ namespace sand::grain {
   template <typename T>
   class voxel_array {
 
+  public:
     voxel_array(size_3d sz) :
      m_data(new T[count(sz)]), m_size(sz) {}
 

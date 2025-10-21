@@ -22,6 +22,12 @@ template <> struct fmt::formatter<sand::dir_3d>: formatter<string_view> {
   }
 };
 
+template <> struct fmt::formatter<sand::grain::size_3d>: formatter<string_view> {
+  auto format(sand::grain::size_3d c, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "({}, {}, {})", c.x(), c.y(), c.z());
+  }
+};
+
 template <> struct fmt::formatter<sand::xform_3d>: formatter<string_view> {
   auto format(sand::xform_3d xfrm, format_context& ctx) const -> format_context::iterator {
     double d[12];
@@ -53,14 +59,29 @@ namespace sand::common {
 
   void geoinfo_test::run() {
     const auto& gi = instance<geoinfo>();
-    UFW_INFO("Running a geoinfo_test process at {}."), fmt::ptr(this);
+    UFW_INFO("Running a geoinfo_test process at {}.", fmt::ptr(this));
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
+    UFW_INFO("GRAIN size (local bbox):\n - outer vessel {};\n - LAr {};\n - optics fiducial {};", gi.grain().vessel_bbox(), gi.grain().LAr_bbox(), gi.grain().fiducial_bbox());
+    dir_3d sz(15., 15., 500.);
+    auto voxels = gi.grain().fiducial_voxels(sz);
+    std::string ascii_grain;
+    for (size_t z = 0; z != voxels.size().z(); ++z) {
+      for (size_t y = 0; y != voxels.size().y(); ++y) {
+        for (size_t x = 0; x != voxels.size().x(); ++x) {
+          ascii_grain += voxels.at(grain::index_3d(x, y, z)) ? '#' : ' ';
+        }
+        ascii_grain += '\n';
+      }
+      ascii_grain += '\n';
+      ascii_grain += '\n';
+    }
+    UFW_INFO("GRAIN was segmented in a fiducial of {} voxels:\n{}", voxels.size(), ascii_grain);
     for (const auto& cam : gi.grain().mask_cameras()) {
       auto cam2glob = gi.grain().transform() * cam.transform;
       auto centre = cam2glob * pos_3d{0., 0., 0.};
       auto aim = cam2glob * dir_3d{0., 0., 1.};
-      UFW_INFO("Camera {} [{}]:\n - centre: [{}];\n - view direction: [{}]\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
+      UFW_INFO("Camera {} [{}]:\n - centre: {};\n - view direction: {};\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
     }
     auto pix_spam = gi.grain().mask_cameras().front();
     for (int i = 0; i != 32; ++i) {

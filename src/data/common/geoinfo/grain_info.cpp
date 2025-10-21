@@ -2,6 +2,8 @@
 #include <grain_info.hpp>
 #include <geant_gdml_parser/geant_gdml_parser.hpp>
 
+#include <G4VisExtent.hh>
+
 namespace sand {
 
   namespace {
@@ -43,7 +45,6 @@ namespace sand {
     }
 
     grain::pixel_array<geoinfo::grain_info::rect_f> parse_pixels(const G4VPhysicalVolume* sipms, const G4GDMLAuxMapType* auxmap) {
-      //FIXME This parser assumes the file is well formed
       grain::pixel_array<geoinfo::grain_info::rect_f> pixels;
       pos_3d centre(sipms->GetObjectTranslation());
       auto sipms_lv = sipms->GetLogicalVolume();
@@ -74,11 +75,16 @@ namespace sand {
 
   static constexpr char s_grain_path[] = "sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0";
 
-  geoinfo::grain_info::grain_info(const geoinfo& gi, const std::string& inner_geom) : subdetector_info(gi, s_grain_path) {
+  geoinfo::grain_info::grain_info(const geoinfo& gi, const std::string& inner_geom) : subdetector_info(gi, s_grain_path), m_fiducial_solid(nullptr) {
     UFW_INFO("Reading grain geometry details from {}.", inner_geom);
+    //Parsing of this geometry assumes the file is well formed and complete
     auto& gdml = ufw::context::current()->instance<grain::geant_gdml_parser>(ufw::public_id(inner_geom));
     auto world = gdml.GetWorldVolume();
     auto vessel_ext_physical = find_by_name(world, "vessel_ext_physical");
+    auto vessel_ext_extent = vessel_ext_physical->GetLogicalVolume()->GetSolid()->GetExtent();
+    m_vessel_aabb.SetX(vessel_ext_extent.GetXmax());
+    m_vessel_aabb.SetY(vessel_ext_extent.GetYmax());
+    m_vessel_aabb.SetZ(vessel_ext_extent.GetZmax());
     auto air_physical = find_by_name(vessel_ext_physical, "air_physical");
     auto vessel_int_physical = find_by_name(air_physical, "vessel_int_physical");
     auto lar_physical = find_by_name(vessel_int_physical, "lar_physical");
@@ -101,12 +107,24 @@ namespace sand {
       mask_camera mc{camera->GetName(), uint8_t(i), uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()), sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{}, std::vector<rect_f>{}};
       m_mask_cameras.emplace_back(mc);
     }
-    UFW_DEBUG("Printing auxmap");
+    auto lar_extent = lar_logical->GetSolid()->GetExtent();
+    m_LAr_aabb.SetX(lar_extent.GetXmax());
+    m_LAr_aabb.SetY(lar_extent.GetYmax());
+    m_LAr_aabb.SetZ(lar_extent.GetZmax());
     for (const auto& [vol, list]: *gdml.GetAuxMap()) {
-      UFW_DEBUG("Logical volume '{}' at {} has {} auxiliary info.", vol->GetName(), fmt::ptr(vol), list.size());
-      print_auxlist(list);
+      for (const auto& item: list) {
+        if (item.type == "Fiducial") {
+          m_fiducial_solid = vol->GetSolid();
+          auto ext = m_fiducial_solid->GetExtent();
+          m_fiducial_aabb.SetX(ext.GetXmax());
+          m_fiducial_aabb.SetY(ext.GetYmax());
+          m_fiducial_aabb.SetZ(ext.GetZmax());
+        }
+      }
     }
-    UFW_DEBUG("End of auxmap");
+    if (!m_fiducial_solid) {
+      UFW_ERROR("Geometry description does not contain a fiducial volume");
+    }
   }
 
   geoinfo::grain_info::~grain_info() = default;
@@ -150,6 +168,36 @@ namespace sand {
       return *it2;
     }
     UFW_ERROR("No camera of any type found with name = '{}'.", name);
+  }
+
+  /**
+   * Creates a voxel grid with nonzero value when a given voxel is contained (even partially) in the fiducial.
+   * Voxels are arranged such that, if the number of voxels in one axis is odd, the middle is centered on zero;
+   * if the number is even, the boundary is at zero.
+   * This function treats each axis separately, voxels can be non-cubical.
+   */
+  grain::voxel_array<uint8_t> geoinfo::grain_info::fiducial_voxels(dir_3d pitch) const {
+    grain::size_3d count(std::ceil(2. * m_fiducial_aabb.x() / pitch.x()),
+                         std::ceil(2. * m_fiducial_aabb.y() / pitch.y()),
+                         std::ceil(2. * m_fiducial_aabb.z() / pitch.z()));
+    grain::voxel_array<uint8_t> mask(count);
+    dir_3d offset(count.x() / -2. * pitch.x(),
+                  count.y() / -2. * pitch.y(),
+                  count.z() / -2. * pitch.z());
+    //super pedantic implementation, checks each vertex
+    mask.for_each([=](grain::index_3d idx, uint8_t& value){
+      value = 0;
+      for (int corner = 0; corner != 8; ++corner) {
+        G4ThreeVector p(offset.x() + (idx.x() + (corner >> 2)) * pitch.x(),
+                        offset.y() + (idx.y() + (corner >> 1 & 1)) * pitch.y(),
+                        offset.z() + (idx.z() + (corner & 1)) * pitch.z());
+        if (m_fiducial_solid->Inside(p) != kOutside) {
+          value = 1;
+          break;
+        }
+      }
+    });
+    return mask;
   }
 
 }
