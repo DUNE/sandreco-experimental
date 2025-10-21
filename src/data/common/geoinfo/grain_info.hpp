@@ -61,9 +61,6 @@ namespace sand {
 
     geo_id id(const geo_path&) const override;
 
-    size_3d inner_vessel_size() const;
-
-
     geo_path path(geo_id) const override;
 
     const camera& at(channel_id::link_t) const;
