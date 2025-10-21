@@ -10,13 +10,27 @@ namespace sand {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
     try{
-        nav->cd(r_info.root_path() / subpath);
-    } catch (ufw::exception& e) {
+        int prev = gErrorIgnoreLevel;
+        gErrorIgnoreLevel = kFatal; // suppress ROOT errors
+        auto sub_path = r_info.root_path() / subpath;
+        bool ok = nav->TGeoNavigator::cd(sub_path.c_str());
+        gErrorIgnoreLevel = prev;
+        if (!ok) {
+          throw 0;
+        }
+    } catch (...) {
         std::regex pattern("(_0)");
         m_path = std::regex_replace(m_path, pattern, "_PV$1");
         nav->cd(r_info.root_path() / m_path);
-        UFW_INFO("Using path '{}'.", m_path.c_str());
     }
+
+    try{
+      nav->cd(r_info.root_path() / m_path);
+    } catch (const ufw::exception&){
+      UFW_EXCEPT(path_not_found, r_info.root_path() / m_path);
+    }
+
+    UFW_DEBUG("Using subdetector path '{}'.", m_path.c_str());
     m_centre = nav->to_master(pos_3d{0.0, 0.0, 0.0});
   }
 

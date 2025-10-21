@@ -12,6 +12,7 @@
 #include <stt_info.hpp>
 
 #include <TFile.h>
+#include <TGeoNavigator.h>
 #include <regex>
 
 #include <root_tgeomanager/root_tgeomanager.hpp>
@@ -25,8 +26,14 @@ namespace sand {
     auto nav = tgm.navigator();
 
     try {
-      nav->cd(m_root_path);
-    } catch (ufw::exception& e) {
+      int prev = gErrorIgnoreLevel;
+      gErrorIgnoreLevel = kFatal; // suppress ROOT errors
+      bool ok = nav->TGeoNavigator::cd(m_root_path.c_str());
+      gErrorIgnoreLevel = prev;
+      if (!ok) {
+        throw 0;
+      }
+    } catch (...) {
       // Step 1: Add _PV before _0
       std::regex pattern_with_0("(_0)");
       m_root_path = std::regex_replace(m_root_path, pattern_with_0, "_PV$1");
@@ -35,20 +42,38 @@ namespace sand {
       std::regex pattern_without_0("(volWorld)");
       m_root_path = std::regex_replace(m_root_path, pattern_without_0, "$1_PV");
     }
-    UFW_INFO("Using root path '{}'.", m_root_path.c_str());
+
+    try{
+      nav->TGeoNavigator::cd(m_root_path.c_str());
+    } catch (...) {
+      UFW_EXCEPT(path_not_found, m_root_path);
+    }
+
+    UFW_DEBUG("Using root path '{}'.", m_root_path.c_str());
 
 
     m_grain.reset(new grain_info(*this));
     m_ecal.reset(new ecal_info(*this));
     
     try {
-      nav->cd(m_root_path / "sand_inner_volume_0/STTtracker_0");
+      int prev = gErrorIgnoreLevel;
+      gErrorIgnoreLevel = kFatal; // suppress ROOT errors
+      auto subpath = m_root_path / "sand_inner_volume_0/STTtracker_0";
+      bool ok = nav->TGeoNavigator::cd(subpath.c_str());
+      gErrorIgnoreLevel = prev;
+      if (!ok) {
+        throw 0;
+      }
       m_tracker.reset(new stt_info(*this));
-    } catch (ufw::exception& e) {
+    } catch (...) {
       try{
-        nav->cd(m_root_path / "sand_inner_volume_PV_0/STTtracker_PV_0"); 
+        int prev = gErrorIgnoreLevel;
+        gErrorIgnoreLevel = kFatal; // suppress ROOT errors
+        auto subpath = m_root_path / "sand_inner_volume_PV_0/STTtracker_PV_0";
+        bool ok = nav->TGeoNavigator::cd(subpath.c_str());
+        gErrorIgnoreLevel = prev;
         m_tracker.reset(new stt_info(*this));       
-      } catch (ufw::exception& e) {
+      } catch (...) {
         m_tracker.reset(new drift_info(*this));
       }
     }
