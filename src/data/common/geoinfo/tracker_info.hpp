@@ -94,17 +94,22 @@ namespace sand {
     using subdetector_info::path;
 
     const std::vector<station_ptr>& stations() const { return m_stations; }
+    subdetector_t subdetector() const { return m_subdetector; }
 
   protected:
     void add_station(station_ptr&&);
 
     void add_volume(const geo_path&, const gas_volume&);
 
+    void set_subdetector(subdetector_t sd) { m_subdetector = sd; }
+
     const station* at(std::size_t i) const { return m_stations.at(i).get(); }
+
 
   private:
     std::vector<station_ptr> m_stations;
     std::map<geo_path, gas_volume> m_volumes;
+    subdetector_t m_subdetector;
 
   };
 

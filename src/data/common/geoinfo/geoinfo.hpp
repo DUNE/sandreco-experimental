@@ -51,6 +51,8 @@ namespace sand {
 
     geo_path path(geo_id) const;
 
+    const geo_path& root_path() const { return m_root_path; }
+
   private:
     friend class subdetector_info;
     friend class ecal_info;
@@ -58,8 +60,6 @@ namespace sand {
     friend class tracker_info;
     friend class drift_info;
     friend class stt_info;
-
-    const geo_path& root_path() const { return m_root_path; }
 
   private:
     std::unique_ptr<grain_info> m_grain;
