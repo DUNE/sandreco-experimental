@@ -12,21 +12,23 @@
 #include <geoinfo/drift_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 
+#include <fast_digi.hpp>
+
 namespace sand::stt {
 
-  class fast_digi : public ufw::process {
+  // class fast_digi : public ufw::process {
 
-  public:
-    fast_digi();
-    void configure (const ufw::config& cfg) override;
-    void run() override;
+  // public:
+  //   fast_digi();
+  //   void configure (const ufw::config& cfg) override;
+  //   void run() override;
 
-  private:
-    double m_drift_velocity; //[mm/ns]
-    double m_wire_velocity; //[mm/ns]
-    double m_sigma_tdc; //[ns]
+  // private:
+  //   double m_drift_velocity; //[mm/ns]
+  //   double m_wire_velocity; //[mm/ns]
+  //   double m_sigma_tdc; //[ns]
 
-  };
+  // };
 
   void fast_digi::configure (const ufw::config& cfg) {
     process::configure(cfg); 
@@ -40,19 +42,70 @@ namespace sand::stt {
   } 
 
   void fast_digi::run() {
+
     UFW_DEBUG("Running fast_digi process at {}", fmt::ptr(this));
     const auto& tree = get<sand::edep_reader>();
     const auto& gi = get<geoinfo>();
+    //const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
     auto& digi = set<sand::tracker::digi>("digi");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-    auto nav = tgm.navigator();
-    const sand::geoinfo::tracker_info &tracker_ref = gi.tracker();
+    std::map<geo_id, std::vector<EDEPHit>> hits_by_tube;
 
     //UFW_DEBUG(" subdetector type is {}", static_cast<int>(gi.tracker().subdetector()));
     if(gi.tracker().subdetector() == subdetector_t::STT){
       UFW_DEBUG(" STT subdetector implementation");
-      auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&tracker_ref);
-      for (const auto& trj : tree) {
+      group_hits_by_tube(hits_by_tube, gi, tree, tgm);
+      // auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
+      // for (const auto& trj : tree) {
+      //   const auto& hit_map = trj.GetHitMap(); // pointer, not value    
+      //   if(hit_map.find(component::STRAW) == hit_map.end()) continue;
+
+      //   UFW_DEBUG("Found {} STRAW hits for trajectory with ID {}", hit_map.at(component::STRAW).size(), trj.GetId());
+    
+      //   for (const auto& hit : hit_map.at(component::STRAW)){
+
+      //     pos_3d hit_mid_point = pos_3d((hit.GetStart().X() + hit.GetStop().X()) * 0.5,
+      //                                   (hit.GetStart().Y() + hit.GetStop().Y()) * 0.5,
+      //                                   (hit.GetStart().Z() + hit.GetStop().Z()) * 0.5);
+
+      //     nav->FindNode(hit_mid_point.x(), hit_mid_point.y(), hit_mid_point.z());
+
+      //     geo_path node_path(nav->GetPath());
+      //     geo_path partial_path = node_path - gi.root_path();
+      //     geo_id ID = stt->id(partial_path); 
+
+      //     UFW_DEBUG("Hit at position ({}, {}, {}) is in geometry node {}.", hit_mid_point.X(), hit_mid_point.Y(), hit_mid_point.Z(), partial_path);
+      //     UFW_DEBUG("Corresponding geo_id: subdetector {}, supermodule {}, station {}, straw {}.",
+      //               static_cast<int>(ID.stt.subdetector),
+      //               static_cast<int>(ID.stt.supermodule),
+      //               static_cast<int>(ID.stt.plane),
+      //               static_cast<int>(ID.stt.tube));
+
+      //   //   if(nav->FindNode(hit_mid_point.X(), hit_mid_point.Y(), hit_mid_point.Z())){
+      //   //     geo_path node_path = nav->GetPath();
+      //   //     geo_id ID = tracker_ref.id(node_path); 
+
+      //   //     // UFW_DEBUG("Hit at position ({}, {}, {}) is in geometry node.", hit_mid_point.X(), hit_mid_point.Y(), hit_mid_point.Z());
+      //   //     } else {
+      //   // //       UFW_WARN("Could not find geometry node for hit at position ({}, {}, {}).", hit_mid_point.X(), hit_mid_point.Y(), hit_mid_point.Z());
+      //   // //       continue;
+      //   //     }
+      //     }
+      //   }     
+
+      } else {
+        UFW_ERROR("Unknown tracker subdetector type.");
+      }
+
+
+  }
+
+  void fast_digi::group_hits_by_tube(std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
+                                      const sand::geoinfo & gi, const sand::edep_reader & tree, 
+                                      sand::root_tgeomanager & tgm) {
+    // Implementation of hit grouping by tube goes here
+    const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
+    for (const auto& trj : tree) {
         const auto& hit_map = trj.GetHitMap(); // pointer, not value    
         if(hit_map.find(component::STRAW) == hit_map.end()) continue;
 
@@ -64,9 +117,9 @@ namespace sand::stt {
                                         (hit.GetStart().Y() + hit.GetStop().Y()) * 0.5,
                                         (hit.GetStart().Z() + hit.GetStop().Z()) * 0.5);
 
-          nav->FindNode(hit_mid_point.x(), hit_mid_point.y(), hit_mid_point.z());
+          tgm.navigator()->FindNode(hit_mid_point.x(), hit_mid_point.y(), hit_mid_point.z());
 
-          geo_path node_path(nav->GetPath());
+          geo_path node_path(tgm.navigator()->GetPath());
           geo_path partial_path = node_path - gi.root_path();
           geo_id ID = stt->id(partial_path); 
 
@@ -76,26 +129,9 @@ namespace sand::stt {
                     static_cast<int>(ID.stt.supermodule),
                     static_cast<int>(ID.stt.plane),
                     static_cast<int>(ID.stt.tube));
-
-        //   if(nav->FindNode(hit_mid_point.X(), hit_mid_point.Y(), hit_mid_point.Z())){
-        //     geo_path node_path = nav->GetPath();
-        //     geo_id ID = tracker_ref.id(node_path); 
-
-        //     // UFW_DEBUG("Hit at position ({}, {}, {}) is in geometry node.", hit_mid_point.X(), hit_mid_point.Y(), hit_mid_point.Z());
-        //     } else {
-        // //       UFW_WARN("Could not find geometry node for hit at position ({}, {}, {}).", hit_mid_point.X(), hit_mid_point.Y(), hit_mid_point.Z());
-        // //       continue;
-        //     }
           }
-        }     
-
-      } else if (gi.tracker().subdetector() == subdetector_t::DRIFT) {
-        UFW_ERROR("Drift detector not yet supported in fast_digi.");
-      } else {
-        UFW_ERROR("Unknown tracker subdetector type.");
-      }
-
-
+        }
+    
   }
 }
 
