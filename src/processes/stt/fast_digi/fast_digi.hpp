@@ -11,7 +11,6 @@
 #include <geoinfo/stt_info.hpp>
 #include <geoinfo/drift_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
-
 namespace sand::stt {
 
   class fast_digi : public ufw::process {
@@ -25,6 +24,10 @@ namespace sand::stt {
     void group_hits_by_tube(std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
                             const sand::geoinfo & gi, const sand::edep_reader & tree, 
                             sand::root_tgeomanager & tgm);
+    
+    void digitize_hits_in_tubes( tracker::digi& digi,
+                              const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
+                             const sand::geoinfo & gi);
 
   private:
     double m_drift_velocity; //[mm/ns]

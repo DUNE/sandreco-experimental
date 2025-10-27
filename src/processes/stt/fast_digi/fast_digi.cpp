@@ -38,7 +38,8 @@ namespace sand::stt {
 
     if(gi.tracker().subdetector() == subdetector_t::STT){
       UFW_DEBUG(" STT subdetector implementation");
-      group_hits_by_tube(hits_by_tube, gi, tree, tgm);   
+      group_hits_by_tube(hits_by_tube, gi, tree, tgm);  
+      digitize_hits_in_tubes(digi, hits_by_tube, gi); 
 
     } else {
       UFW_ERROR("Unknown tracker subdetector type.");
@@ -67,6 +68,7 @@ namespace sand::stt {
           geo_path node_path(tgm.navigator()->GetPath());
           geo_path partial_path = node_path - gi.root_path();
           geo_id ID = stt->id(partial_path); 
+          hits_by_tube[ID].push_back(hit);
 
           UFW_DEBUG("Hit at position ({}, {}, {}) is in geometry node {}.", hit_mid_point.X(), hit_mid_point.Y(), hit_mid_point.Z(), partial_path);
           UFW_DEBUG("Corresponding geo_id: subdetector {}, supermodule {}, station {}, straw {}.",
@@ -78,4 +80,42 @@ namespace sand::stt {
         }
     
   }
+
+
+  void fast_digi::digitize_hits_in_tubes(tracker::digi& digi,
+                                          const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
+                                          const sand::geoinfo & gi) {
+    // Implementation of digitization from hits goes here
+    const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
+    for (const auto& [tube_id, hits] : hits_by_tube) {
+        const auto* wire = stt->get_wire_by_id(tube_id);
+        if (!wire) {
+            UFW_WARN("No wire found for geo_id: subdetector {}, supermodule {}, station {}, straw {}.",
+                      static_cast<int>(tube_id.stt.subdetector),
+                      static_cast<int>(tube_id.stt.supermodule),
+                      static_cast<int>(tube_id.stt.plane),
+                      static_cast<int>(tube_id.stt.tube));
+        } else {
+            UFW_DEBUG("Digitizing hits for tube: subdetector {}, supermodule {}, station {}, straw {}.",
+                      static_cast<int>(tube_id.stt.subdetector),
+                      static_cast<int>(tube_id.stt.supermodule),
+                      static_cast<int>(tube_id.stt.plane),
+                      static_cast<int>(tube_id.stt.tube));
+        }
+
+        // Process hits for this tube and create digi signals
+        // for (const auto& hit : hits) {
+        //     // Example digitization logic (to be replaced with actual implementation)
+        //     tracker::digi::signal sig;
+        //     sig.channel = tube_id; // Assuming channel_id can be constructed from geo_id
+        //     sig.tdc = hit.GetEnergyDeposit() / m_drift_velocity; // Placeholder calculation
+        //     sig.adc = hit.GetEnergyDeposit(); // Placeholder calculation
+
+        //     digi.signals.push_back(sig);
+        // }
+    }
+  }
 }
+
+
+

@@ -187,4 +187,16 @@ namespace sand {
     return gp;
   }
 
+const geoinfo::stt_info::wire* geoinfo::stt_info::get_wire_by_id(const geo_id& id) const {
+    for (const auto& station_ptr : stations()) {
+        for (const auto& wire_ptr : station_ptr->wires) {
+          auto* stt_wire_ptr = static_cast<const sand::geoinfo::stt_info::wire*>(wire_ptr.get());
+          if (stt_wire_ptr->geo == id) {
+              return stt_wire_ptr;
+          }
+        }
+    }
+    return nullptr;
+}
+
 }
