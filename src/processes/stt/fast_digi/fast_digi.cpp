@@ -95,6 +95,7 @@ namespace sand::stt {
                       static_cast<int>(tube_id.stt.supermodule),
                       static_cast<int>(tube_id.stt.plane),
                       static_cast<int>(tube_id.stt.tube));
+            continue;
         } else {
             UFW_DEBUG("Digitizing hits for tube: subdetector {}, supermodule {}, station {}, straw {}.",
                       static_cast<int>(tube_id.stt.subdetector),
@@ -102,17 +103,35 @@ namespace sand::stt {
                       static_cast<int>(tube_id.stt.plane),
                       static_cast<int>(tube_id.stt.tube));
         }
+        for (const auto& hit : hits) {
+            UFW_DEBUG("  Hit ID {}: Energy Deposit = {}, Start Position = ({}, {}, {}, {}), Stop Position = ({}, {}, {}, {})",
+                      hit.GetId(),
+                      hit.GetEnergyDeposit(),
+                      hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T(),
+                      hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T());
+            
+            auto closest_point_pair = wire->closest_points(vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()),
+                                                            vec_4d(hit.GetStop().X(),  hit.GetStop().Y(),  hit.GetStop().Z(),  hit.GetStop().T()), 
+                                                            m_drift_velocity);
+            if (!closest_point_pair) {
+                UFW_WARN("Could not compute closest points for hit ID {} in tube: subdetector {}, supermodule {}, station {}, straw {}.",
+                          hit.GetId(),
+                          static_cast<int>(tube_id.stt.subdetector),
+                          static_cast<int>(tube_id.stt.supermodule),
+                          static_cast<int>(tube_id.stt.plane),
+                          static_cast<int>(tube_id.stt.tube));
+                continue;
+            }
 
-        // Process hits for this tube and create digi signals
-        // for (const auto& hit : hits) {
-        //     // Example digitization logic (to be replaced with actual implementation)
-        //     tracker::digi::signal sig;
-        //     sig.channel = tube_id; // Assuming channel_id can be constructed from geo_id
-        //     sig.tdc = hit.GetEnergyDeposit() / m_drift_velocity; // Placeholder calculation
-        //     sig.adc = hit.GetEnergyDeposit(); // Placeholder calculation
+            vec_4d & closest_point_hit = closest_point_pair.value().first;
+            vec_4d & closest_point_wire = closest_point_pair.value().second;
 
-        //     digi.signals.push_back(sig);
-        // }
+            UFW_DEBUG("    Closest point on hit: ({}, {}, {}, {})", 
+                      closest_point_hit.X(), closest_point_hit.Y(), closest_point_hit.Z(), closest_point_hit.T());
+            UFW_DEBUG("    Closest point on wire: ({}, {}, {}, {})", 
+                      closest_point_wire.X(), closest_point_wire.Y(), closest_point_wire.Z(), closest_point_wire.T());
+        }
+
     }
   }
 }
