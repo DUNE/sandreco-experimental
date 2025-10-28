@@ -74,6 +74,7 @@ namespace sand {
               w->head = centre + globalhalfsize;
               w->tail = centre - globalhalfsize;
               w->max_radius = tube_shape->GetRmax();
+              w->geo = id(geo_path( path() / smodname / plname / tname));
               stat->wires.emplace_back(std::move(w));
           };
 

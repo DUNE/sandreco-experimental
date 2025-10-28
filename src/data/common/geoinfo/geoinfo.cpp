@@ -40,7 +40,7 @@ namespace sand {
 
       // Step 2: Add _PV after World
       std::regex pattern_without_0("(volWorld)");
-      m_root_path = std::regex_replace(m_root_path, pattern_without_0, "$1_PV_0");
+      m_root_path = std::regex_replace(m_root_path, pattern_without_0, "$1_PV");
     }
 
     try{
