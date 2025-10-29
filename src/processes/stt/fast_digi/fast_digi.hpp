@@ -29,6 +29,28 @@ namespace sand::stt {
                               const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
                              const sand::geoinfo & gi);
 
+    void update_timing_parameters(const EDEPHit& hit, 
+                                  const sand::geoinfo::stt_info::wire& wire,
+                                  const vec_4d& closest_point_hit,
+                                 const vec_4d& closest_point_wire,
+                                 double& wire_time,
+                                 double& drift_time,
+                                 double& signal_time,
+                                 double& t_hit) const;
+
+    tracker::digi::signal create_signal(double wire_time, double edep_total, const channel_id& channel) const;
+
+    void log_hit_debug(const EDEPHit& hit) const;
+
+    void log_tube_warning(std::string_view message, const geo_id& tube_id) const;
+
+    void log_tube_debug(std::string_view message, const geo_id& tube_id) const;
+
+    std::optional<tracker::digi::signal> process_hits_for_wire(
+        const std::vector<EDEPHit>& hits, 
+        const sand::geoinfo::stt_info::wire& wire,
+        const geo_id& tube_id) const;
+
   private:
     double m_drift_velocity; //[mm/ns]
     double m_wire_velocity; //[mm/ns]

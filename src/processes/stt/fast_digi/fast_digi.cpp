@@ -87,26 +87,99 @@ namespace sand::stt {
   void fast_digi::digitize_hits_in_tubes(tracker::digi& digi,
                                           const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
                                           const sand::geoinfo & gi) {
-    // Implementation of digitization from hits goes here
     const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
+    if (!stt) return;
+
     for (const auto& [tube_id, hits] : hits_by_tube) {
         const auto* wire = stt->get_wire_by_id(tube_id);
+        
         if (!wire) {
-            UFW_WARN("No wire found for geo_id: subdetector {}, supermodule {}, station {}, straw {}.",
-                      static_cast<int>(tube_id.stt.subdetector),
-                      static_cast<int>(tube_id.stt.supermodule),
-                      static_cast<int>(tube_id.stt.plane),
-                      static_cast<int>(tube_id.stt.tube));
+            log_tube_warning("No wire found", tube_id);
             continue;
-        } else {
-            UFW_DEBUG("Digitizing hits for tube: subdetector {}, supermodule {}, station {}, straw {}.",
-                      static_cast<int>(tube_id.stt.subdetector),
-                      static_cast<int>(tube_id.stt.supermodule),
-                      static_cast<int>(tube_id.stt.plane),
-                      static_cast<int>(tube_id.stt.tube));
         }
 
+        log_tube_debug("Digitizing hits for tube", tube_id);
+        
+        auto signal = process_hits_for_wire(hits, *wire, tube_id);
+        if (signal) {
+            digi.signals.emplace_back(std::move(*signal));
+        }
+    }
+  }
+
+  void fast_digi::log_tube_warning(std::string_view message, const geo_id& tube_id) const {
+        UFW_WARN("{} for geo_id: subdetector {}, supermodule {}, station {}, straw {}.",
+                message,
+                static_cast<int>(tube_id.stt.subdetector),
+                static_cast<int>(tube_id.stt.supermodule),
+                static_cast<int>(tube_id.stt.plane),
+                static_cast<int>(tube_id.stt.tube));
+    }
+
+  void fast_digi::log_tube_debug(std::string_view message, const geo_id& tube_id) const {
+        UFW_DEBUG("{}: subdetector {}, supermodule {}, station {}, straw {}.",
+                message,
+                static_cast<int>(tube_id.stt.subdetector),
+                static_cast<int>(tube_id.stt.supermodule),
+                static_cast<int>(tube_id.stt.plane),
+                static_cast<int>(tube_id.stt.tube));
+    }
+
+  void fast_digi::log_hit_debug(const EDEPHit& hit) const {
+        UFW_DEBUG("  Hit ID {}: Energy Deposit = {}, Start Position = ({}, {}, {}, {}), Stop Position = ({}, {}, {}, {})",
+                hit.GetId(),
+                hit.GetEnergyDeposit(),
+                hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T(),
+                hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T());
+  }
+
+  void fast_digi::update_timing_parameters(const EDEPHit& hit,
+                                const sand::geoinfo::stt_info::wire& wire,
+                                const vec_4d& closest_point_hit,
+                                const vec_4d& closest_point_wire,
+                                double& wire_time,
+                                double& drift_time,
+                                double& signal_time,
+                                double& t_hit) const {
+        
+        double hit_smallest_time = wire.get_min_time(closest_point_hit, m_wire_velocity);
+
+        if (hit_smallest_time < wire_time) {
+            wire_time = hit_smallest_time;
+            t_hit = closest_point_hit.T();
+            drift_time = closest_point_wire.T() - t_hit;
+            signal_time = hit_smallest_time - closest_point_wire.T();
+            
+            UFW_DEBUG("    Closest point on hit: ({}, {}, {}, {})", 
+                     closest_point_hit.X(), closest_point_hit.Y(), 
+                     closest_point_hit.Z(), closest_point_hit.T());
+            UFW_DEBUG("    Closest point on wire: ({}, {}, {}, {})", 
+                     closest_point_wire.X(), closest_point_wire.Y(), 
+                     closest_point_wire.Z(), closest_point_wire.T());
+        }
+    }
+
+  tracker::digi::signal fast_digi::create_signal(double wire_time, double edep_total, 
+                                      const channel_id& channel) const {
         tracker::digi::signal signal;
+        signal.tdc = wire_time + gaussian_error(0, m_sigma_tdc);
+        signal.adc = edep_total;
+        signal.channel = channel;
+
+        UFW_DEBUG("  Created signal: Channel(subdetector {}, channel {}), TDC = {}, ADC = {}",
+                static_cast<int>(signal.channel.subdetector),
+                static_cast<int>(signal.channel.channel),
+                signal.tdc,
+                signal.adc);
+
+        return signal;
+    }
+  
+  std::optional<tracker::digi::signal> fast_digi::process_hits_for_wire(
+        const std::vector<EDEPHit>& hits, 
+        const sand::geoinfo::stt_info::wire& wire,
+        const geo_id& tube_id) const {
+        
         double wire_time = std::numeric_limits<double>::max();
         double drift_time = std::numeric_limits<double>::max();
         double signal_time = std::numeric_limits<double>::max();
@@ -114,61 +187,27 @@ namespace sand::stt {
         double edep_total = 0.0;
 
         for (const auto& hit : hits) {
-
-            UFW_DEBUG("  Hit ID {}: Energy Deposit = {}, Start Position = ({}, {}, {}, {}), Stop Position = ({}, {}, {}, {})",
-                      hit.GetId(),
-                      hit.GetEnergyDeposit(),
-                      hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T(),
-                      hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T());
+            log_hit_debug(hit);
             
-            auto closest_point_pair = wire->closest_points(vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()),
-                                                            vec_4d(hit.GetStop().X(),  hit.GetStop().Y(),  hit.GetStop().Z(),  hit.GetStop().T()), 
-                                                            m_drift_velocity);
-            if (!closest_point_pair) {
-                UFW_WARN("Could not compute closest points for hit ID {} in tube: subdetector {}, supermodule {}, station {}, straw {}.",
-                          hit.GetId(),
-                          static_cast<int>(tube_id.stt.subdetector),
-                          static_cast<int>(tube_id.stt.supermodule),
-                          static_cast<int>(tube_id.stt.plane),
-                          static_cast<int>(tube_id.stt.tube));
-                continue;
-            }
+            auto closest_points = wire.closest_points(vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()), 
+                                                      vec_4d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T()), 
+                                                      m_drift_velocity);
+            if (!closest_points) continue;
 
-            vec_4d & closest_point_hit = closest_point_pair.value().first;
-            vec_4d & closest_point_wire = closest_point_pair.value().second;
-
-            UFW_DEBUG("    Closest point on hit: ({}, {}, {}, {})", 
-                      closest_point_hit.X(), closest_point_hit.Y(), closest_point_hit.Z(), closest_point_hit.T());
-            UFW_DEBUG("    Closest point on wire: ({}, {}, {}, {})", 
-                      closest_point_wire.X(), closest_point_wire.Y(), closest_point_wire.Z(), closest_point_wire.T());
-
-            double hit_smallest_time = wire->get_min_time(closest_point_hit, m_wire_velocity);
-
-            if (hit_smallest_time < wire_time) {
-              wire_time = hit_smallest_time;
-              t_hit = closest_point_hit.T();
-              drift_time = closest_point_wire.T() - t_hit;
-              signal_time = hit_smallest_time - closest_point_wire.T();
-            }
+            auto& [closest_point_hit, closest_point_wire] = *closest_points;
+            update_timing_parameters(hit, wire, closest_point_hit, closest_point_wire, 
+                                   wire_time, drift_time, signal_time, t_hit);
             edep_total += hit.GetEnergyDeposit();
         }
 
-        signal.tdc = wire_time + gaussian_error(0, m_sigma_tdc);
-        signal.adc = edep_total;
-        signal.channel = wire->channel;
+        if (wire_time == std::numeric_limits<double>::max()) {
+            return std::nullopt;
+        }
 
-        
-        UFW_DEBUG("  Created signal: Channel(subdetector {}, channel {}), TDC = {}, ADC = {}",
-                  static_cast<int>(signal.channel.subdetector),
-                  static_cast<int>(signal.channel.channel),
-                  signal.tdc,
-                  signal.adc);  
-
-        digi.signals.emplace_back(signal);
-
+        return create_signal(wire_time, edep_total, wire.channel);
     }
+
   }
-}
 
 
 
