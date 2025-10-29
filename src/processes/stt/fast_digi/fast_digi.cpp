@@ -11,8 +11,10 @@
 #include <geoinfo/stt_info.hpp>
 #include <geoinfo/drift_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
+#include <common/random_generators.h>
 
 #include <fast_digi.hpp>
+
 
 namespace sand::stt {
 
@@ -103,7 +105,16 @@ namespace sand::stt {
                       static_cast<int>(tube_id.stt.plane),
                       static_cast<int>(tube_id.stt.tube));
         }
+
+        tracker::digi::signal signal;
+        double wire_time = std::numeric_limits<double>::max();
+        double drift_time = std::numeric_limits<double>::max();
+        double signal_time = std::numeric_limits<double>::max();
+        double t_hit = std::numeric_limits<double>::max();
+        double edep_total = 0.0;
+
         for (const auto& hit : hits) {
+
             UFW_DEBUG("  Hit ID {}: Energy Deposit = {}, Start Position = ({}, {}, {}, {}), Stop Position = ({}, {}, {}, {})",
                       hit.GetId(),
                       hit.GetEnergyDeposit(),
@@ -130,7 +141,30 @@ namespace sand::stt {
                       closest_point_hit.X(), closest_point_hit.Y(), closest_point_hit.Z(), closest_point_hit.T());
             UFW_DEBUG("    Closest point on wire: ({}, {}, {}, {})", 
                       closest_point_wire.X(), closest_point_wire.Y(), closest_point_wire.Z(), closest_point_wire.T());
+
+            double hit_smallest_time = wire->get_min_time(closest_point_hit, m_wire_velocity);
+
+            if (hit_smallest_time < wire_time) {
+              wire_time = hit_smallest_time;
+              t_hit = closest_point_hit.T();
+              drift_time = closest_point_wire.T() - t_hit;
+              signal_time = hit_smallest_time - closest_point_wire.T();
+            }
+            edep_total += hit.GetEnergyDeposit();
         }
+
+        signal.tdc = wire_time + gaussian_error(0, m_sigma_tdc);
+        signal.adc = edep_total;
+        signal.channel = wire->channel;
+
+        
+        UFW_DEBUG("  Created signal: Channel(subdetector {}, channel {}), TDC = {}, ADC = {}",
+                  static_cast<int>(signal.channel.subdetector),
+                  static_cast<int>(signal.channel.channel),
+                  signal.tdc,
+                  signal.adc);  
+
+        digi.signals.emplace_back(signal);
 
     }
   }
