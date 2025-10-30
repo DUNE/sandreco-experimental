@@ -103,6 +103,8 @@ namespace sand::stt {
         auto signal = process_hits_for_wire(hits, *wire, tube_id);
         if (signal) {
             digi.signals.emplace_back(std::move(*signal));
+            std::for_each(hits.begin(), hits.end(),
+              [&](const auto &hit) { digi.add(hit.GetId()); });
         }
     }
   }
