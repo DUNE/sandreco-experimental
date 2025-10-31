@@ -3,6 +3,8 @@
 #include <geant_gdml_parser/geant_gdml_parser.hpp>
 
 #include <G4VisExtent.hh>
+#include <G4SubtractionSolid.hh>
+#include <G4MultiUnion.hh>
 
 namespace sand {
 
@@ -71,6 +73,26 @@ namespace sand {
       return pixels;
     }
 
+    std::vector<geoinfo::grain_info::rect_f> parse_holes(const G4VPhysicalVolume* mask) {
+      UFW_DEBUG("Parsing masks");
+      auto mask_lv = mask->GetLogicalVolume();
+      auto subsolid = dynamic_cast<G4SubtractionSolid*>(mask_lv->GetSolid());
+      auto multiunion = dynamic_cast<G4MultiUnion*>(subsolid->GetConstituentSolid(1));
+      auto n_holes = multiunion->GetNumberOfSolids();
+      std::vector<geoinfo::grain_info::rect_f> holes;
+      holes.reserve(n_holes);
+      UFW_DEBUG("Mask has {} holes.", n_holes);
+      for (int i = 0; i != n_holes; ++i) {
+        auto box = dynamic_cast<G4Box*>(multiunion->GetSolid(i));
+        double sx = box->GetXHalfLength();
+        double sy = box->GetYHalfLength();
+        auto xfrm = multiunion->GetTransformation(i);
+        geoinfo::grain_info::rect_f r{xfrm.dy() - sy, xfrm.dx() - sx, xfrm.dy() + sy, xfrm.dx() + sx};
+        holes.push_back(r);
+      }
+      return holes;
+    }
+
   }
 
   static constexpr char s_grain_path[] = "sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0";
@@ -104,7 +126,7 @@ namespace sand {
                          rot.zx(), rot.zy(), rot.zz(), tran.z());
       auto sipms = find_by_name(camera, "cameraAssembly_photoDetector");
       auto mask = find_by_name(camera, "cameraAssembly_mask");
-      mask_camera mc{camera->GetName(), uint8_t(i), uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()), sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{}, std::vector<rect_f>{}};
+      mask_camera mc{camera->GetName(), uint8_t(i), uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()), sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{}, parse_holes(mask)};
       m_mask_cameras.emplace_back(mc);
     }
     auto lar_extent = lar_logical->GetSolid()->GetExtent();
