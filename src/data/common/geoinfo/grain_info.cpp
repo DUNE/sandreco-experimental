@@ -74,14 +74,16 @@ namespace sand {
     }
 
     std::vector<geoinfo::grain_info::rect_f> parse_holes(const G4VPhysicalVolume* mask) {
-      UFW_DEBUG("Parsing masks");
+      UFW_INFO("Parsing masks");
       auto mask_lv = mask->GetLogicalVolume();
       auto subsolid = dynamic_cast<G4SubtractionSolid*>(mask_lv->GetSolid());
-      auto multiunion = dynamic_cast<G4MultiUnion*>(subsolid->GetConstituentSolid(1));
+      auto displaced = dynamic_cast<G4DisplacedSolid*>(subsolid->GetConstituentSolid(1));
+      auto multiunion = dynamic_cast<G4MultiUnion*>(displaced->GetConstituentMovedSolid());
+      UFW_INFO("Multiunion @ {}.", fmt::ptr(multiunion));
       auto n_holes = multiunion->GetNumberOfSolids();
       std::vector<geoinfo::grain_info::rect_f> holes;
       holes.reserve(n_holes);
-      UFW_DEBUG("Mask has {} holes.", n_holes);
+      UFW_INFO("Mask has {} holes.", n_holes);
       for (int i = 0; i != n_holes; ++i) {
         auto box = dynamic_cast<G4Box*>(multiunion->GetSolid(i));
         double sx = box->GetXHalfLength();
