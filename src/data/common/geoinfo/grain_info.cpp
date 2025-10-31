@@ -10,32 +10,6 @@ namespace sand {
 
   namespace {
 
-    void print_auxlist(const G4GDMLAuxListType& list, std::string depth = "") {
-      for (const auto& item: list) {
-        UFW_DEBUG("{} Auxiliary '{}' = {} {}.", depth, item.type, item.value, item.unit);
-        if (item.auxList) {
-          print_auxlist(*item.auxList, depth += ' ');
-        }
-      }
-    };
-
-    void print_geom(const G4VPhysicalVolume* pv, std::string depth = "") {
-      if (!pv) {
-        return;
-      }
-      auto rot = pv->GetObjectRotationValue();
-      auto tran = pv->GetObjectTranslation ();
-      UFW_DEBUG("{}- {} (PV) is at [{}, {}, {}], [[{}, {}, {}], [{}, {}, {}], [{}, {}, {}]]", depth, pv->GetName(), tran.x(), tran.y(), tran.z(), 
-                rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
-      auto lv = pv->GetLogicalVolume();
-      auto solid = lv->GetSolid();
-      UFW_DEBUG("{}- {} (LV) has solid of type {}.", depth, lv->GetName(), solid->GetEntityType());
-      depth += ' ';
-      for (int i = 0; i != lv->GetNoDaughters(); ++i) {
-        print_geom(lv->GetDaughter(i), depth);
-      }
-    }
-
     const G4VPhysicalVolume* find_by_name(const G4VPhysicalVolume* pv, std::string_view name) {
       auto lv = pv->GetLogicalVolume();
       for (int i = 0; i != lv->GetNoDaughters(); ++i) {
@@ -56,11 +30,11 @@ namespace sand {
       auto cellsize = std::atof(auxlist.at(1).value);
       auto celledge = std::atof(auxlist.at(2).value);
       auto box = dynamic_cast<G4Box*>(sipms_lv->GetSolid());
-      double sx = box->GetXHalfLength();
-      double sy = box->GetYHalfLength();
-      double y = sy + centre.y();
+      float sx = box->GetXHalfLength();
+      float sy = box->GetYHalfLength();
+      float y = sy + centre.y();
       for (int i = 0; i != cellcount; ++i) {
-        double x = -sx + centre.x();
+        float x = -sx + centre.x();
         for (int j = 0; j != cellcount; ++j) {
           pixels[i][j].left = x;
           pixels[i][j].top = y;
@@ -73,23 +47,16 @@ namespace sand {
       return pixels;
     }
 
-    std::vector<geoinfo::grain_info::rect_f> parse_holes(const G4VPhysicalVolume* mask) {
-      UFW_INFO("Parsing masks");
-      auto mask_lv = mask->GetLogicalVolume();
-      auto subsolid = dynamic_cast<G4SubtractionSolid*>(mask_lv->GetSolid());
-      auto displaced = dynamic_cast<G4DisplacedSolid*>(subsolid->GetConstituentSolid(1));
-      auto multiunion = dynamic_cast<G4MultiUnion*>(displaced->GetConstituentMovedSolid());
-      UFW_INFO("Multiunion @ {}.", fmt::ptr(multiunion));
+    std::vector<geoinfo::grain_info::rect_f> parse_holes(const G4MultiUnion* multiunion) {
       auto n_holes = multiunion->GetNumberOfSolids();
       std::vector<geoinfo::grain_info::rect_f> holes;
       holes.reserve(n_holes);
-      UFW_INFO("Mask has {} holes.", n_holes);
       for (int i = 0; i != n_holes; ++i) {
         auto box = dynamic_cast<G4Box*>(multiunion->GetSolid(i));
-        double sx = box->GetXHalfLength();
-        double sy = box->GetYHalfLength();
+        float sx = box->GetXHalfLength();
+        float sy = box->GetYHalfLength();
         auto xfrm = multiunion->GetTransformation(i);
-        geoinfo::grain_info::rect_f r{xfrm.dy() - sy, xfrm.dx() - sx, xfrm.dy() + sy, xfrm.dx() + sx};
+        geoinfo::grain_info::rect_f r{float(xfrm.dy()) - sy, float(xfrm.dx()) - sx, float(xfrm.dy()) + sy, float(xfrm.dx()) + sx};
         holes.push_back(r);
       }
       return holes;
@@ -113,24 +80,6 @@ namespace sand {
     auto vessel_int_physical = find_by_name(air_physical, "vessel_int_physical");
     auto lar_physical = find_by_name(vessel_int_physical, "lar_physical");
     auto lar_logical = lar_physical->GetLogicalVolume();
-    m_mask_cameras.reserve(lar_logical->GetNoDaughters());
-    for (int i = 0; i != lar_logical->GetNoDaughters(); ++i) {
-      auto camera = lar_logical->GetDaughter(i);
-      if (camera->GetLogicalVolume()->GetName() != "cam_volume") {
-        continue;
-      }
-      auto rot = camera->GetObjectRotationValue(); //GetObjectRotation is not thread safe (!)
-      auto tran = camera->GetObjectTranslation();
-      UFW_DEBUG("{} (PV) is at [{:.3f}, {:.3f}, {:.3f}], [[{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}]]", camera->GetName(), tran.x(), tran.y(), tran.z(), 
-                rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
-      xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
-                         rot.yx(), rot.yy(), rot.yz(), tran.y(),
-                         rot.zx(), rot.zy(), rot.zz(), tran.z());
-      auto sipms = find_by_name(camera, "cameraAssembly_photoDetector");
-      auto mask = find_by_name(camera, "cameraAssembly_mask");
-      mask_camera mc{camera->GetName(), uint8_t(i), uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()), sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{}, parse_holes(mask)};
-      m_mask_cameras.emplace_back(mc);
-    }
     auto lar_extent = lar_logical->GetSolid()->GetExtent();
     m_LAr_aabb.SetX(lar_extent.GetXmax());
     m_LAr_aabb.SetY(lar_extent.GetYmax());
@@ -149,9 +98,40 @@ namespace sand {
     if (!m_fiducial_solid) {
       UFW_ERROR("Geometry description does not contain a fiducial volume");
     }
+    m_mask_cameras.reserve(lar_logical->GetNoDaughters());
+    for (int i = 0; i != lar_logical->GetNoDaughters(); ++i) {
+      auto camera = lar_logical->GetDaughter(i);
+      if (camera->GetLogicalVolume()->GetName() != "cam_volume") {
+        continue;
+      }
+      add_camera(camera, gdml);
+    }
   }
 
   geoinfo::grain_info::~grain_info() = default;
+
+  void geoinfo::grain_info::add_camera(G4VPhysicalVolume* camera, G4GDMLParser& gdml) {
+    auto rot = camera->GetObjectRotationValue(); //GetObjectRotation is not reentrant (!)
+    auto tran = camera->GetObjectTranslation();
+    UFW_DEBUG("Camera '{}' (PV) found at [{:.3f}, {:.3f}, {:.3f}] with rotation matrix:", camera->GetName(), tran.x(), tran.y(), tran.z());
+    UFW_DEBUG("[[{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}]]",
+              rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
+    xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
+                       rot.yx(), rot.yy(), rot.yz(), tran.y(),
+                       rot.zx(), rot.zy(), rot.zz(), tran.z());
+    auto sipms = find_by_name(camera, "cameraAssembly_photoDetector");
+    auto mask = find_by_name(camera, "cameraAssembly_mask");
+    auto mask_lv = mask->GetLogicalVolume();
+    auto subsolid = dynamic_cast<G4SubtractionSolid*>(mask_lv->GetSolid());
+    auto mask_front = dynamic_cast<G4Box*>(subsolid->GetConstituentSolid(0));
+    auto displaced = dynamic_cast<G4DisplacedSolid*>(subsolid->GetConstituentSolid(1));
+    auto multiunion = dynamic_cast<G4MultiUnion*>(displaced->GetConstituentMovedSolid());
+    float sx = mask_front->GetXHalfLength();
+    float sy = mask_front->GetYHalfLength();
+    mask_camera mc{camera->GetName(), 0, uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()),
+                   sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{-sy, -sx, sy, sx}, parse_holes(multiunion)};
+    m_mask_cameras.emplace_back(mc);
+  }
 
   geo_id geoinfo::grain_info::id(const geo_path& gp) const {
     geo_id gi;
@@ -225,23 +205,3 @@ namespace sand {
   }
 
 }
-
-/*
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:25] Printing auxmap
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:27] Logical volume 'codedApertureMask' at 0x1677b1a0 has 1 auxiliary info.
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]  Auxiliary 'Mask' = codedApertureMask .
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]   Auxiliary 'rank' = 31 .
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]   Auxiliary 'cellcount' = 61 .
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]   Auxiliary 'cellsize' = 2.710 mm.
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]   Auxiliary 'celledge' = 0.200 mm.
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:27] Logical volume 'cam_volume' at 0x167af8a0 has 1 auxiliary info.
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]  Auxiliary 'Camera' =  .
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:27] Logical volume 'lar_volume' at 0x16877580 has 1 auxiliary info.
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]  Auxiliary 'Fiducial' =  .
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:27] Logical volume 'photoDetector' at 0x168d6dc0 has 1 auxiliary info.
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]  Auxiliary 'Sensor' = S14160-6050HS .
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]   Auxiliary 'cellcount' = 32 .
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]   Auxiliary 'cellsize' = 3.000 mm.
-[2025-05-22 00:14:02.425] [debug] [grain_info.cpp:11]   Auxiliary 'celledge' = 0.200 mm.
-[2025-05-22 00:14:02.425] [critical] [grain_info.cpp:30] End of auxmap
-*/

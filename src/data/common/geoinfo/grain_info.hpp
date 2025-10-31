@@ -6,6 +6,8 @@
 
 #include <grain/grain.h>
 
+class G4GDMLParser;
+class G4VPhysicalVolume;
 class G4VSolid;
 
 namespace sand {
@@ -90,6 +92,9 @@ namespace sand {
     }
 
     grain::voxel_array<uint8_t> fiducial_voxels(dir_3d pitch) const;
+
+  private:
+    void add_camera(G4VPhysicalVolume*, G4GDMLParser&);
 
   private:
     std::vector<lens_camera> m_lens_cameras;

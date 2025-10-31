@@ -84,6 +84,7 @@ namespace sand::common {
       UFW_INFO("Camera {} [{}]:\n - centre: {};\n - view direction: {};\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
     }
     auto pix_spam = gi.grain().mask_cameras().front();
+    UFW_INFO("First camera details:");
     for (int i = 0; i != 32; ++i) {
       for (int j = 0; j != 32; ++j) {
         UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas[i][j].left, pix_spam.sipm_active_areas[i][j].top, pix_spam.sipm_active_areas[i][j].right, pix_spam.sipm_active_areas[i][j].bottom);
@@ -92,7 +93,6 @@ namespace sand::common {
     std::for_each(pix_spam.holes.begin(), pix_spam.holes.end(), [](auto r) {
       UFW_INFO("Hole rect top left = ({}, {}), bottom right = ({}, {})", r.left, r.top, r.right, r.bottom);
     } );
-    return;
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
