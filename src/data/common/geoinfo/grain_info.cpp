@@ -64,7 +64,7 @@ namespace sand {
 
   }
 
-  static constexpr char s_grain_path[] = "sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0";
+  static constexpr char s_grain_path[] = "sand_inner_volume_0/GRAIN_lv_0/GRAIN_LAr_lv_0";
 
   geoinfo::grain_info::grain_info(const geoinfo& gi, const std::string& inner_geom) : subdetector_info(gi, s_grain_path), m_fiducial_solid(nullptr) {
     UFW_INFO("Reading grain geometry details from {}.", inner_geom);

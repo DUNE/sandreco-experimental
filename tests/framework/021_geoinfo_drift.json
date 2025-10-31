@@ -1,0 +1,23 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : ["/usr/local/lib64"],
+    "ufw-env" : {}
+  },
+  "globals" : {
+    "sand::root_tgeomanager" : { "geometry" : "test/sand-drift-events.10.edep.root" },
+    "sand::geoinfo" : {}
+  },
+  "contexts" : {
+    "keys" : 1,
+    "locals" : {}
+  },
+  "run" : [
+    {
+      "sand::common::geoinfo_test" : { "test_path" : "sand_inner_volume_PV_0/SANDtracker_PV_0/SuperMod_B_PV_1/C3H6Mod_B_PV_2/C3H6DriftChamber_B_PV_0/C3H6DriftModule_1_B_PV_0/C3H6DriftModule_1_B_Fwire_PV_1"},
+      "reqs" : {},
+      "prods" : {}
+    }
+  ]
+}

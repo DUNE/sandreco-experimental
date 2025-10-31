@@ -19,7 +19,7 @@
   },
   "run" : [
     {
-      "sand::common::geoinfo_test" : { "geometry" : "geometries/grain/masks-3mm/main.gdml" },
+      "sand::common::geoinfo_test" : {"test_path" : "sand_inner_volume_PV_0/STTtracker_PV_0/CMod_02_PV_0/CMod_02_planeYY_PV_0/CMod_02_planeYY_straw_PV_5"},
       "reqs" : {},
       "prods" : {}
     }
