@@ -50,7 +50,7 @@ namespace sand::common {
 
     if(!m_test_path.empty()) {
       UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
-      auto ID = gi.tracker().id(m_test_path); 
+      auto ID = gi.tracker().id(gi.tracker().partial_path(m_test_path, gi)); 
       UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector, ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
       UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
     } else {
@@ -61,7 +61,7 @@ namespace sand::common {
     for (const auto& s : gi.tracker().stations()) {
         auto nhor = s->select([](auto& w){ return std::fmod(w.angle(), M_PI) < 1e-3; }).size();
         auto nver = s->select([](auto& w){ return !std::fmod(w.angle(), M_PI) < 1e-3 && std::fmod(w.angle(), M_PI_2) < 1e-3; }).size();
-        UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} horizontal and {} vertical wires;\n - target material {}", i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
+        //UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} horizontal and {} vertical wires;\n - target material {}", i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
       }
   }
 

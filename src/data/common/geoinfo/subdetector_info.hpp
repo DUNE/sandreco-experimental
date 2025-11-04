@@ -21,6 +21,17 @@ namespace sand {
 
     geo_path path() const { return m_path; }
 
+    geo_path partial_path(const geo_path& full_path, const geoinfo& gi) const {
+      auto partial_path = full_path;
+      if(full_path.find(gi.root_path()) != std::string::npos) {
+        partial_path = partial_path - gi.root_path();
+      }
+      if(partial_path.find(path()) != std::string::npos) {
+        partial_path = partial_path - path();
+      }
+      return partial_path;
+    }
+
   protected:
     const geoinfo& info() { return r_info; }
 

@@ -104,8 +104,4 @@ namespace sand {
     return gp;
   }
 
-  geo_path geoinfo::partial_path(const geo_path& full_path) const {
-    return full_path - m_root_path;
-  }
-
 }

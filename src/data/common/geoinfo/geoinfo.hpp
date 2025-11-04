@@ -51,8 +51,6 @@ namespace sand {
 
     geo_path path(geo_id) const;
 
-    geo_path partial_path(const geo_path&) const;
-
   private:
     friend class subdetector_info;
     friend class ecal_info;

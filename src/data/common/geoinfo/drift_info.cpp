@@ -135,7 +135,7 @@ namespace sand {
 
   geo_id geoinfo::drift_info::id(const geo_path& gp) const {
     geo_id gi;
-    auto path = gp - subdetector_info::path();
+    auto path = gp;
     gi.subdetector = DRIFT;
     //abuse the bad notation here, module/plane/straw
     std::string supermodpath(path.token(0));

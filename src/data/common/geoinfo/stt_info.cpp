@@ -74,7 +74,7 @@ namespace sand {
             w->head = centre + globalhalfsize;
             w->tail = centre - globalhalfsize;
             w->max_radius = tube_shape->GetRmax();
-            w->geo = id(geo_path( path() / smodname / plname / tname));
+            w->geo = id(geo_path(smodname.c_str()) / plname / tname);
             stat->wires.emplace_back(std::move(w));
           };
           
@@ -94,7 +94,7 @@ namespace sand {
   
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;
-    auto path = gp - subdetector_info::path();
+    auto path = gp;
     gi.subdetector = STT;
     //abuse the bad notation here, module/plane/straw
     if(path.find("PV_") != std::string::npos) {
