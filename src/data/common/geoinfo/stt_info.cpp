@@ -59,7 +59,7 @@ namespace sand {
           std::string tname = tube->GetName();
           nav->cd(sttpath / smodname / plname / tname);
           /*FIXED to support both TGeoTubeSeg and TGeoTube used in more recent geometries*/
-          TGeoShape* generic_tube_shape = tube->GetVolume()->GetShape();
+          auto* generic_tube_shape = tube->GetVolume()->GetShape();
 
           auto process_tube = [&](auto* tube_shape) {
               auto matrix = nav->get_hmatrix();
@@ -80,11 +80,7 @@ namespace sand {
 
           if (auto* tube_shape = dynamic_cast<TGeoTube*>(generic_tube_shape)) {
               process_tube(tube_shape);
-          }
-          else if (auto* tube_seg = dynamic_cast<TGeoTubeSeg*>(generic_tube_shape)) {
-              process_tube(tube_seg);
-          }
-          else {
+          } else {          
               UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
           }
 
