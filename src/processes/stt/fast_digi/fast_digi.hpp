@@ -38,18 +38,18 @@ namespace sand::stt {
                                  double& signal_time,
                                  double& t_hit) const;
 
-    tracker::digi::signal create_signal(double wire_time, double edep_total, const channel_id& channel) const;
+    tracker::digi::signal create_signal(double wire_time, double edep_total, const channel_id& channel);
 
-    void log_hit_debug(const EDEPHit& hit) const;
+    void log_hit_debug(const EDEPHit& hit);
 
-    void log_tube_warning(std::string_view message, const geo_id& tube_id) const;
+    void log_tube_warning(std::string_view message, const geo_id& tube_id);
 
-    void log_tube_debug(std::string_view message, const geo_id& tube_id) const;
+    void log_tube_debug(std::string_view message, const geo_id& tube_id);
 
     std::optional<tracker::digi::signal> process_hits_for_wire(
         const std::vector<EDEPHit>& hits, 
         const sand::geoinfo::stt_info::wire& wire,
-        const geo_id& tube_id) const;
+        const geo_id& tube_id) ;
 
   private:
     double m_drift_velocity; //[mm/ns]

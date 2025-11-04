@@ -11,7 +11,6 @@
 #include <geoinfo/stt_info.hpp>
 #include <geoinfo/drift_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
-#include <common/random_generators.h>
 
 #include <fast_digi.hpp>
 
@@ -109,7 +108,7 @@ namespace sand::stt {
     }
   }
 
-  void fast_digi::log_tube_warning(std::string_view message, const geo_id& tube_id) const {
+  void fast_digi::log_tube_warning(std::string_view message, const geo_id& tube_id) {
         UFW_WARN("{} for geo_id: subdetector {}, supermodule {}, station {}, straw {}.",
                 message,
                 static_cast<int>(tube_id.stt.subdetector),
@@ -118,7 +117,7 @@ namespace sand::stt {
                 static_cast<int>(tube_id.stt.tube));
     }
 
-  void fast_digi::log_tube_debug(std::string_view message, const geo_id& tube_id) const {
+  void fast_digi::log_tube_debug(std::string_view message, const geo_id& tube_id) {
         UFW_DEBUG("{}: subdetector {}, supermodule {}, station {}, straw {}.",
                 message,
                 static_cast<int>(tube_id.stt.subdetector),
@@ -127,7 +126,7 @@ namespace sand::stt {
                 static_cast<int>(tube_id.stt.tube));
     }
 
-  void fast_digi::log_hit_debug(const EDEPHit& hit) const {
+  void fast_digi::log_hit_debug(const EDEPHit& hit) {
         UFW_DEBUG("  Hit ID {}: Energy Deposit = {}, Start Position = ({}, {}, {}, {}), Stop Position = ({}, {}, {}, {})",
                 hit.GetId(),
                 hit.GetEnergyDeposit(),
@@ -162,9 +161,11 @@ namespace sand::stt {
     }
 
   tracker::digi::signal fast_digi::create_signal(double wire_time, double edep_total, 
-                                      const channel_id& channel) const {
+                                      const channel_id& channel) {
         tracker::digi::signal signal;
-        signal.tdc = wire_time + gaussian_error(0, m_sigma_tdc);
+        std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc);
+        auto ran = gaussian_error(random_engine());
+        signal.tdc = wire_time + ran;
         signal.adc = edep_total;
         signal.channel = channel;
 
@@ -180,7 +181,7 @@ namespace sand::stt {
   std::optional<tracker::digi::signal> fast_digi::process_hits_for_wire(
         const std::vector<EDEPHit>& hits, 
         const sand::geoinfo::stt_info::wire& wire,
-        const geo_id& tube_id) const {
+        const geo_id& tube_id) {
         
         double wire_time = std::numeric_limits<double>::max();
         double drift_time = std::numeric_limits<double>::max();
