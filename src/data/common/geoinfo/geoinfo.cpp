@@ -24,16 +24,10 @@ namespace sand {
     m_root_path = cfg.value("basepath", "/volWorld/rockBox_lv_0/volDetEnclosure_0/volSAND_0/MagIntVol_volume_0/");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
+    std::string world_path = nav->GetPath();
+    bool PV_needed = world_path.find("_PV") != std::string::npos;
 
-    try {
-      int prev = gErrorIgnoreLevel;
-      gErrorIgnoreLevel = kFatal; // suppress ROOT errors
-      bool ok = nav->TGeoNavigator::cd(m_root_path.c_str());
-      gErrorIgnoreLevel = prev;
-      if (!ok) {
-        throw 0;
-      }
-    } catch (...) {
+    if(PV_needed){
       // Step 1: Add _PV before _0
       std::regex pattern_with_0("(_0)");
       m_root_path = std::regex_replace(m_root_path, pattern_with_0, "_PV$1");
@@ -44,8 +38,8 @@ namespace sand {
     }
 
     try{
-      nav->TGeoNavigator::cd(m_root_path.c_str());
-    } catch (...) {
+      nav->cd(m_root_path.c_str());
+    } catch (ufw::exception& e) {
       UFW_EXCEPT(path_not_found, m_root_path);
     }
 
@@ -54,28 +48,31 @@ namespace sand {
 
     m_grain.reset(new grain_info(*this));
     m_ecal.reset(new ecal_info(*this));
+
+    auto subpath = m_root_path;
     
-    try {
-      int prev = gErrorIgnoreLevel;
-      gErrorIgnoreLevel = kFatal; // suppress ROOT errors
-      auto subpath = m_root_path / "sand_inner_volume_0/STTtracker_0";
-      bool ok = nav->TGeoNavigator::cd(subpath.c_str());
-      gErrorIgnoreLevel = prev;
-      if (!ok) {
-        throw 0;
+    if(PV_needed){
+      subpath = m_root_path / "sand_inner_volume_PV_0";
+    } else {
+      subpath = m_root_path / "sand_inner_volume_0";
+    }
+
+    nav->cd(subpath.c_str());
+    bool isSTT = false;
+    for(int d = 0; d < nav->GetCurrentNode()->GetNdaughters(); ++d){
+      std::string daughter_tmp = nav->GetCurrentNode()->GetDaughter(d)->GetName(); // STTtracker_PV_0
+      if(daughter_tmp.find("STTtracker") != std::string::npos){
+        isSTT = true;
+        break;
       }
+    }
+
+    if(isSTT){
+      UFW_INFO("STT subdetector implementation detected.");
       m_tracker.reset(new stt_info(*this));
-    } catch (...) {
-      try{
-        int prev = gErrorIgnoreLevel;
-        gErrorIgnoreLevel = kFatal; // suppress ROOT errors
-        auto subpath = m_root_path / "sand_inner_volume_PV_0/STTtracker_PV_0";
-        bool ok = nav->TGeoNavigator::cd(subpath.c_str());
-        gErrorIgnoreLevel = prev;
-        m_tracker.reset(new stt_info(*this));       
-      } catch (...) {
-        m_tracker.reset(new drift_info(*this));
-      }
+    } else {
+      UFW_INFO("Drift subdetector implementation detected.");
+      m_tracker.reset(new drift_info(*this));
     }
   }
 
