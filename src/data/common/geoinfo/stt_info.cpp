@@ -7,9 +7,9 @@
 #include <TGeoTube.h>
 
 namespace sand {
-
+  
   static constexpr char s_stt_path[] = "sand_inner_volume_0/STTtracker_0";
-
+  
   geoinfo::stt_info::stt_info(const geoinfo& gi) : tracker_info(gi, s_stt_path) {
     set_subdetector(subdetector_t::STT);
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
@@ -60,62 +60,62 @@ namespace sand {
           nav->cd(sttpath / smodname / plname / tname);
           /*FIXED to support both TGeoTubeSeg and TGeoTube used in more recent geometries*/
           auto* generic_tube_shape = tube->GetVolume()->GetShape();
-
+          
           auto process_tube = [&](auto* tube_shape) {
-              auto matrix = nav->get_hmatrix();
-              double* tran = matrix.GetTranslation();
-              double* rot = matrix.GetRotationMatrix();
-              pos_3d centre;
-              centre.SetCoordinates(tran);
-              dir_3d halfsize(0, 0, tube_shape->GetDZ());
-              dir_3d globalhalfsize = nav->to_master(halfsize);
-              auto w = std::make_unique<wire>();
-              w->parent = stat.get();
-              w->head = centre + globalhalfsize;
-              w->tail = centre - globalhalfsize;
-              w->max_radius = tube_shape->GetRmax();
-              w->geo = id(geo_path( path() / smodname / plname / tname));
-              stat->wires.emplace_back(std::move(w));
+            auto matrix = nav->get_hmatrix();
+            double* tran = matrix.GetTranslation();
+            double* rot = matrix.GetRotationMatrix();
+            pos_3d centre;
+            centre.SetCoordinates(tran);
+            dir_3d halfsize(0, 0, tube_shape->GetDZ());
+            dir_3d globalhalfsize = nav->to_master(halfsize);
+            auto w = std::make_unique<wire>();
+            w->parent = stat.get();
+            w->head = centre + globalhalfsize;
+            w->tail = centre - globalhalfsize;
+            w->max_radius = tube_shape->GetRmax();
+            w->geo = id(geo_path( path() / smodname / plname / tname));
+            stat->wires.emplace_back(std::move(w));
           };
-
+          
           if (auto* tube_shape = dynamic_cast<TGeoTube*>(generic_tube_shape)) {
-              process_tube(tube_shape);
+            process_tube(tube_shape);
           } else {          
-              UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
+            UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
           }
-
+          
         } );
       } );
       add_station(station_ptr(std::move(stat)));
     } );
   }
-
+  
   geoinfo::stt_info::~stt_info() = default;
-
+  
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;
     auto path = gp - subdetector_info::path();
     gi.subdetector = STT;
     //abuse the bad notation here, module/plane/straw
     if(path.find("PV_") != std::string::npos) {
-    std::string straw(path.token(2));
-    auto i1 = straw.find('_');
-    auto i2 = straw.find('_', i1 + 1);
-    auto i3 = straw.find('_', i2 + 1);
-    auto i4 = straw.find('_', i3 + 1);
-    auto i5 = straw.find('_', i4 + 1);
-    if (i5 != std::string::npos) {
-      gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
-      gi.stt.plane = 0;
-      if (straw.at(i3 - 1) == 'Y') {
-        gi.stt.plane = 1;
-      } else if (path.token(1).back() == '1') {
-        gi.stt.plane = 2;
+      std::string straw(path.token(2));
+      auto i1 = straw.find('_');
+      auto i2 = straw.find('_', i1 + 1);
+      auto i3 = straw.find('_', i2 + 1);
+      auto i4 = straw.find('_', i3 + 1);
+      auto i5 = straw.find('_', i4 + 1);
+      if (i5 != std::string::npos) {
+        gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
+        gi.stt.plane = 0;
+        if (straw.at(i3 - 1) == 'Y') {
+          gi.stt.plane = 1;
+        } else if (path.token(1).back() == '1') {
+          gi.stt.plane = 2;
+        }
+        gi.stt.tube = std::stoi(straw.substr(i5 + 1));
+      } else {
+        UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
       }
-      gi.stt.tube = std::stoi(straw.substr(i5 + 1));
-    } else {
-      UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
-    }
     } else { // root geometry notation with no PV
       std::string straw(path.token(2));
       auto i1 = straw.find('_');
@@ -141,7 +141,7 @@ namespace sand {
     }
     return gi;
   }
-
+  
   geo_path geoinfo::stt_info::path(geo_id gi) const {
     //TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
@@ -150,20 +150,20 @@ namespace sand {
     auto stat = at(gi.stt.supermodule);
     std::string module_name;
     switch (stat->target) {
-    case TRKONLY:
+      case TRKONLY:
       module_name = "TrkMod_";
       break;
-    case C3H6:
+      case C3H6:
       module_name = "C3H6Mod_";
       break;
-    case CARBON:
+      case CARBON:
       module_name = "CMod_";
       break;
-    default:
+      default:
       UFW_ERROR("Target material '{}' unsupported.", stat->target);
     }
     module_name += fmt::format("{:02}", gi.stt.supermodule);
-
+    
     gp /= module_name + placement + "_0";
     if (gi.stt.plane == 0) {
       module_name += "_planeXX";
@@ -183,83 +183,83 @@ namespace sand {
     else gp /= module_name + "_straw_0" + (gi.stt.tube == 0 ? "" : fmt::format("#{}", gi.stt.tube));
     return gp;
   }
-
+  
   const geoinfo::stt_info::wire* geoinfo::stt_info::get_wire_by_id(const geo_id& id) const {
-      for (const auto& station_ptr : stations()) {
-          for (const auto& wire_ptr : station_ptr->wires) {
-            auto* stt_wire_ptr = static_cast<const sand::geoinfo::stt_info::wire*>(wire_ptr.get());
-            if (stt_wire_ptr->geo == id) {
-                return stt_wire_ptr;
-            }
-          }
+    for (const auto& station_ptr : stations()) {
+      for (const auto& wire_ptr : station_ptr->wires) {
+        auto* stt_wire_ptr = static_cast<const sand::geoinfo::stt_info::wire*>(wire_ptr.get());
+        if (stt_wire_ptr->geo == id) {
+          return stt_wire_ptr;
+        }
       }
-      return nullptr;
+    }
+    return nullptr;
   }
-
+  
   std::optional<std::pair<vec_4d,vec_4d>> geoinfo::stt_info::wire::closest_points(const vec_4d& hit_start, const vec_4d& hit_stop, const double& v_drift) const {
-
-      std::vector<vec_4d> closest_points;
-
-      pos_3d start(hit_start.X(), hit_start.Y(), hit_start.Z());
-      pos_3d stop(hit_stop.X(), hit_stop.Y(), hit_stop.Z());
-
-      dir_3d d = start - head; // Vector from wire head to point start
-      dir_3d s = stop - start; // Vector from point start to point stop
-      dir_3d r = direction(); // Wire direction vector
-
-      double A = s.Dot(s);    // s . s
-      double B = s.Dot(r);    // s . r
-      double C = r.Dot(r);    // r . r
-      double D = s.Dot(d);    // s . (start - head)
-      double E = r.Dot(d);    // r . (start - head)
-
-      double denominator = A * C - B * B;
-
-      if (denominator != 0) {
-          double t = (B * E - C * D) / denominator; // Parameter along s
-          double t_prime = (A * E - B * D) / denominator; // Parameter along r
-
-          // Clamp t to [0, 1] to stay within the segment
-          t = std::max(0.0, std::min(1.0, t));
-          t_prime = std::max(0.0, std::min(1.0, t_prime));
-
-          // Calculate the closest point on the line segment
-          pos_3d closest_point_hit = start + s * t;
-
-          if (t == 0 || t == 1) {
-            dir_3d AP = closest_point_hit - head; 
-            t_prime = AP.Dot(r) / r.Mag2();
-            t_prime = std::max(0.0, std::min(1.0, t_prime));
-          }
-
-          // Calculate the corresponding point on the wire
-          pos_3d closest_point_wire = head + r * t_prime;
-
-          double fraction = sqrt((closest_point_hit - start).Mag2() / s.Mag2());
-          vec_4d closest_point_hit_l(closest_point_hit.X(), 
-                                      closest_point_hit.Y(), 
-                                      closest_point_hit.Z(), 
-                                      hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
-
-          vec_4d closest_point_wire_l(closest_point_wire.X(), 
-                                      closest_point_wire.Y(), 
-                                      closest_point_wire.Z(), 
-                                      closest_point_hit_l.T() + sqrt((closest_point_hit - closest_point_wire).Mag2()) / v_drift);
-
-          return std::make_pair(closest_point_hit_l, closest_point_wire_l);
-
-      } else {
-          // Lines are parallel; handle this case if necessary
-          UFW_WARN("Lines are parallel; no unique closest point.");
-          return std::nullopt;
+    
+    std::vector<vec_4d> closest_points;
+    
+    pos_3d start(hit_start.X(), hit_start.Y(), hit_start.Z());
+    pos_3d stop(hit_stop.X(), hit_stop.Y(), hit_stop.Z());
+    
+    dir_3d d = start - head; // Vector from wire head to point start
+    dir_3d s = stop - start; // Vector from point start to point stop
+    dir_3d r = direction(); // Wire direction vector
+    
+    double A = s.Dot(s);    // s . s
+    double B = s.Dot(r);    // s . r
+    double C = r.Dot(r);    // r . r
+    double D = s.Dot(d);    // s . (start - head)
+    double E = r.Dot(d);    // r . (start - head)
+    
+    double denominator = A * C - B * B;
+    
+    if (denominator != 0) {
+      double t = (B * E - C * D) / denominator; // Parameter along s
+      double t_prime = (A * E - B * D) / denominator; // Parameter along r
+      
+      // Clamp t to [0, 1] to stay within the segment
+      t = std::max(0.0, std::min(1.0, t));
+      t_prime = std::max(0.0, std::min(1.0, t_prime));
+      
+      // Calculate the closest point on the line segment
+      pos_3d closest_point_hit = start + s * t;
+      
+      if (t == 0 || t == 1) {
+        dir_3d AP = closest_point_hit - head; 
+        t_prime = AP.Dot(r) / r.Mag2();
+        t_prime = std::max(0.0, std::min(1.0, t_prime));
       }
-
+      
+      // Calculate the corresponding point on the wire
+      pos_3d closest_point_wire = head + r * t_prime;
+      
+      double fraction = sqrt((closest_point_hit - start).Mag2() / s.Mag2());
+      vec_4d closest_point_hit_l(closest_point_hit.X(), 
+      closest_point_hit.Y(), 
+      closest_point_hit.Z(), 
+      hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
+      
+      vec_4d closest_point_wire_l(closest_point_wire.X(), 
+      closest_point_wire.Y(), 
+      closest_point_wire.Z(), 
+      closest_point_hit_l.T() + sqrt((closest_point_hit - closest_point_wire).Mag2()) / v_drift);
+      
+      return std::make_pair(closest_point_hit_l, closest_point_wire_l);
+      
+    } else {
+      // Lines are parallel; handle this case if necessary
+      UFW_WARN("Lines are parallel; no unique closest point.");
+      return std::nullopt;
+    }
+    
   }
-
+  
   double geoinfo::stt_info::wire::get_min_time(const vec_4d& point, const double &v_signal_inwire) const {
-
+    
     return point.T() + sqrt( (pos_3d(point.Vect()) - head ).Mag2() ) / v_signal_inwire;
-
+    
   }
-
+  
 }
