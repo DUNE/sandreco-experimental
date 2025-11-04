@@ -173,26 +173,17 @@ namespace sand {
       uint64_t raw = -1;
     };
 
-    // Equality operator
-    bool operator==(const geo_id& other) const {
-        return raw == other.raw;
-    }
-    
-    // Inequality
-    bool operator!=(const geo_id& other) const {
-        return !(*this == other);
-    }
-
-    // Less-than operator for ordering
-    bool operator<(const geo_id& other) const {
-        return raw < other.raw;
-    }
-
-    // Greater-than operator for ordering
-    bool operator>(const geo_id& other) const {
-        return raw > other.raw;
-    }
 };
+
+// Equality operator
+inline bool operator==(geo_id lhs, geo_id rhs) {
+    return lhs.raw == rhs.raw;
+}
+
+// Less-than operator for ordering
+inline bool operator<(geo_id lhs, geo_id rhs) {
+    return lhs.raw < rhs.raw;
+}
 
 #endif //__CLING__
   /**
