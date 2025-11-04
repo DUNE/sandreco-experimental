@@ -51,7 +51,7 @@ namespace sand {
 
     geo_path path(geo_id) const;
 
-    const geo_path& root_path() const { return m_root_path; }
+    geo_path partial_path(const geo_path&) const;
 
   private:
     friend class subdetector_info;
@@ -66,6 +66,8 @@ namespace sand {
     std::unique_ptr<ecal_info> m_ecal;
     std::unique_ptr<tracker_info> m_tracker;
     geo_path m_root_path;
+
+    const geo_path& root_path() const { return m_root_path; }
 
   };
 

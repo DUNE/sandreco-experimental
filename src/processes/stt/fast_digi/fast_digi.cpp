@@ -37,14 +37,9 @@ namespace sand::stt {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     std::map<geo_id, std::vector<EDEPHit>> hits_by_tube;
 
-    if(gi.tracker().subdetector() == subdetector_t::STT){
-      UFW_DEBUG(" STT subdetector implementation");
-      group_hits_by_tube(hits_by_tube, gi, tree, tgm);  
-      digitize_hits_in_tubes(digi, hits_by_tube, gi); 
-
-    } else {
-      UFW_ERROR("Unknown tracker subdetector type.");
-    }
+    UFW_DEBUG(" STT subdetector implementation");
+    group_hits_by_tube(hits_by_tube, gi, tree, tgm);  
+    digitize_hits_in_tubes(digi, hits_by_tube, gi); 
   }
 
   void fast_digi::group_hits_by_tube(std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
@@ -67,7 +62,7 @@ namespace sand::stt {
           tgm.navigator()->FindNode(hit_mid_point.x(), hit_mid_point.y(), hit_mid_point.z());
 
           geo_path node_path(tgm.navigator()->GetPath());
-          geo_path partial_path = (node_path - gi.root_path()) - "0/"; //remove leading 0/
+          geo_path partial_path = gi.partial_path(node_path) - "0/"; //remove leading 0/
           geo_id ID = stt->id(partial_path); 
           hits_by_tube[ID].push_back(hit);
 
