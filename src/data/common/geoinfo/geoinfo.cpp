@@ -22,6 +22,7 @@ namespace sand {
   geoinfo::geoinfo(const ufw::config& cfg) {
 
     m_root_path = cfg.value("basepath", "/volWorld/rockBox_lv_0/volDetEnclosure_0/volSAND_0/MagIntVol_volume_0/");
+    m_edep_root_path = cfg.value("edep_basepath", "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
     std::string world_path = nav->GetPath();

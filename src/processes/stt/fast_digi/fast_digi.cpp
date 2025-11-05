@@ -62,7 +62,7 @@ namespace sand::stt {
           tgm.navigator()->FindNode(hit_mid_point.x(), hit_mid_point.y(), hit_mid_point.z());
 
           geo_path node_path(tgm.navigator()->GetPath());
-          geo_path partial_path = stt->partial_path(node_path,gi) - "_0/"; //remove leading 0/
+          geo_path partial_path = stt->partial_path(node_path,gi); 
           geo_id ID = stt->id(partial_path); 
           hits_by_tube[ID].push_back(hit);
 
