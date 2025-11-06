@@ -10,8 +10,6 @@
  */
 #pragma once
 
-#include <vector>
-#include <cstdint>
 
 #include <ufw/data.hpp>
 #include <common/truth.h>
