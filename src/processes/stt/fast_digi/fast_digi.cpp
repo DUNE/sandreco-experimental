@@ -35,10 +35,11 @@ namespace sand::stt {
     const auto& gi = get<geoinfo>();
     auto& digi = set<sand::tracker::digi>("digi");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-    std::map<geo_id, std::vector<EDEPHit>> hits_by_tube = group_hits_by_tube();
 
-    UFW_DEBUG(" STT subdetector implementation"); 
-    digitize_hits_in_tubes(digi, hits_by_tube, gi); 
+
+    UFW_DEBUG(" STT subdetector implementation");
+    std::map<geo_id, std::vector<EDEPHit>> hits_by_tube = group_hits_by_tube(); 
+    digitize_hits_in_tubes(hits_by_tube); 
   }
 
   std::map<geo_id, std::vector<EDEPHit>> fast_digi::group_hits_by_tube() {
@@ -82,10 +83,12 @@ namespace sand::stt {
   }
 
 
-  void fast_digi::digitize_hits_in_tubes(tracker::digi& digi,
-                                          const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
-                                          const sand::geoinfo & gi) {
+  void fast_digi::digitize_hits_in_tubes(const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube) {
+
+    const auto& gi = get<geoinfo>();
+    auto& digi = set<sand::tracker::digi>("digi");
     const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
+
     if (!stt) return;
 
     for (const auto& [tube_id, hits] : hits_by_tube) {

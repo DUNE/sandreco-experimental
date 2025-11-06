@@ -23,9 +23,7 @@ namespace sand::stt {
   private:
     std::map<geo_id, std::vector<EDEPHit>> group_hits_by_tube();
     
-    void digitize_hits_in_tubes( tracker::digi& digi,
-                              const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
-                             const sand::geoinfo & gi);
+    void digitize_hits_in_tubes(const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube);                             
 
     void update_timing_parameters(const EDEPHit& hit, 
                                   const sand::geoinfo::stt_info::wire& wire,
