@@ -21,9 +21,7 @@ namespace sand::stt {
     void run() override;
 
   private:
-    void group_hits_by_tube(std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
-                            const sand::geoinfo & gi, const sand::edep_reader & tree, 
-                            sand::root_tgeomanager & tgm);
+    std::map<geo_id, std::vector<EDEPHit>> group_hits_by_tube();
     
     void digitize_hits_in_tubes( tracker::digi& digi,
                               const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 

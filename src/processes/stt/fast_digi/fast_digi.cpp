@@ -35,18 +35,20 @@ namespace sand::stt {
     const auto& gi = get<geoinfo>();
     auto& digi = set<sand::tracker::digi>("digi");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-    std::map<geo_id, std::vector<EDEPHit>> hits_by_tube;
+    std::map<geo_id, std::vector<EDEPHit>> hits_by_tube = group_hits_by_tube();
 
-    UFW_DEBUG(" STT subdetector implementation");
-    group_hits_by_tube(hits_by_tube, gi, tree, tgm);  
+    UFW_DEBUG(" STT subdetector implementation"); 
     digitize_hits_in_tubes(digi, hits_by_tube, gi); 
   }
 
-  void fast_digi::group_hits_by_tube(std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube, 
-                                      const sand::geoinfo & gi, const sand::edep_reader & tree, 
-                                      sand::root_tgeomanager & tgm) {
-    // Implementation of hit grouping by tube goes here
+  std::map<geo_id, std::vector<EDEPHit>> fast_digi::group_hits_by_tube() {
+    
+    const auto& gi = get<geoinfo>();
+    const auto& tree = get<sand::edep_reader>();
+    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    std::map<geo_id, std::vector<EDEPHit>> hits_by_tube;
     const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
+
     for (const auto& trj : tree) {
         const auto& hit_map = trj.GetHitMap(); // pointer, not value    
         if(hit_map.find(component::STRAW) == hit_map.end()) continue;
@@ -74,6 +76,8 @@ namespace sand::stt {
                     static_cast<int>(ID.stt.tube));
           }
         }
+
+    return hits_by_tube;
     
   }
 
