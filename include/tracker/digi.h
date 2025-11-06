@@ -40,7 +40,7 @@ namespace sand::tracker {
 
       /**
        * @brief Time-to-digital converter (TDC) value.
-       * @unit nanoseconds (ns)
+       * @unit 
        */
       double tdc;
 

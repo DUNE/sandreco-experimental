@@ -41,4 +41,76 @@ namespace sand {
     m_volumes[p] = v;
   }
 
+  std::vector<vec_4d> geoinfo::tracker_info::closest_points(const vec_4d& hit_start, const vec_4d& hit_stop, const double& v_drift, const wire& w) const {
+    
+    std::vector<vec_4d> closest_points;
+    
+    pos_3d start(hit_start.X(), hit_start.Y(), hit_start.Z());
+    pos_3d stop(hit_stop.X(), hit_stop.Y(), hit_stop.Z());
+    
+    dir_3d d = start - w.head; // Vector from wire head to point start
+    dir_3d s = stop - start; // Vector from point start to point stop
+    dir_3d r = w.direction(); // Wire direction vector
+    
+    double A = s.Dot(s);    // s . s
+    double B = s.Dot(r);    // s . r
+    double C = r.Dot(r);    // r . r
+    double D = s.Dot(d);    // s . (start - head)
+    double E = r.Dot(d);    // r . (start - head)
+    
+    double denominator = A * C - B * B;
+
+    std::vector<vec_4d> result;
+    
+    if (denominator != 0) {
+      double t = (B * E - C * D) / denominator; // Parameter along s
+      double t_prime = (A * E - B * D) / denominator; // Parameter along r
+      
+      // Clamp t to [0, 1] to stay within the segment
+      t = std::max(0.0, std::min(1.0, t));
+      t_prime = std::max(0.0, std::min(1.0, t_prime));
+      
+      // Calculate the closest point on the line segment
+      pos_3d closest_point_hit = start + s * t;
+      
+      if (t == 0 || t == 1) {
+        dir_3d AP = closest_point_hit - w.head; 
+        t_prime = AP.Dot(r) / r.Mag2();
+        t_prime = std::max(0.0, std::min(1.0, t_prime));
+      }
+      
+      // Calculate the corresponding point on the wire
+      pos_3d closest_point_wire = w.head + r * t_prime;
+      
+      double fraction = sqrt((closest_point_hit - start).Mag2() / s.Mag2());
+      vec_4d closest_point_hit_l(closest_point_hit.X(), 
+      closest_point_hit.Y(), 
+      closest_point_hit.Z(), 
+      hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
+
+      result.push_back(closest_point_hit_l);
+      
+      vec_4d closest_point_wire_l(closest_point_wire.X(), 
+      closest_point_wire.Y(), 
+      closest_point_wire.Z(), 
+      closest_point_hit_l.T() + sqrt((closest_point_hit - closest_point_wire).Mag2()) / v_drift);
+      
+      result.push_back(closest_point_wire_l);
+
+      return result;
+      
+    } else {
+      // Lines are parallel; handle this case if necessary
+      UFW_WARN("Lines are parallel; no unique closest point.");
+      return result;
+    }
+    
+  }
+  
+  double geoinfo::tracker_info::get_min_time(const vec_4d& point, const double &v_signal_inwire, const wire& w) const {
+    
+    return point.T() + sqrt( (pos_3d(point.Vect()) - w.head ).Mag2() ) / v_signal_inwire;
+    
+  }
+
 }

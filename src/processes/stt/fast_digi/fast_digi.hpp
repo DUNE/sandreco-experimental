@@ -32,7 +32,7 @@ namespace sand::stt {
                                  double& wire_time,
                                  double& drift_time,
                                  double& signal_time,
-                                 double& t_hit) const;
+                                 double& t_hit);
 
     tracker::digi::signal create_signal(double wire_time, double edep_total, const channel_id& channel);
 

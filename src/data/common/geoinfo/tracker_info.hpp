@@ -95,6 +95,10 @@ namespace sand {
 
     const std::vector<station_ptr>& stations() const { return m_stations; }
 
+    std::vector<vec_4d> closest_points(const vec_4d&, const vec_4d&, const double&, const wire&) const;
+      
+    double get_min_time(const vec_4d&, const double &, const wire&) const;
+
   protected:
     void add_station(station_ptr&&);
 

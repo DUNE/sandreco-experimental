@@ -10,9 +10,8 @@ namespace sand {
   public:
     struct wire : public tracker_info::wire {
       geo_id geo; ///< The unique geometry identifier
-      double straw_radius;
-      std::optional<std::pair<vec_4d, vec_4d>> closest_points(const vec_4d&, const vec_4d&, const double&) const;
-      double get_min_time(const vec_4d&, const double &) const;
+      // std::optional<std::pair<vec_4d, vec_4d>> closest_points(const vec_4d&, const vec_4d&, const double&) const;
+      // double get_min_time(const vec_4d&, const double &) const;
     };
 
     struct station : public tracker_info::station {

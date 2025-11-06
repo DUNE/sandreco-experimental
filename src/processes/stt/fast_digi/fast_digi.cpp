@@ -143,9 +143,11 @@ namespace sand::stt {
                                 double& wire_time,
                                 double& drift_time,
                                 double& signal_time,
-                                double& t_hit) const {
-        
-        double hit_smallest_time = wire.get_min_time(closest_point_hit, m_wire_velocity);
+                                double& t_hit) {
+
+        const auto& gi = get<geoinfo>();
+        const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
+        double hit_smallest_time = stt->get_min_time(closest_point_hit, m_wire_velocity, wire);
 
         if (hit_smallest_time < wire_time) {
             wire_time = hit_smallest_time;
@@ -185,6 +187,8 @@ namespace sand::stt {
         const sand::geoinfo::stt_info::wire& wire,
         const geo_id& tube_id) {
         
+        const auto& gi = get<geoinfo>();
+        const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
         double wire_time = std::numeric_limits<double>::max();
         double drift_time = std::numeric_limits<double>::max();
         double signal_time = std::numeric_limits<double>::max();
@@ -194,12 +198,14 @@ namespace sand::stt {
         for (const auto& hit : hits) {
             log_hit_debug(hit);
             
-            auto closest_points = wire.closest_points(vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()), 
+            auto closest_points = stt->closest_points(vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()), 
                                                       vec_4d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T()), 
-                                                      m_drift_velocity);
-            if (!closest_points) continue;
+                                                      m_drift_velocity, wire);
+            if (closest_points.empty()) continue;
 
-            auto& [closest_point_hit, closest_point_wire] = *closest_points;
+            const vec_4d& closest_point_hit = closest_points[0];
+            const vec_4d& closest_point_wire = closest_points[1];
+
             update_timing_parameters(hit, wire, closest_point_hit, closest_point_wire, 
                                    wire_time, drift_time, signal_time, t_hit);
             edep_total += hit.GetEnergyDeposit();
