@@ -25,15 +25,6 @@ namespace sand::stt {
     
     void digitize_hits_in_tubes(const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube);                             
 
-    void update_timing_parameters(const EDEPHit& hit, 
-                                  const sand::geoinfo::stt_info::wire& wire,
-                                  const vec_4d& closest_point_hit,
-                                 const vec_4d& closest_point_wire,
-                                 double& wire_time,
-                                 double& drift_time,
-                                 double& signal_time,
-                                 double& t_hit);
-
     tracker::digi::signal create_signal(double wire_time, double edep_total, const channel_id& channel);
 
     void log_hit_debug(const EDEPHit& hit);
@@ -59,18 +50,3 @@ namespace sand::stt {
 UFW_REGISTER_PROCESS(sand::stt::fast_digi)
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::stt::fast_digi)
 
-
-//}
-// UFW_DEBUG("Trajectory corresponds to STT subdetector.");
-// for(auto t=0; t<stt->stations().size();t++){
-//   const auto * station_ptr = stt->stations().at(t).get();
-//   if(auto* stt_station = static_cast<const sand::geoinfo::stt_info::station*>(station_ptr)){
-//     UFW_DEBUG("STT station {} with {} wires.", t, stt_station->wires.size());
-//     for(auto w=0; w<stt_station->wires.size();w++){
-//       const auto * wire_ptr = stt_station->wires.at(w).get();
-//       if(auto* stt_wire_ptr = static_cast<const sand::geoinfo::stt_info::wire*>(wire_ptr)){
-//         UFW_DEBUG("STT wire {} with max radius {}.", w, stt_wire_ptr->max_radius);
-//       }
-//     }
-//   }
-// }

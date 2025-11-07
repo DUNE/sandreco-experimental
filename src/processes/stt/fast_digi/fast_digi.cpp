@@ -136,33 +136,6 @@ namespace sand::stt {
                 hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T());
   }
 
-  void fast_digi::update_timing_parameters(const EDEPHit& hit,
-                                const sand::geoinfo::stt_info::wire& wire,
-                                const vec_4d& closest_point_hit,
-                                const vec_4d& closest_point_wire,
-                                double& wire_time,
-                                double& drift_time,
-                                double& signal_time,
-                                double& t_hit) {
-
-        const auto& gi = get<geoinfo>();
-        const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
-        double hit_smallest_time = stt->get_min_time(closest_point_hit, m_wire_velocity, wire);
-
-        if (hit_smallest_time < wire_time) {
-            wire_time = hit_smallest_time;
-            t_hit = closest_point_hit.T();
-            drift_time = closest_point_wire.T() - t_hit;
-            signal_time = hit_smallest_time - closest_point_wire.T();
-            
-            UFW_DEBUG("    Closest point on hit: ({}, {}, {}, {})", 
-                     closest_point_hit.X(), closest_point_hit.Y(), 
-                     closest_point_hit.Z(), closest_point_hit.T());
-            UFW_DEBUG("    Closest point on wire: ({}, {}, {}, {})", 
-                     closest_point_wire.X(), closest_point_wire.Y(), 
-                     closest_point_wire.Z(), closest_point_wire.T());
-        }
-    }
 
   tracker::digi::signal fast_digi::create_signal(double wire_time, double edep_total, 
                                       const channel_id& channel) {
@@ -206,8 +179,22 @@ namespace sand::stt {
             const vec_4d& closest_point_hit = closest_points[0];
             const vec_4d& closest_point_wire = closest_points[1];
 
-            update_timing_parameters(hit, wire, closest_point_hit, closest_point_wire, 
-                                   wire_time, drift_time, signal_time, t_hit);
+            // Update timing parameters directly here
+            double hit_smallest_time = stt->get_min_time(closest_point_hit, m_wire_velocity, wire);
+
+            if (hit_smallest_time < wire_time) {
+                wire_time = hit_smallest_time;
+                t_hit = closest_point_hit.T();
+                drift_time = closest_point_wire.T() - t_hit;
+                signal_time = hit_smallest_time - closest_point_wire.T();
+                
+                UFW_DEBUG("    Closest point on hit: ({}, {}, {}, {})", 
+                        closest_point_hit.X(), closest_point_hit.Y(), 
+                        closest_point_hit.Z(), closest_point_hit.T());
+                UFW_DEBUG("    Closest point on wire: ({}, {}, {}, {})", 
+                        closest_point_wire.X(), closest_point_wire.Y(), 
+                        closest_point_wire.Z(), closest_point_wire.T());
+            }
             edep_total += hit.GetEnergyDeposit();
         }
 

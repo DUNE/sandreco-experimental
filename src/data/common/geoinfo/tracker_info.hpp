@@ -46,6 +46,8 @@ namespace sand {
       double length() const { return std::sqrt(direction().Mag2()); } ///< length of the line between 
       pos_3d actual(pos_3d) const;
       std::size_t segment(pos_3d x) const;
+      std::vector<double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
+      double closest_approach_point(const pos_3d&) const;
     };
 
     using wire_ptr = std::unique_ptr<const wire>;
