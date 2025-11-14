@@ -94,8 +94,9 @@ namespace sand {
     grain::voxel_array<uint8_t> fiducial_voxels(dir_3d pitch) const;
 
   private:
-    void add_camera(G4VPhysicalVolume*, G4GDMLParser&);
-
+     void add_camera_mask(G4VPhysicalVolume*, G4GDMLParser&);
+     void add_camera_lens(G4VPhysicalVolume*, G4GDMLParser&);
+  
   private:
     std::vector<lens_camera> m_lens_cameras;
     std::vector<mask_camera> m_mask_cameras;

@@ -77,8 +77,8 @@ namespace sand {
     //m_vessel_aabb.SetY(vessel_ext_extent.GetYmax());
     //m_vessel_aabb.SetZ(vessel_ext_extent.GetZmax());
     //auto air_physical = find_by_name(vessel_ext_physical, "air_physical");
-    auto vessel_int_physical = find_by_name(world, "vessel_int_physical");
-    auto lar_physical = find_by_name(vessel_int_physical, "lar_physical");
+    auto cryostat_physical = find_by_name(world, "cryostat_physical");
+    auto lar_physical = find_by_name(cryostat_physical, "lar_volume_physical");
     auto lar_logical = lar_physical->GetLogicalVolume();
     auto lar_extent = lar_logical->GetSolid()->GetExtent();
     m_LAr_aabb.SetX(lar_extent.GetXmax());
@@ -101,7 +101,7 @@ namespace sand {
     m_mask_cameras.reserve(lar_logical->GetNoDaughters());
     for (int i = 0; i != lar_logical->GetNoDaughters(); ++i) {
       auto camera = lar_logical->GetDaughter(i);
-      if (camera->GetLogicalVolume()->GetName() == "cam_volume") {
+      if (camera->GetLogicalVolume()->GetName() == "cam_volume_mask") {
         add_camera_mask(camera, gdml);
       } else if (camera->GetLogicalVolume()->GetName() == "cam_volume_lens") {
         add_camera_lens(camera, gdml);
@@ -135,6 +135,32 @@ namespace sand {
                    sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{-sy, -sx, sy, sx}, parse_holes(multiunion)};
     m_mask_cameras.emplace_back(mc);
   }
+
+
+  
+  void geoinfo::grain_info::add_camera_lens(G4VPhysicalVolume* camera, G4GDMLParser& gdml) {
+    auto rot = camera->GetObjectRotationValue(); //GetObjectRotation is not reentrant (!)
+    auto tran = camera->GetObjectTranslation();
+    UFW_DEBUG("Camera '{}' (PV) found at [{:.3f}, {:.3f}, {:.3f}] with rotation matrix:", camera->GetName(), tran.x(), tran.y(), tran.z());
+    UFW_DEBUG("[[{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}]]",
+              rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
+    xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
+                       rot.yx(), rot.yy(), rot.yz(), tran.y(),
+                       rot.zx(), rot.zy(), rot.zz(), tran.z());
+    auto sipms = find_by_name(camera, "cameraAssembly_photoDetector");
+    // auto mask = find_by_name(camera, "cameraAssembly_mask");
+    // auto mask_lv = mask->GetLogicalVolume();
+    // auto subsolid = dynamic_cast<G4SubtractionSolid*>(mask_lv->GetSolid());
+    // auto mask_front = dynamic_cast<G4Box*>(subsolid->GetConstituentSolid(0));
+    // auto displaced = dynamic_cast<G4DisplacedSolid*>(subsolid->GetConstituentSolid(1));
+    // auto multiunion = dynamic_cast<G4MultiUnion*>(displaced->GetConstituentMovedSolid());
+    // float sx = mask_front->GetXHalfLength();
+    // float sy = mask_front->GetYHalfLength();
+    // mask_camera mc{camera->GetName(), 0, uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()),
+    //                sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{-sy, -sx, sy, sx}, parse_holes(multiunion)};
+   // m_lens_cameras.emplace_back(mc);
+  }
+
 
   geo_id geoinfo::grain_info::id(const geo_path& gp) const {
     geo_id gi;
