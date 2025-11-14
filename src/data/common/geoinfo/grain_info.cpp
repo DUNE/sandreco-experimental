@@ -93,6 +93,7 @@ namespace sand {
       UFW_ERROR("Geometry description does not contain a fiducial volume");
     }
     m_mask_cameras.reserve(lar_logical->GetNoDaughters());
+    m_lens_cameras.reserve(lar_logical->GetNoDaughters());    
     for (int i = 0; i != lar_logical->GetNoDaughters(); ++i) {
       auto camera = lar_logical->GetDaughter(i);
       if (camera->GetLogicalVolume()->GetName() == "cam_volume_mask") {
@@ -116,7 +117,7 @@ namespace sand {
     xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
                        rot.yx(), rot.yy(), rot.yz(), tran.y(),
                        rot.zx(), rot.zy(), rot.zz(), tran.z());
-    auto sipms = find_by_name(camera, "photoDetector");
+    auto sipms = find_by_name(camera, "photoDetector_physical");
     auto mask = find_by_name(camera, "cameraAssembly_mask");
     auto mask_lv = mask->GetLogicalVolume();
     auto subsolid = dynamic_cast<G4SubtractionSolid*>(mask_lv->GetSolid());
@@ -137,12 +138,12 @@ namespace sand {
     auto tran = camera->GetObjectTranslation();
     UFW_DEBUG("Camera '{}' (PV) found at [{:.3f}, {:.3f}, {:.3f}] with rotation matrix:", camera->GetName(), tran.x(), tran.y(), tran.z());
     UFW_DEBUG("[[{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}]]",
-              rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
+              rot[0][0], rot[0][1], rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);		
     xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
                        rot.yx(), rot.yy(), rot.yz(), tran.y(),
                        rot.zx(), rot.zy(), rot.zz(), tran.z());
-    auto sipms = find_by_name(camera, "photoDetector");
-    auto lens = find_by_name(camera, "gasLens");
+    auto sipms = find_by_name(camera, "photoDetector_physical");
+    auto lens = find_by_name(camera, "gasLens_pv");
     lens_camera lc{camera->GetName(), 0, uint8_t(grain::lens), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()),
                   sipms->GetObjectTranslation().z(), lens->GetObjectTranslation().z()};
     m_lens_cameras.emplace_back(lc);
