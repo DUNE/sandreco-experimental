@@ -71,13 +71,13 @@ namespace sand {
     //Parsing of this geometry assumes the file is well formed and complete
     auto& gdml = ufw::context::current()->instance<grain::geant_gdml_parser>(ufw::public_id(inner_geom));
     auto world = gdml.GetWorldVolume();
-    auto vessel_ext_physical = find_by_name(world, "vessel_ext_physical");
-    auto vessel_ext_extent = vessel_ext_physical->GetLogicalVolume()->GetSolid()->GetExtent();
-    m_vessel_aabb.SetX(vessel_ext_extent.GetXmax());
-    m_vessel_aabb.SetY(vessel_ext_extent.GetYmax());
-    m_vessel_aabb.SetZ(vessel_ext_extent.GetZmax());
-    auto air_physical = find_by_name(vessel_ext_physical, "air_physical");
-    auto vessel_int_physical = find_by_name(air_physical, "vessel_int_physical");
+    //auto vessel_ext_physical = find_by_name(world, "vessel_ext_physical");
+    //auto vessel_ext_extent = vessel_ext_physical->GetLogicalVolume()->GetSolid()->GetExtent();
+    //m_vessel_aabb.SetX(vessel_ext_extent.GetXmax());
+    //m_vessel_aabb.SetY(vessel_ext_extent.GetYmax());
+    //m_vessel_aabb.SetZ(vessel_ext_extent.GetZmax());
+    //auto air_physical = find_by_name(vessel_ext_physical, "air_physical");
+    auto vessel_int_physical = find_by_name(world, "vessel_int_physical");
     auto lar_physical = find_by_name(vessel_int_physical, "lar_physical");
     auto lar_logical = lar_physical->GetLogicalVolume();
     auto lar_extent = lar_logical->GetSolid()->GetExtent();
@@ -101,16 +101,19 @@ namespace sand {
     m_mask_cameras.reserve(lar_logical->GetNoDaughters());
     for (int i = 0; i != lar_logical->GetNoDaughters(); ++i) {
       auto camera = lar_logical->GetDaughter(i);
-      if (camera->GetLogicalVolume()->GetName() != "cam_volume") {
+      if (camera->GetLogicalVolume()->GetName() == "cam_volume") {
+        add_camera_mask(camera, gdml);
+      } else if (camera->GetLogicalVolume()->GetName() == "cam_volume_lens") {
+        add_camera_lens(camera, gdml);
+      } else {
         continue;
       }
-      add_camera(camera, gdml);
     }
   }
 
   geoinfo::grain_info::~grain_info() = default;
 
-  void geoinfo::grain_info::add_camera(G4VPhysicalVolume* camera, G4GDMLParser& gdml) {
+  void geoinfo::grain_info::add_camera_mask(G4VPhysicalVolume* camera, G4GDMLParser& gdml) {
     auto rot = camera->GetObjectRotationValue(); //GetObjectRotation is not reentrant (!)
     auto tran = camera->GetObjectTranslation();
     UFW_DEBUG("Camera '{}' (PV) found at [{:.3f}, {:.3f}, {:.3f}] with rotation matrix:", camera->GetName(), tran.x(), tran.y(), tran.z());
