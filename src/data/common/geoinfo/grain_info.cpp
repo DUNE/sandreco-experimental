@@ -71,12 +71,6 @@ namespace sand {
     //Parsing of this geometry assumes the file is well formed and complete
     auto& gdml = ufw::context::current()->instance<grain::geant_gdml_parser>(ufw::public_id(inner_geom));
     auto world = gdml.GetWorldVolume();
-    //auto vessel_ext_physical = find_by_name(world, "vessel_ext_physical");
-    //auto vessel_ext_extent = vessel_ext_physical->GetLogicalVolume()->GetSolid()->GetExtent();
-    //m_vessel_aabb.SetX(vessel_ext_extent.GetXmax());
-    //m_vessel_aabb.SetY(vessel_ext_extent.GetYmax());
-    //m_vessel_aabb.SetZ(vessel_ext_extent.GetZmax());
-    //auto air_physical = find_by_name(vessel_ext_physical, "air_physical");
     auto cryostat_physical = find_by_name(world, "cryostat_physical");
     auto lar_physical = find_by_name(cryostat_physical, "lar_volume_physical");
     auto lar_logical = lar_physical->GetLogicalVolume();
@@ -122,7 +116,7 @@ namespace sand {
     xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
                        rot.yx(), rot.yy(), rot.yz(), tran.y(),
                        rot.zx(), rot.zy(), rot.zz(), tran.z());
-    auto sipms = find_by_name(camera, "cameraAssembly_photoDetector");
+    auto sipms = find_by_name(camera, "photoDetector");
     auto mask = find_by_name(camera, "cameraAssembly_mask");
     auto mask_lv = mask->GetLogicalVolume();
     auto subsolid = dynamic_cast<G4SubtractionSolid*>(mask_lv->GetSolid());
@@ -147,18 +141,11 @@ namespace sand {
     xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
                        rot.yx(), rot.yy(), rot.yz(), tran.y(),
                        rot.zx(), rot.zy(), rot.zz(), tran.z());
-    auto sipms = find_by_name(camera, "cameraAssembly_photoDetector");
-    // auto mask = find_by_name(camera, "cameraAssembly_mask");
-    // auto mask_lv = mask->GetLogicalVolume();
-    // auto subsolid = dynamic_cast<G4SubtractionSolid*>(mask_lv->GetSolid());
-    // auto mask_front = dynamic_cast<G4Box*>(subsolid->GetConstituentSolid(0));
-    // auto displaced = dynamic_cast<G4DisplacedSolid*>(subsolid->GetConstituentSolid(1));
-    // auto multiunion = dynamic_cast<G4MultiUnion*>(displaced->GetConstituentMovedSolid());
-    // float sx = mask_front->GetXHalfLength();
-    // float sy = mask_front->GetYHalfLength();
-    // mask_camera mc{camera->GetName(), 0, uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()),
-    //                sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{-sy, -sx, sy, sx}, parse_holes(multiunion)};
-   // m_lens_cameras.emplace_back(mc);
+    auto sipms = find_by_name(camera, "photoDetector");
+    auto lens = find_by_name(camera, "gasLens");
+    lens_camera lc{camera->GetName(), 0, uint8_t(grain::lens), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()),
+                  sipms->GetObjectTranslation().z(), lens->GetObjectTranslation().z()};
+    m_lens_cameras.emplace_back(lc);
   }
 
 
