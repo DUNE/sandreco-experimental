@@ -67,7 +67,7 @@ namespace sand::common {
     UFW_INFO("Running a geoinfo_test process at {}.", fmt::ptr(this));
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
-    UFW_INFO("GRAIN size (local bbox):\n - outer vessel {};\n - LAr {};\n - optics fiducial {};", gi.grain().vessel_bbox(), gi.grain().LAr_bbox(), gi.grain().fiducial_bbox());
+    UFW_INFO("GRAIN size (local bbox):\n - LAr {};\n - optics fiducial {};", gi.grain().LAr_bbox(), gi.grain().fiducial_bbox());
     dir_3d sz(15., 15., 500.);
     auto voxels = gi.grain().fiducial_voxels(sz);
     std::string ascii_grain;
