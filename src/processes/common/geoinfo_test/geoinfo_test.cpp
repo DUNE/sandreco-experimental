@@ -16,6 +16,27 @@ template <> struct fmt::formatter<sand::pos_3d>: formatter<string_view> {
   }
 };
 
+template <> struct fmt::formatter<sand::dir_3d>: formatter<string_view> {
+  auto format(sand::dir_3d c, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "({:.2f}, {:.2f}, {:.2f})", c.x(), c.y(), c.z());
+  }
+};
+
+template <> struct fmt::formatter<sand::grain::size_3d>: formatter<string_view> {
+  auto format(sand::grain::size_3d c, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "({}, {}, {})", c.x(), c.y(), c.z());
+  }
+};
+
+template <> struct fmt::formatter<sand::xform_3d>: formatter<string_view> {
+  auto format(sand::xform_3d xfrm, format_context& ctx) const -> format_context::iterator {
+    double d[12];
+    xfrm.GetComponents(d);
+    return fmt::format_to(ctx.out(), "[{:.2f}, {:.2f}, {:.2f}], [[{:.2f}, {:.2f}, {:.2f}], [{:.2f}, {:.2f}, {:.2f}], [{:.2f}, {:.2f}, {:.2f}]]",
+                                       d[3], d[7], d[11], d[0], d[1], d[2], d[4], d[5], d[6], d[8], d[9], d[10]);
+  }
+};
+
 namespace sand::common {
 
   class geoinfo_test : public ufw::process {
@@ -27,12 +48,13 @@ namespace sand::common {
 
   private:
     geo_path m_test_path;
-    
+    std::string m_mask_or_lens;
   };
 
   void geoinfo_test::configure (const ufw::config& cfg) {
     process::configure(cfg);
     m_test_path = std::string(cfg.at("test_path"));
+    m_mask_or_lens = std::string(cfg.at("mask_or_lens"));
     UFW_INFO("Configuring geoinfo_test at {}.", fmt::ptr(this));
   }
 
@@ -41,12 +63,62 @@ namespace sand::common {
   }
 
   void geoinfo_test::run() {
-    const auto& gi = get<geoinfo>();
-    UFW_INFO("Running a geoinfo_test process at {}."), fmt::ptr(this);
+    const auto& gi = instance<geoinfo>();
+    UFW_INFO("Running a geoinfo_test process at {}.", fmt::ptr(this));
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
+    UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
+    UFW_INFO("GRAIN size (local bbox):\n - LAr {};\n - optics fiducial {};", gi.grain().LAr_bbox(), gi.grain().fiducial_bbox());
+    dir_3d sz(15., 15., 500.);
+    auto voxels = gi.grain().fiducial_voxels(sz);
+    std::string ascii_grain;
+    for (size_t z = 0; z != voxels.size().z(); ++z) {
+      for (size_t y = 0; y != voxels.size().y(); ++y) {
+        for (size_t x = 0; x != voxels.size().x(); ++x) {
+          ascii_grain += voxels.at(grain::index_3d(x, y, z)) ? '#' : ' ';
+        }
+        ascii_grain += '\n';
+      }
+      ascii_grain += '\n';
+      ascii_grain += '\n';
+    }
+    UFW_INFO("GRAIN was segmented in a fiducial of {} voxels:\n{}", voxels.size(), ascii_grain);
+    if( m_mask_or_lens == "mask" ){ 	
+	    for (const auto& cam : gi.grain().mask_cameras()) {
+      		auto cam2glob = gi.grain().transform() * cam.transform;
+      		auto centre = cam2glob * pos_3d{0., 0., 0.};
+      		auto aim = cam2glob * dir_3d{0., 0., 1.};
+      		UFW_INFO("Camera {} [{}]:\n - centre: {};\n - view direction: {};\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
+   	 	}
+    		auto pix_spam = gi.grain().mask_cameras().front();
+    		UFW_INFO("First camera details:");
+    		for (int i = 0; i != 32; ++i) {
+      			for (int j = 0; j != 32; ++j) {
+        		UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas[i][j].left, pix_spam.sipm_active_areas[i][j].top, pix_spam.sipm_active_areas[i][j].right, pix_spam.sipm_active_areas[i][j].bottom);
+      		}
+    		}
+    		std::for_each(pix_spam.holes.begin(), pix_spam.holes.end(), [](auto r) {
+      		UFW_INFO("Hole rect top left = ({}, {}), bottom right = ({}, {})", r.left, r.top, r.right, r.bottom);
+    		} );
+    }
+    else if( m_mask_or_lens == "lens" ){
+	for (const auto& cam : gi.grain().lens_cameras()) {
+		auto cam2glob = gi.grain().transform() * cam.transform;
+		auto centre = cam2glob * pos_3d{0., 0., 0.};
+		auto aim = cam2glob * dir_3d{0., 0., 1.};
+		UFW_INFO("Camera {} [{}]:\n - centre: {};\n - view direction: {};\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
+	}
+	auto pix_spam = gi.grain().lens_cameras().front();
+    	UFW_INFO("First camera details:");
+	for (int i = 0; i != 32; ++i) {
+		for (int j = 0; j != 32; ++j) {
+		UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas[i][j].left, pix_spam.sipm_active_areas[i][j].top, pix_spam.sipm_active_areas[i][j].right, pix_spam.sipm_active_areas[i][j].bottom);
+		}
+	}
+	UFW_INFO("Last camera info: distance lens-sensor = {}",pix_spam.z_lens);	
+    }
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
+    UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
-
 
     if(!m_test_path.empty()) {
       UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
@@ -56,6 +128,7 @@ namespace sand::common {
     } else {
       UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
     }
+    UFW_INFO("TRACKER position: '{}'", gi.tracker().transform());
 
     int i = 0;
     for (const auto& s : gi.tracker().stations()) {

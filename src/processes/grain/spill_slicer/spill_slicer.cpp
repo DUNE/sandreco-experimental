@@ -64,16 +64,14 @@ namespace sand::grain {
     binned_times.fill(0.0);
 
     const auto& digis_in = get<digi>("digi");
-    for (auto& cam : digis_in.cameras) {
-      for (auto& pe : cam.photoelectrons) {
-        double time{pe.time_rising_edge};
-        if (time >= min_time && time < max_time) {
-          size_t bin_index = static_cast<size_t>(std::floor((time - min_time) / bin_width));
-          binned_times[bin_index] += pe.charge;
-        }
-        else {
-          UFW_WARN("Digi in camera {} {} is out of time window for slicing (t = {} ns)", cam.camera_id, cam.camera_name, time);
-        }
+    for (auto& signal : digis_in.signals) {
+      double time{signal.time_rising_edge};
+      if (time >= min_time && time < max_time) {
+        size_t bin_index = static_cast<size_t>(std::floor((time - min_time) / bin_width));
+        binned_times[bin_index] += signal.npe;
+      }
+      else {
+        UFW_WARN("Digi in channel {} is out of time window for slicing (t = {} ns)", signal.channel.raw, time);
       }
     }
 
@@ -101,40 +99,38 @@ namespace sand::grain {
     m_stat_photons_accepted = 0;
     m_stat_photons_discarded = 0;
     const auto& digis_in = get<digi>("digi");
-    auto& images_out = set<images>("images");
+    auto& images_out = set<images>("images").images;
     if (m_use_algo) {
       m_slice_times.clear();
       compute_slice_times();
     }
     for (int img_idx = 0; img_idx < m_slice_times.size() - 1; img_idx++) {
       UFW_INFO("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx + 1]);
-      for (auto& cam : digis_in.cameras) {
-        UFW_DEBUG("Camera {} {}", cam.camera_id, cam.camera_name);
-        images::image cam_image;
-        cam_image.blank();
-        cam_image.camera_id = cam.camera_id;
-        cam_image.camera_name = cam.camera_name;
-        cam_image.time_begin = m_slice_times[img_idx];
-        cam_image.time_end = m_slice_times[img_idx + 1];
-        for (auto& pe : cam.photoelectrons) {
-          //UFW_DEBUG("channel id: {}, time: {}", pe.channel_id, pe.time_rising_edge);
-          m_stat_photons_processed++;
-          if (pe.time_rising_edge >= m_slice_times[img_idx] && pe.time_rising_edge < m_slice_times[img_idx + 1]) {
-              //UFW_DEBUG("pe to be assigned to image {}", img_idx);
-              //consistent indexing: Row Major
-              cam_image.pixels.Array()[pe.channel_id].add(pe.hits);
-              cam_image.pixels.Array()[pe.channel_id].amplitude += pe.charge;
-              if (std::isnan(cam_image.pixels.Array()[pe.channel_id].time_first)) {
-                cam_image.pixels.Array()[pe.channel_id].time_first = pe.time_rising_edge;
-              } else if (cam_image.pixels.Array()[pe.channel_id].time_first > pe.time_rising_edge) {
-                cam_image.pixels.Array()[pe.channel_id].time_first = pe.time_rising_edge;
-              }
-              m_stat_photons_accepted++;
-          } else {
-            m_stat_photons_discarded++;
+      size_t offset = images_out.size();
+      for (auto& signal : digis_in.signals) {
+        auto id = signal.channel.link;
+        auto it = std::find_if(images_out.begin() + offset, images_out.end(), [id](auto& img) { return img.camera_id == id; } );
+        if (it == images_out.end()) {
+          images::image img{id, m_slice_times[img_idx], m_slice_times[img_idx + 1]};
+          images_out.emplace_back(img);
+          it = images_out.end() - 1;
+          it->blank();
+          UFW_DEBUG("Created image for camera id: {}, starting at time: {}", id, m_slice_times[img_idx]);
+         }
+        m_stat_photons_processed++;
+        if (signal.time_rising_edge >= m_slice_times[img_idx] && signal.time_rising_edge < m_slice_times[img_idx + 1]) {
+          //UFW_DEBUG("signal to be assigned to image {}", img_idx);
+          //FIXME this assumes that channel ids and the pixel array are indexed consistently
+          auto& pixel = it->pixels.Array()[signal.channel.channel];
+          pixel.add(signal.hits);
+          pixel.amplitude += signal.npe;
+          if (std::isnan(pixel.time_first) || (pixel.time_first > signal.time_rising_edge) ) {
+            pixel.time_first = signal.time_rising_edge;
           }
+          m_stat_photons_accepted++;
+        } else {
+          m_stat_photons_discarded++;
         }
-        images_out.images.emplace_back(cam_image);
       }
     }
     UFW_INFO("Processed {} photons; {} were accepted, {} discarded.", m_stat_photons_processed, m_stat_photons_accepted, m_stat_photons_discarded);

@@ -57,7 +57,7 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction() {}
 
 void PrimaryGeneratorAction::ApplyTranslation(){
     const auto& geom = m_optmen_edepsim->instance<geoinfo>();
-    m_centre = geom.grain().centre();
+    geom.grain().transform().GetTranslation(m_centre);
 }
 
 void PrimaryGeneratorAction::nextIteration() {

@@ -16,8 +16,7 @@ namespace sand::grain {
     };
 
     struct image {
-      uint16_t camera_id;
-      std::string camera_name;
+      channel_id::link_t camera_id;
       double time_begin; // begin of slice
       double time_end; // end of slice
       pixel_array<pixel> pixels;

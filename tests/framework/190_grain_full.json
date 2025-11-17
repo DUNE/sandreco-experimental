@@ -19,8 +19,12 @@
   },
   "globals" : {
     "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
-    "sand::geoinfo" : {},
-    "sand::grain::geant_run_manager" : {}
+    "sand::geoinfo" : { "grain_geometry" : "gdml-lenses" },
+    "sand::grain::geant_run_manager" : {},
+    "sand::grain::geant_gdml_parser" : {
+      "gdml-masks" : { "path" : "/home/sand/geometry/grain-masks/main.gdml" },
+      "gdml-lenses" : {"path": "/home/sand/geometry/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}
+    }
   },
   "contexts" : {
     "keys" : 1,
@@ -32,7 +36,7 @@
     {
       "sand::grain::optical_simulation" : {
         "seed" : 111,
-        "geometry" : "geometries/grain/masks-3mm/main.gdml",
+        "geometry" : "gdml-lenses",
         "energy_split_threshold" : 100
       },
       "reqs" : {},
@@ -42,8 +46,8 @@
         "sand::grain::detector_response_fast" : {
             "matrix_rows": 32,
             "matrix_columns": 32,
-            "sipm_active_size": 3.0,
-            "sipm_border": 0.1,
+            "sipm_active_size": 2.0,
+            "sipm_border": 0.0,
             "seed": 1111,
             "pde": 0.2},
         "reqs" : {"hits" : "grain_hits"},
@@ -58,7 +62,7 @@
       },
       {
         "sand::root::tree_streamer" : {
-          "uri" : "test/images.root",
+          "uri" : "/home/sand/images.root",
           "tree" : "cameras"
         },
         "write" : { "grain_images" : "sand::grain::images"}

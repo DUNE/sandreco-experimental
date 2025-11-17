@@ -24,6 +24,9 @@ namespace sand {
     m_root_path = cfg.value("basepath", "/volWorld/rockBox_lv_0/volDetEnclosure_0/volSAND_0/MagIntVol_volume_0/");
     m_edep_root_path = cfg.value("edep_basepath", "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+
+    auto grain_path = cfg.at("grain_geometry");
+
     auto nav = tgm.navigator();
     std::string world_path = nav->GetPath();
     bool PV_needed = world_path.find("_PV") != std::string::npos;
@@ -46,8 +49,7 @@ namespace sand {
 
     UFW_DEBUG("Using root path '{}'.", m_root_path.c_str());
 
-
-    m_grain.reset(new grain_info(*this));
+    m_grain.reset(new grain_info(*this, grain_path));
     m_ecal.reset(new ecal_info(*this));
 
     auto subpath = m_root_path;

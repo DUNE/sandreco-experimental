@@ -1,1 +1,2 @@
+add_subdirectory(geant_gdml_parser)
 add_subdirectory(geant_run_manager)

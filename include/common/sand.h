@@ -12,6 +12,9 @@
 
 namespace sand {
 
+  /**
+   * Position and direction vectors. For 3D space, note the difference between positions and directions.
+   */
   using pos_3d = ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>>;
   using dir_3d = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<double>>;
   using vec_4d = ROOT::Math::PxPyPzEVector;
@@ -20,6 +23,13 @@ namespace sand {
   using mom_4d = vec_4d;
 
   using rot_3d = ROOT::Math::Rotation3D;
+  /**
+   * xform_3d is the best tool for coordinate system transformation. It is used by multiplying a vector
+   * in the original coordinate system to obtain one in the new system: x' = T * x.
+   * The inverse transform can be used for the opposite transformation x = T.Inverse() * x'
+   * It correctly handles positions and directions, by applying both rotation and translation to the former,
+   * and only rotation to ther latter.
+   */
   using xform_3d = ROOT::Math::Transform3D;
 
   /**
@@ -123,10 +133,13 @@ namespace sand {
    * There is a 1-1 correspondence between the geo_path of a sensitive detector and a geo_id.
    * Prefer geo_id as a key, as it is substantially faster to compare.
    */
-#ifdef __CLING__
-  using geo_id = uint64_t;
-#else //__CLING__
   struct geo_id {
+    using supermodule_t = uint8_t;
+    using plane_t = uint8_t;
+    using tube_t = uint8_t;
+    //ROOT reports an internal error when generating a dictionary for this anonymous union.
+    //Since we don't care too much, we can just pretend it is just an int.
+#ifndef __CLING__
     union {
       struct {
         uint8_t reserved___0;
@@ -136,8 +149,8 @@ namespace sand {
       struct {
         uint8_t reserved___0;
         subdetector_t subdetector;
-        uint8_t supermodule;
-        uint8_t plane;
+        supermodule_t supermodule;
+        plane_t plane;
         uint8_t padding___1[4];
       } drift;
       struct {
@@ -152,9 +165,9 @@ namespace sand {
         };
         uint8_t reserved___0;
         subdetector_t subdetector;
-        uint8_t supermodule;
+        supermodule_t supermodule;
         region_t region;
-        uint8_t plane;
+        plane_t plane;
         uint8_t padding___1[3];
       } ecal;
       struct {
@@ -165,13 +178,17 @@ namespace sand {
       struct {
         uint8_t reserved___0;
         subdetector_t subdetector;
-        uint8_t supermodule;
-        uint8_t plane;
-        uint16_t tube;
+        supermodule_t supermodule;
+        plane_t plane;
+        tube_t tube;
         uint8_t padding___1[2];
       } stt;
       uint64_t raw = -1;
     };
+#else //__CLING__
+  uint64_t raw = -1;
+#endif //__CLING__
+  };
 
 };
 
@@ -193,18 +210,29 @@ inline bool operator<(geo_id lhs, geo_id rhs) {
   using channel_id = uint64_t;
 #else //__CLING__
   struct channel_id {
+    using link_t = uint8_t;
+    using channel_t = uint32_t;
+    //ROOT reports an internal error when generating a dictionary for this anonymous union.
+    //Since we don't care too much, we can just pretend it is just an int.
+#ifndef __CLING__
     union {
       struct {
         uint8_t reserved___0;
         subdetector_t subdetector;
-        uint8_t link;
+        link_t link;
         uint8_t padding___1;
-        uint32_t channel;
+        channel_t channel;
       } /*any*/;
       uint64_t raw = -1;
     };
+#else //__CLING__
+    uint64_t raw = -1;
+#endif //__CLING__
   };
 
+<<<<<<< HEAD
 #endif //__CLING__
+=======
+>>>>>>> 16-write-grain-implementation
 
 }

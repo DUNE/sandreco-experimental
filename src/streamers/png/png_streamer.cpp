@@ -75,9 +75,9 @@ namespace sand::png {
     auto basename = path().stem().string();
     auto ext = path().extension().string();
     for (const auto& img : m_images->images) {
-      auto filename = folder + '/' + basename + '_' + std::to_string(id) + '_' + img.camera_name + "_T" + std::to_string(long(img.time_begin)) + ext;
+      auto filename = folder + '/' + basename + '_' + std::to_string(id) + '_' + std::to_string(img.camera_id) + "_T" + std::to_string(long(img.time_begin)) + ext;
       FILE* fp = fopen(filename.c_str(), "wb");
-      UFW_DEBUG("Opening file for {} at {}, named {}", img.camera_name, id, filename);
+      UFW_DEBUG("Opening file for camera {} at {}, named {}", int(img.camera_id), id, filename);
       png_structp pngstruct = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
       png_infop info = png_create_info_struct(pngstruct);
       if (setjmp(png_jmpbuf(pngstruct))) {
@@ -90,7 +90,7 @@ namespace sand::png {
       png_set_swap(pngstruct);
       png_write_info(pngstruct, info);
       auto array = img.amplitude_array<uint8_t>();
-      UFW_DEBUG("Writing image data for {} at {}, pixel average = {}", img.camera_name, id, [&array](){ return std::accumulate(array.begin(), array.end(), 0.0); }());
+      UFW_DEBUG("Writing image data for camera {} at {}, pixel average = {}", int(img.camera_id), id, [&array](){ return std::accumulate(array.begin(), array.end(), 0.0); }());
       for (int row = 0; row != sand::grain::pixel_array<double>::kRows; ++row) {
         for (int col = 0; col != sand::grain::pixel_array<double>::kCols; ++col) {
           for (int fillc = 0; fillc != m_scale_factor; ++fillc) {
