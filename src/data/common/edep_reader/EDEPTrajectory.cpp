@@ -571,9 +571,9 @@ bool EDEPTrajectory::HasHitWithIdInDetector(int id, component component_name) co
  * @param component_name The name of the detector component.
  * @return The total deposited energy in the specified component.
  */
-double EDEPTrajectory::GetDepositedEnergy(component component_name) {
+double EDEPTrajectory::GetDepositedEnergy(component component_name) const {
   double deposited_energy = 0;
-  for (const auto& hit : hit_map_[component_name]) {
+  for (const auto& hit : hit_map_.at(component_name)) {
     deposited_energy += hit.GetSecondaryDeposit();
   }
   return deposited_energy;

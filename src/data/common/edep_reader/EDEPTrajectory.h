@@ -194,7 +194,7 @@ class EDEPTrajectory {
   bool HasHits() const { return !hit_map_.empty(); }
   bool HasHitWithId(int id) const;
   bool HasHitInDetector(component component_name) const;
-  double GetDepositedEnergy(component component_name);
+  double GetDepositedEnergy(component component_name) const;
   bool HasHitBeforeTime(double start_time) const;
   bool HasHitAfterTime(double stop_time) const;
   bool HasHitWithEnergySmallerThan(double energy) const;
