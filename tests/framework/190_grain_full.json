@@ -27,7 +27,7 @@
     }
   },
   "contexts" : {
-    "keys" : 10,
+    "keys" : 1,
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
     }
@@ -49,7 +49,7 @@
             "sipm_active_size": 2.0,
             "sipm_border": 0.0,
             "seed": 1111,
-            "pde": 1.0},
+            "pde": 0.2},
         "reqs" : {"hits" : "grain_hits"},
         "prods" : {"digi": "grain_digits"}
       },
