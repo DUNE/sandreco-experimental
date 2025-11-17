@@ -12,6 +12,7 @@
 #include <stt_info.hpp>
 
 #include <TFile.h>
+#include <TGeoNavigator.h>
 #include <regex>
 
 #include <root_tgeomanager/root_tgeomanager.hpp>
@@ -21,12 +22,13 @@ namespace sand {
   geoinfo::geoinfo(const ufw::config& cfg) {
 
     m_root_path = cfg.value("basepath", "/volWorld/rockBox_lv_0/volDetEnclosure_0/volSAND_0/MagIntVol_volume_0/");
+    m_edep_root_path = cfg.value("edep_basepath", "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
+    std::string world_path = nav->GetPath();
+    bool PV_needed = world_path.find("_PV") != std::string::npos;
 
-    try {
-      nav->cd(m_root_path);
-    } catch (ufw::exception& e) {
+    if(PV_needed){
       // Step 1: Add _PV before _0
       std::regex pattern_with_0("(_0)");
       m_root_path = std::regex_replace(m_root_path, pattern_with_0, "_PV$1");
@@ -35,22 +37,43 @@ namespace sand {
       std::regex pattern_without_0("(volWorld)");
       m_root_path = std::regex_replace(m_root_path, pattern_without_0, "$1_PV");
     }
-    UFW_INFO("Using root path '{}'.", m_root_path.c_str());
+
+    try{
+      nav->cd(m_root_path.c_str());
+    } catch (ufw::exception& e) {
+      UFW_EXCEPT(path_not_found, m_root_path);
+    }
+
+    UFW_DEBUG("Using root path '{}'.", m_root_path.c_str());
 
 
     m_grain.reset(new grain_info(*this));
     m_ecal.reset(new ecal_info(*this));
+
+    auto subpath = m_root_path;
     
-    try {
-      nav->cd(m_root_path / "sand_inner_volume_0/STTtracker_0");
-      m_tracker.reset(new stt_info(*this));
-    } catch (ufw::exception& e) {
-      try{
-        nav->cd(m_root_path / "sand_inner_volume_PV_0/STTtracker_PV_0"); 
-        m_tracker.reset(new stt_info(*this));       
-      } catch (ufw::exception& e) {
-        m_tracker.reset(new drift_info(*this));
+    if(PV_needed){
+      subpath = m_root_path / "sand_inner_volume_PV_0";
+    } else {
+      subpath = m_root_path / "sand_inner_volume_0";
+    }
+
+    nav->cd(subpath.c_str());
+    bool isSTT = false;
+    for(int d = 0; d < nav->GetCurrentNode()->GetNdaughters(); ++d){
+      std::string daughter_tmp = nav->GetCurrentNode()->GetDaughter(d)->GetName(); // STTtracker_PV_0
+      if(daughter_tmp.find("STTtracker") != std::string::npos){
+        isSTT = true;
+        break;
       }
+    }
+
+    if(isSTT){
+      UFW_INFO("STT subdetector implementation detected.");
+      m_tracker.reset(new stt_info(*this));
+    } else {
+      UFW_INFO("Drift subdetector implementation detected.");
+      m_tracker.reset(new drift_info(*this));
     }
   }
 

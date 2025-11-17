@@ -41,7 +41,7 @@ namespace sand::common {
   }
 
   void geoinfo_test::run() {
-    const auto& gi = instance<geoinfo>();
+    const auto& gi = get<geoinfo>();
     UFW_INFO("Running a geoinfo_test process at {}."), fmt::ptr(this);
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
@@ -50,7 +50,7 @@ namespace sand::common {
 
     if(!m_test_path.empty()) {
       UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
-      auto ID = gi.tracker().id(m_test_path); 
+      auto ID = gi.tracker().id(gi.tracker().partial_path(m_test_path, gi)); 
       UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector, ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
       UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
     } else {

@@ -7,9 +7,9 @@
 #include <TGeoTube.h>
 
 namespace sand {
-
+  
   static constexpr char s_stt_path[] = "sand_inner_volume_0/STTtracker_0";
-
+  
   geoinfo::stt_info::stt_info(const geoinfo& gi) : tracker_info(gi, s_stt_path) {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
@@ -58,66 +58,63 @@ namespace sand {
           std::string tname = tube->GetName();
           nav->cd(sttpath / smodname / plname / tname);
           /*FIXED to support both TGeoTubeSeg and TGeoTube used in more recent geometries*/
-          TGeoShape* generic_tube_shape = tube->GetVolume()->GetShape();
-
+          auto* generic_tube_shape = tube->GetVolume()->GetShape();
+          
           auto process_tube = [&](auto* tube_shape) {
-              auto matrix = nav->get_hmatrix();
-              double* tran = matrix.GetTranslation();
-              double* rot = matrix.GetRotationMatrix();
-              pos_3d centre;
-              centre.SetCoordinates(tran);
-              dir_3d halfsize(0, 0, tube_shape->GetDZ());
-              dir_3d globalhalfsize = nav->to_master(halfsize);
-              auto w = std::make_unique<wire>();
-              w->parent = stat.get();
-              w->head = centre + globalhalfsize;
-              w->tail = centre - globalhalfsize;
-              w->max_radius = tube_shape->GetRmax();
-              stat->wires.emplace_back(std::move(w));
+            auto matrix = nav->get_hmatrix();
+            double* tran = matrix.GetTranslation();
+            double* rot = matrix.GetRotationMatrix();
+            pos_3d centre;
+            centre.SetCoordinates(tran);
+            dir_3d halfsize(0, 0, tube_shape->GetDZ());
+            dir_3d globalhalfsize = nav->to_master(halfsize);
+            auto w = std::make_unique<wire>();
+            w->parent = stat.get();
+            w->head = centre + globalhalfsize;
+            w->tail = centre - globalhalfsize;
+            w->max_radius = tube_shape->GetRmax();
+            w->geo = id(geo_path(smodname.c_str()) / plname / tname);
+            stat->wires.emplace_back(std::move(w));
           };
-
+          
           if (auto* tube_shape = dynamic_cast<TGeoTube*>(generic_tube_shape)) {
-              process_tube(tube_shape);
+            process_tube(tube_shape);
+          } else {          
+            UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
           }
-          else if (auto* tube_seg = dynamic_cast<TGeoTubeSeg*>(generic_tube_shape)) {
-              process_tube(tube_seg);
-          }
-          else {
-              UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
-          }
-
+          
         } );
       } );
       add_station(station_ptr(std::move(stat)));
     } );
   }
-
+  
   geoinfo::stt_info::~stt_info() = default;
-
+  
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;
-    auto path = gp - subdetector_info::path();
+    auto path = gp;
     gi.subdetector = STT;
     //abuse the bad notation here, module/plane/straw
     if(path.find("PV_") != std::string::npos) {
-    std::string straw(path.token(2));
-    auto i1 = straw.find('_');
-    auto i2 = straw.find('_', i1 + 1);
-    auto i3 = straw.find('_', i2 + 1);
-    auto i4 = straw.find('_', i3 + 1);
-    auto i5 = straw.find('_', i4 + 1);
-    if (i5 != std::string::npos) {
-      gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
-      gi.stt.plane = 0;
-      if (straw.at(i3 - 1) == 'Y') {
-        gi.stt.plane = 1;
-      } else if (path.token(1).back() == '1') {
-        gi.stt.plane = 2;
+      std::string straw(path.token(2));
+      auto i1 = straw.find('_');
+      auto i2 = straw.find('_', i1 + 1);
+      auto i3 = straw.find('_', i2 + 1);
+      auto i4 = straw.find('_', i3 + 1);
+      auto i5 = straw.find('_', i4 + 1);
+      if (i5 != std::string::npos) {
+        gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
+        gi.stt.plane = 0;
+        if (straw.at(i3 - 1) == 'Y') {
+          gi.stt.plane = 1;
+        } else if (path.token(1).back() == '1') {
+          gi.stt.plane = 2;
+        }
+        gi.stt.tube = std::stoi(straw.substr(i5 + 1));
+      } else {
+        UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
       }
-      gi.stt.tube = std::stoi(straw.substr(i5 + 1));
-    } else {
-      UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
-    }
     } else { // root geometry notation with no PV
       std::string straw(path.token(2));
       auto i1 = straw.find('_');
@@ -143,7 +140,7 @@ namespace sand {
     }
     return gi;
   }
-
+  
   geo_path geoinfo::stt_info::path(geo_id gi) const {
     //TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
@@ -152,20 +149,20 @@ namespace sand {
     auto stat = at(gi.stt.supermodule);
     std::string module_name;
     switch (stat->target) {
-    case TRKONLY:
+      case TRKONLY:
       module_name = "TrkMod_";
       break;
-    case C3H6:
+      case C3H6:
       module_name = "C3H6Mod_";
       break;
-    case CARBON:
+      case CARBON:
       module_name = "CMod_";
       break;
-    default:
+      default:
       UFW_ERROR("Target material '{}' unsupported.", stat->target);
     }
     module_name += fmt::format("{:02}", gi.stt.supermodule);
-
+    
     gp /= module_name + placement + "_0";
     if (gi.stt.plane == 0) {
       module_name += "_planeXX";
@@ -185,5 +182,18 @@ namespace sand {
     else gp /= module_name + "_straw_0" + (gi.stt.tube == 0 ? "" : fmt::format("#{}", gi.stt.tube));
     return gp;
   }
-
+  
+  const geoinfo::stt_info::wire* geoinfo::stt_info::get_wire_by_id(const geo_id& id) const {
+    for (const auto& station_ptr : stations()) {
+      for (const auto& wire_ptr : station_ptr->wires) {
+        auto* stt_wire_ptr = static_cast<const sand::geoinfo::stt_info::wire*>(wire_ptr.get());
+        if (stt_wire_ptr->geo == id) {
+          return stt_wire_ptr;
+        }
+      }
+    }
+    return nullptr;
+  }
+  
+  
 }

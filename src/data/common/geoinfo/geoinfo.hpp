@@ -59,13 +59,15 @@ namespace sand {
     friend class drift_info;
     friend class stt_info;
 
-    const geo_path& root_path() const { return m_root_path; }
-
   private:
     std::unique_ptr<grain_info> m_grain;
     std::unique_ptr<ecal_info> m_ecal;
     std::unique_ptr<tracker_info> m_tracker;
     geo_path m_root_path;
+    geo_path m_edep_root_path;
+
+    const geo_path& root_path() const { return m_root_path; }
+    const geo_path& edep_root_path() const { return m_edep_root_path; }
 
   };
 

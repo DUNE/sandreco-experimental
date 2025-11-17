@@ -46,6 +46,8 @@ namespace sand {
       double length() const { return std::sqrt(direction().Mag2()); } ///< length of the line between 
       pos_3d actual(pos_3d) const;
       std::size_t segment(pos_3d x) const;
+      std::vector<double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
+      double closest_approach_point(const pos_3d&) const;
     };
 
     using wire_ptr = std::unique_ptr<const wire>;
@@ -95,12 +97,17 @@ namespace sand {
 
     const std::vector<station_ptr>& stations() const { return m_stations; }
 
+    std::vector<vec_4d> closest_points(const vec_4d&, const vec_4d&, const double&, const wire&) const;
+      
+    double get_min_time(const vec_4d&, const double &, const wire&) const;
+
   protected:
     void add_station(station_ptr&&);
 
     void add_volume(const geo_path&, const gas_volume&);
 
     const station* at(std::size_t i) const { return m_stations.at(i).get(); }
+
 
   private:
     std::vector<station_ptr> m_stations;
