@@ -117,7 +117,7 @@ namespace sand {
     xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(),
                        rot.yx(), rot.yy(), rot.yz(), tran.y(),
                        rot.zx(), rot.zy(), rot.zz(), tran.z());
-    auto sipms = find_by_name(camera, "photoDetector_physical");
+    auto sipms = find_by_name(camera, "photoDetector");
     auto mask = find_by_name(camera, "cameraAssembly_mask");
     auto mask_lv = mask->GetLogicalVolume();
     auto subsolid = dynamic_cast<G4SubtractionSolid*>(mask_lv->GetSolid());
@@ -126,7 +126,8 @@ namespace sand {
     auto multiunion = dynamic_cast<G4MultiUnion*>(displaced->GetConstituentMovedSolid());
     float sx = mask_front->GetXHalfLength();
     float sy = mask_front->GetYHalfLength();
-    mask_camera mc{camera->GetName(), 0, uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()),
+    // id as size of vector, we need to parse it from the camera name
+    mask_camera mc{camera->GetName(), m_mask_cameras.size(), uint8_t(grain::mask), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()),
                    sipms->GetObjectTranslation().z(), mask->GetObjectTranslation().z(), rect_f{-sy, -sx, sy, sx}, parse_holes(multiunion)};
     m_mask_cameras.emplace_back(mc);
   }
@@ -144,7 +145,8 @@ namespace sand {
                        rot.zx(), rot.zy(), rot.zz(), tran.z());
     auto sipms = find_by_name(camera, "photoDetector_physical");
     auto lens = find_by_name(camera, "gasLens_pv");
-    lens_camera lc{camera->GetName(), 0, uint8_t(grain::lens), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()),
+    // id as size of vector, we need to parse it from the camera name
+    lens_camera lc{camera->GetName(), m_lens_cameras.size(), uint8_t(grain::lens), loc2grain, parse_pixels(sipms, gdml.GetAuxMap()),
                   sipms->GetObjectTranslation().z(), lens->GetObjectTranslation().z()};
     m_lens_cameras.emplace_back(lc);
   }

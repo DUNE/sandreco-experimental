@@ -9,8 +9,8 @@
     "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
     "sand::geoinfo" : { "grain_geometry" : "gdml-lenses" },
     "sand::grain::geant_gdml_parser" : {
-      "gdml-masks" : { "path" : "geometries/grain/masks-3mm/main.gdml" },
-      "gdml-lenses" : {"path" : "/home/sand/geometries/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}
+      "gdml-masks" : { "path" : "/home/sand/geometry/grain-masks/main.gdml" },
+      "gdml-lenses" : { "path" : "/home/sand/geometry/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}
     }
   },
   "contexts" : {
