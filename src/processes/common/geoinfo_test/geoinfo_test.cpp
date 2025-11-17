@@ -48,12 +48,13 @@ namespace sand::common {
 
   private:
     geo_path m_test_path;
-    
+    std::string m_mask_or_lens;
   };
 
   void geoinfo_test::configure (const ufw::config& cfg) {
     process::configure(cfg);
     m_test_path = std::string(cfg.at("test_path"));
+    m_mask_or_lens = std::string(cfg.at("mask_or_lens"));
     UFW_INFO("Configuring geoinfo_test at {}.", fmt::ptr(this));
   }
 
@@ -66,7 +67,7 @@ namespace sand::common {
     UFW_INFO("Running a geoinfo_test process at {}.", fmt::ptr(this));
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
-    UFW_INFO("GRAIN size (local bbox):\n - outer vessel {};\n - LAr {};\n - optics fiducial {};", gi.grain().vessel_bbox(), gi.grain().LAr_bbox(), gi.grain().fiducial_bbox());
+    UFW_INFO("GRAIN size (local bbox):\n - LAr {};\n - optics fiducial {};", gi.grain().LAr_bbox(), gi.grain().fiducial_bbox());
     dir_3d sz(15., 15., 500.);
     auto voxels = gi.grain().fiducial_voxels(sz);
     std::string ascii_grain;
@@ -81,22 +82,40 @@ namespace sand::common {
       ascii_grain += '\n';
     }
     UFW_INFO("GRAIN was segmented in a fiducial of {} voxels:\n{}", voxels.size(), ascii_grain);
-    for (const auto& cam : gi.grain().mask_cameras()) {
-      auto cam2glob = gi.grain().transform() * cam.transform;
-      auto centre = cam2glob * pos_3d{0., 0., 0.};
-      auto aim = cam2glob * dir_3d{0., 0., 1.};
-      UFW_INFO("Camera {} [{}]:\n - centre: {};\n - view direction: {};\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
+    if( m_mask_or_lens == "mask" ){ 	
+	    for (const auto& cam : gi.grain().mask_cameras()) {
+      		auto cam2glob = gi.grain().transform() * cam.transform;
+      		auto centre = cam2glob * pos_3d{0., 0., 0.};
+      		auto aim = cam2glob * dir_3d{0., 0., 1.};
+      		UFW_INFO("Camera {} [{}]:\n - centre: {};\n - view direction: {};\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
+   	 	}
+    		auto pix_spam = gi.grain().mask_cameras().front();
+    		UFW_INFO("First camera details:");
+    		for (int i = 0; i != 32; ++i) {
+      			for (int j = 0; j != 32; ++j) {
+        		UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas[i][j].left, pix_spam.sipm_active_areas[i][j].top, pix_spam.sipm_active_areas[i][j].right, pix_spam.sipm_active_areas[i][j].bottom);
+      		}
+    		}
+    		std::for_each(pix_spam.holes.begin(), pix_spam.holes.end(), [](auto r) {
+      		UFW_INFO("Hole rect top left = ({}, {}), bottom right = ({}, {})", r.left, r.top, r.right, r.bottom);
+    		} );
     }
-    auto pix_spam = gi.grain().mask_cameras().front();
-    UFW_INFO("First camera details:");
-    for (int i = 0; i != 32; ++i) {
-      for (int j = 0; j != 32; ++j) {
-        UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas[i][j].left, pix_spam.sipm_active_areas[i][j].top, pix_spam.sipm_active_areas[i][j].right, pix_spam.sipm_active_areas[i][j].bottom);
-      }
+    else if( m_mask_or_lens == "lens" ){
+	for (const auto& cam : gi.grain().lens_cameras()) {
+		auto cam2glob = gi.grain().transform() * cam.transform;
+		auto centre = cam2glob * pos_3d{0., 0., 0.};
+		auto aim = cam2glob * dir_3d{0., 0., 1.};
+		UFW_INFO("Camera {} [{}]:\n - centre: {};\n - view direction: {};\n - optics type: {}", cam.name, cam.id, centre, aim, cam.optics);
+	}
+	auto pix_spam = gi.grain().lens_cameras().front();
+    	UFW_INFO("First camera details:");
+	for (int i = 0; i != 32; ++i) {
+		for (int j = 0; j != 32; ++j) {
+		UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas[i][j].left, pix_spam.sipm_active_areas[i][j].top, pix_spam.sipm_active_areas[i][j].right, pix_spam.sipm_active_areas[i][j].bottom);
+		}
+	}
+	UFW_INFO("Last camera info: distance lens-sensor = {}",pix_spam.z_lens);	
     }
-    std::for_each(pix_spam.holes.begin(), pix_spam.holes.end(), [](auto r) {
-      UFW_INFO("Hole rect top left = ({}, {}), bottom right = ({}, {})", r.left, r.top, r.right, r.bottom);
-    } );
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());

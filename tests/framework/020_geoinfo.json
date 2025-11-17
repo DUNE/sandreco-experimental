@@ -7,10 +7,10 @@
   },
   "globals" : {
     "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
-    "sand::geoinfo" : { "grain_geometry" : "gdml-masks" },
+    "sand::geoinfo" : { "grain_geometry" : "gdml-lenses" },
     "sand::grain::geant_gdml_parser" : {
-      "gdml-masks" : { "path" : "geometries/grain/masks-3mm/main.gdml" },
-      "gdml-lenses" : {}
+      "gdml-masks" : { "path" : "/home/sand/geometry/grain-masks/main.gdml" },
+      "gdml-lenses" : { "path" : "/home/sand/geometry/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}
     }
   },
   "contexts" : {
@@ -19,7 +19,7 @@
   },
   "run" : [
     {
-      "sand::common::geoinfo_test" : {"test_path" : "sand_inner_volume_PV_0/STTtracker_PV_0/CMod_02_PV_0/CMod_02_planeYY_PV_0/CMod_02_planeYY_straw_PV_5"},
+      "sand::common::geoinfo_test" : {"test_path" : "sand_inner_volume_PV_0/STTtracker_PV_0/CMod_02_PV_0/CMod_02_planeYY_PV_0/CMod_02_planeYY_straw_PV_5", "mask_or_lens" : "lens"},
       "reqs" : {},
       "prods" : {}
     }

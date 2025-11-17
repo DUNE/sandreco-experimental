@@ -87,21 +87,17 @@ namespace sand {
       return m_LAr_aabb;
     }
 
-    dir_3d vessel_bbox() const {
-      return m_vessel_aabb;
-    }
-
     grain::voxel_array<uint8_t> fiducial_voxels(dir_3d pitch) const;
 
   private:
-    void add_camera(G4VPhysicalVolume*, G4GDMLParser&);
-
+     void add_camera_mask(G4VPhysicalVolume*, G4GDMLParser&);
+     void add_camera_lens(G4VPhysicalVolume*, G4GDMLParser&);
+  
   private:
     std::vector<lens_camera> m_lens_cameras;
     std::vector<mask_camera> m_mask_cameras;
     dir_3d m_fiducial_aabb;
     dir_3d m_LAr_aabb;
-    dir_3d m_vessel_aabb;
     G4VSolid* m_fiducial_solid;
 
   };
