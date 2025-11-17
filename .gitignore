@@ -5,7 +5,7 @@ install/
 *.idx
 .kateproject.build
 compile_commands.json
-src/streamers/root/tree_streamer_linkdef.h
-src/streamers/root/tree_streamer_types.hpp
+src/streamers/*_linkdef.h
+src/streamers/*_types.hpp
 .vscode/settings.json
 sand-events-in-sand_inner_volume.6.ghep.root
