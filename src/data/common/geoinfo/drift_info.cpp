@@ -8,7 +8,7 @@
 
 namespace sand {
 
-  static constexpr char s_drift_path[] = "sand_inner_volume_0/SANDtracker_0";
+  static constexpr char s_drift_path[] = "sand_inner_volume_PV_0/SANDtracker_PV_0";
 
   /**
    * @brief Construct a new geoinfo::drift info::drift info object

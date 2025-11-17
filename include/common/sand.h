@@ -190,8 +190,6 @@ namespace sand {
 #endif //__CLING__
   };
 
-};
-
 // Equality operator
 inline bool operator==(geo_id lhs, geo_id rhs) {
     return lhs.raw == rhs.raw;
@@ -202,13 +200,9 @@ inline bool operator<(geo_id lhs, geo_id rhs) {
     return lhs.raw < rhs.raw;
 }
 
-#endif //__CLING__
   /**
    * Unique identifier for channels as known by the data acquisition system.
    */
-#ifdef __CLING__
-  using channel_id = uint64_t;
-#else //__CLING__
   struct channel_id {
     using link_t = uint8_t;
     using channel_t = uint32_t;
@@ -229,10 +223,5 @@ inline bool operator<(geo_id lhs, geo_id rhs) {
     uint64_t raw = -1;
 #endif //__CLING__
   };
-
-<<<<<<< HEAD
-#endif //__CLING__
-=======
->>>>>>> 16-write-grain-implementation
 
 }

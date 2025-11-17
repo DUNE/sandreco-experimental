@@ -15,7 +15,6 @@ namespace sand {
       UFW_EXCEPT(path_not_found, r_info.root_path() / m_path);
     }
     UFW_DEBUG("Using subdetector path '{}'.", m_path.c_str());
-    m_centre = nav->to_master(pos_3d{0.0, 0.0, 0.0});
     TGeoHMatrix hm = nav->get_hmatrix();
     //I cry everytime... It's the same library...
     const double* rot = hm.GetRotationMatrix();
