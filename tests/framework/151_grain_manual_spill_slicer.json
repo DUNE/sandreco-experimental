@@ -14,7 +14,7 @@
     "run" : [
       {
         "sand::root::tree_streamer" : { 
-          "uri" : "test/detresp.root",
+          "uri" : "test/detresp_masks.root",
           "tree" : "cameras"
         },
         "read" : { "digis" : "sand::grain::digi"}
