@@ -12,13 +12,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(GNUInstallDirs)
 include(CTest)
+include(ClangFormat)
 
 option(BUILD_SHARED_LIBS "Build libraries as shared libraries by default." ON)
 option(BUILD_TESTS "Build Tests" ON)
 option(BUILD_DOCUMENTATION "Build documentation tree" OFF)
 
 if(CMAKE_VERSION VERSION_GREATER "3.30.0")
-  cmake_policy(SET CMP0167 NEW)
+    cmake_policy(SET CMP0167 NEW)
 endif()
 find_package(spdlog REQUIRED)
 
@@ -29,11 +30,11 @@ find_package(ufw REQUIRED)
 add_subdirectory(src)
 
 if(BUILD_TESTS)
-  add_subdirectory(tests)
+    add_subdirectory(tests)
 endif()
 
 if(BUILD_DOCUMENTATION)
-  add_subdirectory(docs)
+    add_subdirectory(docs)
 endif()
 
 install(
@@ -44,7 +45,7 @@ install(
   )
 
 include(CMakePackageConfigHelpers)
-configure_package_config_file( 
+configure_package_config_file(
   "${PROJECT_SOURCE_DIR}/tools/cmake/Config.cmake.in" "sandrecoConfig.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sandreco
   PATH_VARS CMAKE_INSTALL_LIBDIR
