@@ -18,11 +18,6 @@ namespace sand::grain {
     void run() override;
 
   private:
-    double m_sipm_size;
-    double m_sipm_active_size;
-    double m_sipm_border;
-    double m_matrix_width;
-    double m_matrix_height;
     double m_pde;
     std::default_random_engine m_rng_engine;
     std::uniform_real_distribution<> m_uniform;
