@@ -10,8 +10,7 @@ namespace sand {
    * Keep only general purpose members in the main class, and keep the value of any configuration parameter.
    */
   class geoinfo : ufw::data::base<ufw::data::complex_tag, ufw::data::unique_tag, ufw::data::global_tag> {
-
-  public:
+   public:
     class subdetector_info;
     class ecal_info;
     class grain_info;
@@ -19,24 +18,26 @@ namespace sand {
     class drift_info;
     class stt_info;
 
-  private:
+   private:
     class path_not_found : public ufw::exception {
-    public:
+     public:
       path_not_found(const geo_path& p) : exception("Cannot find path '{}' in geometry.", p.c_str()) {}
     };
 
     class invalid_geo_id : public ufw::exception {
-    public:
+     public:
       invalid_geo_id(geo_id g) : exception("GUID {:x} is not a valid identifier.", g.raw) {}
     };
 
     class invalid_position : public ufw::exception {
-    public:
-      invalid_position(pos_3d pos) : exception("No object found at position ({}, {}, {}).", pos.x(), pos.y(), pos.z()) {}
-      invalid_position(std::string_view type, pos_3d pos) : exception("No {} found at position ({}, {}, {}).", type, pos.x(), pos.y(), pos.z()) {}
+     public:
+      invalid_position(pos_3d pos)
+        : exception("No object found at position ({}, {}, {}).", pos.x(), pos.y(), pos.z()) {}
+      invalid_position(std::string_view type, pos_3d pos)
+        : exception("No {} found at position ({}, {}, {}).", type, pos.x(), pos.y(), pos.z()) {}
     };
 
-  public:
+   public:
     explicit geoinfo(const ufw::config&);
 
     ~geoinfo();
@@ -51,7 +52,7 @@ namespace sand {
 
     geo_path path(geo_id) const;
 
-  private:
+   private:
     friend class subdetector_info;
     friend class ecal_info;
     friend class grain_info;
@@ -59,7 +60,7 @@ namespace sand {
     friend class drift_info;
     friend class stt_info;
 
-  private:
+   private:
     std::unique_ptr<grain_info> m_grain;
     std::unique_ptr<ecal_info> m_ecal;
     std::unique_ptr<tracker_info> m_tracker;
@@ -68,9 +69,8 @@ namespace sand {
 
     const geo_path& root_path() const { return m_root_path; }
     const geo_path& edep_root_path() const { return m_edep_root_path; }
-
   };
 
-}
+} // namespace sand
 
 UFW_DECLARE_COMPLEX_DATA(sand::geoinfo);

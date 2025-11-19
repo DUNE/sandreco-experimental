@@ -5,7 +5,6 @@
 namespace sand {
 
   class geoinfo::drift_info : public tracker_info {
-
     struct station : public tracker_info::station {
       geo_id geo; ///< The unique geometry identifier
       wire_list x_view() const;
@@ -13,7 +12,7 @@ namespace sand {
       wire_list v_view() const;
     };
 
-  public:
+   public:
     drift_info(const geoinfo&);
 
     virtual ~drift_info();
@@ -23,7 +22,6 @@ namespace sand {
     geo_id id(const geo_path&) const override;
 
     geo_path path(geo_id) const override;
-
   };
 
-}
+} // namespace sand

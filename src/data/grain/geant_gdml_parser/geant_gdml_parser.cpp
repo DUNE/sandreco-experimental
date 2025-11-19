@@ -6,8 +6,8 @@
 namespace sand::grain {
 
   geant_gdml_parser::geant_gdml_parser(const ufw::config& cfg) {
-    //this little manouver is needed because of improper handling of relative paths elsewhere...
-    auto path = cfg.path_at("path");
+    // this little manouver is needed because of improper handling of relative paths elsewhere...
+    auto path          = cfg.path_at("path");
     auto starting_path = std::filesystem::current_path();
     UFW_DEBUG("Starting path {}", std::filesystem::current_path().string());
     UFW_DEBUG("Setting path {}", path.parent_path().string());
@@ -20,4 +20,4 @@ namespace sand::grain {
     UFW_DEBUG("Back to {}", std::filesystem::current_path().string());
   }
 
-}
+} // namespace sand::grain

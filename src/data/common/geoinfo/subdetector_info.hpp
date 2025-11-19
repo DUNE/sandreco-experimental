@@ -5,11 +5,10 @@
 namespace sand {
 
   class geoinfo::subdetector_info {
-
-  public:
+   public:
     subdetector_info(const geoinfo&, const geo_path&);
-    subdetector_info(const subdetector_info&) = delete;
-    subdetector_info& operator = (const subdetector_info&) = delete;
+    subdetector_info(const subdetector_info&)             = delete;
+    subdetector_info& operator= (const subdetector_info&) = delete;
 
     virtual ~subdetector_info();
 
@@ -21,13 +20,13 @@ namespace sand {
 
     geo_path partial_path(const geo_path& full_path, const geoinfo& gi) const {
       auto partial_path = full_path;
-      if(full_path.find(gi.root_path()) != std::string::npos) {
+      if (full_path.find(gi.root_path()) != std::string::npos) {
         partial_path = partial_path - gi.root_path();
       }
-      if(full_path.find(gi.edep_root_path()) != std::string::npos) {
+      if (full_path.find(gi.edep_root_path()) != std::string::npos) {
         partial_path = partial_path - gi.edep_root_path();
       }
-      if(partial_path.find(path()) != std::string::npos) {
+      if (partial_path.find(path()) != std::string::npos) {
         partial_path = partial_path - path();
       }
       return partial_path;
@@ -38,14 +37,13 @@ namespace sand {
      */
     const xform_3d& transform() const { return m_transform; }
 
-  protected:
+   protected:
     const geoinfo& info() { return r_info; }
 
-  private:
+   private:
     const geoinfo& r_info;
     geo_path m_path;
     xform_3d m_transform;
-
   };
 
-}
+} // namespace sand
