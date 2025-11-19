@@ -22,7 +22,7 @@
     "sand::geoinfo" : { "grain_geometry" : "gdml-masks" },
     "sand::grain::geant_run_manager" : {},
     "sand::grain::geant_gdml_parser" : {
-      "gdml-masks" : { "path" : "/home/sand/geometry/grain-masks/main.gdml" },
+      "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" },
       "gdml-lenses" : { "path" : "geometries/grain/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}
     }
   },
