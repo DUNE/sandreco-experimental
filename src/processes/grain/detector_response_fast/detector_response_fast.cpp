@@ -3,6 +3,8 @@
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 
+#include <geoinfo/geoinfo.hpp>
+#include <geoinfo/grain_info.hpp>
 #include <grain/digi.h>
 #include <grain/grain.h>
 #include <grain/photons.h>
@@ -20,56 +22,57 @@ namespace sand::grain {
 
   void detector_response_fast::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_sipm_active_size = cfg.at("sipm_active_size");
-    m_sipm_border      = cfg.at("sipm_border");
-    m_pde              = cfg.at("pde");
-    m_rng_engine.seed(cfg.at("seed"));
-    m_sipm_size     = m_sipm_active_size + 2 * m_sipm_border;
-    m_matrix_height = camera_height * m_sipm_size;
-    m_matrix_width  = camera_width * m_sipm_size;
+    m_pde = cfg.at("pde");
+    m_gdml_geometry = cfg.at("geometry");
   }
 
   void detector_response_fast::run() {
+    UFW_INFO("Running a detector_response_fast process at {}.", fmt::ptr(this));
+    const auto& gi = instance<geoinfo>();
+    UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     m_stat_photons_processed = 0;
     m_stat_photons_accepted  = 0;
     m_stat_photons_discarded = 0;
     const auto& hits_in      = get<hits>("hits");
     UFW_DEBUG("Processing {} photon hits.", hits_in.photons.size());
-    auto& digi_out = set<digi>("digi");
+    auto& digi_out                        = set<digi>("digi");
+    geoinfo::grain_info::camera* pix_spam = nullptr;
+    if (m_gdml_geometry == "gdml-masks") {
+      pix_spam = &gi.grain().mask_cameras().front();
+    } else if (m_gdml_geometry == "gdml-lenses") {
+      pix_spam = &gi.grain().lens_cameras().front();
+    } else {
+      UFW_ERROR("GRAIN gdml-geometry type not found.");
+    }
     for (const auto& photon : hits_in.photons) {
       true_hits truth;
-      double interaction_probability = m_uniform(m_rng_engine);
+      double interaction_probability = m_uniform(random_engine());
       m_stat_photons_processed++;
       if (interaction_probability < m_pde) {
-        double shifted_pos_x = photon.pos.X() + m_matrix_width * 0.5;
-        double shifted_pos_y = -photon.pos.Y() + m_matrix_height * 0.5;
-        int col              = static_cast<int>(shifted_pos_x / m_sipm_size);
-        int row              = static_cast<int>(shifted_pos_y / m_sipm_size);
-        // UFW_DEBUG("Photon position: {}, {}, assigned to channel {}, {}", p.pos.X(), p.pos.Y(), row, col);
-        //  check matrix boundaries
-        if (col >= 0 && col < camera_width && row >= 0 && row < camera_height) {
-          // check sipm borders
-          if (shifted_pos_x > col * m_sipm_size + m_sipm_border
-              && shifted_pos_x < (col + 1) * m_sipm_size - m_sipm_border
-              && shifted_pos_y > row * m_sipm_size + m_sipm_border
-              && shifted_pos_y < (row + 1) * m_sipm_size - m_sipm_border) {
-            truth.add(photon.hit);
-            // UFW_DEBUG("Photon is inside sipm");
-            // consistent indexing: Row Major
-            channel_id ch;
-            ch.subdetector = GRAIN;
-            ch.link        = photon.camera_id;
-            ch.channel     = row * camera_width + col;
-            digi::signal pe{truth, ch, photon.pos.T(), NAN, 1.0};
-            digi_out.signals.emplace_back(pe);
-            m_stat_photons_accepted++;
-          } else {
-            // UFW_DEBUG("Photon {}, {} is outside sipm {}, {}", shifted_pos_x, shifted_pos_y, col * m_sipm_size, row *
-            // m_sipm_size);
-            m_stat_photons_discarded++;
+        // UFW_DEBUG("processing photon with position: {}, {}", photon.pos.X(), photon.pos.Y());
+        bool channel_found = false;
+        for (int i = 0; i != camera_height && !channel_found; ++i) {
+          for (int j = 0; j != camera_width; ++j) {
+            if (photon.pos.X() > pix_spam->sipm_active_areas[i][j].left
+                && photon.pos.X() < pix_spam->sipm_active_areas[i][j].right
+                && photon.pos.Y() > pix_spam->sipm_active_areas[i][j].bottom
+                && photon.pos.Y() < pix_spam->sipm_active_areas[i][j].top) {
+              truth.add(photon.hit);
+              channel_id ch;
+              ch.subdetector = GRAIN;
+              ch.link        = photon.camera_id;
+              // consistent indexing: Row Major
+              ch.channel = i * camera_width + j;
+              digi::signal pe{truth, ch, photon.pos.T(), NAN, 1.0};
+              digi_out.signals.emplace_back(pe);
+              m_stat_photons_accepted++;
+              // UFW_DEBUG("Added photon to SiPM {},{}", i, j);
+              channel_found = true;
+              break;
+            }
           }
-        } else {
-          // UFW_DEBUG("Photon {}, {} is outside matrix", shifted_pos_x, shifted_pos_y);
+        }
+        if (channel_found == false) {
           m_stat_photons_discarded++;
         }
       } else {
@@ -79,5 +82,4 @@ namespace sand::grain {
     UFW_INFO("Processed {} photon hits; {} were accepted, {} discarded.", m_stat_photons_processed,
              m_stat_photons_accepted, m_stat_photons_discarded);
   }
-
 } // namespace sand::grain

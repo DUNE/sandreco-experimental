@@ -30,7 +30,8 @@
     "keys" : 1,
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
-    }
+    },
+    "seed": 1111
   },
   "run" : [
     {
@@ -44,11 +45,7 @@
     },
       {
         "sand::grain::detector_response_fast" : {
-            "matrix_rows": 32,
-            "matrix_columns": 32,
-            "sipm_active_size": 2.0,
-            "sipm_border": 0.0,
-            "seed": 1111,
+            "geometry" : "gdml-lenses",
             "pde": 0.2},
         "reqs" : {"hits" : "grain_hits"},
         "prods" : {"digi": "grain_digits"}

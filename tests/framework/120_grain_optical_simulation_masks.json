@@ -27,7 +27,7 @@
     }
   },
   "contexts" : {
-    "keys" : 2,
+    "keys" : 10,
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
     }
