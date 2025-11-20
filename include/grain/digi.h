@@ -10,7 +10,6 @@
 namespace sand::grain {
 
   struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-
     struct signal : public sand::true_hits {
       /// The readout channel associated with the signal.
       channel_id channel;
@@ -24,9 +23,8 @@ namespace sand::grain {
 
     using signal_collection = std::vector<signal>;
     signal_collection signals;
-
   };
 
-}
+} // namespace sand::grain
 
 UFW_DECLARE_MANAGED_DATA(sand::grain::digi)

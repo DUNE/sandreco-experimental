@@ -5,11 +5,8 @@
 namespace sand {
 
   class geoinfo::ecal_info : public subdetector_info {
-
-  public:
-    enum class cell_type {
-      barrel, endcap
-    };
+   public:
+    enum class cell_type { barrel, endcap };
 
     struct cell {
       geo_id id;
@@ -18,7 +15,7 @@ namespace sand {
       cell_type type;
     };
 
-  public:
+   public:
     ecal_info(const geoinfo&);
 
     virtual ~ecal_info();
@@ -33,9 +30,8 @@ namespace sand {
 
     geo_path path(geo_id) const override;
 
-  private:
+   private:
     std::map<geo_id, cell> m_cells;
-
   };
 
-}
+} // namespace sand

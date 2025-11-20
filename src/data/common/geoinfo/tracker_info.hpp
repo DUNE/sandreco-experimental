@@ -9,19 +9,18 @@ namespace sand {
    * North-south refers to the global orientation of SAND.
    * North is towards negative X, or the side of the cavern towards the shaft.
    * Positive Y is up, Positive Z goes with the beam, towards the FD.
-   * 
+   *
    * Wire deflection follows the catenary curve y = a*cosh((x-x_min)/a)-a+y_min
    * x_min and y_min can be determined by direct observation or fit of the lowest measured point.
    * a is by definition the length of wire whose weight is equal in magnitude to the tension at x_min.
    * It must be determined by fit after x,y_min are known, fixing the head and tail coordinates.
-   * 
+   *
    * Wire deflection is a separate catenary between each fixed point, up to s_max_wire_spacers + 1.
    * Fixed arrays are used instead of vectors because the number is small and likely identical for all wires.
    * Should there be wires with fewer spacers, the excess entries are guaranteed to be nan.
    */
   class geoinfo::tracker_info : public subdetector_info {
-
-  public:
+   public:
     static const std::size_t s_max_wire_spacers = 0;
 
     struct station;
@@ -32,32 +31,36 @@ namespace sand {
         double a;
       };
       using catenary_array = std::array<catenary, s_max_wire_spacers + 1>;
-      using spacer_array = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X coordinate, starting from north.
-      const station* parent; ///< The parent station
-      channel_id channel; ///< The unique daq identifier
-      pos_3d head; ///< The readout end of the wire
-      pos_3d tail; ///< The termination end of the wire
-      double hv; ///< The bias voltage
-      double max_radius; ///< The maximum drift distance
-      catenary_array catenaries; ///< Maximum deflection downwards at the centre of the segment between two spacers, north to south
+      using spacer_array   = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X
+                                                                     ///< coordinate, starting from north.
+      const station* parent;                                         ///< The parent station
+      channel_id channel;                                            ///< The unique daq identifier
+      pos_3d head;                                                   ///< The readout end of the wire
+      pos_3d tail;                                                   ///< The termination end of the wire
+      double hv;                                                     ///< The bias voltage
+      double max_radius;                                             ///< The maximum drift distance
+      catenary_array
+          catenaries; ///< Maximum deflection downwards at the centre of the segment between two spacers, north to south
       spacer_array spacers; ///< Horizontal coordinates of wire spacers, north to south
-      double angle() const { return std::atan2(direction().y(), direction().x()); } //signed angle w.r.t. horizontal north to south direction
+      double angle() const {
+        return std::atan2(direction().y(), direction().x());
+      }                                                // signed angle w.r.t. horizontal north to south direction
       dir_3d direction() const { return tail - head; } ///< direction pointing towards from head to tail, not normalized
-      double length() const { return std::sqrt(direction().Mag2()); } ///< length of the line between 
+      double length() const { return std::sqrt(direction().Mag2()); } ///< length of the line between
       pos_3d actual(pos_3d) const;
       std::size_t segment(pos_3d x) const;
       std::vector<double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
       double closest_approach_point(const pos_3d&) const;
     };
 
-    using wire_ptr = std::unique_ptr<const wire>;
+    using wire_ptr  = std::unique_ptr<const wire>;
     using wire_list = std::vector<const wire*>;
 
     enum target_material : uint8_t {
       TRKONLY = 0,
-      C3H6 = 1,
-      CARBON = 2,
-      NONE = 255,
+      C3H6    = 1,
+      CARBON  = 2,
+      NONE    = 255,
     };
 
     struct station {
@@ -67,7 +70,8 @@ namespace sand {
       pos_3d bottom_north;
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
-      template <typename Func> wire_list select(Func&& f) const {
+      template <typename Func>
+      wire_list select(Func&& f) const {
         wire_list wl;
         for (const auto& wp : wires) {
           if (std::forward<Func>(f)(*wp)) {
@@ -78,7 +82,7 @@ namespace sand {
       }
     };
 
-  protected:
+   protected:
     using station_ptr = std::unique_ptr<const station>;
 
     struct gas_volume {
@@ -88,7 +92,7 @@ namespace sand {
       double gas_pressure;
     };
 
-  public:
+   public:
     tracker_info(const geoinfo&, const geo_path&);
 
     virtual ~tracker_info();
@@ -98,21 +102,19 @@ namespace sand {
     const std::vector<station_ptr>& stations() const { return m_stations; }
 
     std::vector<vec_4d> closest_points(const vec_4d&, const vec_4d&, const double&, const wire&) const;
-      
-    double get_min_time(const vec_4d&, const double &, const wire&) const;
 
-  protected:
+    double get_min_time(const vec_4d&, const double&, const wire&) const;
+
+   protected:
     void add_station(station_ptr&&);
 
     void add_volume(const geo_path&, const gas_volume&);
 
     const station* at(std::size_t i) const { return m_stations.at(i).get(); }
 
-
-  private:
+   private:
     std::vector<station_ptr> m_stations;
     std::map<geo_path, gas_volume> m_volumes;
-
   };
 
-}
+} // namespace sand
