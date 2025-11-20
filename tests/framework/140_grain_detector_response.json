@@ -14,7 +14,8 @@
     },
     "contexts" : {
       "keys" : 2,
-      "locals" : {}
+      "locals" : {},
+      "seed" : 1111
     },
     "run" : [
       {
@@ -27,8 +28,7 @@
       {
         "sand::grain::detector_response_fast" : {
           "pde" : 0.2,
-          "geometry" : "gdml-masks",
-          "seed" : 1111
+          "geometry" : "gdml-masks"
         },
         "reqs" : {"hits" : "foo"},
         "prods" : {"digi": "pippo"}

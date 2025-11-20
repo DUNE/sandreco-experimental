@@ -23,7 +23,6 @@ namespace sand::grain {
   void detector_response_fast::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_pde = cfg.at("pde");
-    m_rng_engine.seed(cfg.at("seed"));
     m_gdml_geometry = cfg.at("geometry");
   }
 
@@ -47,7 +46,7 @@ namespace sand::grain {
     }
     for (const auto& photon : hits_in.photons) {
       true_hits truth;
-      double interaction_probability = m_uniform(m_rng_engine);
+      double interaction_probability = m_uniform(random_engine());
       m_stat_photons_processed++;
       if (interaction_probability < m_pde) {
         // UFW_DEBUG("processing photon with position: {}, {}", photon.pos.X(), photon.pos.Y());
