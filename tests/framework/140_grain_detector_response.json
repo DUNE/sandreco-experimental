@@ -27,6 +27,7 @@
       {
         "sand::grain::detector_response_fast" : {
           "pde" : 0.2,
+          "geometry" : "gdml-masks",
           "seed" : 1111
         },
         "reqs" : {"hits" : "foo"},
