@@ -23,6 +23,8 @@ namespace sand::grain {
     process::configure(cfg); 
     m_pde = cfg.at("pde");
     m_rng_engine.seed(cfg.at("seed"));
+    m_gdml_geometry = cfg.at("geometry");
+
   }
 
   void detector_response_fast::run() {
@@ -35,7 +37,14 @@ namespace sand::grain {
     const auto& hits_in = get<hits>("hits");
     UFW_DEBUG("Processing {} photon hits.", hits_in.photons.size());
     auto& digi_out = set<digi>("digi");
-    auto pix_spam = gi.grain().mask_cameras().front();   
+    geoinfo::grain_info::camera* pix_spam = nullptr;
+    if (m_gdml_geometry == "gdml-masks") {
+      pix_spam = &gi.grain().mask_cameras().front();
+    } else if (m_gdml_geometry == "gdml-lenses") {
+      pix_spam = &gi.grain().lens_cameras().front();
+    } else {
+      UFW_ERROR("GRAIN gdml-geometry type not found.");
+    }
     for (const auto& photon : hits_in.photons) {
       true_hits truth;
       double interaction_probability = m_uniform(m_rng_engine);
@@ -45,8 +54,8 @@ namespace sand::grain {
         bool channel_found = false;
         for (int i = 0; i != camera_height && !channel_found; ++i) {
           for (int j = 0; j != camera_width; ++j) {
-            if (photon.pos.X() > pix_spam.sipm_active_areas[i][j].left && photon.pos.X() < pix_spam.sipm_active_areas[i][j].right && 
-                photon.pos.Y() > pix_spam.sipm_active_areas[i][j].bottom && photon.pos.Y() < pix_spam.sipm_active_areas[i][j].top) {
+            if (photon.pos.X() > pix_spam->sipm_active_areas[i][j].left && photon.pos.X() < pix_spam->sipm_active_areas[i][j].right && 
+                photon.pos.Y() > pix_spam->sipm_active_areas[i][j].bottom && photon.pos.Y() < pix_spam->sipm_active_areas[i][j].top) {
               truth.add(photon.hit);
               channel_id ch;
               ch.subdetector = GRAIN;

@@ -24,6 +24,7 @@ namespace sand::grain {
     uint64_t m_stat_photons_processed;
     uint64_t m_stat_photons_accepted;
     uint64_t m_stat_photons_discarded;
+    std::string m_gdml_geometry;
 
   };
     
