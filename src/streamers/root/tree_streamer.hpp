@@ -8,8 +8,7 @@ class TTree;
 namespace sand::root {
 
   class tree_streamer : public ufw::streamer {
-
-  public:
+   public:
     tree_streamer();
 
     ~tree_streamer();
@@ -22,7 +21,7 @@ namespace sand::root {
 
     void write(ufw::context_id) override;
 
-  private:
+   private:
     std::unique_ptr<TFile> m_file;
     TTree* m_tree;
     void* m_branchaddr;
@@ -30,9 +29,8 @@ namespace sand::root {
     ufw::context_id* m_id_ptr;
     long m_last_entry;
     static constexpr char s_id_brname[] = "context_id";
-
   };
 
-}
+} // namespace sand::root
 
 UFW_REGISTER_STREAMER(sand::root::tree_streamer)

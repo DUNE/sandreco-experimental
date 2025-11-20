@@ -1,20 +1,19 @@
-#include <ufw/context.hpp>
 #include <ufw/config.hpp>
+#include <ufw/context.hpp>
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
-#include <grain/photons.h>
 #include <grain/digi.h>
+#include <grain/photons.h>
 #include <random>
 
 namespace sand::grain {
 
   class detector_response_fast : public ufw::process {
-
-  public:
+   public:
     detector_response_fast();
-    void configure (const ufw::config& cfg) override;
+    void configure(const ufw::config& cfg) override;
     void run() override;
 
   private:
@@ -27,7 +26,7 @@ namespace sand::grain {
     std::string m_gdml_geometry;
 
   };
-    
-}
+
+} // namespace sand::grain
 
 UFW_REGISTER_PROCESS(sand::grain::detector_response_fast)

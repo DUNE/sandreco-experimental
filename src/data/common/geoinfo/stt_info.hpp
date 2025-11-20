@@ -6,8 +6,7 @@
 namespace sand {
 
   class geoinfo::stt_info : public tracker_info {
-
-  public:
+   public:
     struct wire : public tracker_info::wire {
       geo_id geo; ///< The unique geometry identifier
       // std::optional<std::pair<vec_4d, vec_4d>> closest_points(const vec_4d&, const vec_4d&, const double&) const;
@@ -19,7 +18,7 @@ namespace sand {
       wire_list y_view() const;
     };
 
-  public:
+   public:
     stt_info(const geoinfo&);
 
     virtual ~stt_info();
@@ -31,7 +30,6 @@ namespace sand {
     geo_path path(geo_id) const override;
 
     const wire* get_wire_by_id(const geo_id& id) const;
-
   };
 
-}
+} // namespace sand

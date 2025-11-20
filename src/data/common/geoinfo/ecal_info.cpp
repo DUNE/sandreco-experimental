@@ -16,4 +16,4 @@ namespace sand {
     return gp;
   }
 
-}
+} // namespace sand

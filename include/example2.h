@@ -9,6 +9,6 @@ namespace sand {
     std::vector<double> weights;
   };
 
-}
+} // namespace sand
 
 UFW_DECLARE_MANAGED_DATA(sand::example2)

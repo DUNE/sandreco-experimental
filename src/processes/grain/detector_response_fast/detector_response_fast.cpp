@@ -1,8 +1,9 @@
-#include <ufw/context.hpp>
 #include <ufw/config.hpp>
+#include <ufw/context.hpp>
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 
+#include <grain/digi.h>
 #include <grain/grain.h>
 #include <grain/photons.h>
 #include <grain/digi.h>
@@ -15,7 +16,8 @@ UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::detector_response_fast)
 
 namespace sand::grain {
 
-  detector_response_fast::detector_response_fast() : process({{"hits", "sand::grain::hits"}}, {{"digi", "sand::grain::digi"}}), m_uniform(0.0, 1.0) {
+  detector_response_fast::detector_response_fast()
+    : process({{"hits", "sand::grain::hits"}}, {{"digi", "sand::grain::digi"}}), m_uniform(0.0, 1.0) {
     UFW_DEBUG("Creating a detector_response_fast process at {}", fmt::ptr(this));
   }
 
@@ -32,9 +34,9 @@ namespace sand::grain {
     const auto& gi = instance<geoinfo>();
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     m_stat_photons_processed = 0;
-    m_stat_photons_accepted = 0;
+    m_stat_photons_accepted  = 0;
     m_stat_photons_discarded = 0;
-    const auto& hits_in = get<hits>("hits");
+    const auto& hits_in      = get<hits>("hits");
     UFW_DEBUG("Processing {} photon hits.", hits_in.photons.size());
     auto& digi_out = set<digi>("digi");
     geoinfo::grain_info::camera* pix_spam = nullptr;
@@ -78,6 +80,7 @@ namespace sand::grain {
         m_stat_photons_discarded++;
       }
     }
-    UFW_INFO("Processed {} photon hits; {} were accepted, {} discarded.", m_stat_photons_processed, m_stat_photons_accepted, m_stat_photons_discarded);
+    UFW_INFO("Processed {} photon hits; {} were accepted, {} discarded.", m_stat_photons_processed,
+             m_stat_photons_accepted, m_stat_photons_discarded);
   }
 }

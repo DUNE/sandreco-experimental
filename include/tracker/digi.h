@@ -4,16 +4,15 @@
  * @brief The standard tracker digitization data structure.
  * @version 0.1
  * @date 2025-06-12
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #pragma once
 
-
 #include <ufw/data.hpp>
-#include <common/truth.h>
 #include <common/sand.h>
+#include <common/truth.h>
 
 namespace sand::tracker {
 
@@ -24,11 +23,9 @@ namespace sand::tracker {
    * - sand::true_hits: Base class representing true simulation hits.
    * - ufw::data::base: Provides data handling with managed, instanced, and context tags.
    */
-  struct digi : public sand::true_hits,
-                ufw::data::base<ufw::data::managed_tag,
-                                ufw::data::instanced_tag,
-                                ufw::data::context_tag> {
-
+  struct digi
+    : public sand::true_hits
+    , ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
     /**
      * @brief A signal recorded by a tracker channel.
      */
@@ -40,7 +37,7 @@ namespace sand::tracker {
 
       /**
        * @brief Time-to-digital converter (TDC) value.
-       * @unit 
+       * @unit
        */
       double tdc;
 
@@ -54,6 +51,6 @@ namespace sand::tracker {
     using signal_collection = std::vector<signal>;
     signal_collection signals;
   };
-}
+} // namespace sand::tracker
 
 UFW_DECLARE_MANAGED_DATA(sand::tracker::digi)

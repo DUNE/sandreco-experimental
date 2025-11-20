@@ -1,91 +1,91 @@
 #include <filesystem>
 
-#include <ufw/context.hpp>
 #include <ufw/config.hpp>
+#include <ufw/context.hpp>
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
-#include <grain/photons.h>
-#include <optical_simulation.hpp>
 #include <edep_reader/edep_reader.hpp>
+#include <optical_simulation.hpp>
+#include <grain/photons.h>
 
-#include "G4NistManager.hh"
-#include "G4Material.hh"
-#include "G4MaterialPropertiesTable.hh"
-#include "DetectorConstruction.hh"
 #include "ActionInitialization.hh"
 #include "AnalysisManager.hh"
+#include "DetectorConstruction.hh"
+#include "G4Material.hh"
+#include "G4MaterialPropertiesTable.hh"
+#include "G4NistManager.hh"
 #include "PhysicsList.hh"
 
-#include <geant_run_manager/geant_run_manager.hpp>
 #include <geant_gdml_parser/geant_gdml_parser.hpp>
+#include <geant_run_manager/geant_run_manager.hpp>
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::optical_simulation)
 
 namespace sand::grain {
 
-void optical_simulation::configure (const ufw::config& cfg) {
-  process::configure(cfg);
-  
-  m_energy_split_threshold = cfg.value("energy_split_threshold", m_energy_split_threshold);
-  m_geometry = cfg.at("geometry");
-  
-  if (m_geometry.find("lenses") != std::string::npos) {
-    m_optics_type = OpticsType::LENS;
-    if (m_geometry.find("Xe") != std::string::npos) {
-      m_optics_type = OpticsType::LENS_DOPED;
+  void optical_simulation::configure(const ufw::config& cfg) {
+    process::configure(cfg);
+
+    m_energy_split_threshold = cfg.value("energy_split_threshold", m_energy_split_threshold);
+    m_geometry               = cfg.at("geometry");
+
+    if (m_geometry.find("lenses") != std::string::npos) {
+      m_optics_type = OpticsType::LENS;
+      if (m_geometry.find("Xe") != std::string::npos) {
+        m_optics_type = OpticsType::LENS_DOPED;
+      }
+    } else {
+      m_optics_type = OpticsType::MASK;
     }
-  } else {
-    m_optics_type = OpticsType::MASK;
+    UFW_INFO("Optics type {}", m_optics_type);
+
+    auto& gdml = instance<geant_gdml_parser>(ufw::public_id(m_geometry));
+
+    auto& run_manager = instance<geant_run_manager>();
+
+    run_manager.SetUserInitialization(new DetectorConstruction(gdml, this));
+
+    run_manager.SetUserInitialization(new PhysicsList);
+
+    // Set user action classes
+    AnalysisManager* pAnalysisManager = new AnalysisManager(this);
+    run_manager.SetUserInitialization(new ActionInitialization(pAnalysisManager, this));
+
+    run_manager.Initialize();
   }
-  UFW_INFO("Optics type {}", m_optics_type);
 
-  auto& gdml = instance<geant_gdml_parser>(ufw::public_id(m_geometry));
+  optical_simulation::optical_simulation() : process({}, {{"hits", "sand::grain::hits"}}) {
+    UFW_INFO("Creating a optical_simulation process at {}", fmt::ptr(this));
+  }
 
-  auto& run_manager = instance<geant_run_manager>();
+  void optical_simulation::run() {
+    // CLHEP::HepRandom::setTheSeed(m_seed);
+    // CLHEP::HepRandom::showEngineStatus();
+    m_run_start     = true;
+    m_new_iteration = true;
 
-  run_manager.SetUserInitialization(new DetectorConstruction(gdml, this));
+    instance<geant_run_manager>().BeamOn(GetEventsNumber());
+  }
 
-  run_manager.SetUserInitialization(new PhysicsList);
-  
-  // Set user action classes
-  AnalysisManager *pAnalysisManager = new AnalysisManager(this);
-  run_manager.SetUserInitialization(new ActionInitialization(pAnalysisManager, this));
+  int optical_simulation::GetEventsNumber() {
+    UFW_DEBUG("Computing the number of block for the event");
+    const auto& tree = get<sand::edep_reader>();
+    int eventCount   = 0;
 
-  run_manager.Initialize();
-}
-  
-optical_simulation::optical_simulation() : process({}, {{"hits", "sand::grain::hits"}}) {
-  UFW_INFO("Creating a optical_simulation process at {}", fmt::ptr(this));
-}
-
-void optical_simulation::run() {
-  // CLHEP::HepRandom::setTheSeed(m_seed);
-  // CLHEP::HepRandom::showEngineStatus();
-  m_run_start = true;
-  m_new_iteration = true;
-
-  instance<geant_run_manager>().BeamOn(GetEventsNumber());
-}  
-
-int optical_simulation::GetEventsNumber() {
-  UFW_DEBUG("Computing the number of block for the event");
-  const auto& tree = get<sand::edep_reader>();
-  int eventCount = 0;
-
-  for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
-    if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
-      eventCount += trj_it->GetHitMap().at(component::GRAIN).size();
+    for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
+      if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
+        eventCount += trj_it->GetHitMap().at(component::GRAIN).size();
+      }
     }
-  }
-  UFW_DEBUG("Split into {} events.", eventCount);
+    UFW_DEBUG("Split into {} events.", eventCount);
 
-  return eventCount;
-}
+    return eventCount;
+  }
 
   const optical_simulation::properties_t& optical_simulation::properties() {
-    //Lazy initiallization addresses problem with accessing ??something?? outside of PrimaryGeneratorAction??
+    // Lazy initiallization addresses problem with accessing ??something?? outside of PrimaryGeneratorAction??
     if (!m_properties) {
       init_properties();
     }
@@ -94,22 +94,26 @@ int optical_simulation::GetEventsNumber() {
 
   void optical_simulation::init_properties() {
     m_properties.reset(new properties_t);
-    G4NistManager* manager = G4NistManager::Instance();
-    G4Material* mat = manager->FindOrBuildMaterial("G4_lAr");
+    G4NistManager* manager              = G4NistManager::Instance();
+    G4Material* mat                     = manager->FindOrBuildMaterial("G4_lAr");
     G4MaterialPropertiesTable* matTable = mat->GetMaterialPropertiesTable();
-    G4MaterialPropertyVector* property = matTable->GetProperty("FASTCOMPONENT");
-    m_properties->m_fast_component_distribution.reset(new TH1D("FASTCOMPONENT", "FASTCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(), property->GetMaxEnergy()));
+    G4MaterialPropertyVector* property  = matTable->GetProperty("FASTCOMPONENT");
+    m_properties->m_fast_component_distribution.reset(
+        new TH1D("FASTCOMPONENT", "FASTCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(),
+                 property->GetMaxEnergy()));
     for (int i = 0; i < property->GetVectorLength(); i++) {
       m_properties->m_fast_component_distribution->SetBinContent(i + 1, property->Value(property->Energy(i)));
     }
     property = matTable->GetProperty("SLOWCOMPONENT");
-    m_properties->m_slow_component_distribution.reset(new TH1D("SLOWCOMPONENT", "SLOWCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(), property->GetMaxEnergy()));
+    m_properties->m_slow_component_distribution.reset(
+        new TH1D("SLOWCOMPONENT", "SLOWCOMPONENT", property->GetVectorLength(), property->GetMinLowEdgeEnergy(),
+                 property->GetMaxEnergy()));
     for (int i = 0; i < property->GetVectorLength(); i++) {
       m_properties->m_slow_component_distribution->SetBinContent(i + 1, property->Value(property->Energy(i)));
     }
-    m_properties->m_tau_fast = matTable->GetConstProperty("FASTTIMECONSTANT");
-    m_properties->m_tau_slow = matTable->GetConstProperty("SLOWTIMECONSTANT");
+    m_properties->m_tau_fast            = matTable->GetConstProperty("FASTTIMECONSTANT");
+    m_properties->m_tau_slow            = matTable->GetConstProperty("SLOWTIMECONSTANT");
     m_properties->m_scintillation_yield = matTable->GetConstProperty("SCINTILLATIONYIELD");
   }
 
-}
+} // namespace sand::grain

@@ -9,6 +9,6 @@ namespace sand {
     std::vector<float> times;
   };
 
-}
+} // namespace sand
 
 UFW_DECLARE_MANAGED_DATA(sand::example1)

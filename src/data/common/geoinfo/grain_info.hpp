@@ -13,9 +13,8 @@ class G4VSolid;
 namespace sand {
 
   class geoinfo::grain_info : public subdetector_info {
-
-  public:
-    struct rect_f { //order and type matches volumereco, but should probably be changed to TLBR
+   public:
+    struct rect_f { // order and type matches volumereco, but should probably be changed to TLBR
       float bottom;
       float left;
       float top;
@@ -54,7 +53,7 @@ namespace sand {
     using size_3d = dir_3d;
     using size_3i = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<size_t>>;
 
-  public:
+   public:
     grain_info(const geoinfo&, const std::string&);
 
     virtual ~grain_info();
@@ -79,32 +78,28 @@ namespace sand {
 
     std::vector<mask_camera> mask_cameras() const { return m_mask_cameras; }
 
-    dir_3d fiducial_bbox() const {
-      return m_fiducial_aabb;
-    }
+    dir_3d fiducial_bbox() const { return m_fiducial_aabb; }
 
-    dir_3d LAr_bbox() const {
-      return m_LAr_aabb;
-    }
+    dir_3d LAr_bbox() const { return m_LAr_aabb; }
 
     grain::voxel_array<uint8_t> fiducial_voxels(dir_3d pitch) const;
 
-  private:
-     void add_camera_mask(G4VPhysicalVolume*, G4GDMLParser&);
-     void add_camera_lens(G4VPhysicalVolume*, G4GDMLParser&);
-  
-  private:
+   private:
+    void add_camera_mask(G4VPhysicalVolume*, G4GDMLParser&);
+    void add_camera_lens(G4VPhysicalVolume*, G4GDMLParser&);
+
+   private:
     std::vector<lens_camera> m_lens_cameras;
     std::vector<mask_camera> m_mask_cameras;
     dir_3d m_fiducial_aabb;
     dir_3d m_LAr_aabb;
     G4VSolid* m_fiducial_solid;
-
   };
 
   template <typename Camera>
-  std::enable_if_t<std::is_base_of_v<geoinfo::grain_info::camera, Camera>, const Camera&> geoinfo::grain_info::at(channel_id::link_t id) {
-    auto comp = [id](auto cam){ return cam.id == id; };
+  std::enable_if_t<std::is_base_of_v<geoinfo::grain_info::camera, Camera>, const Camera&>
+  geoinfo::grain_info::at(channel_id::link_t id) {
+    auto comp = [id](auto cam) { return cam.id == id; };
     if constexpr (std::is_same_v<Camera, lens_camera>) {
       auto it = std::find_if(m_lens_cameras.begin(), m_lens_cameras.end(), comp);
       if (it != m_lens_cameras.end()) {
@@ -120,8 +115,9 @@ namespace sand {
   }
 
   template <typename Camera>
-  std::enable_if_t<std::is_base_of_v<geoinfo::grain_info::camera, Camera>, const Camera&> geoinfo::grain_info::at(const std::string& name) {
-    auto comp = [name](auto cam){ return cam.name == name; };
+  std::enable_if_t<std::is_base_of_v<geoinfo::grain_info::camera, Camera>, const Camera&>
+  geoinfo::grain_info::at(const std::string& name) {
+    auto comp = [name](auto cam) { return cam.name == name; };
     if constexpr (std::is_same_v<Camera, lens_camera>) {
       auto it = std::find_if(m_lens_cameras.begin(), m_lens_cameras.end(), comp);
       if (it != m_lens_cameras.end()) {
@@ -136,4 +132,4 @@ namespace sand {
     UFW_ERROR("No camera of the required type found with name = '{}'.", name);
   }
 
-}
+} // namespace sand

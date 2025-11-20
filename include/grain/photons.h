@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <cstdint>
+#include <vector>
 
 #include <ufw/data.hpp>
 #include <common/truth.h>
@@ -10,8 +10,7 @@
 namespace sand::grain {
 
   struct hits : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct photon : public true_hit
-    {
+    struct photon : public true_hit {
       vec_4d pos;
       pos_3d origin;
       mom_4d p;
@@ -22,9 +21,8 @@ namespace sand::grain {
 
     using photon_collection = std::vector<photon>;
     photon_collection photons;
-
   };
 
-}
+} // namespace sand::grain
 
 UFW_DECLARE_MANAGED_DATA(sand::grain::hits)
