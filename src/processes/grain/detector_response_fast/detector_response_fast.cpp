@@ -3,12 +3,11 @@
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 
+#include <geoinfo/geoinfo.hpp>
+#include <geoinfo/grain_info.hpp>
 #include <grain/digi.h>
 #include <grain/grain.h>
 #include <grain/photons.h>
-#include <grain/digi.h>
-#include <geoinfo/geoinfo.hpp>
-#include <geoinfo/grain_info.hpp>
 
 #include <detector_response_fast.hpp>
 
@@ -21,12 +20,11 @@ namespace sand::grain {
     UFW_DEBUG("Creating a detector_response_fast process at {}", fmt::ptr(this));
   }
 
-  void detector_response_fast::configure (const ufw::config& cfg) {
-    process::configure(cfg); 
+  void detector_response_fast::configure(const ufw::config& cfg) {
+    process::configure(cfg);
     m_pde = cfg.at("pde");
     m_rng_engine.seed(cfg.at("seed"));
     m_gdml_geometry = cfg.at("geometry");
-
   }
 
   void detector_response_fast::run() {
@@ -38,7 +36,7 @@ namespace sand::grain {
     m_stat_photons_discarded = 0;
     const auto& hits_in      = get<hits>("hits");
     UFW_DEBUG("Processing {} photon hits.", hits_in.photons.size());
-    auto& digi_out = set<digi>("digi");
+    auto& digi_out                        = set<digi>("digi");
     geoinfo::grain_info::camera* pix_spam = nullptr;
     if (m_gdml_geometry == "gdml-masks") {
       pix_spam = &gi.grain().mask_cameras().front();
@@ -51,17 +49,19 @@ namespace sand::grain {
       true_hits truth;
       double interaction_probability = m_uniform(m_rng_engine);
       m_stat_photons_processed++;
-      if (interaction_probability < m_pde) {     
+      if (interaction_probability < m_pde) {
         // UFW_DEBUG("processing photon with position: {}, {}", photon.pos.X(), photon.pos.Y());
         bool channel_found = false;
         for (int i = 0; i != camera_height && !channel_found; ++i) {
           for (int j = 0; j != camera_width; ++j) {
-            if (photon.pos.X() > pix_spam->sipm_active_areas[i][j].left && photon.pos.X() < pix_spam->sipm_active_areas[i][j].right && 
-                photon.pos.Y() > pix_spam->sipm_active_areas[i][j].bottom && photon.pos.Y() < pix_spam->sipm_active_areas[i][j].top) {
+            if (photon.pos.X() > pix_spam->sipm_active_areas[i][j].left
+                && photon.pos.X() < pix_spam->sipm_active_areas[i][j].right
+                && photon.pos.Y() > pix_spam->sipm_active_areas[i][j].bottom
+                && photon.pos.Y() < pix_spam->sipm_active_areas[i][j].top) {
               truth.add(photon.hit);
               channel_id ch;
               ch.subdetector = GRAIN;
-              ch.link = photon.camera_id;
+              ch.link        = photon.camera_id;
               // consistent indexing: Row Major
               ch.channel = i * camera_width + j;
               digi::signal pe{truth, ch, photon.pos.T(), NAN, 1.0};
@@ -83,4 +83,4 @@ namespace sand::grain {
     UFW_INFO("Processed {} photon hits; {} were accepted, {} discarded.", m_stat_photons_processed,
              m_stat_photons_accepted, m_stat_photons_discarded);
   }
-}
+} // namespace sand::grain

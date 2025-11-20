@@ -3,7 +3,7 @@
 #include <set>
 
 #ifndef __CLING__
-#include <ufw/index.hpp>
+#  include <ufw/index.hpp>
 
 class TG4HitSegment;
 

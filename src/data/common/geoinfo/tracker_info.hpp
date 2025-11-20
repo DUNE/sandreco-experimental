@@ -44,7 +44,7 @@ namespace sand {
       spacer_array spacers; ///< Horizontal coordinates of wire spacers, north to south
       double angle() const {
         return std::atan2(direction().y(), direction().x());
-      }                                                // signed angle w.r.t. horizontal north to south direction
+      } // signed angle w.r.t. horizontal north to south direction
       dir_3d direction() const { return tail - head; } ///< direction pointing towards from head to tail, not normalized
       double length() const { return std::sqrt(direction().Mag2()); } ///< length of the line between
       pos_3d actual(pos_3d) const;
