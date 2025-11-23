@@ -13,7 +13,7 @@
       }
     },
     "contexts" : {
-      "keys" : 2,
+      "keys" : 5,
       "locals" : {},
       "seed" : 1111
     },
@@ -23,11 +23,11 @@
           "uri" : "test/sensors_masks.root",
           "tree" : "cameras"
         },
-        "read" : { "foo" : "sand::grain::hits"}
+        "read" : ["foo"]
       },
       {
         "sand::grain::detector_response_fast" : {
-          "pde" : 0.2,
+          "pde" : 0.999,
           "geometry" : "gdml-masks"
         },
         "reqs" : {"hits" : "foo"},
@@ -38,7 +38,7 @@
           "uri" : "test/detresp_masks.root",
           "tree" : "cameras"
         },
-        "write" : { "pippo" : "sand::grain::digi"}
+        "write" : [ "pippo" ]
       }
     ]
   }

@@ -7,7 +7,7 @@
     "globals" : {
     },
     "contexts" : {
-      "keys" : 2,
+      "keys" : 5,
       "locals" : {
       }
     },
@@ -17,7 +17,7 @@
           "uri" : "test/detresp_masks.root",
           "tree" : "cameras"
         },
-        "read" : { "digis" : "sand::grain::digi"}
+        "read" : [ "digis" ]
       },
       {
         "sand::grain::spill_slicer" : {
@@ -31,7 +31,7 @@
           "uri" : "test/images.root",
           "tree" : "cameras"
         },
-        "write" : { "imgs" : "sand::grain::images"}
+        "write" : ["imgs"] 
       }
     ]
   }

@@ -33,7 +33,7 @@
           "uri" : "test/stt_fast_digi.root",
           "tree" : "stt_fast_digi"
         },
-        "write" : { "pippo" : "sand::tracker::digi"}
+        "write" : ["pippo"]
       }
     ]
   }

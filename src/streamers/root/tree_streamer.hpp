@@ -13,9 +13,11 @@ namespace sand::root {
 
     ~tree_streamer();
 
-    void configure(const ufw::config&, const ufw::type_id&, ufw::op_type) override;
+    void configure(const ufw::config&, ufw::op_type) override;
 
-    void attach(ufw::data::data_base&) override;
+    void prepare(const ufw::public_id&, const ufw::type_id&) override;
+
+    void attach(ufw::data::data_base&, const ufw::public_id&) override;
 
     void read(ufw::context_id) override;
 

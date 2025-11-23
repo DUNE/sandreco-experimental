@@ -27,12 +27,8 @@ namespace sand::root {
     // delete m_tree; //deleted in close
   }
 
-  void tree_streamer::configure(const ufw::config& cfg, const ufw::type_id& tp, ufw::op_type op) {
-    streamer::configure(cfg, tp, op);
-    TClass* tcl = TClass::GetClass(tp.c_str());
-    if (!tcl) {
-      UFW_ERROR("TClass for '{}' not found.", tp);
-    }
+  void tree_streamer::configure(const ufw::config& cfg, ufw::op_type op) {
+    streamer::configure(cfg, op);
     const char* opmode = "";
     switch (op) {
     case ufw::op_type::ro:
@@ -58,35 +54,41 @@ namespace sand::root {
     } else {
       m_tree = new TTree(treename.c_str(), "");
     }
-  }
-
-  void tree_streamer::attach(ufw::data::data_base& d) {
-    TBranch* brid   = nullptr;
-    TBranch* brdata = nullptr;
-    m_branchaddr    = &d;
-    // remove any namespace from the branch name, for convenience.
-    auto brname = ufw::simplified_name(type());
+    TBranch* brid = nullptr;
     if (operation() & ufw::op_type::ro) {
       // attach index branch
       brid = m_tree->GetBranch(s_id_brname);
-      if (!brid) {
-        UFW_ERROR("TBranch '{}' not found.", s_id_brname);
-      }
+      UFW_ASSERT(brid != nullptr, "TBranch '{}' not found.", s_id_brname);
       brid->SetAddress(&m_id_ptr);
-      // attach data branch
-      brdata = m_tree->GetBranch(brname.c_str());
-      if (!brdata) {
-        UFW_ERROR("TBranch '{}' not found.", brname);
-      }
-      brdata->SetAddress(&m_branchaddr);
     } else if (operation() == ufw::op_type::wo) {
-      brid   = m_tree->Branch(s_id_brname, &m_id_ptr);
-      brdata = m_tree->Branch(brname.c_str(), type().c_str(), &m_branchaddr);
+      brid = m_tree->Branch(s_id_brname, &m_id_ptr);
     }
     // unclear if this is default...
     brid->SetAutoDelete(false);
+  }
+
+  void tree_streamer::prepare(const ufw::public_id& id, const ufw::type_id& tp) {
+    TClass* tcl = TClass::GetClass(tp.c_str());
+    UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", tp);
+    ufw::streamer::prepare(id, tp);
+  }
+
+  void tree_streamer::attach(ufw::data::data_base& d, const ufw::public_id& id) {
+    streamer::attach(d, id);
+    var_info& info  = info_map().at(id);
+    info.address    = &d;
+    auto brname     = ufw::simplified_name(info.type); // remove any namespace from the branch name, for convenience.
+    TBranch* brdata = nullptr;
+    if (operation() & ufw::op_type::ro) {
+      // attach data branch
+      brdata = m_tree->GetBranch(brname.c_str());
+      UFW_ASSERT(brdata != nullptr, "TBranch '{}' not found.", brname);
+      brdata->SetAddress(&info.address);
+    } else if (operation() == ufw::op_type::wo) {
+      brdata = m_tree->Branch(brname.c_str(), info.type.c_str(), &info.address);
+    }
+    // unclear if this is default...
     brdata->SetAutoDelete(false);
-    streamer::attach(d);
   }
 
   void tree_streamer::read(ufw::context_id id) {
