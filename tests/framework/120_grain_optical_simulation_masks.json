@@ -47,7 +47,7 @@
         "uri" : "test/sensors_masks.root",
         "tree" : "cameras"
       },
-      "write" : { "foo" : "sand::grain::hits"}
+      "write" : ["foo"]
     }
   ]
 }

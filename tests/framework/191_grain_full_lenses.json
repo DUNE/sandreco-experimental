@@ -62,7 +62,13 @@
           "uri" : "test/full_images_lenses.root",
           "tree" : "cameras"
         },
-        "write" : { "grain_images" : "sand::grain::images"}
+        "write" : ["grain_images" ]
+      },
+      {
+        "sand::png::png_streamer" : {
+          "uri" : "test/full_images_masks.png"
+        },
+        "write" : ["grain_images"]
       }
   ]
 }
