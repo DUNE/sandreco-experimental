@@ -4,8 +4,8 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
-#define CL_TARGET_OPENCL_VERSION 220
-#include <CL/cl.h>
+#include <ocl/ocl.hpp>
+
 #include <chrono>
 #include <random>
 
@@ -18,16 +18,13 @@ namespace sand::common {
     void run() override;
 
    private:
-    void create_device();
-    void create_ctx_queue();
-    void print_device_info();
+    void create_device_ctx_queue();
     void build_kernel();
     void cleanup();
     double time_profile(cl_event ev);
 
    private:
     static constexpr size_t s_max_platforms = 4;
-    cl_platform_id m_platform[s_max_platforms];
     cl_device_id m_device;
     cl_context m_context;
     cl_command_queue m_queue;
@@ -45,8 +42,8 @@ namespace sand::common {
     m_array_size  = cfg.at("array_size");
     m_global_size = std::ceil(m_array_size / float(m_local_size)) * m_local_size;
     UFW_INFO("Summing two arrays with size : {} MB", m_array_size * sizeof(float) / uint(1 << 20));
-    create_device();
-    print_device_info();
+    create_device_ctx_queue();
+    build_kernel();
   }
 
   opencl_test::opencl_test() : process({}, {}) { UFW_DEBUG("Creating an opencl_test process at {}.", fmt::ptr(this)); }
@@ -55,8 +52,6 @@ namespace sand::common {
     UFW_DEBUG("Running an opencl_test process at {}.", fmt::ptr(this));
     // GPU setup
     cl_int err;
-    create_ctx_queue();
-    build_kernel();
 
     // allocate host memory and create input data
     std::unique_ptr<float[]> A(new float[m_array_size]);
@@ -160,68 +155,11 @@ namespace sand::common {
     return gpu_ms;
   }
 
-  void opencl_test::create_device() {
-    cl_int err;
-    cl_uint n_plats;
-    cl_uint n_devs;
-    err = clGetPlatformIDs(s_max_platforms, m_platform, &n_plats);
-    if (err != CL_SUCCESS)
-      UFW_ERROR("Could not identify a platform.");
-    // access a device, look for a GPU first
-    int i = 0;
-    do {
-      err = clGetDeviceIDs(m_platform[i++], CL_DEVICE_TYPE_GPU, 1, &m_device, &n_devs);
-    } while (err != CL_SUCCESS && i < n_plats);
-    if (err == CL_DEVICE_NOT_FOUND) { // switch to CPU
-      i = 0;
-      do {
-        err = clGetDeviceIDs(m_platform[i++], CL_DEVICE_TYPE_CPU, 1, &m_device, &n_devs);
-      } while (err != CL_SUCCESS && i < n_plats);
-    }
-    if (err != CL_SUCCESS)
-      UFW_ERROR("Could not access any devices.");
-    else
-      UFW_DEBUG("Platform with {} devices found.", n_devs);
-  }
-
-  void opencl_test::create_ctx_queue() {
-    cl_int err;
-    m_context = clCreateContext(NULL, 1, &m_device, NULL, NULL, &err);
-    if (err != CL_SUCCESS)
-      UFW_ERROR("Could not create a context.");
-    // enable time profiling in queue: openCL API > 2.0 wants null-terminated properties list
-    const cl_queue_properties props[] = {CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0};
-    m_queue                           = clCreateCommandQueueWithProperties(m_context, m_device, props, &err);
-    if (err != CL_SUCCESS)
-      UFW_ERROR("Could not create a command queue.");
-    else
-      UFW_DEBUG("Context and queue created.");
-  }
-
-  void opencl_test::print_device_info() {
-    auto getStr = [](cl_device_id d, cl_device_info param) -> std::string {
-      size_t sz = 0;
-      clGetDeviceInfo(d, param, 0, nullptr, &sz);
-      std::string s(sz, '\0');
-      clGetDeviceInfo(d, param, sz, s.data(), nullptr);
-      if (!s.empty() && s.back() == '\0') {
-        s.pop_back();
-      }
-      return s;
-    };
-
-    std::string name   = getStr(m_device, CL_DEVICE_NAME);
-    std::string vendor = getStr(m_device, CL_DEVICE_VENDOR);
-    std::string drv    = getStr(m_device, CL_DRIVER_VERSION);
-    UFW_INFO("Device: {} {}, driver version: {}", vendor, name, drv);
-
-    cl_uint cu;
-    clGetDeviceInfo(m_device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cu), &cu, nullptr);
-    size_t wg;
-    clGetDeviceInfo(m_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(wg), &wg, nullptr);
-    cl_ulong mem;
-    clGetDeviceInfo(m_device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(mem), &mem, nullptr);
-    UFW_INFO("Device compute units: {}, Max work-group size: {}, Global memory (MB): {}", cu, wg, mem / (1 << 20));
+  void opencl_test::create_device_ctx_queue() {
+    auto& platform = instance<sand::ocl::platform>();
+    m_device       = platform.devices()[0].get();
+    m_context      = platform.context().get();
+    m_queue        = platform.queues()[0].get();
   }
 
   void opencl_test::build_kernel() {
