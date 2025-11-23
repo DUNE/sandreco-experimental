@@ -27,7 +27,7 @@
     }
   },
   "contexts" : {
-    "keys" : 1,
+    "keys" : 2,
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
     },
@@ -46,13 +46,13 @@
       {
         "sand::grain::detector_response_fast" : {
             "geometry": "gdml-masks",
-            "pde": 0.2},
+            "pde": 0.999},
         "reqs" : {"hits" : "grain_hits"},
         "prods" : {"digi": "grain_digits"}
       },
       {
         "sand::grain::spill_slicer" : {
-            "slice_times": [0.0, 20000.0]
+            "slice_times": [0.0, 5000.0, 20000.0]
         },
         "reqs" : {"digi" : "grain_digits"},
         "prods" : {"images": "grain_images"}
@@ -66,7 +66,8 @@
       },
       {
         "sand::png::png_streamer" : {
-          "uri" : "test/full_images_masks.png"
+          "uri" : "test/masks_big_.png",
+          "scale" : 16
         },
         "write" : ["grain_images"]
       }

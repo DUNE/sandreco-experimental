@@ -13,7 +13,7 @@
       }
     },
     "contexts" : {
-      "keys" : 2,
+      "keys" : 5,
       "locals" : {},
       "seed" : 1111
     },
@@ -27,7 +27,7 @@
       },
       {
         "sand::grain::detector_response_fast" : {
-          "pde" : 0.2,
+          "pde" : 0.999,
           "geometry" : "gdml-masks"
         },
         "reqs" : {"hits" : "foo"},
