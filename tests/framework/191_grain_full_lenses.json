@@ -52,7 +52,7 @@
       },
       {
         "sand::grain::spill_slicer" : {
-            "slice_times": [0.0, 5000.0, 20000.0]
+            "slice_times": [0.0, 20000.0]
         },
         "reqs" : {"digi" : "grain_digits"},
         "prods" : {"images": "grain_images"}
