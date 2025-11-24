@@ -8,8 +8,6 @@
 #include <edep_reader/edep_reader.hpp>
 
 namespace sand {
-  edep_reader::edep_reader() : EDEPTree() {}
-
   truth_adapter::value_type& truth_adapter::at(const index_type&) { UFW_FATAL("Not yet implemented"); }
 
   bool truth_adapter::valid(const index_type&) { UFW_FATAL("Not yet implemented"); }
@@ -36,7 +34,8 @@ sand::edep_reader& ufw::data::factory<sand::edep_reader>::instance(ufw::context_
   if (m_id != i) {
     input_tree->GetEntry(i);
     reader.InizializeFromEdep(*event);
-    m_id = i;
+    reader.m_event = event;
+    m_id           = i;
   }
   return reader;
 }
