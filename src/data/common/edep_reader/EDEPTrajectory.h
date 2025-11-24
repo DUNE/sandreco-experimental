@@ -100,12 +100,6 @@ class EDEPTrajectory {
   std::string GetReaction() const { return reaction_; };
 
   /**
-   * @brief Get the primaries of the interaction that generated this trajectory.
-   * @return Reference to the vector of primaries.
-   */
-  const TG4PrimaryVertexContainer& GetPrimaries() const { return primaries_; }
-
-  /**
    * @brief Get the parent ID of this trajectory.
    * @return The parent ID of this trajectory.
    */
@@ -263,5 +257,4 @@ class EDEPTrajectory {
   int depth_;                              ///< Depth of the trajectory.
   int interaction_number_ = -1;            ///< Number of the interaction that generated this trajectory.
   std::string reaction_   = "";            ///< String corresponding to the reaction that generated this trajectory.
-  TG4PrimaryVertexContainer primaries_;    ///< Container of primary vertices passed in the constructor.
 };

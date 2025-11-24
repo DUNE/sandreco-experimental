@@ -101,8 +101,7 @@ EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
     parent_trajectory_(nullptr),
     id_(trajectory.GetTrackId()),
     parent_id_(trajectory.GetParentId()),
-    pdg_code_(trajectory.GetPDGCode()),
-    primaries_(primaries) {
+    pdg_code_(trajectory.GetPDGCode()) {
   for (const auto& vertex : primaries) {
     auto primary_trj_it =
         std::find_if(vertex.Particles.begin(), vertex.Particles.end(),
@@ -235,7 +234,6 @@ EDEPTrajectory& EDEPTrajectory::operator= (const EDEPTrajectory& trj) {
   this->depth_                 = trj.depth_;
   this->interaction_number_    = trj.interaction_number_;
   this->reaction_              = trj.reaction_;
-  this->primaries_             = trj.primaries_;
   this->children_trajectories_ = trj.children_trajectories_;
   for (auto& t : this->children_trajectories_) {
     t.parent_trajectory_ = this;
@@ -253,7 +251,7 @@ bool EDEPTrajectory::operator== (const EDEPTrajectory& trj) {
   return (this->id_ == trj.id_ && this->parent_id_ == trj.parent_id_
           && this->parent_trajectory_ == trj.parent_trajectory_ && this->pdg_code_ == trj.pdg_code_
           && this->p0_ == trj.p0_ && this->depth_ == trj.depth_ && this->interaction_number_ == trj.interaction_number_
-          && this->reaction_ == trj.reaction_ && this->primaries_.size() == trj.primaries_.size() &&
+          && this->reaction_ == trj.reaction_ &&
           // this->children_trajectories_ == trj.children_trajectories_ &&
           // this->hit_map_ == trj.hit_map_ &&
           this->entering_map_ == trj.entering_map_ && this->exiting_map_ == trj.exiting_map_
@@ -284,7 +282,6 @@ EDEPTrajectory& EDEPTrajectory::operator= (EDEPTrajectory&& trj) {
   this->depth_              = trj.depth_;
   this->interaction_number_ = trj.interaction_number_;
   this->reaction_           = trj.reaction_;
-  std::swap(this->primaries_, trj.primaries_);
   std::swap(this->children_trajectories_, trj.children_trajectories_);
   std::swap(this->hit_map_, trj.hit_map_);
   std::swap(this->entering_map_, trj.entering_map_);
