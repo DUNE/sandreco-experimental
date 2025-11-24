@@ -38,6 +38,22 @@ namespace sand::ocl {
     std::vector<cl::CommandQueue> m_queues;
   };
 
+  /**
+   * It can be useful to pass data between different CL based processes without actually getting this data off the GPU
+   * memory: this class provides a named buffer that can be passed around as a variable in the configuration.
+   * For efficiency reasons, the buffer is not cleared between context executions.
+   */
+  class buffer : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::global_tag> {
+   public:
+    buffer()  = default;
+    ~buffer() = default;
+
+   private:
+    cl::Buffer m_buffer;
+  };
+
 } // namespace sand::ocl
 
 UFW_DECLARE_COMPLEX_DATA(sand::ocl::platform);
+
+UFW_DECLARE_MANAGED_DATA(sand::ocl::buffer);
