@@ -204,7 +204,7 @@ namespace sand {
     UFW_ASSERT(gi.subdetector == DRIFT, "Subdetector must be DRIFT");
     geo_path gp           = path();
     auto stat             = at(gi.drift.supermodule);
-    std::string placement = (gp.find("_PV") != std::string::npos) ? "_PV" : "";
+    std::string placement = "_PV";
 
     int val     = gi.drift.supermodule;
     bool is_trk = (val == 40) ? true : false; // tracker-only supermodule
@@ -272,10 +272,7 @@ namespace sand {
       default:
         UFW_ERROR("Target material '{}' unsupported.", stat->target);
       }
-      if (placement == "")
-        gp /= module_name + "Mod_" + sm_ID + "_0" + (mod_ct > 1 ? ("#" + std::to_string(mod_ct - 1)) : "");
-      else
-        gp /= module_name + "Mod_" + sm_ID + placement + "_" + std::to_string(mod_ct - 1);
+      gp /= module_name + "Mod_" + sm_ID + placement + "_" + std::to_string(mod_ct - 1);
       gp /= module_name + "DriftChamber_" + sm_ID + placement + "_0";
       gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + placement + "_0";
       gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + "_" + wire_type + placement + "_0";

@@ -20,26 +20,12 @@
 namespace sand {
 
   geoinfo::geoinfo(const ufw::config& cfg) {
-    m_root_path      = cfg.value("basepath", "/volWorld/rockBox_lv_0/volDetEnclosure_0/volSAND_0/MagIntVol_volume_0/");
-    m_edep_root_path = cfg.value(
-        "edep_basepath", "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/");
+    m_root_path      = cfg.value("basepath", "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
 
     auto grain_path = cfg.at("grain_geometry");
 
     auto nav               = tgm.navigator();
-    std::string world_path = nav->GetPath();
-    bool PV_needed         = world_path.find("_PV") != std::string::npos;
-
-    if (PV_needed) {
-      // Step 1: Add _PV before _0
-      std::regex pattern_with_0("(_0)");
-      m_root_path = std::regex_replace(m_root_path, pattern_with_0, "_PV$1");
-
-      // Step 2: Add _PV after World
-      std::regex pattern_without_0("(volWorld)");
-      m_root_path = std::regex_replace(m_root_path, pattern_without_0, "$1_PV");
-    }
 
     try {
       nav->cd(m_root_path.c_str());
@@ -53,12 +39,7 @@ namespace sand {
     m_ecal.reset(new ecal_info(*this));
 
     auto subpath = m_root_path;
-
-    if (PV_needed) {
-      subpath = m_root_path / "sand_inner_volume_PV_0";
-    } else {
-      subpath = m_root_path / "sand_inner_volume_0";
-    }
+    subpath = m_root_path / "sand_inner_volume_PV_0";
 
     nav->cd(subpath.c_str());
     bool isSTT = false;
