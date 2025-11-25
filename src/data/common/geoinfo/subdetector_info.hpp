@@ -23,9 +23,6 @@ namespace sand {
       if (full_path.find(gi.root_path()) != std::string::npos) {
         partial_path = partial_path - gi.root_path();
       }
-      if (full_path.find(gi.edep_root_path()) != std::string::npos) {
-        partial_path = partial_path - gi.edep_root_path();
-      }
       if (partial_path.find(path()) != std::string::npos) {
         partial_path = partial_path - path();
       }

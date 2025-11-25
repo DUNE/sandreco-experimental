@@ -144,9 +144,7 @@ namespace sand {
     // TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
     geo_path gp           = path();
-    std::string placement = (gp.find("_PV") != std::string::npos)
-                              ? "_PV"
-                              : ""; // check if we are using the edepsim or ROOT geometry notation
+    std::string placement = "_PV";
     auto stat             = at(gi.stt.supermodule);
     std::string module_name;
     switch (stat->target) {
@@ -173,18 +171,12 @@ namespace sand {
       gp /= module_name + placement + "_0";
     } else if (gi.stt.plane == 2 && stat->target == TRKONLY) {
       module_name += "_planeXX";
-      if (placement == "PV_")
-        gp /= module_name + placement + "_1";
-      else
-        gp /= module_name + "#1";
+      gp /= module_name + placement + "_1";
     } else {
       UFW_ERROR("Plane '{}' unsupported.", gi.stt.plane);
     }
     // TODO check max tube for this layer
-    if (placement == "_PV")
-      gp /= module_name + "_straw_PV_" + gi.stt.tube;
-    else
-      gp /= module_name + "_straw_0" + (gi.stt.tube == 0 ? "" : fmt::format("#{}", gi.stt.tube));
+    gp /= module_name + "_straw_PV_" + gi.stt.tube;
     return gp;
   }
 
