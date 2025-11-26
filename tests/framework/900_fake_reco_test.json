@@ -7,10 +7,10 @@
   },
   "globals" : {},
   "contexts" : {
-    "keys" : [2],
+    "keys" : 8,
     "locals" : {
-      "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"},
-      "sand::genie_reader" : {"uri" : "test/grain.edepsim.root"}
+      "sand::edep_reader" : {"uri" : "test/sand-spill-events.9.edep.root"},
+      "sand::genie_reader" : {"uri" : "test/sand-spill-events.9.edep.root"}
     }
   },
   "run": [
