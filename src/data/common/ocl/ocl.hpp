@@ -1,8 +1,11 @@
 
 #pragma once
 
+#include "ufw/utils.hpp"
 #include <ufw/config.hpp>
 #include <ufw/data.hpp>
+#include <algorithm>
+#include <optional>
 
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_TARGET_OPENCL_VERSION 220
@@ -61,6 +64,12 @@ namespace sand::ocl {
       return (fl & CL_MEM_COPY_HOST_PTR) || (fl & CL_MEM_USE_HOST_PTR);
     }
 
+    /**
+     * This smart pointer will wait for the map to be completed before returning a user pointer.
+     * It will then wait on unmap before going out of scope.
+     * @note Only in the event that you perform queued operatios after mapping, that need to complete before unmapping,
+     * you have to wait on these events manually before this pointer goes out of scope.
+     */
     class autounmapping_ptr {
      public:
       autounmapping_ptr(cl::Buffer& buf, cl::CommandQueue& q) : r_buf(buf), r_q(q), map_ptr(nullptr) {}
@@ -119,37 +128,151 @@ namespace sand::ocl {
      * @returns A pseudo-pointer that can be written to by the user, it will perform the unmap when going out of scope.
      */
     template <cl_mem_flags Flags>
-    std::enable_if_t<read_from_host_flags(Flags), autounmapping_ptr> allocate(const cl::Context& ctx,
-                                                                              cl::CommandQueue& q, size_t nbytes) {
+    std::enable_if_t<!read_from_host_flags(Flags), autounmapping_ptr>
+    allocate(const cl::Context& ctx, cl::CommandQueue& q, size_t nbytes, const Events& prereq = Events{}) {
       UFW_ASSERT(!is_allocated(), "Cannot reallocate buffer.");
-      m_buffer = cl::Buffer(ctx, Flags | CL_MEM_ALLOC_HOST_PTR, nbytes);
-      m_size   = nbytes;
+      m_buffer            = cl::Buffer(ctx, Flags | CL_MEM_ALLOC_HOST_PTR, nbytes);
+      m_size              = nbytes;
+      const Events* evptr = prereq.empty() ? nullptr : &prereq;
       autounmapping_ptr ret(m_buffer, q);
-      ret.map_ptr =
-          q.enqueueMapBuffer(m_buffer, false, CL_MAP_WRITE_INVALIDATE_REGION, 0, nbytes, nullptr, &ret.map_evt);
+      ret.map_ptr = q.enqueueMapBuffer(m_buffer, false, CL_MAP_WRITE_INVALIDATE_REGION, 0, nbytes, evptr, &ret.map_evt);
       return ret;
     }
 
     /**
      * This function maps (a subset of) the buffer to host memory for access.
      * Will use pinned memory if the buffer was allocated with CL_MEM_ALLOC_HOST_PTR
-     * @returns A pseudo-pointer that can be written to by the user, it will perform the unmap when going out of scope.
+     * @returns A pseudo-pointer that can be read from and/or written to by the user, it will perform the unmap when
+     * going out of scope.
      */
-    autounmapping_ptr map(cl::CommandQueue& q, cl_map_flags fl = CL_MAP_READ | CL_MAP_WRITE, size_t offset = 0,
-                          size_t sz = -1ul) {
-      autounmapping_ptr ret(m_buffer, q);
+    template <cl_map_flags Flags = CL_MAP_READ | CL_MAP_WRITE>
+    autounmapping_ptr map(cl::CommandQueue& q, size_t offset = 0, size_t sz = -1ul, const Events& prereq = Events{}) {
+      UFW_ASSERT(is_allocated(), "Buffer is null.");
       if (sz == -1ul) {
-        sz = m_size;
+        sz = m_size - offset;
       }
-      ret.map_ptr = q.enqueueMapBuffer(m_buffer, false, fl, offset, sz, nullptr, &ret.map_evt);
+      UFW_ASSERT(sz + offset <= m_size, "Attempted to map() {} bytes into a buffer of {} bytes.", sz + offset, m_size);
+      const Events* evptr = prereq.empty() ? nullptr : &prereq;
+      autounmapping_ptr ret(m_buffer, q);
+      ret.map_ptr = q.enqueueMapBuffer(m_buffer, false, Flags, offset, sz, evptr, &ret.map_evt);
       return ret;
+    }
+
+    /**
+     * This function reads (a subset of) the buffer with a blocking operation.
+     * If the template parameter @p T is a pointer type, this function will allocate the appropriate amount of host
+     * memory via the array version of operator new[], read the required data into this and return the pointer.
+     * If it is a class with a data() member that returns a pointer, an instance of that class will be default
+     * constructed, the data will be read into the pointer returned by data() and this class will be returned.
+     * If @p T is neither of those things, then an instance of T will be default constructed, the buffer will be read in
+     * place into the instance, and it will be returned.
+     */
+    template <typename T>
+    T read(cl::CommandQueue& q, size_t offset = 0, size_t sz = -1ul, const Events& prereq = Events{}) {
+      UFW_ASSERT(is_allocated(), "Buffer is null.");
+      if (sz == -1ul) {
+        sz = m_size - offset;
+      }
+      UFW_ASSERT(sz + offset <= m_size, "Attempted to read() {} bytes from a buffer of {} bytes.", sz + offset, m_size);
+      const Events* evptr = prereq.empty() ? nullptr : &prereq;
+      if constexpr (std::is_pointer_v<T>) {
+        using ValT = std::remove_pointer_t<T>;
+        T ptr      = new ValT[(sz + sizeof(ValT) - 1) / sizeof(ValT)]; // integer round up
+        q.enqueueReadBuffer(m_buffer, CL_TRUE, offset, sz, ptr, evptr);
+        return ptr;
+      } else if constexpr (std::is_convertible_v<decltype(T{}.data()), void*>) {
+        T ret;
+        q.enqueueReadBuffer(m_buffer, CL_TRUE, offset, sz, ret.data(), evptr);
+        return std::move(ret);
+      } else {
+        static_assert(sizeof(T) >= sz, "Buffer is too large.");
+        T ret;
+        q.enqueueReadBuffer(m_buffer, CL_TRUE, offset, sz, &ret, evptr);
+        return std::move(ret);
+      }
+    }
+
+    /**
+     * This function reads (a subset of) the buffer with a non-blocking operation.
+     * If the template parameter @p T is a pointer type, this function will copy memory into the area pointed to.
+     * If it is a class with a data() member that returns a non const pointer, the data will be read into the pointer
+     * returned by data(). If @p T is neither of those things, then the buffer will be read directly into it.
+     * It is the caller's responsibility to ensure sufficient space in the destination.
+     * @returns the Event signaling the end of the operation.
+     */
+    template <typename T>
+    cl::Event read(T& readinto, cl::CommandQueue& q, size_t offset = 0, size_t sz = -1ul,
+                   const Events& prereq = Events{}) {
+      UFW_ASSERT(is_allocated(), "Buffer is null.");
+      if (sz == -1ul) {
+        sz = m_size - offset;
+      }
+      UFW_ASSERT(sz + offset <= m_size, "Attempted to read() {} bytes from a buffer of {} bytes.", sz + offset, m_size);
+      cl::Event done;
+      const Events* evptr = prereq.empty() ? nullptr : &prereq;
+      if constexpr (std::is_pointer_v<T>) {
+        q.enqueueReadBuffer(m_buffer, CL_FALSE, offset, sz, readinto, evptr, &done);
+      } else if constexpr (std::is_pointer_v<decltype(T{}.data())>) {
+        q.enqueueReadBuffer(m_buffer, CL_FALSE, offset, sz, readinto.data(), evptr, &done);
+      } else {
+        static_assert(sizeof(T) >= sz, "Buffer is too large.");
+        q.enqueueReadBuffer(m_buffer, CL_FALSE, offset, sz, &readinto, evptr, &done);
+      }
+      return std::move(done);
+    }
+
+    /**
+     * This function writes into (a subset of) the buffer with a non-blocking operation.
+     * If the template parameter @p T is a pointer type, this function will copy from the memory pointed to.
+     * If it is a class with a data() member that returns a (const) pointer, the data will be read from the pointer
+     * returned by data(). If @p T is neither of those things, then it will be copied directly.
+     * It is the caller's responsibility to ensure @p readfrom is appropriately sized.
+     * @returns the Event signaling the end of the operation.
+     */
+    template <typename T>
+    cl::Event write(const T& readfrom, cl::CommandQueue& q, size_t offset = 0, size_t sz = -1ul,
+                    const Events& prereq = Events{}) {
+      UFW_ASSERT(is_allocated(), "Buffer is null.");
+      if (sz == -1ul) {
+        sz = m_size - offset;
+      }
+      UFW_ASSERT(sz + offset <= m_size, "Attempted to write() {} bytes to a buffer of {} bytes.", sz + offset, m_size);
+      const Events* evptr = prereq.empty() ? nullptr : &prereq;
+      cl::Event done;
+      if constexpr (std::is_pointer_v<T>) {
+        q.enqueueWriteBuffer(m_buffer, CL_FALSE, offset, sz, readfrom, evptr, &done);
+      } else if constexpr (std::is_convertible_v<decltype(T{}.data()), void*>) {
+        q.enqueueWriteBuffer(m_buffer, CL_FALSE, offset, sz, readfrom.data(), evptr, &done);
+      } else {
+        static_assert(sizeof(T) <= sz, "Buffer is too small.");
+        q.enqueueWriteBuffer(m_buffer, CL_FALSE, offset, sz, &readfrom, evptr, &done);
+      }
+      return std::move(done);
+    }
+
+    cl::Event copyto(const buffer& to, cl::CommandQueue& q, size_t offset_this = 0, size_t offset_that = 0,
+                     size_t sz = -1ul, const Events& prereq = Events{}) {
+      UFW_ASSERT(is_allocated(), "Buffer is null.");
+      if (sz == -1ul) {
+        sz = std::min(m_size - offset_this, to.m_size - offset_that);
+      }
+      UFW_ASSERT(sz + offset_this <= m_size, "Attempted to read() {} bytes from a buffer of {} bytes.",
+                 sz + offset_this, m_size);
+      UFW_ASSERT(sz + offset_that <= to.m_size, "Attempted to write() {} bytes to a buffer of {} bytes.",
+                 sz + offset_that, to.m_size);
+      const Events* evptr = prereq.empty() ? nullptr : &prereq;
+      cl::Event done;
+      q.enqueueCopyBuffer(m_buffer, to.m_buffer, offset_this, offset_that, sz, evptr, &done);
+      return std::move(done);
     }
 
     bool is_allocated() const { return m_buffer.get() != nullptr; }
 
+    size_t size() const { return m_size; }
+
    private:
     cl::Buffer m_buffer;
-    size_t m_size;
+    size_t m_size = 0;
   };
 
 } // namespace sand::ocl
