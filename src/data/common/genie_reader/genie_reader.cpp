@@ -65,7 +65,7 @@ ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_
   set("StdHepLm", &StdHepLm);
 
   if (input_tree->GetBranch("NuParentPdg")) {
-    hasNuParent = true;
+    reader.nuParent_ = NuParent{};
     set("NuParentPdg", &NuParentPdg);
     set("NuParentDecMode", &NuParentDecMode);
     set("NuParentDecP4", &NuParentDecP4);
@@ -78,7 +78,7 @@ ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_
   }
   
   if (input_tree->GetBranch("NumiFluxRun")) {
-    hasNumiFlux = true;
+    reader.numiFlux_ = NumiFlux{};
     set("NumiFluxRun", &NumiFluxRun);
     set("NumiFluxEvtno", &NumiFluxEvtno);
     set("NumiFluxNdxdz", &NumiFluxNdxdz);
@@ -161,15 +161,15 @@ sand::genie_reader& ufw::data::factory<sand::genie_reader>::instance(ufw::contex
                             StdHepPolz, StdHepFd, StdHepLd, 
                             StdHepFm, StdHepLm);
     
-    if (hasNuParent) {
-      reader.nuParent_ = NuParent(NuParentPdg, NuParentDecMode,
+    if (reader.nuParent_) {
+      reader.nuParent_ = NuParent{NuParentPdg, NuParentDecMode,
                                   NuParentDecP4, NuParentDecX4,
                                   NuParentProP4,  NuParentProX4,
-                                  NuParentProNVtx);
+                                  NuParentProNVtx};
     }
 
-    if (hasNumiFlux) {
-      reader.numiFlux_ = {NumiFluxRun, NumiFluxEvtno, NumiFluxNdxdz, 
+    if (reader.numiFlux_) {
+      reader.numiFlux_ = NumiFlux{NumiFluxRun, NumiFluxEvtno, NumiFluxNdxdz,
                           NumiFluxNdydz, NumiFluxNpz, NumiFluxNenergy, 
                           NumiFluxNdxdznea, NumiFluxNdydznea, NumiFluxNenergyn, 
                           NumiFluxNwtnear, NumiFluxNdxdzfar, NumiFluxNdydzfar, 
@@ -188,7 +188,7 @@ sand::genie_reader& ufw::data::factory<sand::genie_reader>::instance(ufw::contex
                           NumiFluxTgppz, NumiFluxTprivx, NumiFluxTprivy, 
                           NumiFluxTprivz, NumiFluxBeamx, NumiFluxBeamy, 
                           NumiFluxBeamz, NumiFluxBeampx, NumiFluxBeampy, 
-                          NumiFluxBeampz, true};
+                          NumiFluxBeampz};
     }
     m_id = i;
   }

@@ -3,6 +3,8 @@
 #include "TObjString.h"
 #include "TBits.h"
 
+#include <optional>
+
 struct GRooTrackerEvent {
   int EvtNum_;
   double EvtXSec_;
@@ -68,8 +70,7 @@ struct NuParent {
          : Pdg_(Pdg), DecMode_(DecMode), 
            DecP4_(4), DecX4_(4), 
            ProP4_(4), ProX4_(4),
-           ProNVtx_(ProNVtx), 
-           valid_(true)
+           ProNVtx_(ProNVtx)
         {
           for (int i = 0; i < 4; i++) {
             DecP4_[i] = DecP4[i];
@@ -88,8 +89,6 @@ struct NuParent {
   std::vector<double> ProX4_;
   
   int ProNVtx_;
-
-  bool valid_ = false;
 };
 
 
@@ -156,13 +155,11 @@ struct NumiFlux {
   double Beampx_;
   double Beampy_;
   double Beampz_;
-  
-  bool valid_ = false;
 };
 
 struct GenieWrapper {
   GRooTrackerEvent event_;
   StdHep stdHep_;
-  NuParent nuParent_;
-  NumiFlux numiFlux_;
+  std::optional<NuParent> nuParent_;
+  std::optional<NumiFlux> numiFlux_;
 };
