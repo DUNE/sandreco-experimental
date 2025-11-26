@@ -41,16 +41,18 @@ namespace sand::common {
     UFW_INFO("StdHep P4 {}, {}, {}, {}.", stdHep.P4_[0][0], stdHep.P4_[0][1], 
                                           stdHep.P4_[0][2], stdHep.P4_[0][3]);
     
-    if (numiFlux.valid_) {
-      UFW_INFO("NumiFlux Run {}.", numiFlux.Run_);
-      UFW_INFO("NumiFlux Ndxdz {}.", numiFlux.Ndxdz_);
+    if (numiFlux) {
+      const auto& numiFlux_val = numiFlux.value();
+      UFW_INFO("NumiFlux Run {}.", numiFlux_val.Run_);
+      UFW_INFO("NumiFlux Ndxdz {}.", numiFlux_val.Ndxdz_);
     } else {
       UFW_DEBUG("Invalid NumiFlux.");
     }
 
-    if (nuParent.valid_) {
-      UFW_INFO("NuParent Pdg {}.", nuParent.Pdg_);
-      UFW_INFO("NuParent DecMode {}.", nuParent.DecMode_);
+    if (nuParent) {
+      const auto& nuParent_val = nuParent.value();
+      UFW_INFO("NuParent Pdg {}.", nuParent_val.Pdg_);
+      UFW_INFO("NuParent DecMode {}.", nuParent_val.DecMode_);
     } else {
       UFW_DEBUG("Invalid NuParent.");
     }
