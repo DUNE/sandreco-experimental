@@ -90,7 +90,6 @@ namespace sand::common {
     err |= clSetKernelArg(m_kernel, 3, sizeof(size_t), &m_array_size);
     if (err != CL_SUCCESS) {
       UFW_ERROR("Failed to set up kernel arguments.");
-      cleanup();
     } else
       UFW_DEBUG("Kernel arguments set.");
 
@@ -184,23 +183,16 @@ namespace sand::common {
       std::string log(logsz, '\0');
       clGetProgramBuildInfo(m_program, m_device, CL_PROGRAM_BUILD_LOG, logsz, &log[0], nullptr);
       UFW_ERROR("Failed to build program:\n {}", log);
-      cleanup();
     } else
       UFW_DEBUG("Built program without errors.");
 
     m_kernel = clCreateKernel(m_program, "vector_add", &err);
     if (err != CL_SUCCESS) {
       UFW_ERROR("Failed to create kernel.");
-      cleanup();
     } else
       UFW_DEBUG("Created kernel vector_add");
   }
 
-  void opencl_test::cleanup() {
-    clReleaseProgram(m_program);
-    clReleaseCommandQueue(m_queue);
-    clReleaseContext(m_context);
-  }
 } // namespace sand::common
 
 UFW_REGISTER_PROCESS(sand::common::opencl_test)
