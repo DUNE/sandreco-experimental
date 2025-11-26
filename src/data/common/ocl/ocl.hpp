@@ -29,11 +29,11 @@ namespace sand::ocl {
 
     virtual ~platform() = default;
 
-    const std::vector<cl::Device>& devices() { return m_devices; }
+    std::vector<cl::Device>& devices() { return m_devices; }
 
-    const cl::Context& context() { return m_context; };
+    cl::Context& context() { return m_context; };
 
-    const std::vector<cl::CommandQueue>& queues() { return m_queues; }
+    std::vector<cl::CommandQueue>& queues() { return m_queues; }
 
    private:
     cl::Platform m_platform;
@@ -77,9 +77,8 @@ namespace sand::ocl {
       autounmapping_ptr& operator= (const autounmapping_ptr&) = delete;
       autounmapping_ptr(autounmapping_ptr&&)                  = default;
       ~autounmapping_ptr() {
-        cl::Event evt;
-        r_q.enqueueUnmapMemObject(r_buf, get(), nullptr, &evt);
-        evt.wait();
+        if (map_ptr)
+          unmap();
       };
 
       void* get() {
@@ -90,6 +89,15 @@ namespace sand::ocl {
       operator void*() { return get(); };
 
       cl::Event& event() { return map_evt; }
+
+      cl::Event unmap() {
+        UFW_ASSERT(map_ptr != nullptr, "unmap called multiple times");
+        map_evt.wait();
+        cl::Event evt;
+        r_q.enqueueUnmapMemObject(r_buf, map_ptr, nullptr, &evt);
+        map_ptr = nullptr;
+        return std::move(evt);
+      }
 
      private:
       cl::Buffer& r_buf;
@@ -115,10 +123,9 @@ namespace sand::ocl {
      * This function allocates a buffer that needs to be initialized from the host via a raw pointer to existing memory.
      */
     template <cl_mem_flags Flags>
-    std::enable_if_t<read_from_host_flags(Flags), cl::Event> allocate(const cl::Context& ctx, size_t nbytes,
-                                                                      const void* p) {
+    std::enable_if_t<read_from_host_flags(Flags), void> allocate(const cl::Context& ctx, size_t nbytes, const void* p) {
       UFW_ASSERT(!is_allocated(), "Cannot reallocate buffer.");
-      m_buffer = cl::Buffer(ctx, Flags, nbytes, p);
+      m_buffer = cl::Buffer(ctx, Flags, nbytes, const_cast<void*>(p));
       m_size   = nbytes;
     }
 
@@ -269,6 +276,8 @@ namespace sand::ocl {
     bool is_allocated() const { return m_buffer.get() != nullptr; }
 
     size_t size() const { return m_size; }
+
+    const cl::Buffer& buf() { return m_buffer; }
 
    private:
     cl::Buffer m_buffer;
