@@ -4,12 +4,12 @@
 #include "ufw/utils.hpp"
 #include <ufw/config.hpp>
 #include <ufw/data.hpp>
-#include <algorithm>
-#include <optional>
 
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_TARGET_OPENCL_VERSION 220
 #include <CL/cl2.hpp>
+
+#define OCL_KERNEL(k) "__kernel " #k;
 
 namespace sand::ocl {
 
@@ -43,6 +43,15 @@ namespace sand::ocl {
   };
 
   using Events = std::vector<cl::Event>;
+
+  inline double elapsed_time(const cl::Event& ev) {
+    cl_ulong qstart = 0;
+    cl_ulong qend   = 0;
+    // C++ API throws on this...
+    clGetEventProfilingInfo(ev.get(), CL_PROFILING_COMMAND_START, sizeof(qstart), &qstart, nullptr);
+    clGetEventProfilingInfo(ev.get(), CL_PROFILING_COMMAND_END, sizeof(qend), &qend, nullptr);
+    return 1e-6 * double(qend - qstart);
+  }
 
   /**
    * It can be useful to pass data between different CL based processes without actually getting this data off the GPU
@@ -277,7 +286,7 @@ namespace sand::ocl {
 
     size_t size() const { return m_size; }
 
-    const cl::Buffer& buf() { return m_buffer; }
+    const cl::Buffer& buf() const { return m_buffer; }
 
    private:
     cl::Buffer m_buffer;
@@ -285,6 +294,16 @@ namespace sand::ocl {
   };
 
 } // namespace sand::ocl
+
+namespace cl::detail {
+  // Specialization for our version of buffer
+  template <>
+  struct KernelArgumentHandler<sand::ocl::buffer, void> {
+    static size_type size(const sand::ocl::buffer&) { return sizeof(cl_mem); }
+    static const cl_mem* ptr(const sand::ocl::buffer& buf) { return &(buf.buf()()); }
+  };
+
+} // namespace cl::detail
 
 UFW_DECLARE_COMPLEX_DATA(sand::ocl::platform);
 

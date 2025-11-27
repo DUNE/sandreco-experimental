@@ -21,12 +21,11 @@ namespace sand::common {
     void create_device_ctx_queue();
     void build_kernel();
     void cleanup();
-    double time_profile(const cl::Event& ev);
 
    private:
     static constexpr size_t s_max_platforms = 4;
-    cl_program m_program;
-    cl_kernel m_kernel;
+    cl::Program m_program;
+    cl::Kernel m_kernel;
     size_t m_array_size;
     const size_t m_local_size = 256;
     size_t m_global_size;
@@ -73,8 +72,7 @@ namespace sand::common {
     auto t4 = std::chrono::high_resolution_clock::now();
     bufA.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(platform.context(), m_array_size * sizeof(float), A.get());
     auto t5 = std::chrono::high_resolution_clock::now();
-    ocl::buffer bufB; // buf A is initialized by pinning from host, but we discount the time needed for the host copy
-    // that is only necesary because we allocated B above already.
+    ocl::buffer bufB; // buf A is initialized by pinning from host
     auto ptr = bufB.allocate<CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY>(platform.context(), platform.queues().front(),
                                                                        m_array_size * sizeof(float));
 
@@ -82,8 +80,9 @@ namespace sand::common {
     auto t6                        = std::chrono::high_resolution_clock::now();
     double copy_buf_A_to_device_ms = std::chrono::duration<double, std::milli>(t5 - t4).count();
     double copy_buf_B_to_device_ms = std::chrono::duration<double, std::milli>(t6 - t5).count();
-    auto map_buf_B_ms              = time_profile(ptr.event());
-    auto unmap_buf_B_ms            = time_profile(ptr.unmap());
+    auto map_buf_B_ms              = ocl::elapsed_time(ptr.event());
+    auto unmapevt                  = ptr.unmap();
+    auto unmap_buf_B_ms            = ocl::elapsed_time(unmapevt);
 
     ocl::buffer bufC;
     bufC.allocate<CL_MEM_WRITE_ONLY>(platform.context(), m_array_size * sizeof(float));
@@ -91,36 +90,22 @@ namespace sand::common {
     ocl::buffer bufD;
     bufD.allocate<CL_MEM_WRITE_ONLY>(platform.context(), m_array_size * sizeof(float));
 
-    // GPU setup
-    cl_int err;
     // set kernel args
-    err = clSetKernelArg(m_kernel, 0, sizeof(cl_mem), &bufA.buf()());
-    err |= clSetKernelArg(m_kernel, 1, sizeof(cl_mem), &bufB.buf()());
-    err |= clSetKernelArg(m_kernel, 2, sizeof(cl_mem), &bufC.buf()());
-    err |= clSetKernelArg(m_kernel, 3, sizeof(size_t), &m_array_size);
-    if (err != CL_SUCCESS) {
-      UFW_ERROR("Failed to set up kernel arguments.");
-    } else
-      UFW_DEBUG("Kernel arguments set.");
-
+    m_kernel.setArg(0, bufA);
+    m_kernel.setArg(1, bufB);
+    m_kernel.setArg(2, bufC);
+    m_kernel.setArg(3, m_array_size);
     // execute the kernel
+    ocl::Events after{unmapevt};
     cl::Event ev_kernel_execution1;
-    err = clEnqueueNDRangeKernel(platform.queues().front()(), m_kernel, 1, NULL, &m_global_size, &m_local_size, 0, NULL,
-                                 &ev_kernel_execution1());
-    if (err != CL_SUCCESS)
-      UFW_ERROR("Failed to enqueue kernel.");
-    else
-      UFW_DEBUG("Kernel enqueued.");
+    platform.queues().front().enqueueNDRangeKernel(m_kernel, cl::NullRange, cl::NDRange(m_global_size),
+                                                   cl::NDRange(m_local_size), &after, &ev_kernel_execution1);
 
-    err |= clSetKernelArg(m_kernel, 2, sizeof(cl_mem), &bufD.buf()());
+    m_kernel.setArg(2, bufD);
     // execute the kernel
     cl::Event ev_kernel_execution2;
-    err = clEnqueueNDRangeKernel(platform.queues().front()(), m_kernel, 1, NULL, &m_global_size, &m_local_size, 1,
-                                 &ev_kernel_execution1(), &ev_kernel_execution2());
-    if (err != CL_SUCCESS)
-      UFW_ERROR("Failed to enqueue kernel.");
-    else
-      UFW_DEBUG("Kernel enqueued.");
+    platform.queues().front().enqueueNDRangeKernel(m_kernel, cl::NullRange, cl::NDRange(m_global_size),
+                                                   cl::NDRange(m_local_size), &after, &ev_kernel_execution2);
 
     void* wptr                      = C_gpu.get();
     cl::Event ev_copy_C_from_device = bufC.read(wptr, platform.queues().front(), 0, -1, {ev_kernel_execution1});
@@ -129,7 +114,7 @@ namespace sand::common {
     auto dptr   = bufD.map<CL_MAP_READ>(platform.queues().front(), 0, -1, {ev_kernel_execution2});
     float dummy = std::accumulate(static_cast<float*>(dptr.get()), static_cast<float*>(dptr.get()) + m_array_size, 0.f);
     auto t8     = std::chrono::high_resolution_clock::now();
-    auto map_buf_D_ms            = time_profile(dptr.event());
+    auto map_buf_D_ms            = ocl::elapsed_time(dptr.event());
     double read_buf_D_to_host_ms = std::chrono::duration<double, std::milli>(t8 - t7).count();
     ev_copy_C_from_device.wait();
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -137,9 +122,9 @@ namespace sand::common {
     // some profiling
     double gpu_wall_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
 
-    auto gpu_kernel1_ms = time_profile(ev_kernel_execution1);
-    auto gpu_kernel2_ms = time_profile(ev_kernel_execution2);
-    auto gpu_read_C_ms  = time_profile(ev_copy_C_from_device);
+    auto gpu_kernel1_ms = ocl::elapsed_time(ev_kernel_execution1);
+    auto gpu_kernel2_ms = ocl::elapsed_time(ev_kernel_execution2);
+    auto gpu_read_C_ms  = ocl::elapsed_time(ev_copy_C_from_device);
 
     UFW_INFO("CPU serial time: {} ms", cpu_ms);
     UFW_INFO("GPU wall time (copy to gpu -> enqueue -> finish -> copy result): {} ms", gpu_wall_ms);
@@ -165,45 +150,15 @@ namespace sand::common {
     UFW_DEBUG("Max absolute error: {}", max_abs_err);
   }
 
-  double opencl_test::time_profile(const cl::Event& ev) {
-    cl_ulong qstart = 0;
-    cl_ulong qend   = 0;
-    clGetEventProfilingInfo(ev.get(), CL_PROFILING_COMMAND_START, sizeof(qstart), &qstart, nullptr);
-    clGetEventProfilingInfo(ev.get(), CL_PROFILING_COMMAND_END, sizeof(qend), &qend, nullptr);
-    double gpu_ms = 1e-6 * double(qend - qstart); // ns -> ms
-    return gpu_ms;
-  }
-
   void opencl_test::build_kernel() {
     // ensure initialized here
     auto& platform = instance<ocl::platform>();
     const char* kernel_src =
-        "__kernel void vector_add(__global const float* A, __global const float* B, __global float* C, ulong N) {\n"
-        "  size_t i = get_global_id(0);\n"
-        "  if (i < N) C[i] = A[i] + B[i];\n"
-        "}\n";
-    cl_int err;
-    m_program = clCreateProgramWithSource(platform.context().get(), 1, &kernel_src, nullptr, &err);
-    if (!m_program || err != CL_SUCCESS) {
-      UFW_ERROR("Failed to create program from kernel source.");
-    } else
-      UFW_DEBUG("Created program from kernel source.");
-    err = clBuildProgram(m_program, 1, &platform.devices().front()(), nullptr, nullptr, nullptr);
-    if (err != CL_SUCCESS) {
-      // print build log
-      size_t logsz = 0;
-      clGetProgramBuildInfo(m_program, platform.devices().front()(), CL_PROGRAM_BUILD_LOG, 0, nullptr, &logsz);
-      std::string log(logsz, '\0');
-      clGetProgramBuildInfo(m_program, platform.devices().front()(), CL_PROGRAM_BUILD_LOG, logsz, &log[0], nullptr);
-      UFW_ERROR("Failed to build program:\n {}", log);
-    } else
-      UFW_DEBUG("Built program without errors.");
-
-    m_kernel = clCreateKernel(m_program, "vector_add", &err);
-    if (err != CL_SUCCESS) {
-      UFW_ERROR("Failed to create kernel.");
-    } else
-      UFW_DEBUG("Created kernel vector_add");
+#include "test_kernel.cl"
+        ;
+    m_program = cl::Program(platform.context(), kernel_src);
+    m_program.build(platform.devices());
+    m_kernel = cl::Kernel(m_program, "vector_add");
   }
 
 } // namespace sand::common
