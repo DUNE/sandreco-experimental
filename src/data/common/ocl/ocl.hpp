@@ -9,9 +9,11 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 220
 #include <CL/cl2.hpp>
 
-#define OCL_KERNEL(k) "__kernel " #k;
+#define CL_KERNEL(k) "__kernel " #k;
 
-namespace sand::ocl {
+namespace sand::cl {
+
+  using namespace ::cl;
 
   /**
    * This class queries OpenCL for all possible platforms. It selects the one with the most GPU devices.
@@ -293,18 +295,18 @@ namespace sand::ocl {
     size_t m_size = 0;
   };
 
-} // namespace sand::ocl
+} // namespace sand::cl
 
 namespace cl::detail {
   // Specialization for our version of buffer
   template <>
-  struct KernelArgumentHandler<sand::ocl::buffer, void> {
-    static size_type size(const sand::ocl::buffer&) { return sizeof(cl_mem); }
-    static const cl_mem* ptr(const sand::ocl::buffer& buf) { return &(buf.buf()()); }
+  struct KernelArgumentHandler<sand::cl::buffer, void> {
+    static size_type size(const sand::cl::buffer&) { return sizeof(cl_mem); }
+    static const cl_mem* ptr(const sand::cl::buffer& buf) { return &(buf.buf()()); }
   };
 
 } // namespace cl::detail
 
-UFW_DECLARE_COMPLEX_DATA(sand::ocl::platform);
+UFW_DECLARE_COMPLEX_DATA(sand::cl::platform);
 
-UFW_DECLARE_MANAGED_DATA(sand::ocl::buffer);
+UFW_DECLARE_MANAGED_DATA(sand::cl::buffer);

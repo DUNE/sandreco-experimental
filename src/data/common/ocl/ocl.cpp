@@ -1,6 +1,8 @@
 #include <ocl.hpp>
 
-namespace sand::ocl {
+namespace sand::cl {
+
+  using namespace ::cl;
 
   platform::platform(const ufw::config& cfg) {
     bool accept_fallback = cfg.value("accept_fallback", true);
@@ -72,4 +74,4 @@ namespace sand::ocl {
     }
   }
 
-}; // namespace sand::ocl
+}; // namespace sand::cl

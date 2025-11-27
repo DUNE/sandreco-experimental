@@ -6,7 +6,7 @@
       "ufw-env" : {}
     },
     "globals" : {
-    "sand::ocl::platform" : {}
+    "sand::cl::platform" : {}
     },
     "contexts" : {
       "keys" : 5,

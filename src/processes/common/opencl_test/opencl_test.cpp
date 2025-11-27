@@ -43,7 +43,7 @@ namespace sand::common {
 
   void opencl_test::run() {
     UFW_DEBUG("Running an opencl_test process at {}.", fmt::ptr(this));
-    auto& platform = instance<ocl::platform>();
+    auto& platform = instance<cl::platform>();
 
     // allocate host memory and create input data
     std::unique_ptr<float[]> A(new float[m_array_size]);
@@ -68,11 +68,11 @@ namespace sand::common {
 
     auto t0 = std::chrono::high_resolution_clock::now();
     // create device buffers.
-    ocl::buffer bufA; // buf A is initialized by copying from host
+    cl::buffer bufA; // buf A is initialized by copying from host
     auto t4 = std::chrono::high_resolution_clock::now();
     bufA.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(platform.context(), m_array_size * sizeof(float), A.get());
     auto t5 = std::chrono::high_resolution_clock::now();
-    ocl::buffer bufB; // buf A is initialized by pinning from host
+    cl::buffer bufB; // buf A is initialized by pinning from host
     auto ptr = bufB.allocate<CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY>(platform.context(), platform.queues().front(),
                                                                        m_array_size * sizeof(float));
 
@@ -80,14 +80,14 @@ namespace sand::common {
     auto t6                        = std::chrono::high_resolution_clock::now();
     double copy_buf_A_to_device_ms = std::chrono::duration<double, std::milli>(t5 - t4).count();
     double copy_buf_B_to_device_ms = std::chrono::duration<double, std::milli>(t6 - t5).count();
-    auto map_buf_B_ms              = ocl::elapsed_time(ptr.event());
+    auto map_buf_B_ms              = cl::elapsed_time(ptr.event());
     auto unmapevt                  = ptr.unmap();
-    auto unmap_buf_B_ms            = ocl::elapsed_time(unmapevt);
+    auto unmap_buf_B_ms            = cl::elapsed_time(unmapevt);
 
-    ocl::buffer bufC;
+    cl::buffer bufC;
     bufC.allocate<CL_MEM_WRITE_ONLY>(platform.context(), m_array_size * sizeof(float));
 
-    ocl::buffer bufD;
+    cl::buffer bufD;
     bufD.allocate<CL_MEM_WRITE_ONLY>(platform.context(), m_array_size * sizeof(float));
 
     // set kernel args
@@ -96,7 +96,7 @@ namespace sand::common {
     m_kernel.setArg(2, bufC);
     m_kernel.setArg(3, m_array_size);
     // execute the kernel
-    ocl::Events after{unmapevt};
+    cl::Events after{unmapevt};
     cl::Event ev_kernel_execution1;
     platform.queues().front().enqueueNDRangeKernel(m_kernel, cl::NullRange, cl::NDRange(m_global_size),
                                                    cl::NDRange(m_local_size), &after, &ev_kernel_execution1);
@@ -114,7 +114,7 @@ namespace sand::common {
     auto dptr   = bufD.map<CL_MAP_READ>(platform.queues().front(), 0, -1, {ev_kernel_execution2});
     float dummy = std::accumulate(static_cast<float*>(dptr.get()), static_cast<float*>(dptr.get()) + m_array_size, 0.f);
     auto t8     = std::chrono::high_resolution_clock::now();
-    auto map_buf_D_ms            = ocl::elapsed_time(dptr.event());
+    auto map_buf_D_ms            = cl::elapsed_time(dptr.event());
     double read_buf_D_to_host_ms = std::chrono::duration<double, std::milli>(t8 - t7).count();
     ev_copy_C_from_device.wait();
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -122,9 +122,9 @@ namespace sand::common {
     // some profiling
     double gpu_wall_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
 
-    auto gpu_kernel1_ms = ocl::elapsed_time(ev_kernel_execution1);
-    auto gpu_kernel2_ms = ocl::elapsed_time(ev_kernel_execution2);
-    auto gpu_read_C_ms  = ocl::elapsed_time(ev_copy_C_from_device);
+    auto gpu_kernel1_ms = cl::elapsed_time(ev_kernel_execution1);
+    auto gpu_kernel2_ms = cl::elapsed_time(ev_kernel_execution2);
+    auto gpu_read_C_ms  = cl::elapsed_time(ev_copy_C_from_device);
 
     UFW_INFO("CPU serial time: {} ms", cpu_ms);
     UFW_INFO("GPU wall time (copy to gpu -> enqueue -> finish -> copy result): {} ms", gpu_wall_ms);
@@ -152,7 +152,7 @@ namespace sand::common {
 
   void opencl_test::build_kernel() {
     // ensure initialized here
-    auto& platform = instance<ocl::platform>();
+    auto& platform = instance<cl::platform>();
     const char* kernel_src =
 #include "test_kernel.cl"
         ;
