@@ -94,48 +94,24 @@ namespace sand {
     geo_id gi;
     auto path      = gp;
     gi.subdetector = STT;
-    // abuse the bad notation here, module/plane/straw
-    if (path.find("PV_") != std::string::npos) {
-      std::string straw(path.token(2));
-      auto i1 = straw.find('_');
-      auto i2 = straw.find('_', i1 + 1);
-      auto i3 = straw.find('_', i2 + 1);
-      auto i4 = straw.find('_', i3 + 1);
-      auto i5 = straw.find('_', i4 + 1);
-      if (i5 != std::string::npos) {
-        gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
-        gi.stt.plane       = 0;
-        if (straw.at(i3 - 1) == 'Y') {
-          gi.stt.plane = 1;
-        } else if (path.token(1).back() == '1') {
-          gi.stt.plane = 2;
-        }
-        gi.stt.tube = std::stoi(straw.substr(i5 + 1));
-      } else {
-        UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
+    std::string straw(path.token(2));
+    auto i1 = straw.find('_');
+    auto i2 = straw.find('_', i1 + 1);
+    auto i3 = straw.find('_', i2 + 1);
+    auto i4 = straw.find('_', i3 + 1);
+    auto i5 = straw.find('_', i4 + 1);
+    if (i5 != std::string::npos) {
+      gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
+      gi.stt.plane       = 0;
+      if (straw.at(i3 - 1) == 'Y') {
+        gi.stt.plane = 1;
+      } else if (path.token(1).back() == '1') {
+        gi.stt.plane = 2;
       }
-    } else { // root geometry notation with no PV
-      std::string straw(path.token(2));
-      auto i1 = straw.find('_');
-      auto i2 = straw.find('_', i1 + 1);
-      auto i3 = straw.find('_', i2 + 1);
-      if (i3 != std::string::npos) {
-        gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
-        gi.stt.plane       = 0;
-        if (straw.at(i3 - 1) == 'Y') {
-          gi.stt.plane = 1;
-        } else if (path.token(0).back() == '1') {
-          gi.stt.plane = 2;
-        }
-        size_t pos = straw.find('#');
-        if (pos != std::string::npos) {
-          gi.stt.tube = std::stoi(straw.substr(pos + 1));
-        } else {
-          gi.stt.tube = 0;
-        }
-      } else {
-        UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
-      }
+      gi.stt.tube = std::stoi(straw.substr(i5 + 1));
+      
+    } else {
+      UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
     }
     return gi;
   }

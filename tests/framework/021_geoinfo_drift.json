@@ -19,7 +19,7 @@
   },
   "run" : [
     {
-      "sand::common::geoinfo_test" : { "test_path" : "sand_inner_volume_PV_0/SANDtracker_PV_0/SuperMod_B_PV_1/C3H6Mod_B_PV_2/C3H6DriftChamber_B_PV_0/C3H6DriftModule_1_B_PV_0/C3H6DriftModule_1_B_Fwire_PV_1", "mask_or_lens" : "mask"},
+      "sand::common::geoinfo_test" : {"test_path" : "sand_inner_volume_PV_0/SANDtracker_PV_0/SuperMod_B_PV_1/C3H6Mod_B_PV_2/C3H6DriftChamber_B_PV_0/C3H6DriftModule_1_B_PV_0", "mask_or_lens" : "mask"},
       "reqs" : {},
       "prods" : {}
     }
