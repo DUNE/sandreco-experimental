@@ -62,21 +62,6 @@ namespace sand {
         stat->top_south    = centre + boxcorner;
         stat->bottom_north = centre - boxcorner;
 
-        auto process_wire = [&](auto* wire_shape) {
-          auto matrix  = nav->get_hmatrix();
-          double* tran = matrix.GetTranslation();
-          double* rot  = matrix.GetRotationMatrix();
-          pos_3d centre;
-          centre.SetCoordinates(tran);
-          dir_3d halfsize(0, 0, wire_shape->GetDZ());
-          dir_3d globalhalfsize = nav->to_master(halfsize);
-          auto w                = std::make_unique<wire>();
-          w->parent             = stat.get();
-          w->head               = centre + globalhalfsize;
-          w->tail               = centre - globalhalfsize;
-          w->max_radius         = wire_shape->GetRmax();
-          stat->wires.emplace_back(std::move(w));
-        };
 
         if (tgt == TRKONLY) {
           nav->for_each_node([&](auto driftmod) {
@@ -84,17 +69,21 @@ namespace sand {
             if (driftmodname.find("DriftMod") == std::string::npos) { // other stuff, targets, ...
               return;
             }
-            // UFW_INFO("DriftMod name: {}", driftmodname);
-            nav->cd(driftpath / smodname / modname / driftmodname);
-            nav->for_each_node([&](auto wire) {
-              std::string wname = wire->GetName();
-              // UFW_INFO("Wire name: {}", wname);
-              auto* wire_shape = dynamic_cast<TGeoTube*>(wire->GetVolume()->GetShape());
-              if (!wire_shape) {
-                UFW_ERROR("Wire '{}' has invalid shape.", wname);
-              }
-              process_wire(wire_shape);
-            });
+
+            geo_path full_path = driftpath / smodname / modname / driftmodname;
+            auto i1        = driftmodname.find('_');
+            auto i2        = driftmodname.find('_', i1 + 1);
+            auto plane     = std::stoi(driftmodname.substr(i1 + 1, i2 - i1 - 1));
+            if (plane == 0) {
+              stat->geo_x = id(partial_path(full_path,gi));
+            } else if (plane == 1) {
+              stat->geo_u = id(partial_path(full_path,gi));
+            } else if (plane == 2) {
+              stat->geo_v = id(partial_path(full_path,gi));
+            } else {
+              UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmodname, plane);
+            }
+            UFW_INFO("DriftMod name: {}", driftmodname);
           });
         } else {
           nav->for_each_node([&](auto driftchamber) {
@@ -109,17 +98,21 @@ namespace sand {
               if (driftmodname.find("DriftMod") == std::string::npos) { // other stuff, targets, ...
                 return;
               }
-              // UFW_INFO("DriftMod name: {}", driftmodname);
-              nav->cd(driftpath / smodname / modname / driftchambername / driftmodname);
-              nav->for_each_node([&](auto wire) {
-                std::string wname = wire->GetName();
-                // UFW_INFO("Wire name: {}", wname);
-                auto* wire_shape = dynamic_cast<TGeoTube*>(wire->GetVolume()->GetShape());
-                if (!wire_shape) {
-                  UFW_ERROR("Wire '{}' has invalid shape.", wname);
-                }
-                process_wire(wire_shape);
-              });
+              geo_path full_path = driftpath / smodname / modname / driftchambername / driftmodname;
+
+              auto i1        = driftmodname.find('_');
+              auto i2        = driftmodname.find('_', i1 + 1);
+              auto plane     = std::stoi(driftmodname.substr(i1 + 1, i2 - i1 - 1));
+            
+              if (plane == 0) {
+                stat->geo_x = id(partial_path(full_path,gi));
+              } else if (plane == 1) {
+                stat->geo_u = id(partial_path(full_path,gi));
+              } else if (plane == 2) {
+                stat->geo_v = id(partial_path(full_path,gi));
+              } else {
+                UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmodname, plane);
+              }
             });
           });
         }
@@ -175,27 +168,21 @@ namespace sand {
       mod_ct = 0; // Carbon
     } else if (modpath.find("C3H6Mod") != std::string::npos) {
       mod_ct = 1; // C3H6
-      if (modpath.find('#') != std::string::npos) {
-        size_t pos = modpath.find('#');
-        auto a     = std::stoi(modpath.substr(pos + 1));
-        mod_ct += a; // C3H6
-      } else if (modpath.find("PV_") != std::string::npos) {
-        size_t pos = modpath.find("PV_");
-        auto a     = std::stoi(modpath.substr(pos + 3));
-        mod_ct += a; // C3H6
-      }
+      size_t pos = modpath.find("PV_");
+      auto a     = std::stoi(modpath.substr(pos + 3));
+      mod_ct += a; // C3H6
     } else {
       UFW_ERROR("Drift module path '{}' is not recognized.", modpath);
     }
     gi.drift.supermodule = tgt_ct * 10 + trk_ct + mod_ct; // supermodule is a combination of target and module
 
-    std::string wire_path(is_trk ? path.token(3) : path.token(4));
-    // UFW_INFO("Wire path: '{}'", wire_path);
-    auto i1        = wire_path.find('_');
-    auto i2        = wire_path.find('_', i1 + 1);
-    auto plane     = std::stoi(wire_path.substr(i1 + 1, i2 - i1 - 1));
-    auto dir       = (wire_path.find("Fwire") == std::string::npos) ? 0 : 1;
-    gi.drift.plane = 2 * plane + dir;
+    std::string plane_path(is_trk ? path.token(2) : path.token(3));
+    // UFW_INFO("Wire path: '{}'", plane_path);
+    auto i1        = plane_path.find('_');
+    auto i2        = plane_path.find('_', i1 + 1);
+    auto plane     = std::stoi(plane_path.substr(i1 + 1, i2 - i1 - 1));
+
+    gi.drift.plane = plane;
 
     return gi;
   }
@@ -213,9 +200,7 @@ namespace sand {
     int tgt_ct = val / 10;
     int mod_ct = val - tgt_ct * 10;
 
-    int plane             = gi.drift.plane / 2;
-    int dir               = gi.drift.plane % 2; // 0 = Swire, 1 = Fwire
-    std::string wire_type = (dir == 0) ? "Swire" : "Fwire";
+    int plane             = gi.drift.plane;
 
     std::string supermod_name;
     // UFW_INFO("tgt_ct: {}, mod_ct: {}, plane: {}, dir: {}", tgt_ct, mod_ct, plane, dir);
@@ -233,19 +218,19 @@ namespace sand {
       if (is_trk)
         supermod_name = "Trk" + placement + "_0";
       else
-        supermod_name = "SuperMod_C" + ((placement == "") ? "_0#1" : placement + "_1");
+        supermod_name = "SuperMod_C" + placement + "_1";
       break;
     case 4:
       supermod_name = "SuperMod_B" + placement + "_0";
       break;
     case 5:
-      supermod_name = "SuperMod_B" + ((placement == "") ? "_0#1" : placement + "_1");
+      supermod_name = "SuperMod_B" + placement + "_1";
       break;
     case 6:
       supermod_name = "SuperMod_A" + placement + "_0";
       break;
     case 7:
-      supermod_name = "SuperMod_A" + ((placement == "") ? "_0#1" : placement + "_1");
+      supermod_name = "SuperMod_A" + placement + "_1";
       break;
     default:
       UFW_ERROR("Supermodule index '{}' is not recognized.", val);
@@ -256,7 +241,6 @@ namespace sand {
     if (supermod_name.find("Trk") != std::string::npos) {
       gp /= "TrkDrift" + placement + "_0";
       gp /= "CDriftModule_" + std::to_string(plane) + placement + "_0";
-      gp /= "CDriftModule_" + std::to_string(plane) + "_" + wire_type + placement + "_0";
     } else {
       auto i1 = supermod_name.find('_');
       auto i2 = supermod_name.find('_', i1 + 1);
@@ -275,7 +259,6 @@ namespace sand {
       gp /= module_name + "Mod_" + sm_ID + placement + "_" + std::to_string(mod_ct - 1);
       gp /= module_name + "DriftChamber_" + sm_ID + placement + "_0";
       gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + placement + "_0";
-      gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + "_" + wire_type + placement + "_0";
     }
     return gp;
   }
