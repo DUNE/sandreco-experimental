@@ -18,11 +18,6 @@ namespace sand::common {
     void run() override;
 
    private:
-    void create_device_ctx_queue();
-    void build_kernel();
-    void cleanup();
-
-   private:
     static constexpr size_t s_max_platforms = 4;
     cl::Program m_program;
     cl::Kernel m_kernel;
@@ -36,7 +31,13 @@ namespace sand::common {
     m_array_size  = cfg.at("array_size");
     m_global_size = std::ceil(m_array_size / float(m_local_size)) * m_local_size;
     UFW_INFO("Summing two arrays with size : {} MB", m_array_size * sizeof(float) / uint(1 << 20));
-    build_kernel();
+    auto& platform = instance<cl::platform>();
+    const char* kernel_src =
+#include "test_kernel.cl"
+        ;
+    m_program = cl::Program(platform.context(), kernel_src);
+    m_program.build(platform.devices());
+    m_kernel = cl::Kernel(m_program, "vector_add");
   }
 
   opencl_test::opencl_test() : process({}, {}) { UFW_DEBUG("Creating an opencl_test process at {}.", fmt::ptr(this)); }
@@ -148,17 +149,6 @@ namespace sand::common {
     else
       UFW_INFO("Results between sequential sum on host and device match.");
     UFW_DEBUG("Max absolute error: {}", max_abs_err);
-  }
-
-  void opencl_test::build_kernel() {
-    // ensure initialized here
-    auto& platform = instance<cl::platform>();
-    const char* kernel_src =
-#include "test_kernel.cl"
-        ;
-    m_program = cl::Program(platform.context(), kernel_src);
-    m_program.build(platform.devices());
-    m_kernel = cl::Kernel(m_program, "vector_add");
   }
 
 } // namespace sand::common
