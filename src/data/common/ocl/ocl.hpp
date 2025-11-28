@@ -9,7 +9,9 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 220
 #include <CL/cl2.hpp>
 
-#define CL_KERNEL(k) "__kernel " #k;
+#define CL_FUNCTION(f) #f "\n"
+
+#define CL_KERNEL(k) "__kernel " #k
 
 namespace sand::cl {
 
