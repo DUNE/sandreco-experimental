@@ -1,7 +1,6 @@
 
 #pragma once
 
-#include "ufw/utils.hpp"
 #include <ufw/config.hpp>
 #include <ufw/data.hpp>
 
