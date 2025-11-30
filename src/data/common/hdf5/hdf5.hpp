@@ -40,3 +40,5 @@ namespace sand::hdf5 {
   };
 
 } // namespace sand::hdf5
+
+UFW_DECLARE_COMPLEX_DATA(sand::hdf5::ndarray);
