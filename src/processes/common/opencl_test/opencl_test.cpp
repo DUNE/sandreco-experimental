@@ -145,7 +145,7 @@ namespace sand::common {
       max_abs_err = std::max(max_abs_err, std::abs(C_cpu[i] - C_gpu[i]));
     }
     if (max_abs_err > 1e-7f)
-      UFW_INFO("Results between sequential sum on host and device differ!");
+      UFW_ERROR("Results between sequential sum on host and device differ!");
     else
       UFW_INFO("Results between sequential sum on host and device match.");
     UFW_DEBUG("Max absolute error: {}", max_abs_err);
