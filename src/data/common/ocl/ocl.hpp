@@ -199,12 +199,11 @@ namespace sand::cl {
         T ptr      = new ValT[(sz + sizeof(ValT) - 1) / sizeof(ValT)]; // integer round up
         q.enqueueReadBuffer(m_buffer, CL_TRUE, offset, sz, ptr, evptr);
         return ptr;
-      } else if constexpr (std::is_convertible_v<decltype(T{}.data()), void*>) {
+      } else if constexpr (std::is_convertible_v<decltype(std::declval<T>().data()), void*>) {
         T ret;
         q.enqueueReadBuffer(m_buffer, CL_TRUE, offset, sz, ret.data(), evptr);
         return std::move(ret);
       } else {
-        static_assert(sizeof(T) >= sz, "Buffer is too large.");
         T ret;
         q.enqueueReadBuffer(m_buffer, CL_TRUE, offset, sz, &ret, evptr);
         return std::move(ret);
@@ -231,10 +230,9 @@ namespace sand::cl {
       const Events* evptr = prereq.empty() ? nullptr : &prereq;
       if constexpr (std::is_pointer_v<T>) {
         q.enqueueReadBuffer(m_buffer, CL_FALSE, offset, sz, readinto, evptr, &done);
-      } else if constexpr (std::is_pointer_v<decltype(T{}.data())>) {
+      } else if constexpr (std::is_pointer_v<decltype(std::declval<T>().data())>) {
         q.enqueueReadBuffer(m_buffer, CL_FALSE, offset, sz, readinto.data(), evptr, &done);
       } else {
-        static_assert(sizeof(T) >= sz, "Buffer is too large.");
         q.enqueueReadBuffer(m_buffer, CL_FALSE, offset, sz, &readinto, evptr, &done);
       }
       return std::move(done);
@@ -260,10 +258,9 @@ namespace sand::cl {
       cl::Event done;
       if constexpr (std::is_pointer_v<T>) {
         q.enqueueWriteBuffer(m_buffer, CL_FALSE, offset, sz, readfrom, evptr, &done);
-      } else if constexpr (std::is_convertible_v<decltype(T{}.data()), void*>) {
+      } else if constexpr (std::is_convertible_v<decltype(std::declval<T>().data()), void*>) {
         q.enqueueWriteBuffer(m_buffer, CL_FALSE, offset, sz, readfrom.data(), evptr, &done);
       } else {
-        static_assert(sizeof(T) <= sz, "Buffer is too small.");
         q.enqueueWriteBuffer(m_buffer, CL_FALSE, offset, sz, &readfrom, evptr, &done);
       }
       return std::move(done);

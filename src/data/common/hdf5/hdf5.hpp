@@ -26,12 +26,38 @@ namespace sand::hdf5 {
 
     virtual ~ndarray() = default;
 
+    /**
+     * List all the datasets in this file.
+     */
     const std::vector<std::string>& datasets() const { return m_datasets; }
 
+    /**
+     * Provides metadata on the given dataset.
+     */
     ndrange range(const std::string&) const;
 
+    /**
+     * Reads the entire dataset into the user provided pointer.
+     * Memory must allocated by the user in the required size.
+     */
     void read(const std::string&, void*);
 
+    /**
+     * Reads the entire dataset into the user provided object.
+     * Memory must allocated by the user in the required size.
+     */
+    template <typename T>
+    void read(const std::string& dataset, T& usrobj) {
+      if constexpr (std::is_pointer_v<T>) {
+        using ValT = std::remove_pointer_t<T>;
+        read(dataset, static_cast<void*>(usrobj));
+      } else if constexpr (std::is_convertible_v<decltype(std::declval<T>().data()), void*>) {
+        read(dataset, static_cast<void*>(usrobj.data()));
+      } else {
+        read(dataset, static_cast<void*>(&usrobj));
+      }
+      read(dataset, usrobj.data());
+    }
     // void write(const std::string&, const void*);
 
    private:

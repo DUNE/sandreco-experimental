@@ -3,6 +3,7 @@ enable_testing()
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS CXX)
 
+include_directories(.)
 include_directories(../../include)
 include_directories(../../src/)
 
