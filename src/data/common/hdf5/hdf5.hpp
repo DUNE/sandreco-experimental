@@ -44,7 +44,9 @@ namespace sand::hdf5 {
 
     /**
      * Reads the entire dataset into the user provided object.
-     * Memory must allocated by the user in the required size.
+     * The object must provide sufficient space, either by pointing to adequate memory,
+     * by being a container with contiguous memory, large enough and exposing a @p data() member,
+     * or simply by being large enough itself.
      */
     template <typename T>
     void read(const std::string& dataset, T& usrobj) {
