@@ -40,13 +40,15 @@ namespace sand::fake_reco {
     reconstructed_interactions_vector.reserve(primary_vertices.size());
     reco_branch.nixn = primary_vertices.size();
 
-    for (const auto& vertex : primary_vertices) {
-      UFW_DEBUG("Processing vertex number {}", &vertex - primary_vertices.data());
+    for (std::size_t event_index = 0; event_index < primary_vertices.size(); event_index++) {
+      const auto& vertex = primary_vertices[event_index];
+      UFW_DEBUG("Processing vertex number {} that points to gRooTracker index: {}", &vertex - primary_vertices.data(),
+                vertex.InteractionNumber);
       // Create empty interactions
       caf::SRTrueInteraction& true_interaction = true_interactions_vector.emplace_back();
       caf::SRInteraction reco_interaction      = empty_interaction_from_vertex(edep);
 
-      initialize_SRTrueInteraction(true_interaction, genie);
+      initialize_SRTrueInteraction(true_interaction, genie.events_[event_index], genie.stdHeps_[event_index]);
 
       // Fill the interactions
       for (const auto& particle : edep) {
