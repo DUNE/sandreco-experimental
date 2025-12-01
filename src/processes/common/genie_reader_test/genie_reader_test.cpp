@@ -26,33 +26,39 @@ namespace sand::common {
   }
 
   void genie_reader_test::run() {
-    const auto& reader = get<sand::genie_reader>();
-    auto event         = reader.event_;
-    auto stdHep        = reader.stdHep_;
-    auto nuParent      = reader.nuParent_;
-    auto numiFlux      = reader.numiFlux_;
-    UFW_INFO("Event num {}", event.EvtNum_);
-    UFW_INFO("Event vertex {}, {}, {}, {}.", event.EvtVtx_[0], event.EvtVtx_[1], event.EvtVtx_[2], event.EvtVtx_[3]);
-    UFW_INFO("Event code {}.", event.EvtCode_->String());
+    const auto& reader     = get<sand::genie_reader>();
+    const auto& events     = reader.events_;
+    const auto& stdHeps    = reader.stdHeps_;
+    const auto& nuParents  = reader.nuParents_;
+    const auto& numiFluxes = reader.numiFluxes_;
+    for (std::size_t i = 0; i < events.size(); i++) {
+      const auto& event  = events[i];
+      const auto& stdHep = stdHeps[i];
+      UFW_INFO("Parsing spill entry number: {}", i);
 
-    UFW_INFO("StdHep N {}.", stdHep.N_);
-    UFW_INFO("StdHep P4 (p, E) {}, {}, {}, {}.", stdHep.P4_[0].Px(), stdHep.P4_[0].Py(), stdHep.P4_[0].Pz(),
-             stdHep.P4_[0].E());
+      UFW_INFO("Event num {}", event.EvtNum_);
+      UFW_INFO("Event vertex {}, {}, {}, {}.", event.EvtVtx_[0], event.EvtVtx_[1], event.EvtVtx_[2], event.EvtVtx_[3]);
+      UFW_INFO("Event code {}.", event.EvtCode_->String());
 
-    if (numiFlux) {
-      const auto& numiFlux_val = numiFlux.value();
-      UFW_INFO("NumiFlux Run {}.", numiFlux_val.Run_);
-      UFW_INFO("NumiFlux Ndxdz {}.", numiFlux_val.Ndxdz_);
-    } else {
-      UFW_DEBUG("Invalid NumiFlux.");
-    }
+      UFW_INFO("StdHep N {}.", stdHep.N_);
+      UFW_INFO("StdHep P4 (p, E) {}, {}, {}, {}.", stdHep.P4_[0].Px(), stdHep.P4_[0].Py(), stdHep.P4_[0].Pz(),
+               stdHep.P4_[0].E());
 
-    if (nuParent) {
-      const auto& nuParent_val = nuParent.value();
-      UFW_INFO("NuParent Pdg {}.", nuParent_val.Pdg_);
-      UFW_INFO("NuParent DecMode {}.", nuParent_val.DecMode_);
-    } else {
-      UFW_DEBUG("Invalid NuParent.");
+      if (numiFluxes) {
+        const auto& numiFlux = numiFluxes.value()[i];
+        UFW_INFO("NumiFlux Run {}.", numiFlux.Run_);
+        UFW_INFO("NumiFlux Ndxdz {}.", numiFlux.Ndxdz_);
+      } else {
+        UFW_DEBUG("Invalid NumiFlux.");
+      }
+
+      if (nuParents) {
+        const auto& nuParent = nuParents.value()[i];
+        UFW_INFO("NuParent Pdg {}.", nuParent.Pdg_);
+        UFW_INFO("NuParent DecMode {}.", nuParent.DecMode_);
+      } else {
+        UFW_DEBUG("Invalid NuParent.");
+      }
     }
   }
 } // namespace sand::common

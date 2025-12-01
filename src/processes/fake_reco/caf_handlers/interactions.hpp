@@ -33,11 +33,12 @@ namespace sand::fake_reco {
     interaction.part.nsandreco++;
   }
 
-  inline void initialize_SRTrueInteraction(caf::SRTrueInteraction& interaction, const GenieWrapper& genie) {
+  inline void initialize_SRTrueInteraction(caf::SRTrueInteraction& interaction, const GRooTrackerEvent& genie_event,
+                                           const StdHep& genie_stdhep) {
     // data got via  genie.stdHep_.(...)[0].(...) are relative to the nu
     // data got via  genie.stdHep_.(...)[1].(...) are relative to the target
 
-    const std::string_view interaction_string = genie.event_.EvtCode_->GetString().Data();
+    const std::string_view interaction_string = genie_event.EvtCode_->GetString().Data();
     const EventSummary summary{interaction_string};
 
     // interaction.id = ?
@@ -59,7 +60,7 @@ namespace sand::fake_reco {
     //  https://github.com/DUNE/ND_CAFMaker/blob/972f11bc5b69ea1f595e14ed16e09162f512011e/src/truth/FillTruth.cxx#L178C5-L178C67)
     // interaction.removalE = ?
 
-    const auto& nu_p4 = genie.stdHep_.P4_[static_cast<int>(StdHepIndex::nu)];
+    const auto& nu_p4 = genie_stdhep.P4_[static_cast<int>(StdHepIndex::nu)];
 
     // both in GeV
     interaction.E          = static_cast<float>(nu_p4.E());
@@ -67,15 +68,15 @@ namespace sand::fake_reco {
     interaction.momentum.y = static_cast<float>(nu_p4.Py());
     interaction.momentum.z = static_cast<float>(nu_p4.Pz());
 
-    const auto nu_daughters_indexes = genie.stdHep_.daughters_indexes_of_part(static_cast<int>(StdHepIndex::nu));
+    const auto nu_daughters_indexes = genie_stdhep.daughters_indexes_of_part(static_cast<int>(StdHepIndex::nu));
     if (nu_daughters_indexes.size() != 1) {
       // not sure if this is the right way to address this problem (is this even possible?)
       UFW_ERROR("Nu produced more than one lepton, it produced {} leptons", nu_daughters_indexes.size());
     }
-    if (genie.stdHep_.Pdg_[nu_daughters_indexes[0]] < 11 || genie.stdHep_.Pdg_[nu_daughters_indexes[0]] > 16) {
-      UFW_ERROR("Nu didn't produced a lepton, PDG code produced: {}", genie.stdHep_.Pdg_[nu_daughters_indexes[0]]);
+    if (genie_stdhep.Pdg_[nu_daughters_indexes[0]] < 11 || genie_stdhep.Pdg_[nu_daughters_indexes[0]] > 16) {
+      UFW_ERROR("Nu didn't produced a lepton, PDG code produced: {}", genie_stdhep.Pdg_[nu_daughters_indexes[0]]);
     }
-    const auto& final_lepton_p4 = genie.stdHep_.P4_[nu_daughters_indexes[0]];
+    const auto& final_lepton_p4 = genie_stdhep.P4_[nu_daughters_indexes[0]];
 
     // true 4-momentum transfer
     const auto q         = nu_p4 - final_lepton_p4;
@@ -101,8 +102,8 @@ namespace sand::fake_reco {
     if (interaction.mode == caf::kRes) {
       interaction.resnum = static_cast<int>(summary.resonance_type.value());
     }
-    interaction.xsec      = static_cast<float>(genie.event_.EvtXSec_);
-    interaction.genweight = static_cast<float>(genie.event_.EvtWght_);
+    interaction.xsec      = static_cast<float>(genie_event.EvtXSec_);
+    interaction.genweight = static_cast<float>(genie_event.EvtWght_);
   }
 
   inline void fill_sr_true_interaction(caf::SRTrueInteraction& interaction, const caf::SRTrueParticle& particle) {

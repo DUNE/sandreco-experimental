@@ -1,14 +1,16 @@
 #pragma once
 
-#include <TBits.h>
-#include <TObjString.h>
 #include <Math/Vector3D.h>
 #include <Math/Vector4D.h>
+#include <TBits.h>
+#include <TObjString.h>
 
 #include <optional>
 #include <vector>
 
 struct GRooTrackerEvent {
+  GRooTrackerEvent() = default;
+
   int EvtNum_;
   double EvtXSec_;
   double EvtDXSec_;
@@ -20,10 +22,7 @@ struct GRooTrackerEvent {
   TBits* EvtFlags_;
 };
 
-enum class StdHepIndex: int {
-  nu = 0,
-  tgt = 1
-};
+enum class StdHepIndex : int { nu = 0, tgt = 1 };
 
 struct StdHep {
   StdHep() = default;
@@ -138,8 +137,8 @@ struct NumiFlux {
 };
 
 struct GenieWrapper {
-  GRooTrackerEvent event_;
-  StdHep stdHep_;
-  std::optional<NuParent> nuParent_;
-  std::optional<NumiFlux> numiFlux_;
+  std::vector<GRooTrackerEvent> events_;
+  std::vector<StdHep> stdHeps_;
+  std::optional<std::vector<NuParent>> nuParents_;
+  std::optional<std::vector<NumiFlux>> numiFluxes_;
 };
