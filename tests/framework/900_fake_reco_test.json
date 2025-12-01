@@ -7,7 +7,7 @@
   },
   "globals" : {},
   "contexts" : {
-    "keys" : 8,
+    "keys" : 1,
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/sand-spill-events.9.edep.root"},
       "sand::genie_reader" : {"uri" : "test/sand-spill-events.9.edep.root"}

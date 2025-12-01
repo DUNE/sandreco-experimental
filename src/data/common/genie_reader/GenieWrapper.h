@@ -1,9 +1,12 @@
 #pragma once
 
-#include "TObjString.h"
-#include "TBits.h"
+#include <TBits.h>
+#include <TObjString.h>
+#include <Math/Vector3D.h>
+#include <Math/Vector4D.h>
 
 #include <optional>
+#include <vector>
 
 struct GRooTrackerEvent {
   int EvtNum_;
@@ -17,80 +20,57 @@ struct GRooTrackerEvent {
   TBits* EvtFlags_;
 };
 
+enum class StdHepIndex: int {
+  nu = 0,
+  tgt = 1
+};
+
 struct StdHep {
-
   StdHep() = default;
-  
-  StdHep(int N, int Pdg, int Status, int Rescat,
-         double X4[][4], double P4[][4], double Polz[][3],
-         int Fd[], int Ld[], int Fm[], int Lm[]) 
-         : N_(N), Pdg_(Pdg), Status_(Status), Rescat_(Rescat),
-         X4_(N, std::vector<double>(4)),
-         P4_(N, std::vector<double>(4)),
-         Polz_(N, std::vector<double>(3)),
-         Fd_(N), Ld_(N), Fm_(N), Lm_(N)
-        {
-          for (int i = 0; i < N; i++) {
-            for (int j = 0; j < 4; j++) {
-              X4_[i][j] = X4[i][j];
-              P4_[i][j] = P4[i][j];
-            }
-            for (int j = 0; j < 3; j++) {
-                Polz_[i][j] = Polz[i][j];
-            }
-            Fd_[i] = Fd[i];
-            Ld_[i] = Ld[i];
-            Fm_[i] = Fm[i];
-            Lm_[i] = Lm[i];
-          }
-        }
 
-    int N_;
-    int Pdg_;
-    int Status_;
-    int Rescat_;
+  StdHep(int N, const int Pdg[], const int Status[], const int Rescat[], const double X4[][4], const double P4[][4],
+         const double Polz[][3], const int Fd[], const int Ld[], const int Fm[], const int Lm[]);
 
-    std::vector<std::vector<double>> X4_;
-    std::vector<std::vector<double>> P4_;
-    std::vector<std::vector<double>> Polz_;
+  [[nodiscard]] std::vector<int> daughters_indexes_of_part(int particle_index) const;
 
-    std::vector<int> Fd_;
-    std::vector<int> Ld_;
-    std::vector<int> Fm_;
-    std::vector<int> Lm_;
+  int N_{};
+  std::vector<int> Pdg_{};
+  std::vector<int> Status_{};
+  std::vector<int> Rescat_{};
+
+  std::vector<ROOT::Math::XYZTVector> X4_{};
+  std::vector<ROOT::Math::PxPyPzEVector> P4_{};
+  std::vector<ROOT::Math::XYZVector> Polz_{};
+
+  std::vector<int> Fd_{};
+  std::vector<int> Ld_{};
+  std::vector<int> Fm_{};
+  std::vector<int> Lm_{};
 };
 
 struct NuParent {
   NuParent() = default;
-  
-  NuParent(int Pdg, int DecMode,
-         double DecP4[4], double DecX4[4],
-         double ProP4[4], double ProX4[4],
-         int ProNVtx) 
-         : Pdg_(Pdg), DecMode_(DecMode), 
-           DecP4_(4), DecX4_(4), 
-           ProP4_(4), ProX4_(4),
-           ProNVtx_(ProNVtx)
-        {
-          for (int i = 0; i < 4; i++) {
-            DecP4_[i] = DecP4[i];
-            DecX4_[i] = DecX4[i];
-            ProP4_[i] = ProP4[i];
-            ProX4_[i] = ProX4[i];
-          }
-        }
+
+  NuParent(int Pdg, int DecMode, double DecP4[4], double DecX4[4], double ProP4[4], double ProX4[4], int ProNVtx)
+    : Pdg_(Pdg), DecMode_(DecMode), DecP4_(4), DecX4_(4), ProP4_(4), ProX4_(4), ProNVtx_(ProNVtx) {
+    for (int i = 0; i < 4; i++) {
+      DecP4_[i] = DecP4[i];
+      DecX4_[i] = DecX4[i];
+      ProP4_[i] = ProP4[i];
+      ProX4_[i] = ProX4[i];
+    }
+  }
 
   int Pdg_;
   int DecMode_;
-  
+
   std::vector<double> DecP4_;
   std::vector<double> DecX4_;
   std::vector<double> ProP4_;
   std::vector<double> ProX4_;
-  
+
   int ProNVtx_;
 };
-
 
 struct NumiFlux {
   int Run_;

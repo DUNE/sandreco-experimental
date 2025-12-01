@@ -26,6 +26,16 @@ ufw::data::factory<sand::edep_reader>::factory(const ufw::config& cfg) : input_f
     UFW_ERROR("EDepSim branch \"Event\" not found in file '{}'.", path.c_str());
   }
   br->SetAddress(&event);
+
+  const auto entries_n = input_tree->GetEntries();
+  size_t total_events = 0;
+  for (size_t i = 0; i < entries_n; i++) {
+    input_tree->GetEntry(i);
+    const auto event_number = event->Primaries.size();
+    total_events += event_number;
+    UFW_DEBUG("Spill {} has {} events", i, event_number);
+  }
+  UFW_DEBUG("total events number: {}", total_events);
 }
 
 ufw::data::factory<sand::edep_reader>::~factory() = default;
