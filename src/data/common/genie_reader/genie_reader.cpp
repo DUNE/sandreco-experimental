@@ -49,7 +49,6 @@ ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_
   } else {
     UFW_DEBUG("NumiFlux branches missing — skipping NumiFlux setup.");
   }
-  input_tree->ResetBranchAddresses();
 
   // Find all the spill separator indexes.
   // In the gRooTracker format, the end of a spill si marked by an event with just one invalid particle.
@@ -61,7 +60,7 @@ ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_
 
   for (Long64_t i{0}; i < input_tree->GetEntries(); i++) {
     input_tree->GetEntry(i);
-    if (StdHepN == 0) {
+    if (StdHepN == 1) {
       separator_indexes.push_back(i);
     }
   }
