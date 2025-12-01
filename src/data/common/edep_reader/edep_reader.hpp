@@ -1,24 +1,33 @@
 #pragma once
 
-#include <ufw/data.hpp>
-
 #include <common/truth.h>
-
 #include <edep_reader/EDEPTree.h>
 
+#include <ufw/data.hpp>
+
+#include <EDepSim/TG4Event.h>
+
 class TG4HitSegment;
-class TG4Event;
 class TFile;
 class TTree;
 
 namespace sand {
 
-  struct edep_reader
+  class edep_reader
     : public EDEPTree
     , public ufw::data::base<ufw::data::complex_tag, ufw::data::unique_tag, ufw::data::context_tag> {
-   private:
-    edep_reader();
+    TG4Event* m_event{nullptr};
+
+    using EDEPTree::EDEPTree;
     friend class ufw::data::factory<sand::edep_reader>;
+
+   public:
+    TG4Event const& event() const {
+      if (m_event != nullptr) {
+        return *m_event;
+      }
+      UFW_ERROR("Event not initialized");
+    }
   };
 
 } // namespace sand
