@@ -1,45 +1,41 @@
 #include <TFile.h>
 #include <TTree.h>
 
-#include <ufw/data.hpp>
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
+#include <ufw/data.hpp>
 
 #include <genie_reader/genie_reader.hpp>
-
 
 namespace sand {
   genie_reader::genie_reader() {}
 
-  truth_adapter::value_type& truth_adapter::at(const index_type&) {
-    UFW_FATAL("Not yet implemented");
-  }
+  truth_adapter::value_type& truth_adapter::at(const index_type&) { UFW_FATAL("Not yet implemented"); }
 
-  bool truth_adapter::valid(const index_type&) {
-    UFW_FATAL("Not yet implemented");
-  }
+  bool truth_adapter::valid(const index_type&) { UFW_FATAL("Not yet implemented"); }
 
-}
+} // namespace sand
 
 ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_file(nullptr) {
   auto path = cfg.path_at("uri");
   input_file.reset(TFile::Open(path.c_str()));
   input_tree = input_file->Get<TTree>("gRooTracker");
-  if(!input_tree){
-    UFW_DEBUG("gRooTracker tree not found in file '{}'.", path.c_str());
-    UFW_DEBUG("Trying the edepsim path.", path.c_str());
-    
+  if (!input_tree) {
+    UFW_DEBUG("gRooTracker tree not found in the root directory of file '{}'.", path.c_str());
+    UFW_DEBUG("Trying the edepsim path: {}/DetSimPassThru/gRooTracker.", path.c_str());
+
     input_tree = input_file->Get<TTree>("DetSimPassThru/gRooTracker");
-    if(!input_tree){
+    if (!input_tree) {
       UFW_ERROR("gRooTracker tree not found in file '{}'.", path.c_str());
     }
+    UFW_DEBUG("Found");
   }
 
   auto set = [&](const char* b, auto* addr) {
     if (auto br = input_tree->GetBranch(b)) {
       br->SetAddress(addr);
-    }
-    else UFW_WARN("Missing expected branch '{}'", b);
+    } else
+      UFW_WARN("Missing expected branch '{}'", b);
   };
 
   set("EvtNum", &EvtNum);
@@ -51,7 +47,7 @@ ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_
   set("EvtVtx", &EvtVtx);
   set("EvtCode", &EvtCode);
   set("EvtFlags", &EvtFlags);
-  
+
   set("StdHepN", &StdHepN);
   set("StdHepPdg", &StdHepPdg);
   set("StdHepStatus", &StdHepStatus);
@@ -76,7 +72,7 @@ ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_
   } else {
     UFW_DEBUG("NuParent branches missing — skipping NuParent setup.");
   }
-  
+
   if (input_tree->GetBranch("NumiFluxRun")) {
     reader.numiFlux_ = NumiFlux{};
     set("NumiFluxRun", &NumiFluxRun);
@@ -152,46 +148,31 @@ sand::genie_reader& ufw::data::factory<sand::genie_reader>::instance(ufw::contex
   if (m_id != i) {
     input_tree->GetEntry(i);
 
-    reader.event_ = {EvtNum, EvtXSec, EvtDXSec, 
-                     EvtKPS, EvtWght, EvtProb,
-                     EvtVtx, EvtCode, EvtFlags};
+    reader.event_ = {EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, EvtVtx, EvtCode, EvtFlags};
 
-    reader.stdHep_ = StdHep(StdHepN, StdHepPdg, StdHepStatus, 
-                            StdHepRescat, StdHepX4, StdHepP4, 
-                            StdHepPolz, StdHepFd, StdHepLd, 
-                            StdHepFm, StdHepLm);
-    
+    reader.stdHep_ = StdHep(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz, StdHepFd,
+                            StdHepLd, StdHepFm, StdHepLm);
+
     if (reader.nuParent_) {
-      reader.nuParent_ = NuParent{NuParentPdg, NuParentDecMode,
-                                  NuParentDecP4, NuParentDecX4,
-                                  NuParentProP4,  NuParentProX4,
-                                  NuParentProNVtx};
+      reader.nuParent_ = NuParent{NuParentPdg,   NuParentDecMode, NuParentDecP4,  NuParentDecX4,
+                                  NuParentProP4, NuParentProX4,   NuParentProNVtx};
     }
 
     if (reader.numiFlux_) {
-      reader.numiFlux_ = NumiFlux{NumiFluxRun, NumiFluxEvtno, NumiFluxNdxdz,
-                          NumiFluxNdydz, NumiFluxNpz, NumiFluxNenergy, 
-                          NumiFluxNdxdznea, NumiFluxNdydznea, NumiFluxNenergyn, 
-                          NumiFluxNwtnear, NumiFluxNdxdzfar, NumiFluxNdydzfar, 
-                          NumiFluxNenergyf, NumiFluxNwtfar, NumiFluxNorig, 
-                          NumiFluxNdecay, NumiFluxNtype, NumiFluxVx, NumiFluxVy, 
-                          NumiFluxVz, NumiFluxPdpx, NumiFluxPdpy, NumiFluxPdpz, 
-                          NumiFluxPpdxdz, NumiFluxPpdydz, NumiFluxPppz, 
-                          NumiFluxPpenergy, NumiFluxPpmedium, NumiFluxPtype, 
-                          NumiFluxPpvx, NumiFluxPpvy, NumiFluxPpvz, NumiFluxMuparpx, 
-                          NumiFluxMuparpy, NumiFluxMuparpz, NumiFluxMupare, 
-                          NumiFluxNecm, NumiFluxNimpwt, NumiFluxXpoint, 
-                          NumiFluxYpoint, NumiFluxZpoint, NumiFluxTvx, 
-                          NumiFluxTvy, NumiFluxTvz, NumiFluxTpx, NumiFluxTpy, 
-                          NumiFluxTpz, NumiFluxTptype, NumiFluxTgen, 
-                          NumiFluxTgptype, NumiFluxTgppx, NumiFluxTgppy, 
-                          NumiFluxTgppz, NumiFluxTprivx, NumiFluxTprivy, 
-                          NumiFluxTprivz, NumiFluxBeamx, NumiFluxBeamy, 
-                          NumiFluxBeamz, NumiFluxBeampx, NumiFluxBeampy, 
-                          NumiFluxBeampz};
+      reader.numiFlux_ = NumiFlux{
+          NumiFluxRun,      NumiFluxEvtno,    NumiFluxNdxdz,    NumiFluxNdydz,    NumiFluxNpz,      NumiFluxNenergy,
+          NumiFluxNdxdznea, NumiFluxNdydznea, NumiFluxNenergyn, NumiFluxNwtnear,  NumiFluxNdxdzfar, NumiFluxNdydzfar,
+          NumiFluxNenergyf, NumiFluxNwtfar,   NumiFluxNorig,    NumiFluxNdecay,   NumiFluxNtype,    NumiFluxVx,
+          NumiFluxVy,       NumiFluxVz,       NumiFluxPdpx,     NumiFluxPdpy,     NumiFluxPdpz,     NumiFluxPpdxdz,
+          NumiFluxPpdydz,   NumiFluxPppz,     NumiFluxPpenergy, NumiFluxPpmedium, NumiFluxPtype,    NumiFluxPpvx,
+          NumiFluxPpvy,     NumiFluxPpvz,     NumiFluxMuparpx,  NumiFluxMuparpy,  NumiFluxMuparpz,  NumiFluxMupare,
+          NumiFluxNecm,     NumiFluxNimpwt,   NumiFluxXpoint,   NumiFluxYpoint,   NumiFluxZpoint,   NumiFluxTvx,
+          NumiFluxTvy,      NumiFluxTvz,      NumiFluxTpx,      NumiFluxTpy,      NumiFluxTpz,      NumiFluxTptype,
+          NumiFluxTgen,     NumiFluxTgptype,  NumiFluxTgppx,    NumiFluxTgppy,    NumiFluxTgppz,    NumiFluxTprivx,
+          NumiFluxTprivy,   NumiFluxTprivz,   NumiFluxBeamx,    NumiFluxBeamy,    NumiFluxBeamz,    NumiFluxBeampx,
+          NumiFluxBeampy,   NumiFluxBeampz};
     }
     m_id = i;
   }
   return reader;
 }
-

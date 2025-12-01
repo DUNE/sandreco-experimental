@@ -4,7 +4,7 @@ find_package(ROOT REQUIRED COMPONENTS Geom Physics Matrix MathCore RIO Tree)
 
 target_sources(genie_reader PRIVATE
     genie_reader.cpp
-    GenieWrapper.h)
+    GenieWrapper.cpp)
 
 target_include_directories(genie_reader PRIVATE . .. ${CMAKE_SOURCE_DIR}/include)
 

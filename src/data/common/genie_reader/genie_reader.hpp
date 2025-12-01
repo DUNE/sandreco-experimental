@@ -55,10 +55,10 @@ class ufw::data::factory<sand::genie_reader> {
   int StdHepN;
   // TODO: check if also these fields are arrays
   //  https://github.com/GENIE-MC/Generator/blob/2084cc6b8f25a460ebf4afd6a4658143fa9ce2ff/src/contrib/t2k/read_t2k_rootracker.C#L54-L56
-  int StdHepPdg;
-  int StdHepStatus;
-  int StdHepRescat;
   constexpr static int kNPmax = 250;
+  int StdHepPdg[kNPmax];
+  int StdHepStatus[kNPmax];
+  int StdHepRescat[kNPmax];
   double StdHepX4[kNPmax][4];
   double StdHepP4[kNPmax][4];
   double StdHepPolz[kNPmax][3];
