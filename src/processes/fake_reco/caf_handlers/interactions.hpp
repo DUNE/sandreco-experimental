@@ -35,8 +35,8 @@ namespace sand::fake_reco {
 
   inline void initialize_SRTrueInteraction(caf::SRTrueInteraction& interaction, const GRooTrackerEvent& genie_event,
                                            const StdHep& genie_stdhep) {
-    // data got via  genie.stdHep_.(...)[0].(...) are relative to the nu
-    // data got via  genie.stdHep_.(...)[1].(...) are relative to the target
+    // data got via  genie_stdhep.(...)[0].(...) are relative to the nu
+    // data got via  genie_stdhep.(...)[1].(...) are relative to the target
 
     const std::string_view interaction_string = genie_event.EvtCode_->GetString().Data();
     const EventSummary summary{interaction_string};
