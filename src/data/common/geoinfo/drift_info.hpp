@@ -22,6 +22,8 @@ namespace sand {
     geo_id id(const geo_path&) const override;
 
     geo_path path(geo_id) const override;
+
+    void set_drift_station(const geo_path &, const std::string &, std::unique_ptr<station>&, const geoinfo&);
   };
 
 } // namespace sand

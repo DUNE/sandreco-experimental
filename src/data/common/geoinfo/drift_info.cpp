@@ -66,24 +66,8 @@ namespace sand {
         if (tgt == TRKONLY) {
           nav->for_each_node([&](auto driftmod) {
             std::string driftmodname = driftmod->GetName();
-            if (driftmodname.find("DriftMod") == std::string::npos) { // other stuff, targets, ...
-              return;
-            }
-
             geo_path full_path = driftpath / smodname / modname / driftmodname;
-            auto i1        = driftmodname.find('_');
-            auto i2        = driftmodname.find('_', i1 + 1);
-            auto plane     = std::stoi(driftmodname.substr(i1 + 1, i2 - i1 - 1));
-            if (plane == 0) {
-              stat->geo_x = id(partial_path(full_path,gi));
-            } else if (plane == 1) {
-              stat->geo_u = id(partial_path(full_path,gi));
-            } else if (plane == 2) {
-              stat->geo_v = id(partial_path(full_path,gi));
-            } else {
-              UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmodname, plane);
-            }
-            UFW_INFO("DriftMod name: {}", driftmodname);
+            set_drift_station(full_path, driftmodname, stat, gi);
           });
         } else {
           nav->for_each_node([&](auto driftchamber) {
@@ -91,28 +75,12 @@ namespace sand {
             if (driftchambername.find("DriftChamber") == std::string::npos) { // other stuff, targets, ...
               return;
             }
-            // UFW_INFO("DriftChamber name: {}", driftchambername);
+            UFW_INFO("DriftChamber name: {}", driftchambername);
             nav->cd(driftpath / smodname / modname / driftchambername);
             nav->for_each_node([&](auto driftmodule) {
               std::string driftmodname = driftmodule->GetName();
-              if (driftmodname.find("DriftMod") == std::string::npos) { // other stuff, targets, ...
-                return;
-              }
               geo_path full_path = driftpath / smodname / modname / driftchambername / driftmodname;
-
-              auto i1        = driftmodname.find('_');
-              auto i2        = driftmodname.find('_', i1 + 1);
-              auto plane     = std::stoi(driftmodname.substr(i1 + 1, i2 - i1 - 1));
-            
-              if (plane == 0) {
-                stat->geo_x = id(partial_path(full_path,gi));
-              } else if (plane == 1) {
-                stat->geo_u = id(partial_path(full_path,gi));
-              } else if (plane == 2) {
-                stat->geo_v = id(partial_path(full_path,gi));
-              } else {
-                UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmodname, plane);
-              }
+              set_drift_station(full_path, driftmodname, stat, gi);
             });
           });
         }
@@ -178,13 +146,17 @@ namespace sand {
 
     std::string plane_path(is_trk ? path.token(2) : path.token(3));
     // UFW_INFO("Wire path: '{}'", plane_path);
-    auto i1        = plane_path.find('_');
-    auto i2        = plane_path.find('_', i1 + 1);
-    auto plane     = std::stoi(plane_path.substr(i1 + 1, i2 - i1 - 1));
-
-    gi.drift.plane = plane;
-
-    return gi;
+    if(plane_path.find("Mylar_") != std::string::npos ) {
+      UFW_WARN("Plane path '{}' corresponds to a mylar foil. This is not a sensitive detector", plane_path);
+      gi.drift.plane = 255; // invalid plane
+      return gi;
+    } else {
+      auto i1        = plane_path.find('_');
+      auto i2        = plane_path.find('_', i1 + 1);
+      auto plane     = std::stoi(plane_path.substr(i1 + 1, i2 - i1 - 1));
+      gi.drift.plane = plane;
+      return gi;
+    }
   }
 
   geo_path geoinfo::drift_info::path(geo_id gi) const {
@@ -261,6 +233,34 @@ namespace sand {
       gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + placement + "_0";
     }
     return gp;
+  }
+
+
+  void geoinfo::drift_info::set_drift_station(const geo_path & driftmod_path, const std::string & driftmod_name, 
+                                              std::unique_ptr<station>& stat, const geoinfo& gi) {
+
+    if (driftmod_name.find("DriftMod") == std::string::npos) {
+        return;  // not a drift module
+    }
+
+    UFW_DEBUG("Setting drift station for path: {}", driftmod_path);
+    UFW_DEBUG("Setting drift station for DriftMod path: {}", driftmod_name);
+    auto i1 = driftmod_name.find('_');
+    auto i2 = driftmod_name.find('_', i1 + 1);
+    auto plane = std::stoi(driftmod_name.substr(i1 + 1, i2 - i1 - 1));
+
+    if (plane == 0) {
+        stat->geo_x = id(partial_path(driftmod_path, gi));
+    } else if (plane == 1) {
+        stat->geo_u = id(partial_path(driftmod_path, gi));
+    } else if (plane == 2) {
+        stat->geo_v = id(partial_path(driftmod_path, gi));
+    } else {
+        UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane);
+    }
+
+    UFW_INFO("DriftMod name: {}", driftmod_name);
+
   }
 
 } // namespace sand
