@@ -8,6 +8,24 @@
 #include <optional>
 #include <vector>
 
+namespace genie {
+  typedef enum EGHepStatus {
+    kIStUndefined                = -1,
+    kIStInitialState             = 0, /* generator-level initial state */
+    kIStStableFinalState         = 1, /* generator-level final state: particles to be tracked by detector-level MC */
+    kIStIntermediateState        = 2,
+    kIStDecayedState             = 3,
+    kIStCorrelatedNucleon        = 10,
+    kIStNucleonTarget            = 11,
+    kIStDISPreFragmHadronicState = 12,
+    kIStPreDecayResonantState    = 13,
+    kIStHadronInTheNucleus       = 14, /* hadrons inside the nucleus: marked for hadron transport modules to act on */
+    kIStFinalStateNuclearRemnant =
+        15, /* low energy nuclear fragments entering the record collectively as a 'hadronic blob' pseudo-particle */
+    kIStNucleonClusterTarget = 16 // for composite nucleons before phase space decay
+  } GHepStatus_t;
+} // namespace genie
+
 struct GRooTrackerEvent {
   GRooTrackerEvent() = default;
 
@@ -34,7 +52,7 @@ struct StdHep {
 
   int N_{};
   std::vector<int> Pdg_{};
-  std::vector<int> Status_{};
+  std::vector<genie::GHepStatus_t> Status_{};
   std::vector<int> Rescat_{};
 
   std::vector<ROOT::Math::XYZTVector> X4_{};

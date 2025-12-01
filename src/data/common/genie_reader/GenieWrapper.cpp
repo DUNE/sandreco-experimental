@@ -16,7 +16,7 @@ StdHep::StdHep(const int N, const int Pdg[], const int Status[], const int Resca
   Lm_.reserve(N);
   for (int i = 0; i < N; i++) {
     Pdg_.push_back(Pdg[i]);
-    Status_.push_back(Status[i]);
+    Status_.push_back(static_cast<genie::GHepStatus_t>(Status_[i]));
     Rescat_.push_back(Rescat[i]);
 
     X4_.emplace_back(X4[i][0], X4[i][1], X4[i][2], X4[i][3]);
