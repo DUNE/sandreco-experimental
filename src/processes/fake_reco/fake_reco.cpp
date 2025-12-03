@@ -77,7 +77,6 @@ namespace sand::fake_reco {
       // Fill the interactions with nu data
       initialize_SRTrueInteraction(true_interaction, genie.events_[interaction_index],
                                    genie.stdHeps_[interaction_index]);
-      // true_interaction.id =
       true_interaction.genieIdx = genie.events_[interaction_index].EvtNum_;
 
       // Fill the interaction with the pre-FSI hadrons
@@ -131,10 +130,12 @@ namespace sand::fake_reco {
                                                     true_interaction.nprim};
           true_interaction.sec.push_back(true_secondary_particle);
           true_interaction.nsec++;
+          update_true_interaction_pdg_counters(true_interaction, true_secondary_particle.pdg);
         }
-        // Now add the primary to its vector, just to use nprim in the upper loop
+        // Now add the primary to its vector, just to use nprim in the previous loop
         true_interaction.prim.push_back(true_primary_particle);
         true_interaction.nprim++;
+        update_true_interaction_pdg_counters(true_interaction, true_primary_particle.pdg);
       }
     }
 

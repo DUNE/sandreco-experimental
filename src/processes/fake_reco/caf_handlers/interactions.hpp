@@ -67,6 +67,10 @@ namespace sand::fake_reco {
     interaction.momentum.y = static_cast<float>(nu_p4.Py());
     interaction.momentum.z = static_cast<float>(nu_p4.Pz());
 
+    // interaction.vtx = // FIXME: waiting for the geo manager (this will require edep)
+    // interaction.isvtxcont = // Same
+    // interaction.time = // Same
+
     const auto nu_daughters_indexes = genie_stdhep.daughters_indexes_of_part(static_cast<int>(StdHepIndex::nu));
     if (nu_daughters_indexes.size() != 1) {
       // not sure if this is the right way to address this problem (is this even possible?)
@@ -105,33 +109,33 @@ namespace sand::fake_reco {
     interaction.xsec      = static_cast<float>(genie_event.EvtXSec_);
     interaction.genweight = static_cast<float>(genie_event.EvtWght_);
 
+    // FIXME: all the fields from baseline to imp_weight should be filled with genie NuParent data, but they are all
+    //  empty at the moment
+
+    interaction.generator = caf::kGENIE;
+    // interaction.genVersion = ?
+
     // Add DUNErw weights to the CAF
     // (comment from
     //  https://github.com/DUNE/ND_CAFMaker/blob/972f11bc5b69ea1f595e14ed16e09162f512011e/src/truth/FillTruth.cxx#L289)
     interaction.xsec_cvwgt = 1;
   }
 
-  inline void fill_sr_true_interaction(caf::SRTrueInteraction& interaction, const caf::SRTrueParticle& particle) {
-    if (particle.parent == -1) {
-      interaction.prim.push_back(particle);
-      interaction.nprim++;
-    } else {
-      interaction.sec.push_back(particle);
-      interaction.nsec++;
-    }
-    // Should we consider e.g. pi0 100111, ... too?
-    switch (particle.pdg) {
+  inline void update_true_interaction_pdg_counters(caf::SRTrueInteraction& interaction, const int pdg) {
+    switch (pdg) {
     case 2212:
       interaction.nproton++;
       break;
     case 2112:
       interaction.nneutron++;
       break;
-    case 111:
-      interaction.npi0++;
-      break;
     case 211:
       interaction.npip++;
+      break;
+    case -211:
+      interaction.npim++;
+    case 111:
+      interaction.npi0++;
       break;
     default:
       break;
