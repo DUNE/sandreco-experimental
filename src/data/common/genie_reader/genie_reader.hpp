@@ -9,8 +9,8 @@
 #include <TBits.h>
 #include <TObjString.h>
 
-#include <vector>
 #include <utility>
+#include <vector>
 
 class TFile;
 class TTree;
@@ -42,7 +42,6 @@ class ufw::data::factory<sand::genie_reader> {
   TTree* input_tree;
   std::vector<std::pair<Long64_t, Long64_t>> spills_boundaries;
   ufw::context_id m_id;
-
 
   bool hasNuParent = false;
   bool hasNumiFlux = false;
@@ -143,5 +142,9 @@ class ufw::data::factory<sand::genie_reader> {
   double NumiFluxBeampy{};
   double NumiFluxBeampz{};
 
+  void check_gRooTracker_format();
+  void populate_spills_boundaries();
   void attach_branches();
+
+  void clear_reader(ufw::context_id i);
 };
