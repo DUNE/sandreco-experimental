@@ -44,8 +44,8 @@ namespace sand {
         }
         // UFW_INFO("Module name: {}", modname);
         stat->target          = tgt;
-        TGeoBBox* plane_shape = dynamic_cast<TGeoBBox*>(mod->GetVolume()->GetShape());
-        if (!plane_shape) {
+        TGeoBBox* station_shape = dynamic_cast<TGeoBBox*>(mod->GetVolume()->GetShape());
+        if (!station_shape) {
           UFW_ERROR("Drift module '{}' has invalid shape.", modname);
         }
         auto matrix  = nav->get_hmatrix();
@@ -53,7 +53,7 @@ namespace sand {
         double* rot  = matrix.GetRotationMatrix();
         pos_3d centre;
         centre.SetCoordinates(tran);
-        dir_3d halfsize(plane_shape->GetDX(), plane_shape->GetDY(), plane_shape->GetDZ());
+        dir_3d halfsize(station_shape->GetDX(), station_shape->GetDY(), station_shape->GetDZ());
         dir_3d boxcorner = nav->to_master(halfsize);
         boxcorner.SetZ(0); // we ignore the thickness here.
         stat->top_north    = centre + boxcorner;
@@ -254,17 +254,19 @@ namespace sand {
     UFW_DEBUG("Setting drift station for DriftMod path: {}", driftmod_name);
     auto i1 = driftmod_name.find('_');
     auto i2 = driftmod_name.find('_', i1 + 1);
-    auto plane = std::stoi(driftmod_name.substr(i1 + 1, i2 - i1 - 1));
+    auto plane_ID = std::stoi(driftmod_name.substr(i1 + 1, i2 - i1 - 1));
 
-    if (plane == 0) {
+    if (plane_ID == 0) {
         geo_x = id;        
-        set_wire_list(plane);
-    } else if (plane == 1) {
+        set_wire_list(plane_ID);
+    } else if (plane_ID == 1) {
         geo_u = id;
-    } else if (plane == 2) {
+        set_wire_list(plane_ID);
+    } else if (plane_ID == 2) {
         geo_v = id;
+        set_wire_list(plane_ID);
     } else {
-        UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane);
+        UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane_ID);
     }
 
     UFW_INFO("DriftMod name: {}", driftmod_name);
@@ -273,39 +275,104 @@ namespace sand {
 
   void geoinfo::drift_info::station::set_wire_list(const size_t & view_ID) {
 
+    /////Get gas volume properties
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
-    auto & angle = view_angle[view_ID];
-    auto & offset = view_offset[view_ID];
-    auto & spacing = view_spacing[view_ID];
-    auto & length = view_length[view_ID];
-    auto & velocity = view_velocity[view_ID];
 
-    UFW_WARN("Current node name: {}", nav->GetCurrentNode()->GetVolume()->GetShape()->GetName());
+    dir_3d view_translation(nav->get_hmatrix().GetTranslation());
 
-    TGeoBBox* plane_shape = dynamic_cast<TGeoBBox*>(nav->GetCurrentNode()->GetVolume()->GetShape());
-    if (!plane_shape) {
-      UFW_ERROR("Drift module '{}' has invalid shape.", nav->GetCurrentNode()->GetName());
+    /// Set global vs local view_corners
+    std::array<pos_3d, 4> view_corners_global;
+    view_corners_global[0] = pos_3d(top_north.x(), top_north.y(), view_translation.z()); // top_north
+    view_corners_global[1] = pos_3d(top_south.x(), top_south.y(), view_translation.z()); // top_south
+    view_corners_global[2] = pos_3d(bottom_south.x(), bottom_south.y(), view_translation.z()); // bottom_south
+    view_corners_global[3] = pos_3d(bottom_north.x(), bottom_north.y(), view_translation.z()); // bottom_north
+
+    std::array<pos_3d, 4> view_corners_local;
+    for (size_t i = 0; i < view_corners_global.size(); ++i) {
+      view_corners_local[i] = view_corners_global[i] - view_translation;
     }
-    auto matrix  = nav->get_hmatrix();
-    double* tran = matrix.GetTranslation();
-    double* rot  = matrix.GetRotationMatrix();
-    pos_3d centre;
-    centre.SetCoordinates(tran);
-    dir_3d halfsize(plane_shape->GetDX(), plane_shape->GetDY(), plane_shape->GetDZ());
-    dir_3d boxcorner = nav->to_master(halfsize);
-    boxcorner.SetZ(0); // we ignore the thickness here.
-    boxcorner.SetX(-boxcorner.x());
-
-    // rot_Z rotator(angle);
-    double c = std::cos(angle);
-    double s = std::sin(angle);
+    UFW_WARN("View centre: ({}, {}, {})", view_translation.X(), view_translation.Y(), view_translation.Z());
+    for (size_t i = 0; i < view_corners_local.size(); ++i) {
+      UFW_WARN("Corner {} global: ({}, {}, {})", i, view_corners_global[i].X(), view_corners_global[i].Y(), view_corners_global[i].Z());
+    }
+    for (size_t i = 0; i < view_corners_local.size(); ++i) {
+      UFW_WARN("Corner {} local: ({}, {}, {})", i, view_corners_local[i].X(), view_corners_local[i].Y(), view_corners_local[i].Z());
+    }
 
     // Rotation around Z axis, no translation
-    xform_3d t(c, -s, 0., 0.,
-               s,  c, 0., 0.,
-               0.,  0., 1, 0.);    
+    double c = std::cos(view_angle[view_ID]);
+    double s = std::sin(view_angle[view_ID]);
+    xform_3d wire_rot(c, -s, 0., 0.,
+                      s,  c, 0., 0.,
+                      0., 0., 1, 0.);   
+               
+    // Find max transverse
+    double max_wire_plane_y = 0.0;
+    for (auto v:view_corners_local) {
+      pos_3d v_rot = wire_rot * v;
+      if (v_rot.Y() > max_wire_plane_y) {
+        max_wire_plane_y = v_rot.Y();
+    }
+
+    /// Find intersections of wires with frame
+    double transverse_position = max_wire_plane_y - view_offset[view_ID];
+    while (transverse_position > -max_wire_plane_y) {
+      pos_3d wire_centre_rot(0., transverse_position, 0.);
+      pos_3d rot_x_axis = wire_rot * pos_3d(1., 0., 0.);
+
+      std::vector<pos_3d> intersections;
+      for(auto v:view_corners_local) {
+        pos_3d intersection;
+        auto next_v = view_corners_local[( (&v - &view_corners_local[0]) + 1) % view_corners_local.size()];
+        auto delta_x = v.X() - next_v.X();
+        auto delta_y = v.Y() - next_v.Y();
+        double det = rot_x_axis.X() * delta_y  - rot_x_axis.Y() * delta_x;
+        if(fabs(det) < 1E-9) {
+          continue;
+        } else {
+          double t = ((v.X() - wire_centre_rot.X()) * delta_y - (v.Y() - wire_centre_rot.Y()) * delta_x) / det;
+          double s = ((wire_centre_rot.X() - v.X()) * rot_x_axis.Y() - (wire_centre_rot.Y() - v.Y()) * rot_x_axis.X()) / det;
+
+          if (s >= 0 && s <= 1) {
+            intersection.SetX(wire_centre_rot.X() + t * rot_x_axis.X());
+            intersection.SetY(wire_centre_rot.Y() + t * rot_x_axis.Y());
+            UFW_DEBUG("Found intersection at ({}, {}, {})", intersection.X(), intersection.Y(), intersection.Z());
+            intersections.push_back(intersection);
+          }
+        }
+      }
+      //pos_3d wire_centre_global = wire_rot.Inverse() * wire_centre_local + view_translation;
+      transverse_position -= view_spacing[view_ID];
+
+    }
+  }
     
   }
 
 } // namespace sand
+
+
+// bool SANDGeoManager::getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector2& intersection)
+// {
+//   double delta_x = A.X() - B.X();
+//   double delta_y = A.Y() - B.Y();
+//   double det = dir.X() * delta_y  - dir.Y() * delta_x;
+
+//   if (fabs(det) < 1E-9) {
+//     // std::cout << "Line and segment are parallel." << std::endl;
+//     return false;
+//   } else {
+    
+//     double t = ((A.X() - p.X()) * delta_y - (A.Y() - p.Y()) * delta_x) / det;
+//     double s = ((p.X() - A.X()) * dir.Y() - (p.Y() - A.Y()) * dir.X()) / det;
+
+//     if (s >= 0 && s <= 1) {
+//       intersection.SetX(p.X() + t * dir.X());
+//       intersection.SetY(p.Y() + t * dir.Y());
+//       return true;
+//     }
+
+//     return false;
+//   }
+// }
