@@ -65,9 +65,10 @@ ufw::data::factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_
     }
   }
 
+  spills_boundaries.reserve(separator_indexes.size());
   spills_boundaries.emplace_back(0, separator_indexes[0]);
-  for (std::size_t i = 1; i < spills_boundaries.size(); i++) {
-    spills_boundaries.emplace_back(separator_indexes[i] + 1, separator_indexes[i - 1]);
+  for (std::size_t i = 1; i < separator_indexes.size(); i++) {
+    spills_boundaries.emplace_back(separator_indexes[i - 1] + 1, separator_indexes[i]);
   }
 
   attach_branches();
