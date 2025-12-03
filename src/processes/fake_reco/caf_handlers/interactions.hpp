@@ -73,7 +73,8 @@ namespace sand::fake_reco {
       // not sure if this is the right way to address this problem (is this even possible?)
       UFW_ERROR("Nu produced more than one lepton, it produced {} leptons", nu_daughters_indexes.size());
     }
-    if (genie_stdhep.Pdg_[nu_daughters_indexes[0]] < 11 || genie_stdhep.Pdg_[nu_daughters_indexes[0]] > 16) {
+    if ((genie_stdhep.Pdg_[nu_daughters_indexes[0]] < 11 || genie_stdhep.Pdg_[nu_daughters_indexes[0]] > 16)
+        && (genie_stdhep.Pdg_[nu_daughters_indexes[0]] > -11 || genie_stdhep.Pdg_[nu_daughters_indexes[0]] < -16)) {
       UFW_ERROR("Nu didn't produced a lepton, PDG code produced: {}", genie_stdhep.Pdg_[nu_daughters_indexes[0]]);
     }
     const auto& final_lepton_p4 = genie_stdhep.P4_[nu_daughters_indexes[0]];
@@ -104,6 +105,11 @@ namespace sand::fake_reco {
     }
     interaction.xsec      = static_cast<float>(genie_event.EvtXSec_);
     interaction.genweight = static_cast<float>(genie_event.EvtWght_);
+
+    // Add DUNErw weights to the CAF
+    // (comment from
+    //  https://github.com/DUNE/ND_CAFMaker/blob/972f11bc5b69ea1f595e14ed16e09162f512011e/src/truth/FillTruth.cxx#L289)
+    interaction.xsec_cvwgt = 1;
   }
 
   inline void fill_sr_true_interaction(caf::SRTrueInteraction& interaction, const caf::SRTrueParticle& particle) {
