@@ -14,7 +14,30 @@
 
 #include <duneanaobj/StandardRecord/StandardRecord.h>
 
+#include <utility>
+#include <vector>
+
 namespace sand::fake_reco {
+
+  // Returns a vector of pairs (interactions_begin_index, interaction_size) referred to elements of tree
+  // childen_trajectories_
+  std::vector<std::pair<std::size_t, std::size_t>> make_edep_interaction_map(const EDEPTree& tree) {
+    std::vector<std::pair<std::size_t, std::size_t>> output{};
+
+    std::size_t current_spill_index       = tree.GetChildrenTrajectories()[0].GetInteractionNumber();
+    std::size_t current_spill_begin_index = 0;
+    for (std::size_t i = 0; i < tree.GetChildrenTrajectories().size(); i++) {
+      if (tree.GetChildrenTrajectories()[i].GetInteractionNumber() == current_spill_index) {
+        continue;
+      }
+
+      output.emplace_back(current_spill_begin_index, i - current_spill_begin_index);
+      current_spill_index       = tree.GetChildrenTrajectories()[i].GetInteractionNumber();
+      current_spill_begin_index = i;
+    }
+    return output;
+  }
+
   fake_reco::fake_reco() : process{{}, {}} {}
 
   void fake_reco::configure(const ufw::config& cfg) { process::configure(cfg); }
@@ -23,6 +46,8 @@ namespace sand::fake_reco {
     // Read input
     const auto& edep  = get<edep_reader>();
     const auto& genie = get<genie_reader>();
+
+    const auto edep_map = make_edep_interaction_map(edep);
 
     const auto& event            = edep.event();
     const auto& primary_vertices = event.Primaries;
