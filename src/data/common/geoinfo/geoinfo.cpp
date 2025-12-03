@@ -88,4 +88,47 @@ namespace sand {
     return gp;
   }
 
+  bool geoinfo::getXYLineSegmentIntersection(
+    const pos_3d& v1,
+    const pos_3d& v2,
+    const pos_3d& p,
+    const pos_3d& dir,
+    pos_3d& intersection_point)
+    {
+        // Differences for the segment v1 → v2
+        double delta_x = v1.X() - v2.X();
+        double delta_y = v1.Y() - v2.Y();
+
+        // Determinant for solving the linear system
+        double det = dir.X() * delta_y - dir.Y() * delta_x;
+
+        // If det is ~0, the lines are parallel or nearly parallel → no intersection
+        if (std::fabs(det) < 1e-9) {
+            return false;
+        }
+
+        // Solve parametric values t (for infinite line p + t*dir) and s (segment)
+        double t = ((v1.X() - p.X()) * delta_y -
+                    (v1.Y() - p.Y()) * delta_x) / det;
+
+        double s = ((p.X() - v1.X()) * dir.Y() -
+                    (p.Y() - v1.Y()) * dir.X()) / det;
+
+        // Intersection must lie on the segment (s ∈ [0,1])
+        if (s < 0.0 || s > 1.0) {
+            return false;
+        }
+
+        // Compute intersection point 
+        intersection_point = p;
+        intersection_point.SetX(p.X() + t * dir.X());
+        intersection_point.SetY(p.Y() + t * dir.Y());
+        intersection_point.SetZ(p.Z());
+
+
+        return true;
+    }
+
+
+
 } // namespace sand

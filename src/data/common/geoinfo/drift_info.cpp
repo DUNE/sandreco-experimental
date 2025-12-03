@@ -279,7 +279,8 @@ namespace sand {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
 
-    dir_3d view_translation(nav->get_hmatrix().GetTranslation());
+    dir_3d view_translation;
+    view_translation.SetCoordinates(nav->get_hmatrix().GetTranslation());
 
     /// Set global vs local view_corners
     std::array<pos_3d, 4> view_corners_global;
@@ -325,23 +326,12 @@ namespace sand {
       for(auto v:view_corners_local) {
         pos_3d intersection;
         auto next_v = view_corners_local[( (&v - &view_corners_local[0]) + 1) % view_corners_local.size()];
-        auto delta_x = v.X() - next_v.X();
-        auto delta_y = v.Y() - next_v.Y();
-        double det = rot_x_axis.X() * delta_y  - rot_x_axis.Y() * delta_x;
-        if(fabs(det) < 1E-9) {
-          continue;
-        } else {
-          double t = ((v.X() - wire_centre_rot.X()) * delta_y - (v.Y() - wire_centre_rot.Y()) * delta_x) / det;
-          double s = ((wire_centre_rot.X() - v.X()) * rot_x_axis.Y() - (wire_centre_rot.Y() - v.Y()) * rot_x_axis.X()) / det;
-
-          if (s >= 0 && s <= 1) {
-            intersection.SetX(wire_centre_rot.X() + t * rot_x_axis.X());
-            intersection.SetY(wire_centre_rot.Y() + t * rot_x_axis.Y());
-            UFW_DEBUG("Found intersection at ({}, {}, {})", intersection.X(), intersection.Y(), intersection.Z());
-            intersections.push_back(intersection);
-          }
+        if(getXYLineSegmentIntersection(v, next_v, wire_centre_rot, rot_x_axis, intersection)) {
+          intersections.push_back(intersection);
         }
       }
+
+      UFW_DEBUG("Wire at transverse position {} has {} intersections.", transverse_position, intersections.size());
       //pos_3d wire_centre_global = wire_rot.Inverse() * wire_centre_local + view_translation;
       transverse_position -= view_spacing[view_ID];
 

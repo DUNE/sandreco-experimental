@@ -67,7 +67,15 @@ namespace sand {
     geo_path m_root_path;
 
     const geo_path& root_path() const { return m_root_path; }
-  };
+
+   public:
+    static bool getXYLineSegmentIntersection(
+      const pos_3d& v1,
+      const pos_3d& v2,
+      const pos_3d& p,
+      const pos_3d& dir,
+      pos_3d& intersection_point);
+    };
 
 } // namespace sand
 
