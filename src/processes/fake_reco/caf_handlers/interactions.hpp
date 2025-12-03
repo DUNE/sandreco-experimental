@@ -41,8 +41,7 @@ namespace sand::fake_reco {
     const std::string_view interaction_string = genie_event.EvtCode_->GetString().Data();
     const EventSummary summary{interaction_string};
 
-    // interaction.id = ?
-    // interaction.genieIdx = ?
+    // interaction.id = ? // TODO: understand what goes here
 
     interaction.pdg = summary.probe_pdg;
     // fill this for similarity with FD, but no oscillations
