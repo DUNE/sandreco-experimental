@@ -67,7 +67,9 @@ namespace sand {
           nav->for_each_node([&](auto driftmod) {
             std::string driftmodname = driftmod->GetName();
             geo_path full_path = driftpath / smodname / modname / driftmodname;
-            set_drift_station(full_path, driftmodname, stat, gi);
+            nav->cd(full_path);
+            auto ID = id(partial_path(full_path, gi));
+            stat->set_drift_view(full_path, gi, ID);
           });
         } else {
           nav->for_each_node([&](auto driftchamber) {
@@ -80,7 +82,9 @@ namespace sand {
             nav->for_each_node([&](auto driftmodule) {
               std::string driftmodname = driftmodule->GetName();
               geo_path full_path = driftpath / smodname / modname / driftchambername / driftmodname;
-              set_drift_station(full_path, driftmodname, stat, gi);
+              nav->cd(full_path);
+              auto ID = id(partial_path(full_path, gi));
+              stat->set_drift_view(full_path, gi, ID);
             });
           });
         }
@@ -236,9 +240,12 @@ namespace sand {
   }
 
 
-  void geoinfo::drift_info::set_drift_station(const geo_path & driftmod_path, const std::string & driftmod_name, 
-                                              std::unique_ptr<station>& stat, const geoinfo& gi) {
+  void geoinfo::drift_info::station::set_drift_view(const geo_path & driftmod_path, const geoinfo& gi, const geo_id& id) {
 
+    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav = tgm.navigator();
+    std::string driftmod_name(nav->GetCurrentNode()->GetName());
+    
     if (driftmod_name.find("DriftMod") == std::string::npos) {
         return;  // not a drift module
     }
@@ -250,17 +257,55 @@ namespace sand {
     auto plane = std::stoi(driftmod_name.substr(i1 + 1, i2 - i1 - 1));
 
     if (plane == 0) {
-        stat->geo_x = id(partial_path(driftmod_path, gi));
+        geo_x = id;        
+        set_wire_list(plane);
     } else if (plane == 1) {
-        stat->geo_u = id(partial_path(driftmod_path, gi));
+        geo_u = id;
     } else if (plane == 2) {
-        stat->geo_v = id(partial_path(driftmod_path, gi));
+        geo_v = id;
     } else {
         UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane);
     }
 
     UFW_INFO("DriftMod name: {}", driftmod_name);
 
+  }
+
+  void geoinfo::drift_info::station::set_wire_list(const size_t & view_ID) {
+
+    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav = tgm.navigator();
+    auto & angle = view_angle[view_ID];
+    auto & offset = view_offset[view_ID];
+    auto & spacing = view_spacing[view_ID];
+    auto & length = view_length[view_ID];
+    auto & velocity = view_velocity[view_ID];
+
+    UFW_WARN("Current node name: {}", nav->GetCurrentNode()->GetVolume()->GetShape()->GetName());
+
+    TGeoBBox* plane_shape = dynamic_cast<TGeoBBox*>(nav->GetCurrentNode()->GetVolume()->GetShape());
+    if (!plane_shape) {
+      UFW_ERROR("Drift module '{}' has invalid shape.", nav->GetCurrentNode()->GetName());
+    }
+    auto matrix  = nav->get_hmatrix();
+    double* tran = matrix.GetTranslation();
+    double* rot  = matrix.GetRotationMatrix();
+    pos_3d centre;
+    centre.SetCoordinates(tran);
+    dir_3d halfsize(plane_shape->GetDX(), plane_shape->GetDY(), plane_shape->GetDZ());
+    dir_3d boxcorner = nav->to_master(halfsize);
+    boxcorner.SetZ(0); // we ignore the thickness here.
+    boxcorner.SetX(-boxcorner.x());
+
+    // rot_Z rotator(angle);
+    double c = std::cos(angle);
+    double s = std::sin(angle);
+
+    // Rotation around Z axis, no translation
+    xform_3d t(c, -s, 0., 0.,
+               s,  c, 0., 0.,
+               0.,  0., 1, 0.);    
+    
   }
 
 } // namespace sand
