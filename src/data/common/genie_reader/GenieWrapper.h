@@ -68,8 +68,9 @@ struct StdHep {
 struct NuParent {
   NuParent() = default;
 
-  NuParent(int Pdg, int DecMode, double DecP4[4], double DecX4[4], double ProP4[4], double ProX4[4], int ProNVtx)
-    : Pdg_(Pdg), DecMode_(DecMode), DecP4_(4), DecX4_(4), ProP4_(4), ProX4_(4), ProNVtx_(ProNVtx) {
+  NuParent(const int Pdg, const int DecMode, const double DecP4[4], const double DecX4[4], const double ProP4[4],
+           const double ProX4[4], const int ProNVtx)
+    : Pdg_{Pdg}, DecMode_{DecMode}, DecP4_{}, DecX4_{}, ProP4_{}, ProX4_{}, ProNVtx_{ProNVtx} {
     for (int i = 0; i < 4; i++) {
       DecP4_[i] = DecP4[i];
       DecX4_[i] = DecX4[i];
@@ -81,10 +82,10 @@ struct NuParent {
   int Pdg_;
   int DecMode_;
 
-  std::vector<double> DecP4_;
-  std::vector<double> DecX4_;
-  std::vector<double> ProP4_;
-  std::vector<double> ProX4_;
+  std::array<double, 4> DecP4_;
+  std::array<double, 4> DecX4_;
+  std::array<double, 4> ProP4_;
+  std::array<double, 4> ProX4_;
 
   int ProNVtx_;
 };
