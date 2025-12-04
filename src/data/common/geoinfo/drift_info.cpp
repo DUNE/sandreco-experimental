@@ -258,16 +258,15 @@ namespace sand {
 
     if (plane_ID == 0) {
         geo_x = id;        
-        set_wire_list(plane_ID);
     } else if (plane_ID == 1) {
         geo_u = id;
-        set_wire_list(plane_ID);
     } else if (plane_ID == 2) {
         geo_v = id;
-        set_wire_list(plane_ID);
     } else {
         UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane_ID);
     }
+
+    set_wire_list(plane_ID);
 
     UFW_INFO("DriftMod name: {}", driftmod_name);
 
@@ -308,37 +307,52 @@ namespace sand {
                       s,  c, 0., 0.,
                       0., 0., 1, 0.);   
                
-    // Find max transverse
+    // Find max y in wire plane (rotated frame)
     double max_wire_plane_y = 0.0;
     for (auto v:view_corners_local) {
-      pos_3d v_rot = wire_rot * v;
+      pos_3d v_rot = wire_rot.Inverse() * v;  //Local to rotated frame
+      UFW_DEBUG("Rotated corner at ({}, {}, {})", v_rot.X(), v_rot.Y(), v_rot.Z());
       if (v_rot.Y() > max_wire_plane_y) {
         max_wire_plane_y = v_rot.Y();
+        UFW_INFO("New max wire plane y: {}", max_wire_plane_y);
+      }
     }
+  
 
     /// Find intersections of wires with frame
     double transverse_position = max_wire_plane_y - view_offset[view_ID];
     while (transverse_position > -max_wire_plane_y) {
-      pos_3d wire_centre_rot(0., transverse_position, 0.);
-      pos_3d rot_x_axis = wire_rot * pos_3d(1., 0., 0.);
+      pos_3d wire_centre_rot(0., transverse_position, 0.); // origin of the vector in rotated frame
 
-      std::vector<pos_3d> intersections;
-      for(auto v:view_corners_local) {
+      pos_3d wire_centre_local = wire_rot * wire_centre_rot; // origin of the vector in local frame from rotated frame
+      dir_3d local_x_axis = wire_rot * dir_3d(1., 0., 0.); // direction of the vector in local frame from rotated frame
+
+      UFW_INFO("Checking rotated direction: ({}, {}, {})", local_x_axis.X(), local_x_axis.Y(), local_x_axis.Z());
+
+      std::vector<pos_3d> intersections, intersections_global;
+      for (int i = 0; i < view_corners_local.size(); i++) {
         pos_3d intersection;
-        auto next_v = view_corners_local[( (&v - &view_corners_local[0]) + 1) % view_corners_local.size()];
-        if(getXYLineSegmentIntersection(v, next_v, wire_centre_rot, rot_x_axis, intersection)) {
+        const auto& current_v = view_corners_local[i];
+        const auto& next_v    = view_corners_local[(i + 1) % view_corners_local.size()]; // wraps to first
+        if(getXYLineSegmentIntersection(current_v, next_v, wire_centre_rot, local_x_axis, intersection)) {
           intersections.push_back(intersection);
         }
       }
 
-      UFW_DEBUG("Wire at transverse position {} has {} intersections.", transverse_position, intersections.size());
+      UFW_DEBUG("Wire at transverse position {} has {} intersections. Angle: {}", transverse_position, intersections.size(), view_angle[view_ID], view_angle[view_ID]);
+      for (const auto &inter : intersections) {
+        intersections_global.push_back(inter + view_translation);
+        //UFW_DEBUG("Intersection at ({}, {}, {})", inter.X(), inter.Y(), inter.Z());
+        //UFW_DEBUG("Global Intersection at ({}, {}, {})", inter.X() + view_translation.X(), inter.Y() + view_translation.Y(), inter.Z() + view_translation.Z());
+      }
       //pos_3d wire_centre_global = wire_rot.Inverse() * wire_centre_local + view_translation;
       transverse_position -= view_spacing[view_ID];
 
     }
+
+    if(view_angle[view_ID] == M_PI / 36.0)UFW_ERROR("Stopping to check.");
   }
     
-  }
 
 } // namespace sand
 

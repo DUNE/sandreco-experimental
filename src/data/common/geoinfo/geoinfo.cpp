@@ -88,14 +88,15 @@ namespace sand {
     return gp;
   }
 
+  // Solve  p+t*dir = v1 + s*(v2-v1)
   bool geoinfo::getXYLineSegmentIntersection(
     const pos_3d& v1,
     const pos_3d& v2,
     const pos_3d& p,
-    const pos_3d& dir,
+    const dir_3d& dir,
     pos_3d& intersection_point)
     {
-        // Differences for the segment v1 → v2
+        // Segment direction vector
         double delta_x = v1.X() - v2.X();
         double delta_y = v1.Y() - v2.Y();
 

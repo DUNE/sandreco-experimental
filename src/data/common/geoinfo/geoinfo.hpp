@@ -73,7 +73,7 @@ namespace sand {
       const pos_3d& v1,
       const pos_3d& v2,
       const pos_3d& p,
-      const pos_3d& dir,
+      const dir_3d& dir,
       pos_3d& intersection_point);
     };
 
