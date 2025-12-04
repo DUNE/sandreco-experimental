@@ -69,7 +69,7 @@ namespace sand {
             geo_path full_path = driftpath / smodname / modname / driftmodname;
             nav->cd(full_path);
             auto ID = id(partial_path(full_path, gi));
-            stat->set_drift_view(full_path, gi, ID);
+            stat->set_drift_view(full_path, ID);
           });
         } else {
           nav->for_each_node([&](auto driftchamber) {
@@ -84,7 +84,7 @@ namespace sand {
               geo_path full_path = driftpath / smodname / modname / driftchambername / driftmodname;
               nav->cd(full_path);
               auto ID = id(partial_path(full_path, gi));
-              stat->set_drift_view(full_path, gi, ID);
+              stat->set_drift_view(full_path, ID);
             });
           });
         }
@@ -240,7 +240,7 @@ namespace sand {
   }
 
 
-  void geoinfo::drift_info::station::set_drift_view(const geo_path & driftmod_path, const geoinfo& gi, const geo_id& id) {
+  void geoinfo::drift_info::station::set_drift_view(const geo_path & driftmod_path, const geo_id& id) {
 
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
@@ -250,8 +250,7 @@ namespace sand {
         return;  // not a drift module
     }
 
-    UFW_DEBUG("Setting drift station for path: {}", driftmod_path);
-    UFW_DEBUG("Setting drift station for DriftMod path: {}", driftmod_name);
+    UFW_DEBUG("Setting drift view for path: {}", driftmod_path);
     auto i1 = driftmod_name.find('_');
     auto i2 = driftmod_name.find('_', i1 + 1);
     auto plane_ID = std::stoi(driftmod_name.substr(i1 + 1, i2 - i1 - 1));
@@ -280,25 +279,18 @@ namespace sand {
     view_translation.SetCoordinates(nav->get_hmatrix().GetTranslation());
 
     /// Set global vs local view_corners
-    std::vector<pos_3d> view_corners_global;
-    view_corners_global.push_back(pos_3d(top_north.x(), top_north.y(), view_translation.z())); // top_north
-    view_corners_global.push_back(pos_3d(top_south.x(), top_south.y(), view_translation.z())); // top_south
-    view_corners_global.push_back(pos_3d(bottom_south.x(), bottom_south.y(), view_translation.z())); // bottom_south
-    view_corners_global.push_back(pos_3d(bottom_north.x(), bottom_north.y(), view_translation.z())); // bottom_north
+    std::vector<pos_3d> view_corners_global(4);
+    view_corners_global[0] = pos_3d(top_north.x(), top_north.y(), view_translation.z()); // top_north
+    view_corners_global[1] = pos_3d(top_south.x(), top_south.y(), view_translation.z()); // top_south
+    view_corners_global[2] = pos_3d(bottom_south.x(), bottom_south.y(), view_translation.z()); // bottom_south
+    view_corners_global[3] = pos_3d(bottom_north.x(), bottom_north.y(), view_translation.z()); // bottom_north
 
     std::vector<pos_3d> view_corners_local(4);
     for (size_t i = 0; i < view_corners_global.size(); ++i) {
       view_corners_local[i] = view_corners_global[i] - view_translation;
     }
-    // UFW_WARN("View centre: ({}, {}, {})", view_translation.X(), view_translation.Y(), view_translation.Z());
-    // for (size_t i = 0; i < view_corners_local.size(); ++i) {
-    //   UFW_WARN("Corner {} global: ({}, {}, {})", i, view_corners_global[i].X(), view_corners_global[i].Y(), view_corners_global[i].Z());
-    // }
-    // for (size_t i = 0; i < view_corners_local.size(); ++i) {
-    //   UFW_WARN("Corner {} local: ({}, {}, {})", i, view_corners_local[i].X(), view_corners_local[i].Y(), view_corners_local[i].Z());
-    // }
 
-    // Rotation around Z axis, no translation
+    // Setting up rotation matrix for wires
     double c = std::cos(view_angle[view_ID]);
     double s = std::sin(view_angle[view_ID]);
     xform_3d wire_rot(c, -s, 0., 0.,
@@ -309,10 +301,8 @@ namespace sand {
     double max_wire_plane_y = 0.0;
     for (auto v:view_corners_local) {
       pos_3d v_rot = wire_rot.Inverse() * v;  //Local to rotated frame
-      //UFW_DEBUG("Rotated corner at ({}, {}, {})", v_rot.X(), v_rot.Y(), v_rot.Z());
       if (v_rot.Y() > max_wire_plane_y) {
         max_wire_plane_y = v_rot.Y();
-        //UFW_INFO("New max wire plane y: {}", max_wire_plane_y);
       }
     }
   
@@ -325,36 +315,20 @@ namespace sand {
       pos_3d wire_centre_local = wire_rot * wire_centre_rot; // origin of the vector in local frame from rotated frame
       dir_3d local_x_axis = wire_rot * dir_3d(1., 0., 0.); // direction of the vector in local frame from rotated frame
 
-      //UFW_INFO("Checking rotated direction: ({}, {}, {})", local_x_axis.X(), local_x_axis.Y(), local_x_axis.Z());
-
       std::vector<pos_3d> intersections = getXYLinePolygonIntersections(
         view_corners_local,
         wire_centre_local,
         local_x_axis);
-      // for (int i = 0; i < view_corners_local.size(); i++) {
-      //   pos_3d intersection;
-      //   const auto& current_v = view_corners_local[i];
-      //   const auto& next_v    = view_corners_local[(i + 1) % view_corners_local.size()]; // wraps to first
-      //   if(getXYLineSegmentIntersection(current_v, next_v, wire_centre_local, local_x_axis, intersection)) {
-      //     intersections.push_back(intersection);
-      //   }
-      // }
 
       std::vector<pos_3d> intersections_global;
-      //UFW_DEBUG("Wire at transverse position {} has {} intersections. Angle: {}", transverse_position, intersections.size(), view_angle[view_ID], view_angle[view_ID]);
-      for (const auto &inter : intersections) {
-        intersections_global.push_back(inter + view_translation);
-        // UFW_DEBUG("Intersection at ({}, {}, {})", inter.X(), inter.Y(), inter.Z());
-        //UFW_DEBUG("Global Intersection at ({}, {}, {})", inter.X() + view_translation.X(), inter.Y() + view_translation.Y(), inter.Z() + view_translation.Z());
-      }
-      //pos_3d wire_centre_global = wire_rot.Inverse() * wire_centre_local + view_translation;
+      for (const auto &inter : intersections) intersections_global.push_back(inter + view_translation);
 
       // Need exactly two intersections to define a wire
       if (intersections_global.size() == 2) {
         auto w                = std::make_unique<wire>();
         w->parent             = this;
-        w->head               = intersections_global[0];
-        w->tail               = intersections_global[1];
+        w->head               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[1] : intersections_global[0];
+        w->tail               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[0] : intersections_global[1];
         w->max_radius         = view_spacing[view_ID] / 2.0;
         wires.emplace_back(std::move(w));
       } else {
@@ -365,31 +339,27 @@ namespace sand {
 
     }
   }
+
+  geoinfo::drift_info::wire_list geoinfo::drift_info::station::x_view() const {
+    wire_list wl = select([&](const wire& w) {
+      return std::abs(w.angle() - view_angle[geo_x.drift.plane]) < 1e-6;
+    });
+    return wl;
+  }
+
+  geoinfo::drift_info::wire_list geoinfo::drift_info::station::u_view() const {
+    wire_list wl = select([&](const wire& w) {
+      return std::abs(w.angle() - view_angle[geo_u.drift.plane]) < 1e-6;
+    });
+    return wl;
+  }
+
+  geoinfo::drift_info::wire_list geoinfo::drift_info::station::v_view() const {
+    wire_list wl = select([&](const wire& w) {
+      return std::abs(w.angle() - view_angle[geo_v.drift.plane]) < 1e-6;
+    });
+    return wl;
+  }
     
 
 } // namespace sand
-
-
-// bool SANDGeoManager::getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector2& intersection)
-// {
-//   double delta_x = A.X() - B.X();
-//   double delta_y = A.Y() - B.Y();
-//   double det = dir.X() * delta_y  - dir.Y() * delta_x;
-
-//   if (fabs(det) < 1E-9) {
-//     // std::cout << "Line and segment are parallel." << std::endl;
-//     return false;
-//   } else {
-    
-//     double t = ((A.X() - p.X()) * delta_y - (A.Y() - p.Y()) * delta_x) / det;
-//     double s = ((p.X() - A.X()) * dir.Y() - (p.Y() - A.Y()) * dir.X()) / det;
-
-//     if (s >= 0 && s <= 1) {
-//       intersection.SetX(p.X() + t * dir.X());
-//       intersection.SetY(p.Y() + t * dir.Y());
-//       return true;
-//     }
-
-//     return false;
-//   }
-// }
