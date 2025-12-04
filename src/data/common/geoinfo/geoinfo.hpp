@@ -69,12 +69,19 @@ namespace sand {
     const geo_path& root_path() const { return m_root_path; }
 
    public:
+
     static bool getXYLineSegmentIntersection(
       const pos_3d& v1,
       const pos_3d& v2,
       const pos_3d& p,
       const dir_3d& dir,
       pos_3d& intersection_point);
+
+    static std::vector<pos_3d> getXYLinePolygonIntersections(
+      const std::vector<pos_3d>& polygon,
+      const pos_3d& line_point,
+      const dir_3d& line_dir);
+      
     };
 
 } // namespace sand

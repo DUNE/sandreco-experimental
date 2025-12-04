@@ -130,6 +130,22 @@ namespace sand {
         return true;
     }
 
+  std::vector<pos_3d> geoinfo::getXYLinePolygonIntersections(
+    const std::vector<pos_3d>& v,
+    const pos_3d& p,
+    const dir_3d& dir){
+      std::vector<pos_3d> intersections;
+      for (int i = 0; i < v.size(); i++) {
+        pos_3d intersection;
+        const auto& current_v = v[i];
+        const auto& next_v    = v[(i + 1) % v.size()]; // wraps to first
+        if(getXYLineSegmentIntersection(current_v, next_v, p, dir, intersection)) {
+          intersections.push_back(intersection);
+        }
+      }
+      return intersections;
+    }
+
 
 
 } // namespace sand
