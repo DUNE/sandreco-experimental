@@ -10,7 +10,7 @@ namespace sand {
       wire_list x_view() const;
       wire_list u_view() const;
       wire_list v_view() const;
-      void set_drift_view(const geo_path &, const geoinfo&, const geo_id &);
+      void set_drift_view(const geo_path &, const geo_id &);
       void set_wire_list(const size_t &);
     };
 
