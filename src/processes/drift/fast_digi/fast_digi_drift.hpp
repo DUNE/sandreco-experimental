@@ -20,7 +20,7 @@ namespace sand::drift {
       void run() override;
 
     private:
-      std::map<geo_id, std::vector<EDEPHit>> group_hits_by_station();
+      std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>> group_hits_by_wire();
 
       void digitize_hits_in_wires(const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube);
 
