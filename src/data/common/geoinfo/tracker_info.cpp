@@ -85,6 +85,32 @@ namespace sand {
     }
   }
 
+  std::vector<vec_4d> geoinfo::tracker_info::closest_point(const vec_4d& point, const double& v_drift, const wire& w) const {
+    std::vector<vec_4d> closest_points;
+
+    pos_3d p(point.X(), point.Y(), point.Z());
+
+    double t_prime = w.closest_approach_point(p);
+
+    if (std::isnan(t_prime) == false) {
+      // Calculate the corresponding point on the wire
+      pos_3d closest_point_wire = w.head + w.direction() * t_prime;
+
+      vec_4d closest_point_wire_l(closest_point_wire.X(), closest_point_wire.Y(), closest_point_wire.Z(),
+                                  point.T()
+                                      + sqrt((p - closest_point_wire).Mag2()) / v_drift);
+
+      closest_points.push_back(closest_point_wire_l);
+
+      return closest_points;
+
+    } else {
+      // Degenerate case; handle this if necessary
+      UFW_WARN("Could not find closest approach point on wire.");
+      return closest_points;
+    }
+  }
+
   double geoinfo::tracker_info::get_min_time(const vec_4d& point, const double& v_signal_inwire, const wire& w) const {
     return point.T() + sqrt((pos_3d(point.Vect()) - w.head).Mag2()) / v_signal_inwire;
   }
@@ -144,6 +170,28 @@ namespace sand {
     t_prime = std::max(0.0, std::min(1.0, t_prime));
 
     return t_prime;
+  }
+
+  const geoinfo::tracker_info::wire * geoinfo::tracker_info::closest_wire_in_list(wire_list list, vec_4d point, double v_drift) const {
+    double min_dist = std::numeric_limits<double>::max();
+    const geoinfo::tracker_info::wire* closest_wire = nullptr;
+
+    for (const auto wire : list) {
+      auto closest_points = closest_point(point, v_drift, *wire);
+      if(closest_points.empty()) {
+        UFW_WARN(" Could not find closest point on wire, skipping wire.");
+        continue;
+      }
+
+      double dist = sqrt((pos_3d(closest_points[0].Vect()) - pos_3d(point.Vect())).Mag2());
+
+      if (dist < min_dist) {
+        min_dist = dist;
+        closest_wire = wire;
+      }
+    }
+
+    return closest_wire;
   }
 
 } // namespace sand
