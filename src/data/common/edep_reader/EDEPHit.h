@@ -16,6 +16,8 @@ class EDEPHit {
    * @brief Constructor for EDEPHit.
    * @param hit The TG4HitSegment object containing hit information.
    */
+  EDEPHit() = default;
+  
   EDEPHit(TG4HitSegment hit)
     : start_(hit.GetStart()),
       stop_(hit.GetStop()),

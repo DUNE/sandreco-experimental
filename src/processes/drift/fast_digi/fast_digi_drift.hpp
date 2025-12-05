@@ -22,13 +22,19 @@ namespace sand::drift {
     private:
       std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>> group_hits_by_wire();
 
-      void digitize_hits_in_wires(const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube);
+      std::map<const geoinfo::tracker_info::wire *, EDEPHit> split_hit(size_t, size_t, 
+                                                                      geoinfo::tracker_info::wire_list,
+                                                                      const EDEPHit&);
 
-      tracker::digi::signal create_signal(double wire_time, double edep_total, const channel_id& channel);
+      void digitize_hits_in_wires(const std::map<geo_id, std::vector<EDEPHit>>&);
 
-      tracker::digi::signal process_hits_for_wire(const std::vector<EDEPHit>& hits,
-                                                                const sand::geoinfo::drift_info::wire& wire,
-                                                                const geo_id& tube_id);
+      tracker::digi::signal create_signal(double, double, const channel_id&);
+
+      tracker::digi::signal process_hits_for_wire(const std::vector<EDEPHit>& ,
+                                                  const sand::geoinfo::drift_info::wire& ,
+                                                  const geo_id& );
+
+      
 
     private:
       double m_drift_velocity; //[mm/ns]

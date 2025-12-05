@@ -172,9 +172,23 @@ namespace sand {
     return t_prime;
   }
 
-  const geoinfo::tracker_info::wire * geoinfo::tracker_info::closest_wire_in_list(wire_list list, vec_4d point, double v_drift) const {
+  xform_3d geoinfo::tracker_info::wire::wire_plane_transform() const {
+    double c = std::cos(angle());
+    double s = std::sin(angle());
+    pos_3d center = pos_3d(0.5 * (parent->top_north.X() + parent->bottom_south.X()),
+                           0.5 * (parent->top_north.Y() + parent->bottom_south.Y()),
+                           head.Z());
+    xform_3d wire_rot(c, -s, 0., center.X(),
+                      s,  c, 0., center.Y(),
+                      0., 0., 1, center.Z());
+    return wire_rot;
+  }
+
+  std::pair<const geoinfo::tracker_info::wire*, size_t> geoinfo::tracker_info::closest_wire_in_list(wire_list list, vec_4d point, double v_drift) const {
     double min_dist = std::numeric_limits<double>::max();
     const geoinfo::tracker_info::wire* closest_wire = nullptr;
+    size_t closest_wire_index = 0;
+    size_t current_index = 0;
 
     for (const auto wire : list) {
       auto closest_points = closest_point(point, v_drift, *wire);
@@ -188,10 +202,12 @@ namespace sand {
       if (dist < min_dist) {
         min_dist = dist;
         closest_wire = wire;
+        closest_wire_index = current_index;
       }
+      ++current_index;
     }
 
-    return closest_wire;
+    return {closest_wire, closest_wire_index};
   }
 
 } // namespace sand
