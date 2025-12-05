@@ -23,9 +23,11 @@ if(CMAKE_VERSION VERSION_GREATER "3.30.0")
 endif()
 find_package(spdlog REQUIRED)
 
-find_package(ROOT COMPONENTS RIO Tree REQUIRED)
+find_package(ROOT COMPONENTS MathCore REQUIRED)
 
 find_package(ufw REQUIRED)
+
+add_subdirectory(include)
 
 add_subdirectory(src)
 
