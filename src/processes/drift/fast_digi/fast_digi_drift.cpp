@@ -85,25 +85,144 @@ namespace sand::drift {
           wires_in_view = drift_station->v_view();
         } 
 
-        const geoinfo::tracker_info::wire* closest_wire_start = drift->closest_wire_in_list(wires_in_view, hit.GetStart(), m_drift_velocity);
-        const geoinfo::tracker_info::wire* closest_wire_stop = drift->closest_wire_in_list(wires_in_view, hit.GetStop(), m_drift_velocity);
+        const auto [closest_wire_start, closest_wire_start_index] = drift->closest_wire_in_list(wires_in_view, hit.GetStart(), m_drift_velocity);
+        const auto [closest_wire_stop, closest_wire_stop_index] = drift->closest_wire_in_list(wires_in_view, hit.GetStop(), m_drift_velocity);
         
+        if(closest_wire_start_index == SIZE_MAX || closest_wire_stop_index == SIZE_MAX) {
+          UFW_WARN(" Could not find closest wire index for one end of the hit, skipping.");
+          continue;
+        }
         if(closest_wire_start==nullptr || closest_wire_stop==nullptr) {
           UFW_WARN(" Could not find closest wire for one end of the hit, skipping.");
           continue;
         }
 
-        if(closest_wire_start==closest_wire_stop) UFW_INFO(" Closest wire start and stop are the same wire.");
-        else UFW_INFO(" Closest wire start and stop are different wires.");
 
+        ///Get rotation matrix from local to global coordinates of the wire
 
+     
 
-        hits_by_wire[closest_wire_start].emplace_back(hit);
+        if(closest_wire_start==closest_wire_stop) {
+          UFW_INFO(" Closest wire start and stop are the same wire.");
+          hits_by_wire[closest_wire_start].emplace_back(hit);
+        } else {
+          UFW_INFO(" Closest wire start and stop are different wires.");
+          auto splitted_hits = split_hit(closest_wire_start_index, closest_wire_stop_index, wires_in_view, hit);
+          UFW_INFO(" Split hit into {} parts.", splitted_hits.size());
+          // auto combined_hit = generate_combined_hit(closest_wire_start, closest_wire_stop, hit);
+          // hits_by_wire[closest_wire_start].emplace_back(combined_hit);
+        }
       }
       
     }
 
     return hits_by_wire;
+  }
+
+  std::map<const geoinfo::tracker_info::wire *, EDEPHit> fast_digi::split_hit(
+                                          size_t closest_wire_start_index,
+                                          size_t closest_wire_stop_index,
+                                          geoinfo::tracker_info::wire_list wires_in_view,
+                                          const EDEPHit& hit) {
+    
+    const auto& gi   = get<geoinfo>();
+    const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
+    std::map<const geoinfo::tracker_info::wire *, EDEPHit> split_hit;
+
+    size_t first_in_list = closest_wire_start_index;
+    size_t last_in_list  = closest_wire_stop_index;
+    if(closest_wire_start_index >closest_wire_stop_index) {
+      UFW_INFO(" Swapping closest wire start and stop to maintain order.");
+      first_in_list = closest_wire_stop_index;
+      last_in_list  = closest_wire_start_index;
+    }
+
+    double hseg_length = (hit.GetStop().Vect() - hit.GetStart().Vect()).Mag();
+    double hseg_dt = (hit.GetStop() - hit.GetStart()).T();
+    double hseg_start_t = hit.GetStart().T();
+
+    xform_3d wire_plane_transform = wires_in_view.at(first_in_list)->wire_plane_transform();
+
+    pos_3d hit_start_global = pos_3d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
+    pos_3d hit_start_local_rotated = wire_plane_transform.Inverse() * hit_start_global;
+
+    pos_3d hit_stop_global = pos_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
+    pos_3d hit_stop_local_rotated = wire_plane_transform.Inverse() * hit_stop_global;
+
+    auto delta_x_local_rotated = hit_stop_local_rotated.X() - hit_start_local_rotated.X();
+    auto delta_y_local_rotated = hit_stop_local_rotated.Y() - hit_start_local_rotated.Y();
+    auto delta_z_local_rotated = hit_stop_local_rotated.Z() - hit_start_local_rotated.Z();
+
+    auto transverse_coord_start = hit_start_local_rotated.Y();
+
+    UFW_INFO(" Hit start global: ({}, {}, {})", hit_start_global.X(), hit_start_global.Y(), hit_start_global.Z());
+    UFW_INFO(" Hit start local rotated: ({}, {}, {})", hit_start_local_rotated.X(), hit_start_local_rotated.Y(), hit_start_local_rotated.Z());
+    UFW_INFO(" Hit stop global: ({}, {}, {})", hit_stop_global.X(), hit_stop_global.Y(), hit_stop_global.Z());
+    UFW_INFO(" Hit stop local rotated: ({}, {}, {})", hit_stop_local_rotated.X(), hit_stop_local_rotated.Y(), hit_stop_local_rotated.Z());
+    UFW_INFO(" Delta X local rotated: {}", delta_x_local_rotated);
+    UFW_INFO(" Delta Y local rotated: {}", delta_y_local_rotated);
+
+    for(size_t wire_index = first_in_list; wire_index <= last_in_list; ++wire_index) {
+      const auto* wire1 = wires_in_view.at(wire_index);
+      const auto* wire2 = (wire_index + 1 <= wires_in_view.size() -1) ? wires_in_view.at(wire_index + 1) : nullptr; 
+
+      if(wire2 == nullptr) {
+        UFW_INFO(" Reached last wire in view during hit splitting.");
+        break;
+      }
+
+      double step_coordinate = 0.0;
+      // Calculate the plane coordinate between wire1 and wire2
+
+      if (wire_index + 1 != wires_in_view.size()) {
+
+        pos_3d global_wire1_center = (wire1->head + dir_3d(wire1->tail)) * 0.5;
+        pos_3d local_wire1_center_rotated = wire_plane_transform.Inverse() * global_wire1_center;
+        auto transverse_coord1 = local_wire1_center_rotated.Y();
+
+        pos_3d global_wire2_center = (wire2->head + dir_3d(wire2->tail)) * 0.5;
+        pos_3d local_wire2_center_rotated = wire_plane_transform.Inverse() * global_wire2_center;
+        auto transverse_coord2 = local_wire2_center_rotated.Y();
+
+        auto inner_plane_center_transverse_coord = 0.5 * (transverse_coord1 + transverse_coord2);
+
+        UFW_INFO(" Wire1 index: {}, transverse coord: {}", wire_index, transverse_coord1);
+        UFW_INFO(" Wire2 index: {}, transverse coord: {}", wire_index+1, transverse_coord2);
+        UFW_INFO(" Inner plane center transverse coord: {}", inner_plane_center_transverse_coord);
+        if (fabs(inner_plane_center_transverse_coord - transverse_coord_start) < 
+            fabs(hit_stop_local_rotated.Y() - transverse_coord_start)) {
+          step_coordinate = inner_plane_center_transverse_coord;
+        } else {
+          step_coordinate = hit_stop_local_rotated.Y();
+        }
+
+      } else {
+        step_coordinate = hit_stop_local_rotated.Y();
+      }
+
+      double t = fabs((step_coordinate - transverse_coord_start) / delta_y_local_rotated);
+
+      pos_3d rotated_crossing_point(hit_start_local_rotated.X() + delta_x_local_rotated * t, 
+                                    hit_start_local_rotated.Y() + delta_y_local_rotated * t,
+                                    hit_start_local_rotated.Z() + delta_z_local_rotated * t);
+
+      pos_3d global_crossing_point = wire_plane_transform * rotated_crossing_point;
+
+      //double segment_portion = sqrt((global_crossing_point - hit_start_global).Mag2()) / hseg_length;
+
+      pos_3d mid_hit_seg_portion = (global_crossing_point + dir_3d(hit_start_global)) / 2.0; // TO-DO: Start should be the previous stopping point
+      vec_4d mid_hit_seg_portion_4d(mid_hit_seg_portion.X(),mid_hit_seg_portion.Y(),mid_hit_seg_portion.Z(),hit.GetStart().T());
+      
+      const auto [closest_wire_to_position,closest_to_position_ind] = drift->closest_wire_in_list(wires_in_view,mid_hit_seg_portion_4d,m_drift_velocity);
+
+
+      UFW_INFO(" Crossing point local rotated: ({}, {}, {})", rotated_crossing_point.X(), rotated_crossing_point.Y(), rotated_crossing_point.Z());
+      UFW_INFO(" Crossing point global: ({}, {}, {})", global_crossing_point.X(), global_crossing_point.Y(), global_crossing_point.Z());
+
+      EDEPHit hit_split; // To be set properly later
+      split_hit[closest_wire_to_position] = hit;
+    }
+    return split_hit; // Return the original hit for now
   }
 
 } // namespace sand::stt

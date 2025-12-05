@@ -51,6 +51,7 @@ namespace sand {
       std::size_t segment(pos_3d x) const;
       std::vector<double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
       double closest_approach_point(const pos_3d&) const;
+      xform_3d wire_plane_transform() const; /// transform from local wire plane to global coordinates
     };
 
     using wire_ptr  = std::unique_ptr<const wire>;
@@ -106,7 +107,7 @@ namespace sand {
     std::vector<vec_4d> closest_points(const vec_4d&, const vec_4d&, const double&, const wire&) const;
     std::vector<vec_4d> closest_point(const vec_4d&, const double&, const wire&) const;
     double get_min_time(const vec_4d&, const double&, const wire&) const;
-    const wire* closest_wire_in_list(wire_list, vec_4d, double) const;
+    std::pair<const wire*, size_t> closest_wire_in_list(wire_list, vec_4d, double) const;
 
    protected:
     void add_station(station_ptr&&);
