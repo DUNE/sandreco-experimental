@@ -7,7 +7,8 @@ set(HDRS EDEPTree.h
     EDEPTrajectoryPoint.h
     EDEPTrajectory.h
     EDEPHit.h
-    EDEPUtils.h)
+    EDEPUtils.h
+    edep_reader.hpp)
 
 target_sources(edep_reader PRIVATE
     ${HDRS}
@@ -29,5 +30,5 @@ if (EXPORT_PRIVATE_INTERFACES)
 
     target_include_directories(edep_reader INTERFACE
                                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-                               $<INSTALL_INTERFACE:include/sandreco/private>)
+                               $<INSTALL_INTERFACE:include/sandreco/private/${rel_path}/..>)
 endif()

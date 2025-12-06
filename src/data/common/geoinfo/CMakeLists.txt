@@ -33,5 +33,5 @@ if (EXPORT_PRIVATE_INTERFACES)
 
     target_include_directories(geoinfo INTERFACE
                                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-                               $<INSTALL_INTERFACE:include/sandreco/private>)
+                               $<INSTALL_INTERFACE:include/sandreco/private/${rel_path}/..>)
 endif()
