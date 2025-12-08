@@ -19,108 +19,52 @@
 
 namespace sand::fake_reco {
 
-  // Returns a vector of pairs (interactions_begin_index, interaction_size) referred to elements of tree
-  // children_trajectories_
-  std::vector<std::pair<std::size_t, std::size_t>> make_edep_interaction_map(const EDEPTree& tree,
-                                                                             std::size_t spills_number) {
-    std::vector<std::pair<std::size_t, std::size_t>> output{};
-    output.reserve(spills_number);
-
-    std::size_t current_spill_index       = tree.GetChildrenTrajectories()[0].GetInteractionNumber();
-    std::size_t current_spill_begin_index = 0;
-    for (std::size_t i = 0; i < tree.GetChildrenTrajectories().size(); i++) {
-      if (tree.GetChildrenTrajectories()[i].GetInteractionNumber() == current_spill_index) {
-        continue;
-      }
-
-      output.emplace_back(current_spill_begin_index, i - current_spill_begin_index);
-      current_spill_index       = tree.GetChildrenTrajectories()[i].GetInteractionNumber();
-      current_spill_begin_index = i;
-    }
-    output.emplace_back(current_spill_begin_index, tree.GetChildrenTrajectories().size() - current_spill_begin_index);
-    UFW_ASSERT(output.size() == spills_number,
-               "Could not find the same number of spills in gRooTracker and EDepSimEvents");
-    return output;
-  }
-
-  fake_reco::fake_reco() : process{{}, {}} {}
+  fake_reco::fake_reco() : process{{}, {{"output_caf", "caf::StandardRecord"}}} {}
 
   void fake_reco::configure(const ufw::config& cfg) { process::configure(cfg); }
 
   void fake_reco::run() {
-    // Read input
-    const auto& edep  = get<edep_reader>();
-    const auto& genie = get<genie_reader>();
+    // Bind input and output
+    edep_            = &get<edep_reader>();
+    genie_           = &get<genie_reader>();
+    standard_record_ = new caf::StandardRecord{}; // placeholder
+    // TODO: make a ufw StandardRecord wrapper
+    // standard_record_ = &set<caf::StandardRecord>("output_caf");
 
-    const auto edep_map = make_edep_interaction_map(edep, genie.events_.size());
+    const auto edep_map = make_edep_interaction_map();
 
     // Initialize spill structures
-    caf::StandardRecord standard_record{};
-
-    auto& truth_branch             = standard_record.mc;
-    auto& true_interactions_vector = truth_branch.nu;
-    true_interactions_vector.reserve(edep_map.size());
-    truth_branch.nnu = edep_map.size();
-
-    auto& reco_branch                       = standard_record.nd.sand;
-    auto& reconstructed_interactions_vector = reco_branch.ixn;
-    reconstructed_interactions_vector.reserve(edep_map.size());
-    reco_branch.nixn = edep_map.size();
+    set_branches_capacities_();
 
     // Loop over interactions (nu vertices)
     for (std::size_t interaction_index = 0; interaction_index < edep_map.size(); interaction_index++) {
       const auto [edep_first_index, edep_size] = edep_map[interaction_index];
       // Create empty interactions
       caf::SRTrueInteraction& true_interaction = true_interactions_vector.emplace_back();
-      caf::SRInteraction reco_interaction      = empty_interaction_from_vertex(edep);
+      // caf::SRInteraction reco_interaction      = empty_interaction_from_vertex(edep);
 
       // Fill the interactions with nu data
-      initialize_SRTrueInteraction(true_interaction, genie.events_[interaction_index],
-                                   genie.stdHeps_[interaction_index]);
-      true_interaction.genieIdx = genie.events_[interaction_index].EvtNum_;
+      initialize_SRTrueInteraction(true_interaction, genie_->events_[interaction_index],
+                                   genie_->stdHeps_[interaction_index]);
+      true_interaction.genieIdx = genie_->events_[interaction_index].EvtNum_;
 
-      // Fill the interaction with the pre-FSI hadrons
-      // Loop over GENIE particles
-      for (std::size_t particle_index = 0; particle_index < genie.stdHeps_[interaction_index].N_; particle_index++) {
-        if (genie.stdHeps_[interaction_index].Status_[particle_index] != ::genie::EGHepStatus::kIStHadronInTheNucleus) {
-          continue;
-        }
-        if (genie.stdHeps_[interaction_index].Pdg_[particle_index] == 2000000101) {
-          // Skip GENIE "bindino"
-          // https://github.com/DUNE/ND_CAFMaker/blob/972f11bc5b69ea1f595e14ed16e09162f512011e/src/truth/FillTruth.cxx#L223
-          continue;
-        }
-        caf::SRTrueParticle true_particle =
-            SRTrueParticle_from_genie(particle_index, genie.stdHeps_[interaction_index]);
-        true_particle.interaction_id = true_interaction.id;
-        true_interaction.prefsi.push_back(true_particle);
-        true_interaction.nprefsi++;
-      }
+      fill_true_interaction_with_preFSI_hadrons_(true_interaction, interaction_index);
 
-      // Set the true_interaction vectors capacities
-      true_interaction.prim.reserve(edep_size);
-      const std::size_t secondary_n =
-          std::accumulate(edep.GetChildrenTrajectories().data() + edep_first_index,
-                          edep.GetChildrenTrajectories().data() + edep_first_index + edep_size, 0,
-                          [&](std::size_t acc, const auto primary_particle) -> std::size_t {
-                            return acc
-                                 + std::distance(++edep.GetTrajectory(primary_particle.GetId()),
-                                                 edep.GetTrajectoryEnd(edep.GetTrajectory(primary_particle.GetId())));
-                          });
-      true_interaction.sec.reserve(secondary_n);
+      set_true_interaction_vectors_capacities_(true_interaction, edep_first_index, edep_size);
+
       // Fill the interaction with particles propagated by GEANT
       // Loop over edep tree particles
       for (std::size_t edep_index = edep_first_index; edep_index < edep_first_index + edep_size; edep_index++) {
         // Create the primary true particle
-        const auto& primary_particle = edep.GetChildrenTrajectories()[edep_index];
+        const auto& primary_particle = edep_->GetChildrenTrajectories()[edep_index];
 
         auto true_primary_particle           = SRTrueParticle_from_edep(primary_particle);
         true_primary_particle.interaction_id = true_interaction.id;
         true_primary_particle.ancestor_id    = {static_cast<int>(interaction_index), caf::TrueParticleID::kPrimary,
                                                 true_interaction.nprim};
 
-        for (auto it = ++edep.GetTrajectory(primary_particle.GetId());
-             it != edep.GetTrajectoryEnd(edep.GetTrajectory(primary_particle.GetId())); ++it) {
+        for (auto it = ++edep_->GetTrajectory(primary_particle.GetId());
+             it != edep_->GetTrajectoryEnd(edep_->GetTrajectory(primary_particle.GetId())); ++it) {
           // Create the secondary true particles from this primary
           const auto& secondary_particle = *it;
 
@@ -138,12 +82,102 @@ namespace sand::fake_reco {
         update_true_interaction_pdg_counters(true_interaction, true_primary_particle.pdg);
       }
     }
-
-    UFW_ASSERT(true_interactions_vector.size() == truth_branch.nnu,
-               "truth_branch.nnu doesn't match truth_branch.nu size");
-    UFW_ASSERT(reconstructed_interactions_vector.size() == reco_branch.nixn,
-               "reco_branch.nixn doesn't match reco_branch.ixn size");
+    assert_sizes();
   }
+
+  // Returns a vector of pairs (interactions_begin_index, interaction_size) referred to elements of tree
+  // children_trajectories_
+  std::vector<std::pair<std::size_t, std::size_t>> fake_reco::make_edep_interaction_map() const {
+    std::vector<std::pair<std::size_t, std::size_t>> output{};
+    output.reserve(genie_->events_.size());
+
+    std::size_t current_spill_index       = edep_->GetChildrenTrajectories()[0].GetInteractionNumber();
+    std::size_t current_spill_begin_index = 0;
+    for (std::size_t i = 0; i < edep_->GetChildrenTrajectories().size(); i++) {
+      if (edep_->GetChildrenTrajectories()[i].GetInteractionNumber() == current_spill_index) {
+        continue;
+      }
+
+      output.emplace_back(current_spill_begin_index, i - current_spill_begin_index);
+      current_spill_index       = edep_->GetChildrenTrajectories()[i].GetInteractionNumber();
+      current_spill_begin_index = i;
+    }
+    output.emplace_back(current_spill_begin_index, edep_->GetChildrenTrajectories().size() - current_spill_begin_index);
+    UFW_ASSERT(output.size() == genie_->events_.size(),
+               "Could not find the same number of spills in gRooTracker and EDepSimEvents");
+    return output;
+  }
+
+  void fake_reco::set_branches_capacities_() const {
+    auto& truth_branch             = standard_record_->mc;
+    auto& true_interactions_vector = truth_branch.nu;
+    truth_branch.nnu               = genie_->events_.size();
+    true_interactions_vector.reserve(genie_->events_.size());
+
+    auto& common_branch            = standard_record_->common.ixn;
+    auto& reco_interactions_vector = common_branch.sandreco;
+    common_branch.nsandreco        = genie_->events_.size();
+    reco_interactions_vector.reserve(genie_->events_.size());
+
+    auto& sand_branch              = standard_record_->nd.sand;
+    auto& sand_interactions_vector = sand_branch.ixn;
+    sand_branch.nixn               = genie_->events_.size();
+    sand_interactions_vector.reserve(genie_->events_.size());
+  }
+
+  void fake_reco::fill_true_interaction_with_preFSI_hadrons_(caf::SRTrueInteraction& true_interaction,
+                                                             const std::size_t interaction_index) const {
+    // Loop over GENIE particles
+    for (std::size_t particle_index = 0; particle_index < genie_->stdHeps_[interaction_index].N_; particle_index++) {
+      if (genie_->stdHeps_[interaction_index].Status_[particle_index] != ::genie::EGHepStatus::kIStHadronInTheNucleus) {
+        continue;
+      }
+      if (genie_->stdHeps_[interaction_index].Pdg_[particle_index] == 2000000101) {
+        // Skip GENIE "bindino"
+        // https://github.com/DUNE/ND_CAFMaker/blob/972f11bc5b69ea1f595e14ed16e09162f512011e/src/truth/FillTruth.cxx#L223
+        continue;
+      }
+      caf::SRTrueParticle true_particle =
+          SRTrueParticle_from_genie(particle_index, genie_->stdHeps_[interaction_index]);
+      true_particle.interaction_id = true_interaction.id;
+      true_interaction.prefsi.push_back(true_particle);
+      true_interaction.nprefsi++;
+    }
+  }
+
+  void fake_reco::set_true_interaction_vectors_capacities_(caf::SRTrueInteraction& true_interaction,
+                                                           const std::size_t edep_first_index,
+                                                           const std::size_t edep_size) const {
+    true_interaction.prim.reserve(edep_size);
+
+    const auto first_element_ptr = edep_->GetChildrenTrajectories().data() + edep_first_index;
+    const auto last_element_ptr  = edep_->GetChildrenTrajectories().data() + edep_first_index + edep_size;
+
+    const std::size_t secondary_n =
+        std::accumulate(first_element_ptr, last_element_ptr, 0, [&](std::size_t acc, const auto& primary_particle) {
+          auto subtree_vertex             = edep_->GetTrajectory(primary_particle.GetId());
+          const auto last_subtree_element = edep_->GetTrajectoryEnd(subtree_vertex);
+          // Start to count from the first subtree element
+          return acc + std::distance(++subtree_vertex, last_subtree_element);
+        });
+    true_interaction.sec.reserve(secondary_n);
+  }
+
+  void fake_reco::assert_sizes() const {
+    const auto& truth_branch = standard_record_->mc;
+    const auto& [nu, nnu]    = truth_branch;
+
+    const auto& common_branch = standard_record_->common.ixn;
+
+    const auto& sand_branch = standard_record_->nd.sand;
+    const auto& [nixn, ixn] = sand_branch;
+
+    UFW_ASSERT(nu.size() == nnu, "truth_branch.nnu doesn't match truth_branch.nu size");
+    UFW_ASSERT(common_branch.sandreco.size() == common_branch.nsandreco,
+               "common_branch.nsandreco doesn't match common_branch.sandreco size");
+    UFW_ASSERT(ixn.size() == sand_branch.nixn, "sand_branch.nixn doesn't match sand_branch.ixn size");
+  }
+
 } // namespace sand::fake_reco
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::fake_reco::fake_reco);
