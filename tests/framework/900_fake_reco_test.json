@@ -1,23 +1,33 @@
 {
-  "ufw" : {
-    "ufw-loglevel" : "debug",
-    "ufw-basepath" : "/usr/local/share/sandreco/data",
-    "ufw-ldpath" : ["/usr/local/lib64"],
-    "ufw-env" : {}
+  "ufw": {
+    "ufw-loglevel": "debug",
+    "ufw-basepath": "/usr/local/share/sandreco/data",
+    "ufw-ldpath": [
+      "/usr/local/lib64"
+    ],
+    "ufw-env": {}
   },
-  "globals" : {},
-  "contexts" : {
-    "keys" : 1,
-    "locals" : {
-      "sand::edep_reader" : {"uri" : "test/sand-spill-events.9.edep.root"},
-      "sand::genie_reader" : {"uri" : "test/sand-spill-events.9.edep.root"}
+  "globals": {},
+  "contexts": {
+    "keys": [
+      1
+    ],
+    "locals": {
+      "sand::edep_reader": {
+        "uri": "test/sand-spill-events.9.edep.root"
+      },
+      "sand::genie_reader": {
+        "uri": "test/sand-spill-events.9.edep.root"
+      }
     }
   },
   "run": [
     {
       "sand::fake_reco::fake_reco": {},
-      "reqs" : {},
-      "prods": {}
+      "reqs": {},
+      "prods": {
+        "output_caf": "produced_caf"
+      }
     }
   ]
 }
