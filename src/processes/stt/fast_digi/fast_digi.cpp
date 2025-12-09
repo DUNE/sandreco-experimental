@@ -94,7 +94,7 @@ namespace sand::stt {
 
       log_tube_debug("Digitizing hits for tube", tube_id);
 
-      auto signal = process_hits_for_wire(hits, *wire, tube_id);
+      auto signal = process_hits_for_wire(hits, *wire);
       if (signal) {
         digi.signals.emplace_back(std::move(*signal));
         std::for_each(hits.begin(), hits.end(), [&](const auto& hit) { digi.add(hit.GetId()); });
@@ -136,8 +136,7 @@ namespace sand::stt {
   }
 
   std::optional<tracker::digi::signal> fast_digi::process_hits_for_wire(const std::vector<EDEPHit>& hits,
-                                                                        const sand::geoinfo::stt_info::wire& wire,
-                                                                        const geo_id& tube_id) {
+                                                                        const sand::geoinfo::stt_info::wire& wire) {
     const auto& gi     = get<geoinfo>();
     const auto* stt    = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
     double wire_time   = std::numeric_limits<double>::max();
