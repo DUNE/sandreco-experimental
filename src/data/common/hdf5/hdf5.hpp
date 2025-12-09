@@ -5,6 +5,8 @@
 #include <ufw/data.hpp>
 
 #include <H5Cpp.h>
+#include <H5DataType.h>
+#include <H5PredType.h>
 
 namespace sand::hdf5 {
 
@@ -13,18 +15,26 @@ namespace sand::hdf5 {
     class ndrange : public std::vector<hsize_t> {
      public:
       using std::vector<hsize_t>::vector;
+      size_t byte_size() const { return flat_size() * type().getSize(); }
       size_t flat_size() const;
-      void set_type(H5T_class_t t) { m_type = t; }
-      H5T_class_t type() const { return m_type; }
+      void set_type(H5::DataType t) { m_type = t; }
+      H5::DataType type() const { return m_type; }
 
      private:
-      H5T_class_t m_type;
+      H5::DataType m_type;
     };
 
    public:
     ndarray(const ufw::config&);
 
     virtual ~ndarray() = default;
+
+    std::string attribute(const std::string& dataset, const std::string& attr);
+
+    /**
+     * Note that attributes can only be set on existing datasets, e.g. as created by write()
+     */
+    void set_attribute(const std::string& dataset, const std::string& attr, const std::string& value);
 
     /**
      * List all the datasets in this file.
@@ -41,6 +51,11 @@ namespace sand::hdf5 {
      * Memory must allocated by the user in the required size.
      */
     void read(const std::string&, void*);
+    /**
+     * Writes the entire dataset from the user provided pointer.
+     * Does not take ownership of the memory.
+     */
+    void write(const std::string&, const ndrange&, const void*);
 
     /**
      * Reads the entire dataset into the user provided object.
@@ -51,18 +66,27 @@ namespace sand::hdf5 {
     template <typename T>
     void read(const std::string& dataset, T& usrobj) {
       if constexpr (std::is_pointer_v<T>) {
-        using ValT = std::remove_pointer_t<T>;
         read(dataset, static_cast<void*>(usrobj));
       } else if constexpr (std::is_convertible_v<decltype(std::declval<T>().data()), void*>) {
         read(dataset, static_cast<void*>(usrobj.data()));
       } else {
         read(dataset, static_cast<void*>(&usrobj));
       }
-      read(dataset, usrobj.data());
     }
-    // void write(const std::string&, const void*);
+
+    template <typename T>
+    void write(const std::string& dataset, const ndrange& ndr, const T& usrobj) {
+      if constexpr (std::is_pointer_v<T>) {
+        write(dataset, ndr, static_cast<const void*>(usrobj));
+      } else if constexpr (std::is_convertible_v<decltype(std::declval<T>().data()), const void*>) {
+        write(dataset, ndr, static_cast<const void*>(usrobj.data()));
+      } else {
+        write(dataset, ndr, static_cast<const void*>(&usrobj));
+      }
+    }
 
    private:
+    ufw::config::io m_io_type;
     H5::H5File m_file;
     std::vector<std::string> m_datasets;
   };
