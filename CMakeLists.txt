@@ -17,15 +17,18 @@ include(ClangFormat)
 option(BUILD_SHARED_LIBS "Build libraries as shared libraries by default." ON)
 option(BUILD_TESTS "Build Tests" ON)
 option(BUILD_DOCUMENTATION "Build documentation tree" OFF)
+option(EXPORT_PRIVATE_INTERFACES "Export targets and install private headers for plugins." ON)
 
 if(CMAKE_VERSION VERSION_GREATER "3.30.0")
     cmake_policy(SET CMP0167 NEW)
 endif()
 find_package(spdlog REQUIRED)
 
-find_package(ROOT COMPONENTS RIO Tree REQUIRED)
+find_package(ROOT COMPONENTS MathCore REQUIRED)
 
 find_package(ufw REQUIRED)
+
+add_subdirectory(include)
 
 add_subdirectory(src)
 
