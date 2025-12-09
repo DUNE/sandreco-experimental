@@ -27,8 +27,7 @@ namespace sand::stt {
     tracker::digi::signal create_signal(double wire_time, double edep_total, const channel_id& channel);
 
     std::optional<tracker::digi::signal> process_hits_for_wire(const std::vector<EDEPHit>& hits,
-                                                               const sand::geoinfo::stt_info::wire& wire,
-                                                               const geo_id& tube_id);
+                                                               const sand::geoinfo::stt_info::wire& wire);
 
    private:
     double m_drift_velocity; //[mm/ns]

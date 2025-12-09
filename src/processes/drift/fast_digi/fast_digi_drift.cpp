@@ -34,6 +34,7 @@ namespace sand::drift {
     auto& digi       = set<sand::tracker::digi>("digi");
     auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
     std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>> hits_by_wire = group_hits_by_wire();
+    digitize_hits_in_wires(hits_by_wire);
 
     UFW_DEBUG(" DRIFT subdetector implementation");
   }
@@ -101,7 +102,7 @@ namespace sand::drift {
           UFW_INFO(" Closest wire start and stop are the same wire.");
           hits_by_wire[closest_wire_start].emplace_back(hit);
         } else {
-          UFW_INFO(" Closest wire start and stop are different wires.");
+          UFW_INFO(" Closest wire start and stop are different wires: ID: ({},{}).", closest_wire_start_index, closest_wire_stop_index);
           auto split_hits = split_hit(closest_wire_start_index, closest_wire_stop_index, wires_in_view, hit);
           UFW_INFO(" Split hit into {} parts.", split_hits.size());
           for (const auto& [wire, split_hit] : split_hits) {
@@ -126,19 +127,11 @@ namespace sand::drift {
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
     std::map<const geoinfo::tracker_info::wire *, EDEPHit> split_hit;
 
-    size_t first_in_list = closest_wire_start_index;
-    size_t last_in_list  = closest_wire_stop_index;
-    if(closest_wire_start_index >closest_wire_stop_index) {
-      UFW_DEBUG(" Swapping closest wire start and stop to maintain order.");
-      first_in_list = closest_wire_stop_index;
-      last_in_list  = closest_wire_start_index;
-    }
-
     double hseg_length = (hit.GetStop().Vect() - hit.GetStart().Vect()).Mag();
     double hseg_dt = (hit.GetStop() - hit.GetStart()).T();
     double hseg_start_t = hit.GetStart().T();
 
-    xform_3d wire_plane_transform = wires_in_view.at(first_in_list)->wire_plane_transform();
+    xform_3d wire_plane_transform = wires_in_view.at(closest_wire_start_index)->wire_plane_transform();
 
     pos_3d hit_start_global = pos_3d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
     pos_3d hit_start_local_rotated = wire_plane_transform.Inverse() * hit_start_global;
@@ -146,18 +139,13 @@ namespace sand::drift {
     pos_3d hit_stop_global = pos_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
     pos_3d hit_stop_local_rotated = wire_plane_transform.Inverse() * hit_stop_global;
 
-    auto delta_x_local_rotated = hit_stop_local_rotated.X() - hit_start_local_rotated.X();
-    auto delta_y_local_rotated = hit_stop_local_rotated.Y() - hit_start_local_rotated.Y();
-    auto delta_z_local_rotated = hit_stop_local_rotated.Z() - hit_start_local_rotated.Z();
-
-    auto transverse_coord_start = hit_start_local_rotated.Y();
 
     UFW_INFO(" Hit start global: ({}, {}, {})", hit_start_global.X(), hit_start_global.Y(), hit_start_global.Z());
     UFW_INFO(" Hit start local rotated: ({}, {}, {})", hit_start_local_rotated.X(), hit_start_local_rotated.Y(), hit_start_local_rotated.Z());
     UFW_INFO(" Hit stop global: ({}, {}, {})", hit_stop_global.X(), hit_stop_global.Y(), hit_stop_global.Z());
     UFW_INFO(" Hit stop local rotated: ({}, {}, {})", hit_stop_local_rotated.X(), hit_stop_local_rotated.Y(), hit_stop_local_rotated.Z());
-    UFW_INFO(" Delta X local rotated: {}", delta_x_local_rotated);
-    UFW_INFO(" Delta Y local rotated: {}", delta_y_local_rotated);
+    // UFW_INFO(" Delta X local rotated: {}", delta_x_local_rotated);
+    // UFW_INFO(" Delta Y local rotated: {}", delta_y_local_rotated);
 
     UFW_DEBUG(" Total hit key properties: Start ({}, {}, {}, {}), Stop ({}, {}, {}, {}), EnergyDeposit: {}, SecondaryDeposit: {}, TrackLength: {}, Contrib: {}, PrimaryId: {}, Id: {}", 
               hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T(),
@@ -165,8 +153,31 @@ namespace sand::drift {
               hit.GetEnergyDeposit(), hit.GetSecondaryDeposit(), hit.GetTrackLength(), hit.GetContrib(), hit.GetPrimaryId(), hit.GetId());
 
     /// Set starting point
+    size_t first_in_list = closest_wire_start_index;
+    size_t last_in_list  = closest_wire_stop_index;
     auto start = hit_start_global;
     auto start_time = hseg_start_t;
+    auto start_local_rotated = hit_start_local_rotated;
+    auto transverse_coord_start = hit_start_local_rotated.Y();
+    auto transverse_coord_stop = hit_stop_local_rotated.Y();
+    auto delta_x_local_rotated = hit_stop_local_rotated.X() - hit_start_local_rotated.X();
+    auto delta_y_local_rotated = hit_stop_local_rotated.Y() - hit_start_local_rotated.Y();
+    auto delta_z_local_rotated = hit_stop_local_rotated.Z() - hit_start_local_rotated.Z();
+    if(closest_wire_start_index >closest_wire_stop_index) {
+      UFW_DEBUG(" Swapping closest wire start and stop to maintain order.");
+      first_in_list = closest_wire_stop_index;
+      last_in_list  = closest_wire_start_index;
+      start = hit_stop_global;
+      start_time = hseg_start_t + hseg_dt;
+      start_local_rotated = hit_stop_local_rotated;
+      transverse_coord_start = hit_stop_local_rotated.Y();
+      transverse_coord_stop = hit_start_local_rotated.Y();
+      delta_x_local_rotated = -delta_x_local_rotated;
+      delta_y_local_rotated = -delta_y_local_rotated;
+      delta_z_local_rotated = -delta_z_local_rotated;
+    }
+
+
 
     for(size_t wire_index = first_in_list; wire_index <= last_in_list; ++wire_index) {
       const auto* wire1 = wires_in_view.at(wire_index);
@@ -196,21 +207,22 @@ namespace sand::drift {
         UFW_DEBUG(" Wire2 index: {}, transverse coord: {}", wire_index+1, transverse_coord2);
         UFW_DEBUG(" Inner plane center transverse coord: {}", inner_plane_center_transverse_coord);
         if (fabs(inner_plane_center_transverse_coord - transverse_coord_start) < 
-            fabs(hit_stop_local_rotated.Y() - transverse_coord_start)) {
+            fabs(transverse_coord_stop - transverse_coord_start)) {
           step_coordinate = inner_plane_center_transverse_coord;
         } else {
-          step_coordinate = hit_stop_local_rotated.Y();
+          step_coordinate = transverse_coord_stop;
         }
 
       } else {
-        step_coordinate = hit_stop_local_rotated.Y();
+        step_coordinate = transverse_coord_stop;
       }
 
       double t = fabs((step_coordinate - transverse_coord_start) / delta_y_local_rotated);
+      UFW_INFO(" Step coordinate: {}, transverse coord start: {}, delta_y_local_rotated: {}", step_coordinate, transverse_coord_start, delta_y_local_rotated );
 
-      pos_3d rotated_crossing_point(hit_start_local_rotated.X() + delta_x_local_rotated * t, 
-                                    hit_start_local_rotated.Y() + delta_y_local_rotated * t,
-                                    hit_start_local_rotated.Z() + delta_z_local_rotated * t);
+      pos_3d rotated_crossing_point(start_local_rotated.X() + delta_x_local_rotated * t, 
+                                    start_local_rotated.Y() + delta_y_local_rotated * t,
+                                    start_local_rotated.Z() + delta_z_local_rotated * t);
 
       pos_3d global_crossing_point = wire_plane_transform * rotated_crossing_point;
       auto stop = global_crossing_point;
@@ -226,6 +238,9 @@ namespace sand::drift {
 
       UFW_DEBUG(" Crossing point local rotated: ({}, {}, {})", rotated_crossing_point.X(), rotated_crossing_point.Y(), rotated_crossing_point.Z());
       UFW_DEBUG(" Crossing point global: ({}, {}, {})", global_crossing_point.X(), global_crossing_point.Y(), global_crossing_point.Z());
+      UFW_DEBUG(" Segment start: ({}, {}, {})", start.X(), start.Y(), start.Z());
+      UFW_DEBUG(" Segment stop: ({}, {}, {})", stop.X(), stop.Y(), stop.Z());
+      UFW_DEBUG(" Segment length: {}", sqrt((stop - start).Mag2()));
       UFW_DEBUG(" Segment portion: {}", segment_portion);
       UFW_DEBUG(" Hit Portion associated to wire index: {}", wire_index);
 
@@ -245,9 +260,91 @@ namespace sand::drift {
 
       split_hit[closest_wire_to_position] = hit_split;
 
-      hit_start_global = global_crossing_point;
+      start = stop;
     }
     return split_hit; // Return the original hit for now
   }
 
+  // TO-DO: For now identhical to stt implementation, need to modify for drift specifics
+  void fast_digi::digitize_hits_in_wires(const std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>>& hits_by_wire) {
+    const auto& gi  = get<geoinfo>();
+    auto& digi      = set<sand::tracker::digi>("digi");
+    const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
+
+    for (auto [wire, hits] : hits_by_wire) { 
+      UFW_INFO("Station target: {}, station top north corner: ({},{},{})", wire->parent->target,
+                wire->parent->top_north.X(), wire->parent->top_north.Y(), wire->parent->top_north.Z()); 
+      UFW_INFO(" Wire properties: Head ({}, {}, {}), Tail ({}, {}, {})", 
+                wire->head.X(), wire->head.Y(), wire->head.Z(),
+                wire->tail.X(), wire->tail.Y(), wire->tail.Z());
+      UFW_INFO(" Number of hits in wire: {}", hits.size());
+      
+      auto signal = process_hits_for_wire(hits, *wire);
+      if (signal) {
+        digi.signals.emplace_back(std::move(*signal));
+        std::for_each(hits.begin(), hits.end(), [&](const auto& hit) { digi.add(hit.GetId()); });
+      }
+      
+    }
+  }
+
+  tracker::digi::signal fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
+    tracker::digi::signal signal;
+    std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc);
+    auto ran       = gaussian_error(random_engine());
+    signal.tdc     = wire_time + ran;
+    signal.adc     = edep_total;
+    signal.channel = channel;
+
+    UFW_DEBUG("  Created signal: Channel(subdetector {}, channel {}), TDC = {}, ADC = {}",
+              static_cast<int>(signal.channel.subdetector), static_cast<int>(signal.channel.channel), signal.tdc,
+              signal.adc);
+
+    return signal;
+  }
+
+  std::optional<tracker::digi::signal> fast_digi::process_hits_for_wire(const std::vector<EDEPHit>& hits,
+                                                                        const sand::geoinfo::drift_info::wire& wire) {
+    const auto& gi     = get<geoinfo>();
+    const auto* drift    = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
+    double wire_time   = std::numeric_limits<double>::max();
+    double drift_time  = std::numeric_limits<double>::max();
+    double signal_time = std::numeric_limits<double>::max();
+    double t_hit       = std::numeric_limits<double>::max();
+    double edep_total  = 0.0;
+
+    for (const auto& hit : hits) {
+
+      auto closest_points = drift->closest_points(
+          vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()),
+          vec_4d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T()), m_drift_velocity, wire);
+      if (closest_points.empty())
+        continue;
+
+      const vec_4d& closest_point_hit  = closest_points[0];
+      const vec_4d& closest_point_wire = closest_points[1];
+
+      // Update timing parameters directly here
+      double hit_smallest_time = drift->get_min_time(closest_point_hit, m_wire_velocity, wire);
+
+      if (hit_smallest_time < wire_time) {
+        wire_time   = hit_smallest_time;
+        t_hit       = closest_point_hit.T();
+        drift_time  = closest_point_wire.T() - t_hit;
+        signal_time = hit_smallest_time - closest_point_wire.T();
+
+        UFW_DEBUG("    Closest point on hit: ({}, {}, {}, {})", closest_point_hit.X(), closest_point_hit.Y(),
+                  closest_point_hit.Z(), closest_point_hit.T());
+        UFW_DEBUG("    Closest point on wire: ({}, {}, {}, {})", closest_point_wire.X(), closest_point_wire.Y(),
+                  closest_point_wire.Z(), closest_point_wire.T());
+      }
+      edep_total += hit.GetEnergyDeposit();
+    }
+
+    if (wire_time == std::numeric_limits<double>::max()) {
+      return std::nullopt;
+    }
+
+    return create_signal(wire_time, edep_total, wire.channel);
+  }
 } // namespace sand::stt
