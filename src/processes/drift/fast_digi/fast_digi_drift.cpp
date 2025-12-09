@@ -95,23 +95,20 @@ namespace sand::drift {
         if(closest_wire_start==nullptr || closest_wire_stop==nullptr) {
           UFW_WARN(" Could not find closest wire for one end of the hit, skipping.");
           continue;
-        }
-
-
-        ///Get rotation matrix from local to global coordinates of the wire
-
-     
+        }    
 
         if(closest_wire_start==closest_wire_stop) {
           UFW_INFO(" Closest wire start and stop are the same wire.");
           hits_by_wire[closest_wire_start].emplace_back(hit);
         } else {
           UFW_INFO(" Closest wire start and stop are different wires.");
-          auto splitted_hits = split_hit(closest_wire_start_index, closest_wire_stop_index, wires_in_view, hit);
-          UFW_INFO(" Split hit into {} parts.", splitted_hits.size());
-          // auto combined_hit = generate_combined_hit(closest_wire_start, closest_wire_stop, hit);
-          // hits_by_wire[closest_wire_start].emplace_back(combined_hit);
+          auto split_hits = split_hit(closest_wire_start_index, closest_wire_stop_index, wires_in_view, hit);
+          UFW_INFO(" Split hit into {} parts.", split_hits.size());
+          for (const auto& [wire, split_hit] : split_hits) {
+            hits_by_wire[wire].emplace_back(split_hit);
+          }
         }
+
       }
       
     }
@@ -132,7 +129,7 @@ namespace sand::drift {
     size_t first_in_list = closest_wire_start_index;
     size_t last_in_list  = closest_wire_stop_index;
     if(closest_wire_start_index >closest_wire_stop_index) {
-      UFW_INFO(" Swapping closest wire start and stop to maintain order.");
+      UFW_DEBUG(" Swapping closest wire start and stop to maintain order.");
       first_in_list = closest_wire_stop_index;
       last_in_list  = closest_wire_start_index;
     }
@@ -162,12 +159,21 @@ namespace sand::drift {
     UFW_INFO(" Delta X local rotated: {}", delta_x_local_rotated);
     UFW_INFO(" Delta Y local rotated: {}", delta_y_local_rotated);
 
+    UFW_DEBUG(" Total hit key properties: Start ({}, {}, {}, {}), Stop ({}, {}, {}, {}), EnergyDeposit: {}, SecondaryDeposit: {}, TrackLength: {}, Contrib: {}, PrimaryId: {}, Id: {}", 
+              hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T(),
+              hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T(),
+              hit.GetEnergyDeposit(), hit.GetSecondaryDeposit(), hit.GetTrackLength(), hit.GetContrib(), hit.GetPrimaryId(), hit.GetId());
+
+    /// Set starting point
+    auto start = hit_start_global;
+    auto start_time = hseg_start_t;
+
     for(size_t wire_index = first_in_list; wire_index <= last_in_list; ++wire_index) {
       const auto* wire1 = wires_in_view.at(wire_index);
       const auto* wire2 = (wire_index + 1 <= wires_in_view.size() -1) ? wires_in_view.at(wire_index + 1) : nullptr; 
 
       if(wire2 == nullptr) {
-        UFW_INFO(" Reached last wire in view during hit splitting.");
+        UFW_DEBUG(" Reached last wire in view during hit splitting.");
         break;
       }
 
@@ -186,9 +192,9 @@ namespace sand::drift {
 
         auto inner_plane_center_transverse_coord = 0.5 * (transverse_coord1 + transverse_coord2);
 
-        UFW_INFO(" Wire1 index: {}, transverse coord: {}", wire_index, transverse_coord1);
-        UFW_INFO(" Wire2 index: {}, transverse coord: {}", wire_index+1, transverse_coord2);
-        UFW_INFO(" Inner plane center transverse coord: {}", inner_plane_center_transverse_coord);
+        UFW_DEBUG(" Wire1 index: {}, transverse coord: {}", wire_index, transverse_coord1);
+        UFW_DEBUG(" Wire2 index: {}, transverse coord: {}", wire_index+1, transverse_coord2);
+        UFW_DEBUG(" Inner plane center transverse coord: {}", inner_plane_center_transverse_coord);
         if (fabs(inner_plane_center_transverse_coord - transverse_coord_start) < 
             fabs(hit_stop_local_rotated.Y() - transverse_coord_start)) {
           step_coordinate = inner_plane_center_transverse_coord;
@@ -207,20 +213,39 @@ namespace sand::drift {
                                     hit_start_local_rotated.Z() + delta_z_local_rotated * t);
 
       pos_3d global_crossing_point = wire_plane_transform * rotated_crossing_point;
+      auto stop = global_crossing_point;
 
-      //double segment_portion = sqrt((global_crossing_point - hit_start_global).Mag2()) / hseg_length;
 
-      pos_3d mid_hit_seg_portion = (global_crossing_point + dir_3d(hit_start_global)) / 2.0; // TO-DO: Start should be the previous stopping point
-      vec_4d mid_hit_seg_portion_4d(mid_hit_seg_portion.X(),mid_hit_seg_portion.Y(),mid_hit_seg_portion.Z(),hit.GetStart().T());
+      double segment_portion = sqrt((stop - start).Mag2()) / hseg_length;
+
+      pos_3d mid_hit_seg_portion = (stop + dir_3d(start)) / 2.0; // TO-DO: Start should be the previous stopping point
+      vec_4d mid_hit_seg_portion_4d(mid_hit_seg_portion.X(),mid_hit_seg_portion.Y(),mid_hit_seg_portion.Z(),start_time);
       
       const auto [closest_wire_to_position,closest_to_position_ind] = drift->closest_wire_in_list(wires_in_view,mid_hit_seg_portion_4d,m_drift_velocity);
 
 
-      UFW_INFO(" Crossing point local rotated: ({}, {}, {})", rotated_crossing_point.X(), rotated_crossing_point.Y(), rotated_crossing_point.Z());
-      UFW_INFO(" Crossing point global: ({}, {}, {})", global_crossing_point.X(), global_crossing_point.Y(), global_crossing_point.Z());
+      UFW_DEBUG(" Crossing point local rotated: ({}, {}, {})", rotated_crossing_point.X(), rotated_crossing_point.Y(), rotated_crossing_point.Z());
+      UFW_DEBUG(" Crossing point global: ({}, {}, {})", global_crossing_point.X(), global_crossing_point.Y(), global_crossing_point.Z());
+      UFW_DEBUG(" Segment portion: {}", segment_portion);
+      UFW_DEBUG(" Hit Portion associated to wire index: {}", wire_index);
 
-      EDEPHit hit_split; // To be set properly later
-      split_hit[closest_wire_to_position] = hit;
+      /// Build new hit portion
+      TLorentzVector hit_start_lv(start.X(), start.Y(), start.Z(), start_time);
+      TLorentzVector hit_stop_lv(stop.X(), stop.Y(), stop.Z(), start_time + hseg_dt * segment_portion);
+      auto energy_deposit_portion = hit.GetEnergyDeposit() * segment_portion;
+      auto secondary_deposit_portion = hit.GetSecondaryDeposit() * segment_portion;
+      auto track_length_portion = hit.GetTrackLength() * segment_portion;
+      auto contrib_portion = hit.GetContrib(); // TO-DO: How to split contributor?
+      auto primary_id = hit.GetPrimaryId();
+      auto ID = hit.GetId();
+      
+      EDEPHit hit_split(hit_start_lv, hit_stop_lv, 
+                        energy_deposit_portion, secondary_deposit_portion, 
+                        track_length_portion, contrib_portion, primary_id, ID); 
+
+      split_hit[closest_wire_to_position] = hit_split;
+
+      hit_start_global = global_crossing_point;
     }
     return split_hit; // Return the original hit for now
   }
