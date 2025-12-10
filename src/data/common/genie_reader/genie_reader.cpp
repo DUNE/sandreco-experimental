@@ -53,12 +53,12 @@ namespace ufw::data {
 
       reader.events_.push_back({EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, EvtVtx, EvtCode, EvtFlags});
 
-      reader.stdHeps_.push_back({StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
-                                 StdHepFd, StdHepLd, StdHepFm, StdHepLm});
+      reader.stdHeps_.emplace_back(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
+                                 StdHepFd, StdHepLd, StdHepFm, StdHepLm);
 
       if (reader.nuParents_.has_value()) {
-        reader.nuParents_->push_back({NuParentPdg, NuParentDecMode, NuParentDecP4, NuParentDecX4, NuParentProP4,
-                                      NuParentProX4, NuParentProNVtx});
+        reader.nuParents_->emplace_back(NuParentPdg, NuParentDecMode, NuParentDecP4, NuParentDecX4, NuParentProP4,
+                                      NuParentProX4, NuParentProNVtx);
       }
 
       if (reader.numiFluxes_.has_value()) {
