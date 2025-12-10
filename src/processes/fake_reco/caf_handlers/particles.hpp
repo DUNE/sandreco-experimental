@@ -13,35 +13,27 @@
 
 namespace sand::fake_reco {
 
-  inline caf::SRRecoParticle reco_particle_from_edep_trajectory(const EDEPTrajectory& particle) {
+  inline ::caf::SRRecoParticle reco_particle_from_edep_trajectory(const EDEPTrajectory& particle) {
     return {
         .primary  = true,
         .pdg      = particle.GetPDGCode(),
         .tgtA     = 0,                                           // ?
         .score    = std::numeric_limits<float>::signaling_NaN(), // ?
         .E        = 0,                                           // ?
-        .E_method = caf::PartEMethod::kUnknownMethod,            // ?
-        .p        = caf::SRVector3D{particle.GetInitialMomentum().Vect()},
-        .start    = {}, // FIXME: waiting for the GeoManager
-        // .start =
-        //     caf::SRVector3D{
-        //         particle.GetTrajectoryPointsVect()
-        //             .front()
-        //             .GetPosition()
-        //             .Vect() // are these [cm]?
-        //     },
-        .end = {}, // FIXME: waiting for the GeoManager
-        // .end = caf::SRVector3D{particle.GetTrajectoryPointsVect()
-        //                            .back()
-        //                            .GetPosition()
-        //                            .Vect()},
+        .E_method = ::caf::PartEMethod::kUnknownMethod,          // ?
+        .p        = ::caf::SRVector3D{particle.GetInitialMomentum().Vect()},
+        .start =
+            ::caf::SRVector3D{
+                particle.GetTrajectoryPointsVect().front().GetPosition().Vect() // are these [cm]?
+            },
+        .end          = ::caf::SRVector3D{particle.GetTrajectoryPointsVect().back().GetPosition().Vect()},
         .contained    = false, // ?
         .truth        = {},    // ?
         .truthOverlap = {}     // ?
     };
   }
 
-  inline caf::SRTrueParticle SRTrueParticle_from_genie(const std::size_t i, const StdHep& std_hep) {
+  inline ::caf::SRTrueParticle SRTrueParticle_from_genie(const std::size_t i, const StdHep& std_hep) {
     return {
         .pdg            = std_hep.Pdg_[i],
         .G4ID           = -1, // This function is used only for genie only particles
@@ -54,47 +46,26 @@ namespace sand::fake_reco {
     };
   }
 
-  inline caf::SRTrueParticle SRTrueParticle_from_edep(const EDEPTrajectory& particle) {
-    return {
-        .pdg  = particle.GetPDGCode(),
-        .G4ID = particle.GetId(), // This is the GEANT trajectory id. The CafMaker reset this index at each interaction
-        .interaction_id = {},     // This will be filled by fake_reco loop
-        .time           = {},     // FIXME: waiting for the GeoManager
-        // .time = static_cast<float>(particle.GetTrajectoryPointsVect()
-        //                                .front()
-        //                                .GetPosition()
-        //                                .T()), // ?
-        .ancestor_id = {}, // This will be filled by fake_reco loop
-        .p           = particle.GetInitialMomentum(),
-        .start_pos   = {}, // FIXME: waiting for the GeoManager
-        // .start_pos =
-        //     caf::SRVector3D{
-        //         particle.GetTrajectoryPointsVect()
-        //             .front()
-        //             .GetPosition()
-        //             .Vect() // are these [cm]?
-        //     },
-        .end_pos = {}, // FIXME: waiting for the GeoManager
-        // .end_pos = caf::SRVector3D{particle.GetTrajectoryPointsVect()
-        //                                .back()
-        //                                .GetPosition()
-        //                                .Vect()},
-        .parent    = particle.GetParentId(),
-        .daughters = {}, // should I get this visiting the whole children tree or just the first layer?
-        // FIXME: waiting for the GeoManager
-        .first_process    = 0,
-        .first_subprocess = 0,
-        .end_process      = 0,
-        .end_subprocess   = 0
-        // .first_process = static_cast<unsigned int>(
-        //     particle.GetTrajectoryPointsVect().front().GetProcess()),
-        // .first_subprocess = static_cast<unsigned int>(
-        //     particle.GetTrajectoryPointsVect().front().GetSubprocess()),
-        // .end_process = static_cast<unsigned int>(
-        //     particle.GetTrajectoryPointsVect().back().GetProcess()),
-        // .end_subprocess = static_cast<unsigned int>(
-        //     particle.GetTrajectoryPointsVect().back().GetSubprocess())
-    };
+  inline ::caf::SRTrueParticle SRTrueParticle_from_edep(const EDEPTrajectory& particle) {
+    const auto trajectory_points = particle.GetTrajectoryPointsVect();
+    return {.pdg = particle.GetPDGCode(),
+            .G4ID =
+                particle.GetId(), // This is the GEANT trajectory id. The CafMaker reset this index at each interaction
+            .interaction_id = {}, // This will be filled by fake_reco loop
+            .time           = static_cast<float>(trajectory_points.front().GetPosition().T()), // ?
+            .ancestor_id    = {}, // This will be filled by fake_reco loop
+            .p              = particle.GetInitialMomentum(),
+            .start_pos =
+                ::caf::SRVector3D{
+                    trajectory_points.front().GetPosition().Vect() // are these [cm]?
+                },
+            .end_pos          = ::caf::SRVector3D{trajectory_points.back().GetPosition().Vect()},
+            .parent           = particle.GetParentId(),
+            .daughters        = {}, // should I get this visiting the whole children tree or just the first layer?
+            .first_process    = static_cast<unsigned int>(trajectory_points.front().GetProcess()),
+            .first_subprocess = static_cast<unsigned int>(trajectory_points.front().GetSubprocess()),
+            .end_process      = static_cast<unsigned int>(trajectory_points.back().GetProcess()),
+            .end_subprocess   = static_cast<unsigned int>(trajectory_points.back().GetSubprocess())};
   }
 
 } // namespace sand::fake_reco

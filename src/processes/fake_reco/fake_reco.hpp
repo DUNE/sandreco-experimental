@@ -28,10 +28,9 @@
 
 #include <edep_reader/edep_reader.hpp>
 #include <genie_reader/genie_reader.hpp>
+#include <caf/caf_wrapper.hpp>
 
 #include <ufw/process.hpp>
-
-#include <duneanaobj/StandardRecord/StandardRecord.h>
 
 #include <utility>
 #include <vector>
@@ -42,7 +41,7 @@ namespace sand::fake_reco {
     const edep_reader* edep_{};
     const genie_reader* genie_{};
 
-    caf::StandardRecord* standard_record_{};
+    sand::caf::caf_wrapper* standard_record_{};
 
     // caf::SRTruthBranch& truth_branch_;
     // caf::SRInteractionBranch& common_branch_;
@@ -50,9 +49,9 @@ namespace sand::fake_reco {
     [[nodiscard]] std::vector<std::pair<std::size_t, std::size_t>> make_edep_interaction_map() const;
 
     void set_branches_capacities_() const;
-    void fill_true_interaction_with_preFSI_hadrons_(caf::SRTrueInteraction& true_interaction,
+    void fill_true_interaction_with_preFSI_hadrons_(::caf::SRTrueInteraction& true_interaction,
                                                     std::size_t interaction_index) const;
-    void set_true_interaction_vectors_capacities_(caf::SRTrueInteraction& true_interaction,
+    void set_true_interaction_vectors_capacities_(::caf::SRTrueInteraction& true_interaction,
                                                   std::size_t edep_first_index, std::size_t edep_size) const;
     void assert_sizes() const;
    public:

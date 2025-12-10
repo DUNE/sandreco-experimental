@@ -18,8 +18,8 @@
 #include <cmath>
 
 namespace sand::fake_reco {
-  inline caf::SRInteraction empty_interaction_from_vertex(const EDEPTree& vertex) {
-    caf::SRInteraction interaction{};
+  inline ::caf::SRInteraction empty_interaction_from_vertex(const EDEPTree& vertex) {
+    ::caf::SRInteraction interaction{};
     // TODO: get the id from genie
     // interaction.id = ...;
     // FIXME: waiting for the GeoManager
@@ -28,12 +28,12 @@ namespace sand::fake_reco {
     return interaction;
   }
 
-  inline void fill_sr_interaction(caf::SRInteraction& interaction, const caf::SRRecoParticle& particle) {
+  inline void fill_sr_interaction(::caf::SRInteraction& interaction, const ::caf::SRRecoParticle& particle) {
     interaction.part.sandreco.push_back(particle);
     interaction.part.nsandreco++;
   }
 
-  inline void initialize_SRTrueInteraction(caf::SRTrueInteraction& interaction, const GRooTrackerEvent& genie_event,
+  inline void initialize_SRTrueInteraction(::caf::SRTrueInteraction& interaction, const GRooTrackerEvent& genie_event,
                                            const StdHep& genie_stdhep) {
     // data got via  genie_stdhep.(...)[0].(...) are relative to the nu
     // data got via  genie_stdhep.(...)[1].(...) are relative to the target
@@ -93,7 +93,7 @@ namespace sand::fake_reco {
     interaction.bjorkenX = interaction.Q2 / (2 * Mnuc * interaction.q0);
     interaction.inelasticity = interaction.q0 / interaction.E;
 
-    if (interaction.mode == caf::kCoh || interaction.mode == caf::kDiffractive) {
+    if (interaction.mode == ::caf::kCoh || interaction.mode == ::caf::kDiffractive) {
       // returns the running or selected value of invariant hadronic mass W
       // when not set returns -99999
       // https://github.com/GENIE-MC/Generator/blob/2084cc6b8f25a460ebf4afd6a4658143fa9ce2ff/src/Framework/Interaction/Kinematics.cxx#L170
@@ -102,8 +102,8 @@ namespace sand::fake_reco {
     }
 
     interaction.ischarm    = summary.is_charm_event;
-    interaction.isseaquark = summary.scattering_type == caf::kDIS && summary.hit_sea_quark;
-    if (interaction.mode == caf::kRes) {
+    interaction.isseaquark = summary.scattering_type == ::caf::kDIS && summary.hit_sea_quark;
+    if (interaction.mode == ::caf::kRes) {
       interaction.resnum = static_cast<int>(summary.resonance_type.value());
     }
     interaction.xsec      = static_cast<float>(genie_event.EvtXSec_);
@@ -112,7 +112,7 @@ namespace sand::fake_reco {
     // FIXME: all the fields from baseline to imp_weight should be filled with genie NuParent data, but they are all
     //  empty at the moment
 
-    interaction.generator = caf::kGENIE;
+    interaction.generator = ::caf::kGENIE;
     // interaction.genVersion = ?
 
     // Add DUNErw weights to the CAF
@@ -121,7 +121,7 @@ namespace sand::fake_reco {
     interaction.xsec_cvwgt = 1;
   }
 
-  inline void update_true_interaction_pdg_counters(caf::SRTrueInteraction& interaction, const int pdg) {
+  inline void update_true_interaction_pdg_counters(::caf::SRTrueInteraction& interaction, const int pdg) {
     switch (pdg) {
     case 2212:
       interaction.nproton++;

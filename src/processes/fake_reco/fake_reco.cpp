@@ -19,7 +19,7 @@
 
 namespace sand::fake_reco {
 
-  fake_reco::fake_reco() : process{{}, {{"output_caf", "caf::StandardRecord"}}} {}
+  fake_reco::fake_reco() : process{{}, {{"output_caf", "sand::caf::caf_wrapper"}}} {}
 
   void fake_reco::configure(const ufw::config& cfg) { process::configure(cfg); }
 
@@ -27,9 +27,7 @@ namespace sand::fake_reco {
     // Bind input and output
     edep_            = &get<edep_reader>();
     genie_           = &get<genie_reader>();
-    standard_record_ = new caf::StandardRecord{}; // placeholder
-    // TODO: make a ufw StandardRecord wrapper
-    // standard_record_ = &set<caf::StandardRecord>("output_caf");
+    standard_record_ = &set<sand::caf::caf_wrapper>("output_caf");
 
     const auto edep_map = make_edep_interaction_map();
 
@@ -41,7 +39,7 @@ namespace sand::fake_reco {
     for (std::size_t interaction_index = 0; interaction_index < edep_map.size(); interaction_index++) {
       const auto [edep_first_index, edep_size] = edep_map[interaction_index];
       // Create empty interactions
-      caf::SRTrueInteraction& true_interaction = true_interactions_vector.emplace_back();
+      ::caf::SRTrueInteraction& true_interaction = true_interactions_vector.emplace_back();
       // caf::SRInteraction reco_interaction      = empty_interaction_from_vertex(edep);
 
       // Fill the interactions with nu data
@@ -61,7 +59,7 @@ namespace sand::fake_reco {
 
         auto true_primary_particle           = SRTrueParticle_from_edep(primary_particle);
         true_primary_particle.interaction_id = true_interaction.id;
-        true_primary_particle.ancestor_id    = {static_cast<int>(interaction_index), caf::TrueParticleID::kPrimary,
+        true_primary_particle.ancestor_id    = {static_cast<int>(interaction_index), ::caf::TrueParticleID::kPrimary,
                                                 true_interaction.nprim};
 
         for (auto it = ++edep_->GetTrajectory(primary_particle.GetId());
@@ -71,7 +69,7 @@ namespace sand::fake_reco {
 
           auto true_secondary_particle           = SRTrueParticle_from_edep(secondary_particle);
           true_secondary_particle.interaction_id = true_interaction.id;
-          true_secondary_particle.ancestor_id    = {static_cast<int>(interaction_index), caf::TrueParticleID::kPrimary,
+          true_secondary_particle.ancestor_id    = {static_cast<int>(interaction_index), ::caf::TrueParticleID::kPrimary,
                                                     true_interaction.nprim};
           true_interaction.sec.push_back(true_secondary_particle);
           true_interaction.nsec++;
@@ -126,7 +124,7 @@ namespace sand::fake_reco {
     sand_interactions_vector.reserve(genie_->events_.size());
   }
 
-  void fake_reco::fill_true_interaction_with_preFSI_hadrons_(caf::SRTrueInteraction& true_interaction,
+  void fake_reco::fill_true_interaction_with_preFSI_hadrons_(::caf::SRTrueInteraction& true_interaction,
                                                              const std::size_t interaction_index) const {
     // Loop over GENIE particles
     for (std::size_t particle_index = 0; particle_index < genie_->stdHeps_[interaction_index].N_; particle_index++) {
@@ -138,7 +136,7 @@ namespace sand::fake_reco {
         // https://github.com/DUNE/ND_CAFMaker/blob/972f11bc5b69ea1f595e14ed16e09162f512011e/src/truth/FillTruth.cxx#L223
         continue;
       }
-      caf::SRTrueParticle true_particle =
+      ::caf::SRTrueParticle true_particle =
           SRTrueParticle_from_genie(particle_index, genie_->stdHeps_[interaction_index]);
       true_particle.interaction_id = true_interaction.id;
       true_interaction.prefsi.push_back(true_particle);
@@ -146,7 +144,7 @@ namespace sand::fake_reco {
     }
   }
 
-  void fake_reco::set_true_interaction_vectors_capacities_(caf::SRTrueInteraction& true_interaction,
+  void fake_reco::set_true_interaction_vectors_capacities_(::caf::SRTrueInteraction& true_interaction,
                                                            const std::size_t edep_first_index,
                                                            const std::size_t edep_size) const {
     true_interaction.prim.reserve(edep_size);

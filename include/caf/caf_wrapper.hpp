@@ -11,12 +11,11 @@
 
 namespace sand::caf {
 
-struct caf_wrapper
-    : public ::caf::StandardRecord,
-      public ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag,
-                             ufw::data::context_tag> {};
+  struct caf_wrapper
+    : public ::caf::StandardRecord
+    , public ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {};
 
-} // namespace sand
+} // namespace sand::caf
 
 UFW_DECLARE_MANAGED_DATA(sand::caf::caf_wrapper);
 
