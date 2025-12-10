@@ -154,6 +154,7 @@ namespace sand::drift {
     size_t last_in_list  = closest_wire_stop_index;
     auto start = hit_start_global;
     auto start_time = hseg_start_t;
+    auto delta_time = hseg_dt;
     auto start_local_rotated = hit_start_local_rotated;
     auto transverse_coord_start = hit_start_local_rotated.Y();
     auto transverse_coord_stop = hit_stop_local_rotated.Y();
@@ -166,6 +167,7 @@ namespace sand::drift {
       last_in_list  = closest_wire_start_index;
       start = hit_stop_global;
       start_time = hseg_start_t + hseg_dt;
+      delta_time = -hseg_dt;
       start_local_rotated = hit_stop_local_rotated;
       transverse_coord_start = hit_stop_local_rotated.Y();
       transverse_coord_stop = hit_start_local_rotated.Y();
@@ -226,7 +228,7 @@ namespace sand::drift {
 
       double segment_portion = sqrt((stop - start).Mag2()) / hseg_length;
 
-      pos_3d mid_hit_seg_portion = (stop + dir_3d(start)) / 2.0; // TO-DO: Start should be the previous stopping point
+      pos_3d mid_hit_seg_portion = (stop + dir_3d(start)) / 2.0;
       vec_4d mid_hit_seg_portion_4d(mid_hit_seg_portion.X(),mid_hit_seg_portion.Y(),mid_hit_seg_portion.Z(),start_time);
       
       const auto [closest_wire_to_position,closest_to_position_ind] = drift->closest_wire_in_list(wires_in_view,mid_hit_seg_portion_4d,m_drift_velocity);
@@ -242,7 +244,7 @@ namespace sand::drift {
 
       /// Build new hit portion
       TLorentzVector hit_start_lv(start.X(), start.Y(), start.Z(), start_time);
-      TLorentzVector hit_stop_lv(stop.X(), stop.Y(), stop.Z(), start_time + hseg_dt * segment_portion);
+      TLorentzVector hit_stop_lv(stop.X(), stop.Y(), stop.Z(), start_time + delta_time * segment_portion);
       auto energy_deposit_portion = hit.GetEnergyDeposit() * segment_portion;
       auto secondary_deposit_portion = hit.GetSecondaryDeposit() * segment_portion;
       auto track_length_portion = hit.GetTrackLength() * segment_portion;
