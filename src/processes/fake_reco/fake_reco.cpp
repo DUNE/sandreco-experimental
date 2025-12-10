@@ -36,6 +36,7 @@ namespace sand::fake_reco {
     // Initialize spill structures
     set_branches_capacities_();
 
+    auto& true_interactions_vector = standard_record_->mc.nu;
     // Loop over interactions (nu vertices)
     for (std::size_t interaction_index = 0; interaction_index < edep_map.size(); interaction_index++) {
       const auto [edep_first_index, edep_size] = edep_map[interaction_index];
@@ -91,18 +92,18 @@ namespace sand::fake_reco {
     std::vector<std::pair<std::size_t, std::size_t>> output{};
     output.reserve(genie_->events_.size());
 
-    std::size_t current_spill_index       = edep_->GetChildrenTrajectories()[0].GetInteractionNumber();
-    std::size_t current_spill_begin_index = 0;
+    std::size_t current_event_index       = edep_->GetChildrenTrajectories()[0].GetInteractionNumber();
+    std::size_t current_event_begin_index = 0;
     for (std::size_t i = 0; i < edep_->GetChildrenTrajectories().size(); i++) {
-      if (edep_->GetChildrenTrajectories()[i].GetInteractionNumber() == current_spill_index) {
+      if (edep_->GetChildrenTrajectories()[i].GetInteractionNumber() == current_event_index) {
         continue;
       }
 
-      output.emplace_back(current_spill_begin_index, i - current_spill_begin_index);
-      current_spill_index       = edep_->GetChildrenTrajectories()[i].GetInteractionNumber();
-      current_spill_begin_index = i;
+      output.emplace_back(current_event_begin_index, i - current_event_begin_index);
+      current_event_index       = edep_->GetChildrenTrajectories()[i].GetInteractionNumber();
+      current_event_begin_index = i;
     }
-    output.emplace_back(current_spill_begin_index, edep_->GetChildrenTrajectories().size() - current_spill_begin_index);
+    output.emplace_back(current_event_begin_index, edep_->GetChildrenTrajectories().size() - current_event_begin_index);
     UFW_ASSERT(output.size() == genie_->events_.size(),
                "Could not find the same number of spills in gRooTracker and EDepSimEvents");
     return output;
