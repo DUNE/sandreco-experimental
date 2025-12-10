@@ -7,7 +7,9 @@
     ],
     "ufw-env": {}
   },
-  "globals": {},
+  "globals": {
+    "sand::root_tgeomanager" : { "geometry" : "test/sand-spill-events.9.edep.root" }
+  },
   "contexts": {
     "keys": [
       1

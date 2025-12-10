@@ -5,8 +5,6 @@
 #ifndef SANDRECO_EVTCODE_PARSER_HPP
 #define SANDRECO_EVTCODE_PARSER_HPP
 
-#include "EvtCode_parser.hpp"
-
 #include <duneanaobj/StandardRecord/SREnums.h>
 
 #include <charconv>
@@ -58,7 +56,7 @@ namespace sand::fake_reco {
       int n_rho_zero  = 0;
     };
 
-    const static std::unordered_map<std::string, caf::ScatteringMode> caf_scattering_mode_map;
+    const static std::unordered_map<std::string, ::caf::ScatteringMode> caf_scattering_mode_map;
 
     // --- Standard Interaction Fields ---
     int probe_pdg{0};
@@ -70,7 +68,7 @@ namespace sand::fake_reco {
 
     // TODO: reason on the option to switch to string_view
     std::string interaction_type{};
-    caf::ScatteringMode scattering_type{};
+    ::caf::ScatteringMode scattering_type{};
 
     // --- Exclusive Tag Fields ---
 
@@ -251,35 +249,35 @@ namespace sand::fake_reco {
     }
   };
 
-  const std::unordered_map<std::string, caf::ScatteringMode> EventSummary::caf_scattering_mode_map{
-      {"QES", caf::kQE},
-      {"1Kaon", caf::kSingleKaon},
-      {"DIS", caf::kDIS},
-      {"RES", caf::kRes},
-      {"COH", caf::kCoh},
-      {"DFR", caf::kDiffractive},
-      {"NuEEL", caf::kNuElectronElastic},
-      {"IMD", caf::kInvMuonDecay},
-      {"AMNuGamma", caf::kAMNuGamma},
-      {"MEC", caf::kMEC},
-      {"CEvNS", caf::kCohElastic},
-      {"IBD", caf::kInverseBetaDecay},
-      {"GLR", caf::kGlashowResonance},
-      {"IMDAnh", caf::kIMDAnnihilation},
-      {"PhotonCOH", caf::kPhotonCoh},
-      {"PhotonRES", caf::kPhotonRes},
+  const std::unordered_map<std::string, ::caf::ScatteringMode> EventSummary::caf_scattering_mode_map{
+      {"QES", ::caf::kQE},
+      {"1Kaon", ::caf::kSingleKaon},
+      {"DIS", ::caf::kDIS},
+      {"RES", ::caf::kRes},
+      {"COH", ::caf::kCoh},
+      {"DFR", ::caf::kDiffractive},
+      {"NuEEL", ::caf::kNuElectronElastic},
+      {"IMD", ::caf::kInvMuonDecay},
+      {"AMNuGamma", ::caf::kAMNuGamma},
+      {"MEC", ::caf::kMEC},
+      {"CEvNS", ::caf::kCohElastic},
+      {"IBD", ::caf::kInverseBetaDecay},
+      {"GLR", ::caf::kGlashowResonance},
+      {"IMDAnh", ::caf::kIMDAnnihilation},
+      {"PhotonCOH", ::caf::kPhotonCoh},
+      {"PhotonRES", ::caf::kPhotonRes},
       // TODO: Check that the absence of a "kScSinglePion" caf equivalent is intended.
-      {"DMEL", caf::kDarkMatterElastic},
-      {"DMDIS", caf::kDarkMatterDIS},
-      {"DME", caf::kDarkMatterElectron},
+      {"DMEL", ::caf::kDarkMatterElastic},
+      {"DMDIS", ::caf::kDarkMatterDIS},
+      {"DME", ::caf::kDarkMatterElectron},
       // TODO: Check that the absence of a "kScNorm" caf equivalent is intended.
 
       // There is just one "Unknown mode in cafs"
       {"Uknown to GENIE",
-       caf::
+       ::caf::
            kUnknownMode}, // yes, the typo in "Uknown" is "intended" check
                           // https://github.com/GENIE-MC/Generator/blob/2084cc6b8f25a460ebf4afd6a4658143fa9ce2ff/src/Framework/Interaction/ScatteringType.h#L70
-      {"Unknown", caf::kUnknownMode}
+      {"Unknown", ::caf::kUnknownMode}
 
       // Gemini comment:
       //  Cases from the first switch with no clear mapping in the second:
