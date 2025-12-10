@@ -131,7 +131,7 @@ namespace sand {
     float sy        = mask_front->GetYHalfLength();
     // id as size of vector, we need to parse it from the camera name
     mask_camera mc{camera->GetName(),
-                   m_mask_cameras.size(),
+                   static_cast<sand::channel_id::link_t>(m_mask_cameras.size()),
                    uint8_t(grain::mask),
                    loc2grain,
                    parse_pixels(sipms, gdml.GetAuxMap()),
@@ -155,7 +155,7 @@ namespace sand {
     auto lens  = find_by_name(camera, "gasLens_pv");
     // id as size of vector, we need to parse it from the camera name
     lens_camera lc{camera->GetName(),
-                   m_lens_cameras.size(),
+                   static_cast<sand::channel_id::link_t>(m_lens_cameras.size()),
                    uint8_t(grain::lens),
                    loc2grain,
                    parse_pixels(sipms, gdml.GetAuxMap()),
@@ -235,11 +235,13 @@ namespace sand {
 
   /**
    * Returns voxel center position in the local reference frame given the 3D index.
-   * Assuming that voxels are arranged such that, if the number of voxels in one axis is odd, the middle is centered on zero.
-   * if the number is even, the boundary is at zero.
+   * Assuming that voxels are arranged such that, if the number of voxels in one axis is odd, the middle is centered on
+   * zero. if the number is even, the boundary is at zero.
    */
   pos_3d geoinfo::grain_info::voxel_index_to_position(grain::index_3d index, dir_3d pitch, grain::size_3d size) const {
-    return pos_3d((index.x() + 0.5 - static_cast<float>(size.x()) / 2.)*pitch.x(), (index.y() + 0.5 - static_cast<float>(size.y()) / 2.)*pitch.y(), (index.z() + 0.5 - static_cast<float>(size.z()) / 2.)*pitch.z());
+    return pos_3d((index.x() + 0.5 - static_cast<float>(size.x()) / 2.) * pitch.x(),
+                  (index.y() + 0.5 - static_cast<float>(size.y()) / 2.) * pitch.y(),
+                  (index.z() + 0.5 - static_cast<float>(size.z()) / 2.) * pitch.z());
   }
 
 } // namespace sand
