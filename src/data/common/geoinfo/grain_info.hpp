@@ -84,6 +84,8 @@ namespace sand {
 
     grain::voxel_array<uint8_t> fiducial_voxels(dir_3d pitch) const;
 
+    pos_3d voxel_index_to_position(grain::index_3d, dir_3d, grain::size_3d) const;
+
    private:
     void add_camera_mask(G4VPhysicalVolume*, G4GDMLParser&);
     void add_camera_lens(G4VPhysicalVolume*, G4GDMLParser&);

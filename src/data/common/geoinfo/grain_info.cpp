@@ -233,4 +233,13 @@ namespace sand {
     return mask;
   }
 
+  /**
+   * Returns voxel center position in the local reference frame given the 3D index.
+   * Assuming that voxels are arranged such that, if the number of voxels in one axis is odd, the middle is centered on zero.
+   * if the number is even, the boundary is at zero.
+   */
+  pos_3d geoinfo::grain_info::voxel_index_to_position(grain::index_3d index, dir_3d pitch, grain::size_3d size) const {
+    return pos_3d((index.x() + 0.5 - static_cast<float>(size.x()) / 2.)*pitch.x(), (index.y() + 0.5 - static_cast<float>(size.y()) / 2.)*pitch.y(), (index.z() + 0.5 - static_cast<float>(size.z()) / 2.)*pitch.z());
+  }
+
 } // namespace sand

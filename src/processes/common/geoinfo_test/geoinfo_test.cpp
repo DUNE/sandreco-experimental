@@ -86,6 +86,15 @@ namespace sand::common {
       ascii_grain += '\n';
     }
     UFW_INFO("GRAIN was segmented in a fiducial of {} voxels:\n{}", voxels.size(), ascii_grain);
+    for (size_t k = 0; k != voxels.size().z() && k < 100; ++k) { // Just few cycles for testing
+      for (size_t j = 0; j != voxels.size().y() && j < 100; ++j) {
+        for (size_t i = 0; k != voxels.size().x() && i < 100; ++i) {
+          pos_3d voxel_position{gi.grain().voxel_index_to_position(grain::index_3d(i, j, k), sz, voxels.size())};
+          UFW_INFO("index: ({},{},{}) position: ({},{},{})\n", i, j, k, voxel_position.x(), voxel_position.y(),
+                   voxel_position.z());
+        }
+      }
+    }
     if (m_mask_or_lens == "mask") {
       for (const auto& cam : gi.grain().mask_cameras()) {
         auto cam2glob = gi.grain().transform() * cam.transform;
