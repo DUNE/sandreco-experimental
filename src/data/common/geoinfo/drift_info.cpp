@@ -151,7 +151,7 @@ namespace sand {
     std::string plane_path(is_trk ? path.token(2) : path.token(3));
     // UFW_INFO("Wire path: '{}'", plane_path);
     if(plane_path.find("Mylar_") != std::string::npos ) {
-      UFW_WARN("Plane path '{}' corresponds to a mylar foil. This is not a sensitive detector", plane_path);
+      UFW_DEBUG("Plane path '{}' corresponds to a mylar foil. This is not a sensitive detector", plane_path);
       gi.drift.plane = 255; // invalid plane
       return gi;
     } else {

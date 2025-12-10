@@ -35,8 +35,6 @@ namespace sand::drift {
     auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
     std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>> hits_by_wire = group_hits_by_wire();
     digitize_hits_in_wires(hits_by_wire);
-
-    UFW_DEBUG(" DRIFT subdetector implementation");
   }
 
   std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>> fast_digi::group_hits_by_wire() {
@@ -51,7 +49,7 @@ namespace sand::drift {
       if (!trj.HasHitInDetector(component::DRIFT)) 
         continue;
 
-      UFW_DEBUG("Found {} DRIFT hits for trajectory with ID {}", hit_map.at(component::DRIFT).size(), trj.GetId());
+      UFW_INFO("Found {} DRIFT hits for trajectory with ID {}", hit_map.at(component::DRIFT).size(), trj.GetId());
 
       for(const auto& hit : hit_map.at(component::DRIFT)) {
 
@@ -66,11 +64,11 @@ namespace sand::drift {
         geo_id stop_ID = drift->id(stop_partial_path);
 
         if(start_ID.drift.plane == 255 || stop_ID.drift.plane == 255) {
-          UFW_WARN(" One of two hit_segment ends has invalid plane ID, skipping.");
+          UFW_DEBUG(" One of two hit_segment ends has invalid plane ID, skipping.");
           continue;
         }
         if(start_ID.raw != stop_ID.raw) {
-          UFW_WARN(" Hit spans multiple views: start view ID ({},{},{}), stop view ID ({},{},{}). Skipping.", 
+          UFW_DEBUG(" Hit spans multiple views: start view ID ({},{},{}), stop view ID ({},{},{}). Skipping.", 
                                 start_ID.drift.subdetector, start_ID.drift.supermodule, start_ID.drift.plane, 
                                 stop_ID.drift.subdetector, stop_ID.drift.supermodule, stop_ID.drift.plane);
           continue;
@@ -90,21 +88,21 @@ namespace sand::drift {
         const auto [closest_wire_stop, closest_wire_stop_index] = drift->closest_wire_in_list(wires_in_view, hit.GetStop(), m_drift_velocity);
         
         if(closest_wire_start_index == SIZE_MAX || closest_wire_stop_index == SIZE_MAX) {
-          UFW_WARN(" Could not find closest wire index for one end of the hit, skipping.");
+          UFW_DEBUG(" Could not find closest wire index for one end of the hit, skipping.");
           continue;
         }
         if(closest_wire_start==nullptr || closest_wire_stop==nullptr) {
-          UFW_WARN(" Could not find closest wire for one end of the hit, skipping.");
+          UFW_DEBUG(" Could not find closest wire for one end of the hit, skipping.");
           continue;
         }    
 
         if(closest_wire_start==closest_wire_stop) {
-          UFW_INFO(" Closest wire start and stop are the same wire.");
+          UFW_DEBUG(" For hit ID ({}) closest wire start and stop are the same wire: wire ID: ({}).", hit.GetId(), closest_wire_start_index);
           hits_by_wire[closest_wire_start].emplace_back(hit);
         } else {
-          UFW_INFO(" Closest wire start and stop are different wires: ID: ({},{}).", closest_wire_start_index, closest_wire_stop_index);
+          UFW_DEBUG(" For hit ID ({}) closest wire start and stop are different wires: wire ID: ({},{}).", hit.GetId(), closest_wire_start_index, closest_wire_stop_index);
           auto split_hits = split_hit(closest_wire_start_index, closest_wire_stop_index, wires_in_view, hit);
-          UFW_INFO(" Split hit into {} parts.", split_hits.size());
+          UFW_DEBUG(" Split hit between {} wires.", split_hits.size());
           for (const auto& [wire, split_hit] : split_hits) {
             hits_by_wire[wire].emplace_back(split_hit);
           }
@@ -114,6 +112,7 @@ namespace sand::drift {
       
     }
 
+    UFW_INFO("Hits have been grouped associated to {} wires.", hits_by_wire.size());
     return hits_by_wire;
   }
 
@@ -140,12 +139,10 @@ namespace sand::drift {
     pos_3d hit_stop_local_rotated = wire_plane_transform.Inverse() * hit_stop_global;
 
 
-    UFW_INFO(" Hit start global: ({}, {}, {})", hit_start_global.X(), hit_start_global.Y(), hit_start_global.Z());
-    UFW_INFO(" Hit start local rotated: ({}, {}, {})", hit_start_local_rotated.X(), hit_start_local_rotated.Y(), hit_start_local_rotated.Z());
-    UFW_INFO(" Hit stop global: ({}, {}, {})", hit_stop_global.X(), hit_stop_global.Y(), hit_stop_global.Z());
-    UFW_INFO(" Hit stop local rotated: ({}, {}, {})", hit_stop_local_rotated.X(), hit_stop_local_rotated.Y(), hit_stop_local_rotated.Z());
-    // UFW_INFO(" Delta X local rotated: {}", delta_x_local_rotated);
-    // UFW_INFO(" Delta Y local rotated: {}", delta_y_local_rotated);
+    UFW_DEBUG(" Hit start global: ({}, {}, {})", hit_start_global.X(), hit_start_global.Y(), hit_start_global.Z());
+    UFW_DEBUG(" Hit start local rotated: ({}, {}, {})", hit_start_local_rotated.X(), hit_start_local_rotated.Y(), hit_start_local_rotated.Z());
+    UFW_DEBUG(" Hit stop global: ({}, {}, {})", hit_stop_global.X(), hit_stop_global.Y(), hit_stop_global.Z());
+    UFW_DEBUG(" Hit stop local rotated: ({}, {}, {})", hit_stop_local_rotated.X(), hit_stop_local_rotated.Y(), hit_stop_local_rotated.Z());
 
     UFW_DEBUG(" Total hit key properties: Start ({}, {}, {}, {}), Stop ({}, {}, {}, {}), EnergyDeposit: {}, SecondaryDeposit: {}, TrackLength: {}, Contrib: {}, PrimaryId: {}, Id: {}", 
               hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T(),
@@ -218,7 +215,6 @@ namespace sand::drift {
       }
 
       double t = fabs((step_coordinate - transverse_coord_start) / delta_y_local_rotated);
-      UFW_INFO(" Step coordinate: {}, transverse coord start: {}, delta_y_local_rotated: {}", step_coordinate, transverse_coord_start, delta_y_local_rotated );
 
       pos_3d rotated_crossing_point(start_local_rotated.X() + delta_x_local_rotated * t, 
                                     start_local_rotated.Y() + delta_y_local_rotated * t,
@@ -262,7 +258,8 @@ namespace sand::drift {
 
       start = stop;
     }
-    return split_hit; // Return the original hit for now
+    UFW_DEBUG(" Finished splitting hit into {} parts.", split_hit.size());
+    return split_hit; 
   }
 
   // TO-DO: For now identhical to stt implementation, need to modify for drift specifics
@@ -272,12 +269,12 @@ namespace sand::drift {
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
 
     for (auto [wire, hits] : hits_by_wire) { 
-      UFW_INFO("Station target: {}, station top north corner: ({},{},{})", wire->parent->target,
+      UFW_DEBUG("Station target: {}, station top north corner: ({},{},{})", wire->parent->target,
                 wire->parent->top_north.X(), wire->parent->top_north.Y(), wire->parent->top_north.Z()); 
-      UFW_INFO(" Wire properties: Head ({}, {}, {}), Tail ({}, {}, {})", 
+      UFW_DEBUG(" Wire properties: Head ({}, {}, {}), Tail ({}, {}, {})", 
                 wire->head.X(), wire->head.Y(), wire->head.Z(),
                 wire->tail.X(), wire->tail.Y(), wire->tail.Z());
-      UFW_INFO(" Number of hits in wire: {}", hits.size());
+      UFW_DEBUG(" Number of hits in wire: {}", hits.size());
       
       auto signal = process_hits_for_wire(hits, *wire);
       if (signal) {
@@ -286,6 +283,7 @@ namespace sand::drift {
       }
       
     }
+    UFW_INFO("Digitization complete. Total number of signals created: {}", digi.signals.size());
   }
 
   tracker::digi::signal fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
