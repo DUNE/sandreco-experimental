@@ -149,7 +149,23 @@ namespace sand::drift {
     return (distance_to_boundary < distance_to_end) ? boundary_transverse : transverse_end;
   }
 
-  pos_3d fast_digi::interpolate_segment_endpoint(const pos_3d& start_local,
+  void fast_digi::log_segment_debug(const pos_3d& segment_start_global,
+                                    const pos_3d& segment_end_global,
+                                    const pos_3d& segment_end_local,
+                                    double segment_length,
+                                    double segment_fraction,
+                                    size_t wire_index) const {
+    UFW_DEBUG(" ===== Segment {} Debug Info =====", wire_index);
+    UFW_DEBUG("   Start global: ({:.3f}, {:.3f}, {:.3f})", 
+              segment_start_global.X(), segment_start_global.Y(), segment_start_global.Z());
+    UFW_DEBUG("   End global:   ({:.3f}, {:.3f}, {:.3f})", 
+              segment_end_global.X(), segment_end_global.Y(), segment_end_global.Z());
+    UFW_DEBUG("   End local:    ({:.3f}, {:.3f}, {:.3f})", 
+              segment_end_local.X(), segment_end_local.Y(), segment_end_local.Z());
+    UFW_DEBUG("   Length: {:.3f}, Fraction: {:.4f}", segment_length, segment_fraction);
+  }
+
+  std::pair<pos_3d, pos_3d> fast_digi::interpolate_segment_endpoint(const pos_3d& start_local,
                                                  double dx_local, double dy_local, double dz_local,
                                                  double segment_end_transverse,
                                                  const xform_3d& transform) const {
@@ -165,10 +181,7 @@ namespace sand::drift {
     // Transform to global coordinates
     const pos_3d segment_end_global = transform * segment_end_local;
 
-    UFW_DEBUG(" Segment end local: ({}, {}, {})", segment_end_local.X(), segment_end_local.Y(), segment_end_local.Z());
-    UFW_DEBUG(" Segment end global: ({}, {}, {})", segment_end_global.X(), segment_end_global.Y(), segment_end_global.Z());
-
-    return segment_end_global;
+    return {segment_end_local, segment_end_global};
   }
 
   EDEPHit fast_digi::create_segment_hit(const pos_3d& segment_start_global,
@@ -197,7 +210,7 @@ namespace sand::drift {
   std::map<const geoinfo::tracker_info::wire *, EDEPHit> fast_digi::split_hit(
                                           size_t closest_wire_start_index,
                                           size_t closest_wire_stop_index,
-                                          geoinfo::tracker_info::wire_list wires_in_view,
+                                          const geoinfo::tracker_info::wire_list& wires_in_view,
                                           const EDEPHit& hit) {
     
     const auto& gi   = get<geoinfo>();
@@ -272,8 +285,8 @@ namespace sand::drift {
           current_wire, next_wire, wire_plane_transform,
           segment_start_local.Y(), transverse_end, wire_index);
 
-      // Calculate segment endpoint in global coordinates
-      const pos_3d segment_end_global = interpolate_segment_endpoint(
+      // Calculate segment endpoint in both local and global coordinates
+      const auto [segment_end_local, segment_end_global] = interpolate_segment_endpoint(
           segment_start_local, dx_local, dy_local, dz_local,
           segment_end_transverse, wire_plane_transform);
 
@@ -281,20 +294,16 @@ namespace sand::drift {
       const double segment_length = sqrt((segment_end_global - segment_start_global).Mag2());
       const double segment_fraction = segment_length / total_hit_length;
 
-      UFW_DEBUG(" Segment start: ({}, {}, {})", segment_start_global.X(), segment_start_global.Y(), segment_start_global.Z());
-      UFW_DEBUG(" Segment stop: ({}, {}, {})", segment_end_global.X(), segment_end_global.Y(), segment_end_global.Z());
-      UFW_DEBUG(" Segment length: {}", segment_length);
-      UFW_DEBUG(" Segment fraction: {}", segment_fraction);
+      // Validate segment fraction is reasonable
+      if (segment_fraction < 0.0 || segment_fraction > 1.0) {
+        UFW_WARN(" Segment fraction out of range [0,1]: {} for wire index {}", segment_fraction, wire_index);
+      }
 
-      // Find midpoint to determine which wire owns this segment
-      const pos_3d segment_midpoint = (segment_end_global + dir_3d(segment_start_global)) * 0.5;
-      const vec_4d segment_midpoint_4d(segment_midpoint.X(), segment_midpoint.Y(), 
-                                       segment_midpoint.Z(), segment_start_time);
-
-      UFW_DEBUG(" Hit segment associated to wire index: {}", wire_index);
+      log_segment_debug(segment_start_global, segment_end_global, segment_end_local,
+                       segment_length, segment_fraction, wire_index);
 
       // Build split hit for this segment
-      EDEPHit segment_hit = create_segment_hit(
+      const EDEPHit segment_hit = create_segment_hit(
           segment_start_global, segment_end_global,
           segment_start_time, time_direction, total_time_span,
           segment_fraction, hit);
@@ -303,7 +312,7 @@ namespace sand::drift {
 
       // Move to next segment
       segment_start_global = segment_end_global;
-      segment_start_local = wire_plane_transform.Inverse() * segment_end_global;
+      segment_start_local = segment_end_local;
       segment_start_time += time_direction * total_time_span * segment_fraction;
     }
     UFW_DEBUG(" Finished splitting hit into {} parts.", split_hit.size());
