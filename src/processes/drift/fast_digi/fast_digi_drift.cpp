@@ -116,6 +116,84 @@ namespace sand::drift {
     return hits_by_wire;
   }
 
+  double fast_digi::calculate_wire_boundary_transverse(const geoinfo::tracker_info::wire* current_wire,
+                                                       const geoinfo::tracker_info::wire* next_wire,
+                                                       const xform_3d& wire_plane_transform,
+                                                       double transverse_start,
+                                                       double transverse_end,
+                                                       size_t wire_index) const {
+    if (next_wire == nullptr) {
+      return transverse_end;
+    }
+
+    // Calculate wire centers in local coordinates
+    const pos_3d wire1_center_global = (current_wire->head + dir_3d(current_wire->tail)) * 0.5;
+    const pos_3d wire1_center_local = wire_plane_transform.Inverse() * wire1_center_global;
+    const double wire1_transverse = wire1_center_local.Y();
+
+    const pos_3d wire2_center_global = (next_wire->head + dir_3d(next_wire->tail)) * 0.5;
+    const pos_3d wire2_center_local = wire_plane_transform.Inverse() * wire2_center_global;
+    const double wire2_transverse = wire2_center_local.Y();
+
+    // Midpoint between adjacent wires defines the boundary
+    const double boundary_transverse = 0.5 * (wire1_transverse + wire2_transverse);
+
+    UFW_DEBUG(" Wire1 index: {}, transverse coord: {}", wire_index, wire1_transverse);
+    UFW_DEBUG(" Wire2 index: {}, transverse coord: {}", wire_index + 1, wire2_transverse);
+    UFW_DEBUG(" Boundary transverse coord: {}", boundary_transverse);
+
+    // Check if boundary is between start and end, otherwise use end
+    const double distance_to_boundary = fabs(boundary_transverse - transverse_start);
+    const double distance_to_end = fabs(transverse_end - transverse_start);
+
+    return (distance_to_boundary < distance_to_end) ? boundary_transverse : transverse_end;
+  }
+
+  pos_3d fast_digi::interpolate_segment_endpoint(const pos_3d& start_local,
+                                                 double dx_local, double dy_local, double dz_local,
+                                                 double segment_end_transverse,
+                                                 const xform_3d& transform) const {
+    // Linear interpolation parameter: fraction along hit segment
+    const double interpolation_param = fabs((segment_end_transverse - start_local.Y()) / dy_local);
+
+    // Calculate segment endpoint in local coordinates
+    const pos_3d segment_end_local(
+        start_local.X() + dx_local * interpolation_param,
+        start_local.Y() + dy_local * interpolation_param,
+        start_local.Z() + dz_local * interpolation_param);
+
+    // Transform to global coordinates
+    const pos_3d segment_end_global = transform * segment_end_local;
+
+    UFW_DEBUG(" Segment end local: ({}, {}, {})", segment_end_local.X(), segment_end_local.Y(), segment_end_local.Z());
+    UFW_DEBUG(" Segment end global: ({}, {}, {})", segment_end_global.X(), segment_end_global.Y(), segment_end_global.Z());
+
+    return segment_end_global;
+  }
+
+  EDEPHit fast_digi::create_segment_hit(const pos_3d& segment_start_global,
+                                        const pos_3d& segment_end_global,
+                                        double segment_start_time,
+                                        double time_direction,
+                                        double total_time_span,
+                                        double segment_fraction,
+                                        const EDEPHit& original_hit) const {
+    const TLorentzVector segment_start_4d(segment_start_global.X(), segment_start_global.Y(),
+                                          segment_start_global.Z(), segment_start_time);
+    const TLorentzVector segment_end_4d(segment_end_global.X(), segment_end_global.Y(),
+                                        segment_end_global.Z(),
+                                        segment_start_time + time_direction * total_time_span * segment_fraction);
+
+    const double scaled_energy = original_hit.GetEnergyDeposit() * segment_fraction;
+    const double scaled_secondary = original_hit.GetSecondaryDeposit() * segment_fraction;
+    const double scaled_track_length = original_hit.GetTrackLength() * segment_fraction;
+
+    return EDEPHit(segment_start_4d, segment_end_4d,
+                   scaled_energy, scaled_secondary,
+                   scaled_track_length, original_hit.GetContrib(),  // TO-DO: How to split contributor?
+                   original_hit.GetPrimaryId(), original_hit.GetId());
+  }
+
   std::map<const geoinfo::tracker_info::wire *, EDEPHit> fast_digi::split_hit(
                                           size_t closest_wire_start_index,
                                           size_t closest_wire_stop_index,
@@ -126,139 +204,107 @@ namespace sand::drift {
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
     std::map<const geoinfo::tracker_info::wire *, EDEPHit> split_hit;
 
-    double hseg_length = (hit.GetStop().Vect() - hit.GetStart().Vect()).Mag();
-    double hseg_dt = (hit.GetStop() - hit.GetStart()).T();
-    double hseg_start_t = hit.GetStart().T();
+    // Extract hit segment properties
+    const double total_hit_length = (hit.GetStop().Vect() - hit.GetStart().Vect()).Mag();
+    const double total_time_span = (hit.GetStop() - hit.GetStart()).T();
+    const double hit_start_time = hit.GetStart().T();
 
-    xform_3d wire_plane_transform = wires_in_view.at(closest_wire_start_index)->wire_plane_transform();
+    // Get coordinate transformation for wire plane
+    const xform_3d wire_plane_transform = wires_in_view.at(closest_wire_start_index)->wire_plane_transform();
 
-    pos_3d hit_start_global = pos_3d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
-    pos_3d hit_start_local_rotated = wire_plane_transform.Inverse() * hit_start_global;
+    // Transform hit endpoints from global to local rotated coordinates
+    const pos_3d hit_start_global = pos_3d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
+    const pos_3d hit_start_local = wire_plane_transform.Inverse() * hit_start_global;
 
-    pos_3d hit_stop_global = pos_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
-    pos_3d hit_stop_local_rotated = wire_plane_transform.Inverse() * hit_stop_global;
-
+    const pos_3d hit_stop_global = pos_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
+    const pos_3d hit_stop_local = wire_plane_transform.Inverse() * hit_stop_global;
 
     UFW_DEBUG(" Hit start global: ({}, {}, {})", hit_start_global.X(), hit_start_global.Y(), hit_start_global.Z());
-    UFW_DEBUG(" Hit start local rotated: ({}, {}, {})", hit_start_local_rotated.X(), hit_start_local_rotated.Y(), hit_start_local_rotated.Z());
+    UFW_DEBUG(" Hit start local rotated: ({}, {}, {})", hit_start_local.X(), hit_start_local.Y(), hit_start_local.Z());
     UFW_DEBUG(" Hit stop global: ({}, {}, {})", hit_stop_global.X(), hit_stop_global.Y(), hit_stop_global.Z());
-    UFW_DEBUG(" Hit stop local rotated: ({}, {}, {})", hit_stop_local_rotated.X(), hit_stop_local_rotated.Y(), hit_stop_local_rotated.Z());
+    UFW_DEBUG(" Hit stop local rotated: ({}, {}, {})", hit_stop_local.X(), hit_stop_local.Y(), hit_stop_local.Z());
 
     UFW_DEBUG(" Total hit key properties: Start ({}, {}, {}, {}), Stop ({}, {}, {}, {}), EnergyDeposit: {}, SecondaryDeposit: {}, TrackLength: {}, Contrib: {}, PrimaryId: {}, Id: {}", 
               hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T(),
               hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T(),
               hit.GetEnergyDeposit(), hit.GetSecondaryDeposit(), hit.GetTrackLength(), hit.GetContrib(), hit.GetPrimaryId(), hit.GetId());
 
-    /// Set starting point
-    size_t first_in_list = closest_wire_start_index;
-    size_t last_in_list  = closest_wire_stop_index;
-    auto start = hit_start_global;
-    auto start_time = hseg_start_t;
-    auto delta_time = hseg_dt;
-    auto start_local_rotated = hit_start_local_rotated;
-    auto transverse_coord_start = hit_start_local_rotated.Y();
-    auto transverse_coord_stop = hit_stop_local_rotated.Y();
-    auto delta_x_local_rotated = hit_stop_local_rotated.X() - hit_start_local_rotated.X();
-    auto delta_y_local_rotated = hit_stop_local_rotated.Y() - hit_start_local_rotated.Y();
-    auto delta_z_local_rotated = hit_stop_local_rotated.Z() - hit_start_local_rotated.Z();
-    if(closest_wire_start_index >closest_wire_stop_index) {
+    // Setup iteration parameters: ensure we iterate from first to last wire
+    const bool need_to_reverse = (closest_wire_start_index > closest_wire_stop_index);
+    
+    size_t first_wire_index = need_to_reverse ? closest_wire_stop_index : closest_wire_start_index;
+    size_t last_wire_index  = need_to_reverse ? closest_wire_start_index : closest_wire_stop_index;
+    
+    // Starting point for iteration (may be swapped if reversing)
+    pos_3d segment_start_global = need_to_reverse ? hit_stop_global : hit_start_global;
+    pos_3d segment_start_local = need_to_reverse ? hit_stop_local : hit_start_local;
+    double segment_start_time = need_to_reverse ? (hit_start_time + total_time_span) : hit_start_time;
+    double time_direction = need_to_reverse ? -1.0 : 1.0;
+    
+    // Transverse coordinates (Y in local frame) for interpolation
+    const double transverse_start = segment_start_local.Y();
+    const double transverse_end = need_to_reverse ? hit_start_local.Y() : hit_stop_local.Y();
+    
+    // Local coordinate deltas for linear interpolation
+    const double dx_local = (need_to_reverse ? -1.0 : 1.0) * (hit_stop_local.X() - hit_start_local.X());
+    const double dy_local = (need_to_reverse ? -1.0 : 1.0) * (hit_stop_local.Y() - hit_start_local.Y());
+    const double dz_local = (need_to_reverse ? -1.0 : 1.0) * (hit_stop_local.Z() - hit_start_local.Z());
+    
+    if(need_to_reverse) {
       UFW_DEBUG(" Swapping closest wire start and stop to maintain order.");
-      first_in_list = closest_wire_stop_index;
-      last_in_list  = closest_wire_start_index;
-      start = hit_stop_global;
-      start_time = hseg_start_t + hseg_dt;
-      delta_time = -hseg_dt;
-      start_local_rotated = hit_stop_local_rotated;
-      transverse_coord_start = hit_stop_local_rotated.Y();
-      transverse_coord_stop = hit_start_local_rotated.Y();
-      delta_x_local_rotated = -delta_x_local_rotated;
-      delta_y_local_rotated = -delta_y_local_rotated;
-      delta_z_local_rotated = -delta_z_local_rotated;
     }
 
 
 
-    for(size_t wire_index = first_in_list; wire_index <= last_in_list; ++wire_index) {
-      const auto* wire1 = wires_in_view.at(wire_index);
-      const auto* wire2 = (wire_index + 1 <= wires_in_view.size() -1) ? wires_in_view.at(wire_index + 1) : nullptr; 
+    // Iterate through wires, splitting hit into segments
+    for(size_t wire_index = first_wire_index; wire_index <= last_wire_index; ++wire_index) {
+      const auto* current_wire = wires_in_view.at(wire_index);
+      const bool is_last_wire = (wire_index + 1 >= wires_in_view.size());
+      const auto* next_wire = is_last_wire ? nullptr : wires_in_view.at(wire_index + 1);
 
-      if(wire2 == nullptr) {
+      if(next_wire == nullptr) {
         UFW_DEBUG(" Reached last wire in view during hit splitting.");
         break;
       }
 
-      double step_coordinate = 0.0;
-      // Calculate the plane coordinate between wire1 and wire2
+      // Determine the transverse coordinate where this segment ends
+      const double segment_end_transverse = calculate_wire_boundary_transverse(
+          current_wire, next_wire, wire_plane_transform,
+          segment_start_local.Y(), transverse_end, wire_index);
 
-      if (wire_index + 1 != wires_in_view.size()) {
+      // Calculate segment endpoint in global coordinates
+      const pos_3d segment_end_global = interpolate_segment_endpoint(
+          segment_start_local, dx_local, dy_local, dz_local,
+          segment_end_transverse, wire_plane_transform);
 
-        pos_3d global_wire1_center = (wire1->head + dir_3d(wire1->tail)) * 0.5;
-        pos_3d local_wire1_center_rotated = wire_plane_transform.Inverse() * global_wire1_center;
-        auto transverse_coord1 = local_wire1_center_rotated.Y();
+      // Calculate what fraction of the total hit this segment represents
+      const double segment_length = sqrt((segment_end_global - segment_start_global).Mag2());
+      const double segment_fraction = segment_length / total_hit_length;
 
-        pos_3d global_wire2_center = (wire2->head + dir_3d(wire2->tail)) * 0.5;
-        pos_3d local_wire2_center_rotated = wire_plane_transform.Inverse() * global_wire2_center;
-        auto transverse_coord2 = local_wire2_center_rotated.Y();
+      UFW_DEBUG(" Segment start: ({}, {}, {})", segment_start_global.X(), segment_start_global.Y(), segment_start_global.Z());
+      UFW_DEBUG(" Segment stop: ({}, {}, {})", segment_end_global.X(), segment_end_global.Y(), segment_end_global.Z());
+      UFW_DEBUG(" Segment length: {}", segment_length);
+      UFW_DEBUG(" Segment fraction: {}", segment_fraction);
 
-        auto inner_plane_center_transverse_coord = 0.5 * (transverse_coord1 + transverse_coord2);
+      // Find midpoint to determine which wire owns this segment
+      const pos_3d segment_midpoint = (segment_end_global + dir_3d(segment_start_global)) * 0.5;
+      const vec_4d segment_midpoint_4d(segment_midpoint.X(), segment_midpoint.Y(), 
+                                       segment_midpoint.Z(), segment_start_time);
 
-        UFW_DEBUG(" Wire1 index: {}, transverse coord: {}", wire_index, transverse_coord1);
-        UFW_DEBUG(" Wire2 index: {}, transverse coord: {}", wire_index+1, transverse_coord2);
-        UFW_DEBUG(" Inner plane center transverse coord: {}", inner_plane_center_transverse_coord);
-        if (fabs(inner_plane_center_transverse_coord - transverse_coord_start) < 
-            fabs(transverse_coord_stop - transverse_coord_start)) {
-          step_coordinate = inner_plane_center_transverse_coord;
-        } else {
-          step_coordinate = transverse_coord_stop;
-        }
+      UFW_DEBUG(" Hit segment associated to wire index: {}", wire_index);
 
-      } else {
-        step_coordinate = transverse_coord_stop;
-      }
+      // Build split hit for this segment
+      EDEPHit segment_hit = create_segment_hit(
+          segment_start_global, segment_end_global,
+          segment_start_time, time_direction, total_time_span,
+          segment_fraction, hit);
 
-      double t = fabs((step_coordinate - transverse_coord_start) / delta_y_local_rotated);
+      split_hit[current_wire] = segment_hit;
 
-      pos_3d rotated_crossing_point(start_local_rotated.X() + delta_x_local_rotated * t, 
-                                    start_local_rotated.Y() + delta_y_local_rotated * t,
-                                    start_local_rotated.Z() + delta_z_local_rotated * t);
-
-      pos_3d global_crossing_point = wire_plane_transform * rotated_crossing_point;
-      auto stop = global_crossing_point;
-
-
-      double segment_portion = sqrt((stop - start).Mag2()) / hseg_length;
-
-      pos_3d mid_hit_seg_portion = (stop + dir_3d(start)) / 2.0;
-      vec_4d mid_hit_seg_portion_4d(mid_hit_seg_portion.X(),mid_hit_seg_portion.Y(),mid_hit_seg_portion.Z(),start_time);
-      
-      const auto [closest_wire_to_position,closest_to_position_ind] = drift->closest_wire_in_list(wires_in_view,mid_hit_seg_portion_4d,m_drift_velocity);
-
-
-      UFW_DEBUG(" Crossing point local rotated: ({}, {}, {})", rotated_crossing_point.X(), rotated_crossing_point.Y(), rotated_crossing_point.Z());
-      UFW_DEBUG(" Crossing point global: ({}, {}, {})", global_crossing_point.X(), global_crossing_point.Y(), global_crossing_point.Z());
-      UFW_DEBUG(" Segment start: ({}, {}, {})", start.X(), start.Y(), start.Z());
-      UFW_DEBUG(" Segment stop: ({}, {}, {})", stop.X(), stop.Y(), stop.Z());
-      UFW_DEBUG(" Segment length: {}", sqrt((stop - start).Mag2()));
-      UFW_DEBUG(" Segment portion: {}", segment_portion);
-      UFW_DEBUG(" Hit Portion associated to wire index: {}", wire_index);
-
-      /// Build new hit portion
-      TLorentzVector hit_start_lv(start.X(), start.Y(), start.Z(), start_time);
-      TLorentzVector hit_stop_lv(stop.X(), stop.Y(), stop.Z(), start_time + delta_time * segment_portion);
-      auto energy_deposit_portion = hit.GetEnergyDeposit() * segment_portion;
-      auto secondary_deposit_portion = hit.GetSecondaryDeposit() * segment_portion;
-      auto track_length_portion = hit.GetTrackLength() * segment_portion;
-      auto contrib_portion = hit.GetContrib(); // TO-DO: How to split contributor?
-      auto primary_id = hit.GetPrimaryId();
-      auto ID = hit.GetId();
-      
-      EDEPHit hit_split(hit_start_lv, hit_stop_lv, 
-                        energy_deposit_portion, secondary_deposit_portion, 
-                        track_length_portion, contrib_portion, primary_id, ID); 
-
-      split_hit[closest_wire_to_position] = hit_split;
-
-      start = stop;
+      // Move to next segment
+      segment_start_global = segment_end_global;
+      segment_start_local = wire_plane_transform.Inverse() * segment_end_global;
+      segment_start_time += time_direction * total_time_span * segment_fraction;
     }
     UFW_DEBUG(" Finished splitting hit into {} parts.", split_hit.size());
     return split_hit; 
