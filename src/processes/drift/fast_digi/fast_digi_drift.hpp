@@ -23,7 +23,7 @@ namespace sand::drift {
       std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>> group_hits_by_wire();
 
       std::map<const geoinfo::tracker_info::wire *, EDEPHit> split_hit(size_t, size_t, 
-                                                                      geoinfo::tracker_info::wire_list,
+                                                                      const geoinfo::tracker_info::wire_list&,
                                                                       const EDEPHit&);
 
       double calculate_wire_boundary_transverse(const geoinfo::tracker_info::wire*, 
@@ -33,7 +33,7 @@ namespace sand::drift {
                                                 double transverse_end,
                                                 size_t wire_index) const;
 
-      pos_3d interpolate_segment_endpoint(const pos_3d& start_local,
+      std::pair<pos_3d, pos_3d> interpolate_segment_endpoint(const pos_3d& start_local,
                                           double dx_local, double dy_local, double dz_local,
                                           double segment_end_transverse,
                                           const xform_3d& transform) const;
@@ -45,6 +45,13 @@ namespace sand::drift {
                                  double total_time_span,
                                  double segment_fraction,
                                  const EDEPHit& original_hit) const;
+
+      void log_segment_debug(const pos_3d& segment_start_global,
+                            const pos_3d& segment_end_global,
+                            const pos_3d& segment_end_local,
+                            double segment_length,
+                            double segment_fraction,
+                            size_t wire_index) const;
 
       void digitize_hits_in_wires(const std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>>&);
 
