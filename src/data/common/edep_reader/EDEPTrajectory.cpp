@@ -1,4 +1,9 @@
 #include "EDEPTrajectory.h"
+
+#include <ufw/context.hpp>
+
+#include <root_tgeomanager/root_tgeomanager.hpp>
+
 #include <math.h>
 
 /**
@@ -7,31 +12,34 @@
  * @param geo The TGeoManager object representing the geometry.
  * @return Pointer to the geometric node.
  */
-// TGeoNode* GetNode(const TG4TrajectoryPoint& tpoint) {
-//   TGeoNode* node = nullptr;
+TGeoNode* GetNode(const TG4TrajectoryPoint& tpoint) {
 
-//   TLorentzVector position = tpoint.GetPosition();
-//   TVector3       mom = tpoint.GetMomentum();
+  auto& tgm        = ufw::context::current()->instance<sand::root_tgeomanager>();
+  
+  TGeoNode* node = nullptr;
 
-//   node = geo->FindNode(position.X(), position.Y(), position.Z());
+  TLorentzVector position = tpoint.GetPosition();
+  TVector3       mom = tpoint.GetMomentum();
 
-//   geo->SetCurrentDirection(mom.X(), mom.Y(), mom.Z());
+  node = tgm.navigator()->FindNode(position.X(), position.Y(), position.Z());
 
-//   // Notice: this is a fix for cases of P = 0.
-//   //         Particle not moving means FindNextBoundary will not converge
-//   //         Is this edepsim?
-//   if (abs(mom.X()) == 0 && abs(mom.Y()) == 0 && abs(mom.Z()) == 0) {
-//     return node;
-//   }
-//   geo->FindNextBoundary(1000);
+  tgm.navigator()->SetCurrentDirection(mom.X(), mom.Y(), mom.Z());
 
-//   if (geo->GetStep() < 1E-5) {
-//     geo->Step();
-//     node = geo->GetCurrentNode();
-//   }
+  // Notice: this is a fix for cases of P = 0.
+  //         Particle not moving means FindNextBoundary will not converge
+  //         Is this edepsim?
+  if (abs(mom.X()) == 0 && abs(mom.Y()) == 0 && abs(mom.Z()) == 0) {
+    return node;
+  }
+  tgm.navigator()->FindNextBoundary(1000);
 
-//   return node;
-// }
+  if (tgm.navigator()->GetStep() < 1E-5) {
+    tgm.navigator()->Step();
+    node = tgm.navigator()->GetCurrentNode();
+  }
+
+  return node;
+}
 
 // Notice: this works (I think) but I don't like it.
 /**
@@ -121,89 +129,89 @@ EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
     entering_map_[comp.second] = false;
   }
 
-  // for (auto it = trajectory.Points.begin(); it != trajectory.Points.end(); ++it) {
-  //   auto next_it = std::next(it);
+  for (auto it = trajectory.Points.begin(); it != trajectory.Points.end(); ++it) {
+    auto next_it = std::next(it);
 
-  // auto current_node   = GetNode(*it, geo);
-  // std::string current_volume;
-  // if(current_node != nullptr ){
-  //       current_volume = current_node->GetName();
-  // } else {
-  //   current_volume = "";
-  // }
+    auto current_node   = GetNode(*it);
+    std::string current_volume;
+    if(current_node != nullptr ){
+          current_volume = current_node->GetName();
+    } else {
+      current_volume = "";
+    }
 
-  // component comp;
-  // bool in_grain   = Match(current_volume, grain_names);
-  // if(in_grain) comp = component::GRAIN;
+    component comp;
+    bool in_grain   = Match(current_volume, grain_names);
+    if(in_grain) comp = component::GRAIN;
 
-  // bool in_ecal    = Match(current_volume, ecal_names);
-  // if(in_ecal) comp = component::ECAL;
+    bool in_ecal    = Match(current_volume, ecal_names);
+    if(in_ecal) comp = component::ECAL;
 
-  // bool in_mag     = Match(current_volume, magnet_names);
-  // if(in_mag) comp = component::MAGNET;
+    bool in_mag     = Match(current_volume, magnet_names);
+    if(in_mag) comp = component::MAGNET;
 
-  // bool in_world   = Match(current_volume, world_names);
-  // if(in_world) comp = component::WORLD;
+    bool in_world   = Match(current_volume, world_names);
+    if(in_world) comp = component::WORLD;
 
-  // bool in_stt     = Match(current_volume, stt_names);
-  // bool in_drift   = Match(current_volume, drift_names);
+    bool in_stt     = Match(current_volume, stt_names);
+    bool in_drift   = Match(current_volume, drift_names);
 
-  // if(in_stt )   comp = component::STRAW;
-  // if(in_drift)  comp = component::DRIFT;
+    if(in_stt )   comp = component::STRAW;
+    if(in_drift)  comp = component::DRIFT;
 
-  // Notice: Ths is useful to debug unincluded volume names
-  // if (!(in_grain || in_stt || in_drift || in_ecal || in_mag || in_world)) {
-  // continue;
-  // std::cout << current_volume << "  " << component_to_string[comp] << std::endl;
-  // }
+    // Notice: This is useful to debug unincluded volume names
+    // if (!(in_grain || in_stt || in_drift || in_ecal || in_mag || in_world)) {
+    // continue;
+    // std::cout << current_volume << "  " << component_to_string[comp] << std::endl;
+    // }
 
-  // Notice: this should simply be 'trajectory_points_[comp].push_back(*it);'
-  //         but stt and drift share some names and only the last one will be added
-  //         must be fixed in the geometry
+    // Notice: this should simply be 'trajectory_points_[comp].push_back(*it);'
+    //         but stt and drift share some names and only the last one will be added
+    //         must be fixed in the geometry
 
-  // if (in_grain || in_ecal || in_mag || in_world) {
-  //   trajectory_points_[comp].push_back(*it);
-  // }
+    if (in_grain || in_ecal || in_mag || in_world) {
+      trajectory_points_[comp].push_back(*it);
+    }
 
-  // if (in_stt && in_drift) {
-  //   trajectory_points_[component::STRAW].push_back(*it);
-  //   trajectory_points_[component::DRIFT].push_back(*it);
-  // }
-  // if (!in_stt && in_drift) {
-  //   trajectory_points_[component::DRIFT].push_back(*it);
-  // }
-  // if (in_stt && !in_drift) {
-  //   trajectory_points_[component::STRAW].push_back(*it);
-  // }
+    if (in_stt && in_drift) {
+      trajectory_points_[component::STRAW].push_back(*it);
+      trajectory_points_[component::DRIFT].push_back(*it);
+    }
+    if (!in_stt && in_drift) {
+      trajectory_points_[component::DRIFT].push_back(*it);
+    }
+    if (in_stt && !in_drift) {
+      trajectory_points_[component::STRAW].push_back(*it);
+    }
 
-  // if(it == trajectory.Points.begin()){
-  //   first_points_[comp].push_back(*it);
-  // }
-  // if(next_it == trajectory.Points.end()){
-  //   last_points_[comp].push_back(*it);
-  //   continue;
-  // }
+    if(it == trajectory.Points.begin()){
+      first_points_[comp].push_back(*it);
+    }
+    if(next_it == trajectory.Points.end()){
+      last_points_[comp].push_back(*it);
+      continue;
+    }
 
-  // auto next_node   = GetNode(*next_it, geo);
-  // std::string next_volume;
-  // if(next_node != nullptr){
-  //     next_volume = next_node->GetName();
-  // } else {
-  //   next_volume = "";
-  // }
+    auto next_node   = GetNode(*next_it);
+    std::string next_volume;
+    if(next_node != nullptr){
+        next_volume = next_node->GetName();
+    } else {
+      next_volume = "";
+    }
 
-  // bool next_grain = Match(next_volume,    grain_names);
-  // bool next_stt   = Match(next_volume,    stt_names);
-  // bool next_drift = Match(next_volume,    drift_names);
-  // bool next_ecal  = Match(next_volume,    ecal_names);
-  // bool next_mag   = Match(next_volume,    magnet_names);
-  // bool next_world = Match(next_volume,    world_names);
+    bool next_grain = Match(next_volume,    grain_names);
+    bool next_stt   = Match(next_volume,    stt_names);
+    bool next_drift = Match(next_volume,    drift_names);
+    bool next_ecal  = Match(next_volume,    ecal_names);
+    bool next_mag   = Match(next_volume,    magnet_names);
+    bool next_world = Match(next_volume,    world_names);
 
-  // bool      in[6]   = {in_grain,   in_stt,   in_drift,   in_ecal,   in_mag,   in_world};
-  // bool      next[6] = {next_grain, next_stt, next_drift, next_ecal, next_mag, next_world};
-  // CheckInNext(in, next, *it, *next_it);
+    bool      in[6]   = {in_grain,   in_stt,   in_drift,   in_ecal,   in_mag,   in_world};
+    bool      next[6] = {next_grain, next_stt, next_drift, next_ecal, next_mag, next_world};
+    CheckInNext(in, next, *it, *next_it);
 
-  // }
+  }
 
   if (hit_map.find(id_) != hit_map.end()) {
     hit_map_ = hit_map.at(id_);
