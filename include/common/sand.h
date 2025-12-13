@@ -167,23 +167,6 @@ namespace sand {
    */
   enum subdetector_t : uint8_t { DRIFT = 0, ECAL = 1, GRAIN = 2, STT = 3, TRACKER = STT, MUON = 4, NONE = 255 };
 
-  inline const char* format_as(subdetector_t s) {
-    switch (s) {
-    case DRIFT:
-      return "DRIFT";
-    case ECAL:
-      return "ECAL";
-    case GRAIN:
-      return "GRAIN";
-    case STT:
-      return "STT";
-    case MUON:
-      return "MUON";
-    case NONE:
-      return "NONE";
-    }
-  }
-
   /**
    * Unique identifier for elements of the detector geometry as known by Geant.
    * There is a 1-1 correspondence between the geo_path of a sensitive detector and a geo_id.
@@ -279,6 +262,26 @@ namespace sand {
 } // namespace sand
 
 #ifndef __CLING__
+
+template <>
+struct fmt::formatter<sand::subdetector_t> : formatter<string_view> {
+  auto format(sand::subdetector_t s, format_context& ctx) const -> format_context::iterator {
+    switch (s) {
+    case sand::DRIFT:
+      return fmt::format_to(ctx.out(), "DRIFT");
+    case sand::ECAL:
+      return fmt::format_to(ctx.out(), "ECAL");
+    case sand::GRAIN:
+      return fmt::format_to(ctx.out(), "GRAIN");
+    case sand::STT:
+      return fmt::format_to(ctx.out(), "STT");
+    case sand::MUON:
+      return fmt::format_to(ctx.out(), "MUON");
+    default:
+      return fmt::format_to(ctx.out(), "NONE");
+    }
+  }
+};
 
 template <>
 struct fmt::formatter<sand::geo_id> : formatter<string_view> {
