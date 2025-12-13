@@ -99,8 +99,7 @@ namespace sand::common {
     if (!m_test_path.empty()) {
       UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
       auto ID = gi.tracker().id(gi.tracker().partial_path(m_test_path, gi));
-      UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector,
-               ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
+      UFW_INFO("ID function test (SubdetectorID: {}", ID.subdetector);
       UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
     } else {
       UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
