@@ -10,39 +10,6 @@
 #include <geoinfo/tracker_info.hpp>
 #include <common/sand.h>
 
-template <>
-struct fmt::formatter<sand::pos_3d> : formatter<string_view> {
-  auto format(sand::pos_3d c, format_context& ctx) const -> format_context::iterator {
-    return fmt::format_to(ctx.out(), "({:.2f}, {:.2f}, {:.2f})", c.x(), c.y(), c.z());
-  }
-};
-
-template <>
-struct fmt::formatter<sand::dir_3d> : formatter<string_view> {
-  auto format(sand::dir_3d c, format_context& ctx) const -> format_context::iterator {
-    return fmt::format_to(ctx.out(), "({:.2f}, {:.2f}, {:.2f})", c.x(), c.y(), c.z());
-  }
-};
-
-template <>
-struct fmt::formatter<sand::grain::size_3d> : formatter<string_view> {
-  auto format(sand::grain::size_3d c, format_context& ctx) const -> format_context::iterator {
-    return fmt::format_to(ctx.out(), "({}, {}, {})", c.x(), c.y(), c.z());
-  }
-};
-
-template <>
-struct fmt::formatter<sand::xform_3d> : formatter<string_view> {
-  auto format(sand::xform_3d xfrm, format_context& ctx) const -> format_context::iterator {
-    double d[12];
-    xfrm.GetComponents(d);
-    return fmt::format_to(
-        ctx.out(),
-        "[{:.2f}, {:.2f}, {:.2f}], [[{:.2f}, {:.2f}, {:.2f}], [{:.2f}, {:.2f}, {:.2f}], [{:.2f}, {:.2f}, {:.2f}]]",
-        d[3], d[7], d[11], d[0], d[1], d[2], d[4], d[5], d[6], d[8], d[9], d[10]);
-  }
-};
-
 namespace sand::common {
 
   class geoinfo_test : public ufw::process {
