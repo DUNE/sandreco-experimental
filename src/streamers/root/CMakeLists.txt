@@ -54,6 +54,8 @@ file(APPEND tree_streamer_linkdef.h "#pragma link C++ class ufw::data::context_t
 file(APPEND tree_streamer_linkdef.h "#pragma link C++ class ufw::data::base<ufw::data::managed_tag,ufw::data::instanced_tag,ufw::data::context_tag>+;\n")
 file(APPEND tree_streamer_linkdef.h "#pragma link C++ class sand::true_hit+;\n")
 file(APPEND tree_streamer_linkdef.h "#pragma link C++ class sand::true_hits+;\n")
+file(APPEND tree_streamer_linkdef.h "#pragma link C++ class sand::geo_id+;\n")
+file(APPEND tree_streamer_linkdef.h "#pragma link C++ class sand::channel_id+;\n")
 file(APPEND tree_streamer_linkdef.h ${USER_TYPES_LINKDEF})
 file(APPEND tree_streamer_linkdef.h "#endif\n")
 

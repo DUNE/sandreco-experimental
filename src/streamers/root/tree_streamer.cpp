@@ -83,9 +83,9 @@ namespace sand::root {
       // attach data branch
       brdata = m_tree->GetBranch(brname.c_str());
       UFW_ASSERT(brdata != nullptr, "TBranch '{}' not found.", brname);
-      brdata->SetAddress(&info.address);
+      brdata->SetAddress(static_cast<void*>(&info.address));
     } else if (operation() == ufw::op_type::wo) {
-      brdata = m_tree->Branch(brname.c_str(), info.type.c_str(), &info.address);
+      brdata = m_tree->Branch(brname.c_str(), info.type.c_str(), static_cast<void*>(&info.address));
     }
     // unclear if this is default...
     brdata->SetAutoDelete(false);
