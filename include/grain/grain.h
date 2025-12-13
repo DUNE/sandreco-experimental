@@ -124,3 +124,17 @@ namespace sand::grain {
   };
 
 } // namespace sand::grain
+
+template <>
+struct fmt::formatter<sand::grain::index_3d> : formatter<string_view> {
+  auto format(sand::grain::index_3d c, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "({}, {}, {})", c.x(), c.y(), c.z());
+  }
+};
+
+template <>
+struct fmt::formatter<sand::grain::size_3d> : formatter<string_view> {
+  auto format(sand::grain::size_3d c, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "({}, {}, {})", c.x(), c.y(), c.z());
+  }
+};
