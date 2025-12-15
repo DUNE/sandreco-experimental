@@ -67,7 +67,7 @@ namespace sand::grain {
         size_t bin_index = static_cast<size_t>(std::floor((time - min_time) / bin_width));
         binned_times[bin_index] += signal.npe;
       } else {
-        UFW_WARN("Digi in channel {} is out of time window for slicing (t = {} ns)", signal.channel.raw, time);
+        UFW_WARN("Digi in channel {} is out of time window for slicing (t = {} ns)", signal.channel().raw, time);
       }
     }
 
@@ -104,7 +104,7 @@ namespace sand::grain {
       UFW_INFO("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx + 1]);
       size_t offset = images_out.size();
       for (auto& signal : digis_in.signals) {
-        auto id = signal.channel.link;
+        auto id = signal.channel().link;
         auto it = std::find_if(images_out.begin() + offset, images_out.end(),
                                [id](auto& img) { return img.camera_id == id; });
         if (it == images_out.end()) {
@@ -118,7 +118,7 @@ namespace sand::grain {
         if (signal.time_rising_edge >= m_slice_times[img_idx] && signal.time_rising_edge < m_slice_times[img_idx + 1]) {
           // UFW_DEBUG("signal to be assigned to image {}", img_idx);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
-          auto& pixel = it->pixels.Array()[signal.channel.channel];
+          auto& pixel = it->pixels.Array()[signal.channel().channel];
           pixel.insert(signal.true_hits());
           pixel.amplitude += signal.npe;
           if (std::isnan(pixel.time_first) || (pixel.time_first > signal.time_rising_edge)) {

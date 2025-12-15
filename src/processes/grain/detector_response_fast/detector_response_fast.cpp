@@ -45,7 +45,6 @@ namespace sand::grain {
       UFW_ERROR("GRAIN gdml-geometry type not found.");
     }
     for (const auto& photon : hits_in.photons) {
-      sand::truth mctruth;
       double interaction_probability = m_uniform(random_engine());
       m_stat_photons_processed++;
       if (interaction_probability < m_pde) {
@@ -57,19 +56,21 @@ namespace sand::grain {
                 && photon.pos.X() < pix_spam->sipm_active_areas[i][j].right
                 && photon.pos.Y() > pix_spam->sipm_active_areas[i][j].bottom
                 && photon.pos.Y() < pix_spam->sipm_active_areas[i][j].top) {
-              mctruth.insert(photon.true_hit);
               channel_id ch;
               ch.subdetector = GRAIN;
               ch.link        = photon.camera_id;
               // consistent indexing: Row Major
               ch.channel = i * camera_width + j;
-              digi::signal pe{mctruth, ch, photon.pos.T(), NAN, 1.0};
+              digi::signal pe{reco::digi{sand::truth(photon.true_hit), ch, reco::digi::time{photon.pos.T()}}, photon.pos.T(), NAN, 1.0};
               digi_out.signals.emplace_back(pe);
               m_stat_photons_accepted++;
               // UFW_DEBUG("Added photon to SiPM {},{}", i, j);
               channel_found = true;
               break;
             }
+          }
+          if (channel_found) {
+            break;
           }
         }
         if (channel_found == false) {

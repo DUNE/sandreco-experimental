@@ -36,6 +36,7 @@ namespace sand {
     
   public:
     truth() = default;
+    truth(truth_index onehit) : m_hits{onehit} {}
     const std::set<truth_index> true_hits() const { return m_hits; }
     inline void insert(truth_index i) { m_hits.emplace(i); }
     inline void insert(const std::set<truth_index>& set) { m_hits.insert(set.begin(), set.end()); }
