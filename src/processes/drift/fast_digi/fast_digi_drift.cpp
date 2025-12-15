@@ -84,8 +84,8 @@ namespace sand::drift {
           wires_in_view = drift_station->v_view();
         } 
 
-        const auto [closest_wire_start, closest_wire_start_index] = drift->closest_wire_in_list(wires_in_view, hit.GetStart(), m_drift_velocity);
-        const auto [closest_wire_stop, closest_wire_stop_index] = drift->closest_wire_in_list(wires_in_view, hit.GetStop(), m_drift_velocity);
+        const auto [closest_wire_start, closest_wire_start_index] = drift->closest_wire_in_list(wires_in_view, pos_3d(hit.GetStart().Vect()));
+        const auto [closest_wire_stop, closest_wire_stop_index] = drift->closest_wire_in_list(wires_in_view, pos_3d(hit.GetStop().Vect()));
         
         if(closest_wire_start_index == SIZE_MAX || closest_wire_stop_index == SIZE_MAX) {
           UFW_DEBUG(" Could not find closest wire index for one end of the hit, skipping.");
@@ -373,11 +373,9 @@ namespace sand::drift {
       auto closest_points = drift->closest_points(
           vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()),
           vec_4d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T()), m_drift_velocity, wire);
-      if (closest_points.empty())
-        continue;
 
-      const vec_4d& closest_point_hit  = closest_points[0];
-      const vec_4d& closest_point_wire = closest_points[1];
+      const vec_4d& closest_point_hit  = closest_points.first;
+      const vec_4d& closest_point_wire = closest_points.second;
 
       // Update timing parameters directly here
       double hit_smallest_time = drift->get_min_time(closest_point_hit, m_wire_velocity, wire);
@@ -402,4 +400,4 @@ namespace sand::drift {
 
     return create_signal(wire_time, edep_total, wire.channel);
   }
-} // namespace sand::stt
+} // namespace sand::drift
