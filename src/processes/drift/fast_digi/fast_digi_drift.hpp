@@ -68,7 +68,7 @@ namespace sand::drift {
       double m_sigma_tdc;      //[ns]
   };
 
-} // namespace sand::stt
+} // namespace sand::drift
 
 UFW_REGISTER_PROCESS(sand::drift::fast_digi)
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::drift::fast_digi)
