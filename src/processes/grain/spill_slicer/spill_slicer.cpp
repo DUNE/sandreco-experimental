@@ -119,7 +119,7 @@ namespace sand::grain {
           // UFW_DEBUG("signal to be assigned to image {}", img_idx);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
           auto& pixel = it->pixels.Array()[signal.channel.channel];
-          pixel.add(signal.hits);
+          pixel.insert(signal.true_hits());
           pixel.amplitude += signal.npe;
           if (std::isnan(pixel.time_first) || (pixel.time_first > signal.time_rising_edge)) {
             pixel.time_first = signal.time_rising_edge;

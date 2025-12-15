@@ -20,28 +20,29 @@ namespace sand {
 
 } // namespace sand
 
+#else  //__CLING__
+
+namespace sand {
+
+  using truth_index = std::size_t;
+  
+} // namespace sand
+
 #endif //__CLING__
 
 namespace sand {
 
-  struct true_hit {
-#ifdef __CLING__
-    size_t hit;
-#else  //__CLING__
-    truth_index hit;
-#endif //__CLING__
-  };
+  class truth {
+    
+  public:
+    truth() = default;
+    const std::set<truth_index> true_hits() const { return m_hits; }
+    inline void insert(truth_index i) { m_hits.emplace(i); }
+    inline void insert(const std::set<truth_index>& set) { m_hits.insert(set.begin(), set.end()); }
 
-  struct true_hits {
-#ifdef __CLING__
-    std::set<size_t> hits;
-    inline void add(size_t i) { hits.emplace(i); }
-    inline void add(const std::set<size_t>& set) { hits.insert(set.begin(), set.end()); }
-#else  //__CLING__
-    std::set<truth_index> hits;
-    inline void add(truth_index i) { hits.emplace(i); }
-    inline void add(const std::set<truth_index>& set) { hits.insert(set.begin(), set.end()); }
-#endif //__CLING__
+  private:
+    std::set<truth_index> m_hits;
+
   };
 
 } // namespace sand

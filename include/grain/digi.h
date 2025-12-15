@@ -10,7 +10,7 @@
 namespace sand::grain {
 
   struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct signal : public sand::true_hits {
+    struct signal : public sand::truth {
       /// The readout channel associated with the signal.
       channel_id channel;
       /// Calibrated time [ns] of rising edge since start of context.

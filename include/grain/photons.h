@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <vector>
 
 #include <ufw/data.hpp>
@@ -10,7 +9,8 @@
 namespace sand::grain {
 
   struct hits : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct photon : public true_hit {
+    struct photon {
+      truth_index true_hit;
       vec_4d pos;
       pos_3d origin;
       mom_4d p;

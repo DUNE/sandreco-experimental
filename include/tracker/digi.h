@@ -20,11 +20,11 @@ namespace sand::tracker {
    * @brief Represents a digitized collection of signals in the tracker subsystem.
    *
    * Inherits from:
-   * - sand::true_hits: Base class representing true simulation hits.
+   * - sand::truth: Base class representing true simulation hits.
    * - ufw::data::base: Provides data handling with managed, instanced, and context tags.
    */
   struct digi
-    : public sand::true_hits
+    : public sand::truth
     , ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
     /**
      * @brief A signal recorded by a tracker channel.
