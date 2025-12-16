@@ -232,11 +232,6 @@ namespace sand::drift {
     const pos_3d hit_stop_global = pos_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
     const pos_3d hit_stop_local = wire_plane_transform.Inverse() * hit_stop_global;
 
-    UFW_DEBUG(" Hit start global: ({}, {}, {})", hit_start_global.X(), hit_start_global.Y(), hit_start_global.Z());
-    UFW_DEBUG(" Hit start local rotated: ({}, {}, {})", hit_start_local.X(), hit_start_local.Y(), hit_start_local.Z());
-    UFW_DEBUG(" Hit stop global: ({}, {}, {})", hit_stop_global.X(), hit_stop_global.Y(), hit_stop_global.Z());
-    UFW_DEBUG(" Hit stop local rotated: ({}, {}, {})", hit_stop_local.X(), hit_stop_local.Y(), hit_stop_local.Z());
-
     UFW_DEBUG(" Total hit key properties: Start ({}, {}, {}, {}), Stop ({}, {}, {}, {}), EnergyDeposit: {}, SecondaryDeposit: {}, TrackLength: {}, Contrib: {}, PrimaryId: {}, Id: {}", 
               hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T(),
               hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T(),
