@@ -60,6 +60,11 @@ namespace sand::drift {
       std::optional<tracker::digi::signal> process_hits_for_wire(const std::vector<EDEPHit>& ,
                                                   const sand::geoinfo::drift_info::wire&);
 
+      std::pair<vec_4d,vec_4d> closest_points_hit_wire(const vec_4d& hit_start, const vec_4d& hit_stop,
+                                              double v_drift, const geoinfo::tracker_info::wire& w) const;
+
+      double get_min_time(const vec_4d& point, double v_signal_inwire, const geoinfo::tracker_info::wire& w) const;
+
       
 
     private:

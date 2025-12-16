@@ -319,7 +319,7 @@ namespace sand::drift {
     return split_hit; 
   }
 
-  // TO-DO: For now identhical to stt implementation, need to modify for drift specifics
+  // TO-DO: For now identical to stt implementation, need to modify for drift specifics
   void fast_digi::digitize_hits_in_wires(const std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>>& hits_by_wire) {
     const auto& gi  = get<geoinfo>();
     auto& digi      = set<sand::tracker::digi>("digi");
@@ -370,7 +370,7 @@ namespace sand::drift {
 
     for (const auto& hit : hits) {
 
-      auto closest_points = drift->closest_points(
+      auto closest_points = closest_points_hit_wire(
           vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()),
           vec_4d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T()), m_drift_velocity, wire);
 
@@ -378,7 +378,7 @@ namespace sand::drift {
       const vec_4d& closest_point_wire = closest_points.second;
 
       // Update timing parameters directly here
-      double hit_smallest_time = drift->get_min_time(closest_point_hit, m_wire_velocity, wire);
+      double hit_smallest_time = get_min_time(closest_point_hit, m_wire_velocity, wire);
 
       if (hit_smallest_time < wire_time) {
         wire_time   = hit_smallest_time;
@@ -399,5 +399,51 @@ namespace sand::drift {
     }
 
     return create_signal(wire_time, edep_total, wire.channel);
+  }
+
+  // TO-DO: For now identical to stt implementation, need to modify for drift specifics
+  std::pair<vec_4d,vec_4d> fast_digi::closest_points_hit_wire(const vec_4d& hit_start, const vec_4d& hit_stop,  //TO-DO move to fast_digi
+                                                            double v_drift, const geoinfo::tracker_info::wire& w) const {
+    std::pair<vec_4d,vec_4d> closest_points;
+
+    pos_3d start(hit_start.X(), hit_start.Y(), hit_start.Z());
+    pos_3d stop(hit_stop.X(), hit_stop.Y(), hit_stop.Z());
+
+    auto seg_params = w.closest_approach_segment(start, stop);
+
+    std::vector<vec_4d> result;
+
+    double& t       = seg_params.first; // Parameter along s
+    double& t_prime = seg_params.second; // Parameter along r
+
+    // Calculate the closest point on the line segment
+    pos_3d closest_point_hit = start + (stop - start) * t;
+
+    if (t == 0 || t == 1) {
+      dir_3d AP = closest_point_hit - w.head;
+      t_prime   = AP.Dot(w.direction()) / w.direction().Mag2();
+      t_prime   = std::max(0.0, std::min(1.0, t_prime));
+    }
+
+    // Calculate the corresponding point on the wire
+    pos_3d closest_point_wire = w.head + w.direction() * t_prime;
+
+    double fraction = sqrt((closest_point_hit - start).Mag2() / (stop - start).Mag2());
+    vec_4d closest_point_hit_l(closest_point_hit.X(), closest_point_hit.Y(), closest_point_hit.Z(),
+                                hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
+
+    closest_points.first = closest_point_hit_l;
+
+    vec_4d closest_point_wire_l(closest_point_wire.X(), closest_point_wire.Y(), closest_point_wire.Z(),
+                                closest_point_hit_l.T()
+                                    + sqrt((closest_point_hit - closest_point_wire).Mag2()) / v_drift);
+
+    closest_points.second = closest_point_wire_l;
+
+    return closest_points;
+  }
+
+  double fast_digi::get_min_time(const vec_4d& point, double v_signal_inwire, const geoinfo::tracker_info::wire& w) const {
+    return point.T() + sqrt((pos_3d(point.Vect()) - w.head).Mag2()) / v_signal_inwire;
   }
 } // namespace sand::drift

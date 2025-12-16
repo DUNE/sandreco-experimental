@@ -104,9 +104,9 @@ namespace sand {
 
     const station* get_station_by_ID(std::size_t i) const { return m_stations.at(i).get(); }
 
-    std::pair<vec_4d,vec_4d> closest_points(const vec_4d&, const vec_4d&, double, const wire&) const; //TO-DO use pos_3d if time is not needed
-    vec_4d closest_point(const vec_4d&, double, const wire&) const;
-    double get_min_time(const vec_4d&, double, const wire&) const;
+    // std::pair<vec_4d,vec_4d> closest_points(const vec_4d&, const vec_4d&, double, const wire&) const; //TO-DO use pos_3d if time is not needed
+    // vec_4d closest_point(const vec_4d&, double, const wire&) const;
+    // double get_min_time(const vec_4d&, double, const wire&) const;
     std::pair<const wire*, size_t> closest_wire_in_list(wire_list, pos_3d) const;
 
    protected:
