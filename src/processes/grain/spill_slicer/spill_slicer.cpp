@@ -129,6 +129,17 @@ namespace sand::grain {
           m_stat_photons_discarded++;
         }
       }
+      for (const auto& img :images_out) {
+        size_t maxhits = 0;
+        double npe = 0.;
+        for (int x = 0; x != camera_width; ++x) {
+          for (int y = 0; y != camera_height; ++y) {
+            maxhits = std::max(maxhits, img.pixels[x][y].true_hits().size());
+            npe += img.pixels[x][y].amplitude;
+          }
+        }
+        UFW_DEBUG("Camera {} recorded a total of {} photons from {} different MC true hits", img.camera_id, npe, maxhits );
+      }
     }
     UFW_INFO("Processed {} photons; {} were accepted, {} discarded.", m_stat_photons_processed, m_stat_photons_accepted,
              m_stat_photons_discarded);
