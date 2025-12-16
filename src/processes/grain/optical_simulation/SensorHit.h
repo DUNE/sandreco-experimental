@@ -28,7 +28,7 @@ namespace sand::grain {
    public:
     SensorHit();
     SensorHit(G4ThreeVector pArrive, G4ThreeVector pOrigin, G4ThreeVector pDirection, G4double pTime, G4double pEnergy,
-              G4double pScatter, G4String camName, G4String productionVolume);
+              G4double pScatter, G4String camName, G4String productionVolume, int pTruth);
     SensorHit(const SensorHit& orig);
     virtual ~SensorHit();
 
@@ -66,6 +66,9 @@ namespace sand::grain {
     inline void productionVolume(G4String c) { _productionVolume = c; };
     inline G4String productionVolume() const { return _productionVolume; };
 
+    inline void truth(int c) { _truth = c; };
+    inline int truth() const { return _truth; };
+
    private:
     // the arrival time of the photon
     G4double _arrivalTime;
@@ -85,6 +88,8 @@ namespace sand::grain {
     G4String _camName;
     // name of the volume in which the photon has been emitted
     G4String _productionVolume;
+    // integer index of the MC truth Edephit
+    int _truth;
   };
 
   //--------------------------------------------------

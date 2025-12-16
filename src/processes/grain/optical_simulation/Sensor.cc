@@ -21,6 +21,7 @@
 #include "G4Navigator.hh"
 #include "G4ios.hh"
 #include "G4Box.hh"
+#include "G4OpticalPhoton.hh"
 
 namespace sand::grain {
 Sensor::Sensor(const G4String& name, const G4String& hitsCollectionName, const optical_simulation* optmen_edepsim)
@@ -46,11 +47,10 @@ void Sensor::Initialize(G4HCofThisEvent* hitCollection) {
 G4bool Sensor::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
   if (aStep == NULL) return false;
   G4Track* theTrack = aStep->GetTrack();
-
+  static bool ihavealreadyprinted = false;
   // Need to know if this is an optical photon
   if (theTrack->GetDefinition() != G4OpticalPhoton::OpticalPhotonDefinition())
     return false;
-
   // Find out information regarding the hit
   G4StepPoint* thePostPoint = aStep->GetPostStepPoint();
 
@@ -120,15 +120,15 @@ G4bool Sensor::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
               photonArrive);
 
 	//kill photons from the back (lens assembly is not sealed)
-	if(m_optmen_edepsim->opticsType() != optical_simulation::OpticsType::MASK  && 
+	if(m_optmen_edepsim->opticsType() != optical_simulation::OpticsType::MASK  &&
              ( ((G4Box*)theTouchable->GetSolid())->GetZHalfLength() - photonArrive.z() > 0.01) ){
-	      //std::cout << "Killed from the back" << std::endl;	
+	      //std::cout << "Killed from the back" << std::endl;
               break;
 	}
 
       // Creating the hit and add it to the collection
       _photonDetHitCollection->insert(
-          new SensorHit(photonArrive, emissionPosition, photonDirection, arrivalTime, energy, scatterAngle, camName, productionVolume));
+          new SensorHit(photonArrive, emissionPosition, photonDirection, arrivalTime, energy, scatterAngle, camName, productionVolume, m_optmen_edepsim->current_truth_id()));
       nHits++;
       hitAdded = true;
       break;

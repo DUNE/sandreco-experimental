@@ -21,7 +21,7 @@ SensorHit::SensorHit() {
 }
 
 SensorHit::SensorHit(G4ThreeVector pArrive, G4ThreeVector pOrigin, G4ThreeVector pDirection, G4double pTime,
-                       G4double pEnergy, G4double pScatter, G4String pCamName, G4String pProductionVolume) {
+                       G4double pEnergy, G4double pScatter, G4String pCamName, G4String pProductionVolume, int pTruth) {
   _arrivalTime = pTime;
   _posArrive = pArrive;
   _posOrigin = pOrigin;
@@ -30,6 +30,7 @@ SensorHit::SensorHit(G4ThreeVector pArrive, G4ThreeVector pOrigin, G4ThreeVector
   _scatter = pScatter;
   _camName = pCamName;
   _productionVolume = pProductionVolume;
+  _truth = pTruth;
 }
 
 SensorHit::SensorHit(const SensorHit& orig) : G4VHit() { *this = orig; }
@@ -45,6 +46,7 @@ const SensorHit& SensorHit::operator=(const SensorHit& right) {
   _scatter = right._scatter;
   _camName = right._camName;
   _productionVolume = right._productionVolume;
+  _truth = right._truth;
   return *this;
 }
 
@@ -52,6 +54,6 @@ G4int SensorHit::operator==(const SensorHit& right) const {
   return (_posArrive == right._posArrive && _posOrigin == right._posOrigin &&
           _arrivalTime == right._arrivalTime && _energy == right._energy && 
           _direction == right._direction && _scatter == right._scatter && 
-          _camName == right._camName && _productionVolume == right._productionVolume);
+          _camName == right._camName && _productionVolume == right._productionVolume && _truth == right._truth);
 }
 }
