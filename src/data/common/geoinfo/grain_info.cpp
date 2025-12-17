@@ -114,12 +114,9 @@ namespace sand {
   void geoinfo::grain_info::add_camera_mask(G4VPhysicalVolume* camera, G4GDMLParser& gdml) {
     auto rot  = camera->GetObjectRotationValue(); // GetObjectRotation is not reentrant (!)
     auto tran = camera->GetObjectTranslation();
-    UFW_DEBUG("Camera '{}' (PV) found at [{:.3f}, {:.3f}, {:.3f}] with rotation matrix:", camera->GetName(), tran.x(),
-              tran.y(), tran.z());
-    UFW_DEBUG("[[{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}], [{:.3f}, {:.3f}, {:.3f}]]", rot[0][0], rot[0][1],
-              rot[0][2], rot[1][0], rot[1][1], rot[1][2], rot[2][0], rot[2][1], rot[2][2]);
     xform_3d loc2grain(rot.xx(), rot.xy(), rot.xz(), tran.x(), rot.yx(), rot.yy(), rot.yz(), tran.y(), rot.zx(),
                        rot.zy(), rot.zz(), tran.z());
+    UFW_DEBUG("Camera '{}' (PV) found with transform: {}", camera->GetName(), loc2grain);
     auto sipms      = find_by_name(camera, "photoDetector");
     auto mask       = find_by_name(camera, "cameraAssembly_mask");
     auto mask_lv    = mask->GetLogicalVolume();
@@ -131,7 +128,7 @@ namespace sand {
     float sy        = mask_front->GetYHalfLength();
     // id as size of vector, we need to parse it from the camera name
     mask_camera mc{camera->GetName(),
-                   m_mask_cameras.size(),
+                   static_cast<sand::channel_id::link_t>(m_mask_cameras.size()),
                    uint8_t(grain::mask),
                    loc2grain,
                    parse_pixels(sipms, gdml.GetAuxMap()),
@@ -155,7 +152,7 @@ namespace sand {
     auto lens  = find_by_name(camera, "gasLens_pv");
     // id as size of vector, we need to parse it from the camera name
     lens_camera lc{camera->GetName(),
-                   m_lens_cameras.size(),
+                   static_cast<sand::channel_id::link_t>(m_lens_cameras.size()),
                    uint8_t(grain::lens),
                    loc2grain,
                    parse_pixels(sipms, gdml.GetAuxMap()),
@@ -231,6 +228,17 @@ namespace sand {
       }
     });
     return mask;
+  }
+
+  /**
+   * Returns voxel center position in the local reference frame given the 3D index.
+   * Assuming that voxels are arranged such that, if the number of voxels in one axis is odd, the middle is centered on
+   * zero. if the number is even, the boundary is at zero.
+   */
+  pos_3d geoinfo::grain_info::voxel_index_to_position(grain::index_3d index, dir_3d pitch, grain::size_3d size) const {
+    return pos_3d((index.x() + 0.5 - static_cast<float>(size.x()) / 2.) * pitch.x(),
+                  (index.y() + 0.5 - static_cast<float>(size.y()) / 2.) * pitch.y(),
+                  (index.z() + 0.5 - static_cast<float>(size.z()) / 2.) * pitch.z());
   }
 
 } // namespace sand

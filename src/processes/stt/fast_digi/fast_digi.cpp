@@ -65,11 +65,8 @@ namespace sand::stt {
         geo_id ID             = stt->id(partial_path);
         hits_by_tube[ID].push_back(hit);
 
-        UFW_DEBUG("Hit at position ({}, {}, {}) is in geometry node {}.", hit_mid_point.X(), hit_mid_point.Y(),
-                  hit_mid_point.Z(), partial_path);
-        UFW_DEBUG("Corresponding geo_id: subdetector {}, supermodule {}, station {}, straw {}.",
-                  static_cast<int>(ID.stt.subdetector), static_cast<int>(ID.stt.supermodule),
-                  static_cast<int>(ID.stt.plane), static_cast<int>(ID.stt.tube));
+        UFW_DEBUG("Hit at position {} is in geometry node {}.", hit_mid_point, partial_path);
+        UFW_DEBUG("Corresponding geo_id: {}", ID);
       }
     }
 
@@ -88,11 +85,11 @@ namespace sand::stt {
       const auto* wire = stt->get_wire_by_id(tube_id);
 
       if (!wire) {
-        log_tube_warning("No wire found", tube_id);
+        UFW_WARN("No wire found for geo_id {}", tube_id);
         continue;
       }
 
-      log_tube_debug("Digitizing hits for tube", tube_id);
+      UFW_DEBUG("Digitizing hits for tube {}", tube_id);
 
       auto signal = process_hits_for_wire(hits, *wire);
       if (signal) {
@@ -100,24 +97,6 @@ namespace sand::stt {
         std::for_each(hits.begin(), hits.end(), [&](const auto& hit) { digi.add(hit.GetId()); });
       }
     }
-  }
-
-  void fast_digi::log_tube_warning(std::string_view message, const geo_id& tube_id) {
-    UFW_WARN("{} for geo_id: subdetector {}, supermodule {}, station {}, straw {}.", message,
-             static_cast<int>(tube_id.stt.subdetector), static_cast<int>(tube_id.stt.supermodule),
-             static_cast<int>(tube_id.stt.plane), static_cast<int>(tube_id.stt.tube));
-  }
-
-  void fast_digi::log_tube_debug(std::string_view message, const geo_id& tube_id) {
-    UFW_DEBUG("{}: subdetector {}, supermodule {}, station {}, straw {}.", message,
-              static_cast<int>(tube_id.stt.subdetector), static_cast<int>(tube_id.stt.supermodule),
-              static_cast<int>(tube_id.stt.plane), static_cast<int>(tube_id.stt.tube));
-  }
-
-  void fast_digi::log_hit_debug(const EDEPHit& hit) {
-    UFW_DEBUG("  Hit ID {}: Energy Deposit = {}, Start Position = ({}, {}, {}, {}), Stop Position = ({}, {}, {}, {})",
-              hit.GetId(), hit.GetEnergyDeposit(), hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(),
-              hit.GetStart().T(), hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T());
   }
 
   tracker::digi::signal fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
@@ -146,7 +125,8 @@ namespace sand::stt {
     double edep_total  = 0.0;
 
     for (const auto& hit : hits) {
-      log_hit_debug(hit);
+      UFW_DEBUG("  Hit ID {}: Energy Deposit = {}, Start Position = {}, Stop Position = {}", hit.GetId(),
+                hit.GetEnergyDeposit(), vec_4d(hit.GetStart()), vec_4d(hit.GetStop()));
 
       auto closest_points = closest_points_hit_wire(
           vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()),
@@ -164,10 +144,8 @@ namespace sand::stt {
         drift_time  = closest_point_wire.T() - t_hit;
         signal_time = hit_smallest_time - closest_point_wire.T();
 
-        UFW_DEBUG("    Closest point on hit: ({}, {}, {}, {})", closest_point_hit.X(), closest_point_hit.Y(),
-                  closest_point_hit.Z(), closest_point_hit.T());
-        UFW_DEBUG("    Closest point on wire: ({}, {}, {}, {})", closest_point_wire.X(), closest_point_wire.Y(),
-                  closest_point_wire.Z(), closest_point_wire.T());
+        UFW_DEBUG("    Closest point on hit: {}", closest_point_hit);
+        UFW_DEBUG("    Closest point on wire: {}", closest_point_wire);
       }
       edep_total += hit.GetEnergyDeposit();
     }
