@@ -156,12 +156,9 @@ namespace sand::drift {
                                     double segment_fraction,
                                     size_t wire_index) const {
     UFW_DEBUG(" ===== Segment {} Debug Info =====", wire_index);
-    UFW_DEBUG("   Start global: ({:.3f}, {:.3f}, {:.3f})", 
-              segment_start_global.X(), segment_start_global.Y(), segment_start_global.Z());
-    UFW_DEBUG("   End global:   ({:.3f}, {:.3f}, {:.3f})", 
-              segment_end_global.X(), segment_end_global.Y(), segment_end_global.Z());
-    UFW_DEBUG("   End local:    ({:.3f}, {:.3f}, {:.3f})", 
-              segment_end_local.X(), segment_end_local.Y(), segment_end_local.Z());
+    UFW_DEBUG("   Start global: {}", segment_start_global);
+    UFW_DEBUG("   End global:   {}", segment_end_global);
+    UFW_DEBUG("   End local:    {}", segment_end_local);
     UFW_DEBUG("   Length: {:.3f}, Fraction: {:.4f}", segment_length, segment_fraction);
   }
 
@@ -232,10 +229,8 @@ namespace sand::drift {
     const pos_3d hit_stop_global = pos_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
     const pos_3d hit_stop_local = wire_plane_transform.Inverse() * hit_stop_global;
 
-    UFW_DEBUG(" Total hit key properties: Start ({}, {}, {}, {}), Stop ({}, {}, {}, {}), EnergyDeposit: {}, SecondaryDeposit: {}, TrackLength: {}, Contrib: {}, PrimaryId: {}, Id: {}", 
-              hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T(),
-              hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T(),
-              hit.GetEnergyDeposit(), hit.GetSecondaryDeposit(), hit.GetTrackLength(), hit.GetContrib(), hit.GetPrimaryId(), hit.GetId());
+    UFW_DEBUG(" Total hit key properties: Start {}, Stop {}, EnergyDeposit: {}, SecondaryDeposit: {}, TrackLength: {}, Contrib: {}, PrimaryId: {}, Id: {}", 
+              vec_4d(hit.GetStart()), vec_4d(hit.GetStop()), hit.GetEnergyDeposit(), hit.GetSecondaryDeposit(), hit.GetTrackLength(), hit.GetContrib(), hit.GetPrimaryId(), hit.GetId());
 
     // Setup iteration parameters: ensure we iterate from first to last wire
     const bool need_to_reverse = (closest_wire_start_index > closest_wire_stop_index);
@@ -321,11 +316,8 @@ namespace sand::drift {
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
 
     for (auto [wire, hits] : hits_by_wire) { 
-      UFW_DEBUG("Station target: {}, station top north corner: ({},{},{})", wire->parent->target,
-                wire->parent->top_north.X(), wire->parent->top_north.Y(), wire->parent->top_north.Z()); 
-      UFW_DEBUG(" Wire properties: Head ({}, {}, {}), Tail ({}, {}, {})", 
-                wire->head.X(), wire->head.Y(), wire->head.Z(),
-                wire->tail.X(), wire->tail.Y(), wire->tail.Z());
+      UFW_DEBUG("Station target: {}, station top north corner: {}", wire->parent->target, wire->parent->top_north);
+      UFW_DEBUG(" Wire properties: Head {}, Tail {}", wire->head, wire->tail);
       UFW_DEBUG(" Number of hits in wire: {}", hits.size());
       
       auto signal = process_hits_for_wire(hits, *wire);
@@ -381,10 +373,8 @@ namespace sand::drift {
         drift_time  = closest_point_wire.T() - t_hit;
         signal_time = hit_smallest_time - closest_point_wire.T();
 
-        UFW_DEBUG("    Closest point on hit: ({}, {}, {}, {})", closest_point_hit.X(), closest_point_hit.Y(),
-                  closest_point_hit.Z(), closest_point_hit.T());
-        UFW_DEBUG("    Closest point on wire: ({}, {}, {}, {})", closest_point_wire.X(), closest_point_wire.Y(),
-                  closest_point_wire.Z(), closest_point_wire.T());
+        UFW_DEBUG("Closest point on hit: {}", vec_4d(closest_point_hit));
+        UFW_DEBUG("Closest point on wire: {}", vec_4d(closest_point_wire));
       }
       edep_total += hit.GetEnergyDeposit();
     }
