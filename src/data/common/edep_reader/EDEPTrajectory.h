@@ -197,6 +197,12 @@ class EDEPTrajectory {
   double GetDepositedEnergy(component component_name);
   bool HasHitBeforeTime(double start_time) const;
   bool HasHitAfterTime(double stop_time) const;
+  bool HasHitWithEnergySmallerThan(double energy) const;
+  bool HasHitWithEnergyLargerThan(double energy) const; 
+  bool HasHitInEnergy(double min, double max) const;
+  bool HasHitInTimeAndEnergy(double start_time, double stop_time, 
+                             double min_energy, double max_energy) const;
+
   bool IsTrajectorySaturated() const;
 
   bool HasHitInTime(double start_time, double stop_time) const;

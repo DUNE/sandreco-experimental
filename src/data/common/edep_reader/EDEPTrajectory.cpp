@@ -403,6 +403,24 @@ bool EDEPTrajectory::HasHitBeforeTime(double time) const {
 }
 
 /**
+ * @brief Checks if the trajectory has hits with energy smaller than the specified amount.
+ * @param time The energy threshold.
+ * @return True if the trajectory has hits with energy smaller than the specified amount, otherwise false.
+ */
+bool EDEPTrajectory::HasHitWithEnergySmallerThan(double energy) const {
+  return HasHitWhere([energy](const EDEPHit& hit) { return hit.GetEnergyDeposit() < energy; });
+}
+
+/**
+ * @brief Checks if the trajectory has hits with energy larger than the specified amount.
+ * @param time The energy threshold.
+ * @return True if the trajectory has hits with energy larger than the specified amount, otherwise false.
+ */
+bool EDEPTrajectory::HasHitWithEnergyLargerThan(double energy) const {
+  return HasHitWhere([energy](const EDEPHit& hit) { return hit.GetEnergyDeposit() > energy; });
+}
+
+/**
  * @brief Checks if the trajectory has hits after a specified time.
  * @param time The time threshold.
  * @return True if the trajectory has hits after the specified time, otherwise false.
@@ -420,6 +438,33 @@ bool EDEPTrajectory::HasHitAfterTime(double time) const {
 bool EDEPTrajectory::HasHitInTime(double start_time, double stop_time) const {
   return HasHitWhere([start_time, stop_time](const EDEPHit& hit) {
     return (hit.GetStart().T() > start_time && hit.GetStart().T() < stop_time);
+  });
+}
+
+/**
+ * @brief Checks if the trajectory has hits within a specified energy range.
+ * @param min The min of the energy range.
+ * @param max The max of the energy range.
+ * @return True if the trajectory has hits within the specified energy range, otherwise false.
+ */
+bool EDEPTrajectory::HasHitInEnergy(double min, double max) const {
+  return HasHitWhere([min, max](const EDEPHit& hit) {
+    return (hit.GetEnergyDeposit() > min && hit.GetEnergyDeposit() < max);
+  });
+}
+
+/**
+ * @brief Checks if the trajectory has hits within a specified energy and time ranges.
+ * @param start_time The start of the time range.
+ * @param stop_time The stop of the time range.
+ * @param min_energy The min of the energy range.
+ * @param max_energy The max of the energy range.
+ * @return True if the trajectory has hits within the specified energy range, otherwise false.
+ */
+bool EDEPTrajectory::HasHitInTimeAndEnergy(double start_time, double stop_time, double min_energy, double max_energy) const {
+  return HasHitWhere([start_time, stop_time, min_energy, max_energy](const EDEPHit& hit) {
+    return (hit.GetEnergyDeposit() > min_energy && hit.GetEnergyDeposit() < max_energy && 
+            hit.GetStart().T() > start_time && hit.GetStart().T() < stop_time);
   });
 }
 
