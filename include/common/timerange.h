@@ -21,7 +21,7 @@ namespace sand::reco {
 
     explicit timerange(double t, double sigma = 1.0) : m_earliest(t - sigma), m_best(t), m_latest(t + sigma) {}
 
-    timerange(double e, double b, double l) : m_earliest(e), m_best(b), m_latest(e) {
+    timerange(double e, double b, double l) : m_earliest(e), m_best(b), m_latest(l) {
       if (!*this) {
         UFW_ERROR("Inconsistent time interval: ({}, {}, {}).", e, b, l);
       }
