@@ -23,7 +23,6 @@ namespace sand::grain {
   void detector_response_fast::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_pde = cfg.at("pde");
-    m_gdml_geometry = cfg.at("geometry");
   }
 
   void detector_response_fast::run() {
@@ -36,40 +35,34 @@ namespace sand::grain {
     const auto& hits_in      = get<hits>("hits");
     UFW_DEBUG("Processing {} photon hits.", hits_in.photons.size());
     auto& digi_out                        = set<digi>("digi");
-    geoinfo::grain_info::camera* pix_spam = nullptr;
-    if (m_gdml_geometry == "gdml-masks") {
-      pix_spam = &gi.grain().mask_cameras().front();
-    } else if (m_gdml_geometry == "gdml-lenses") {
-      pix_spam = &gi.grain().lens_cameras().front();
-    } else {
-      UFW_ERROR("GRAIN gdml-geometry type not found.");
-    }
     for (const auto& photon : hits_in.photons) {
-      true_hits truth;
       double interaction_probability = m_uniform(random_engine());
       m_stat_photons_processed++;
+      const geoinfo::grain_info::camera& camera = gi.grain().at(photon.camera_id);
       if (interaction_probability < m_pde) {
         // UFW_DEBUG("processing photon with position: {}, {}", photon.pos.X(), photon.pos.Y());
         bool channel_found = false;
         for (int i = 0; i != camera_height && !channel_found; ++i) {
           for (int j = 0; j != camera_width; ++j) {
-            if (photon.pos.X() > pix_spam->sipm_active_areas[i][j].left
-                && photon.pos.X() < pix_spam->sipm_active_areas[i][j].right
-                && photon.pos.Y() > pix_spam->sipm_active_areas[i][j].bottom
-                && photon.pos.Y() < pix_spam->sipm_active_areas[i][j].top) {
-              truth.add(photon.hit);
+            if (photon.pos.X() > camera.sipm_active_areas[i][j].left
+                && photon.pos.X() < camera.sipm_active_areas[i][j].right
+                && photon.pos.Y() > camera.sipm_active_areas[i][j].bottom
+                && photon.pos.Y() < camera.sipm_active_areas[i][j].top) {
               channel_id ch;
               ch.subdetector = GRAIN;
               ch.link        = photon.camera_id;
               // consistent indexing: Row Major
               ch.channel = i * camera_width + j;
-              digi::signal pe{truth, ch, photon.pos.T(), NAN, 1.0};
+              digi::signal pe{reco::digi{sand::truth(photon.true_hit), ch, reco::digi::time{photon.pos.T()}}, photon.pos.T(), NAN, 1.0};
               digi_out.signals.emplace_back(pe);
               m_stat_photons_accepted++;
               // UFW_DEBUG("Added photon to SiPM {},{}", i, j);
               channel_found = true;
               break;
             }
+          }
+          if (channel_found) {
+            break;
           }
         }
         if (channel_found == false) {

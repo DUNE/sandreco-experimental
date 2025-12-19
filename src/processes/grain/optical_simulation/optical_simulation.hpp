@@ -46,6 +46,14 @@ namespace sand::grain {
     mutable std::deque<int> track_ids;
     mutable std::deque<double> track_times;
 
+    int current_truth_id() const {
+      return m_truth_index;
+    }
+
+    void set_current_truth_id(int mc) {
+      m_truth_index = mc;
+    }
+
    private:
     void init_properties();
 
@@ -56,6 +64,7 @@ namespace sand::grain {
     bool m_new_iteration;
     bool m_run_start;
     std::unique_ptr<properties_t> m_properties;
+    int m_truth_index;
   };
 
 } // namespace sand::grain

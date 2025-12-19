@@ -74,9 +74,9 @@ namespace sand {
     template <typename Camera>
     std::enable_if_t<std::is_base_of_v<camera, Camera>, const Camera&> at(const std::string&);
 
-    std::vector<lens_camera> lens_cameras() const { return m_lens_cameras; }
+    const std::vector<lens_camera>& lens_cameras() const { return m_lens_cameras; }
 
-    std::vector<mask_camera> mask_cameras() const { return m_mask_cameras; }
+    const std::vector<mask_camera>& mask_cameras() const { return m_mask_cameras; }
 
     dir_3d fiducial_bbox() const { return m_fiducial_aabb; }
 

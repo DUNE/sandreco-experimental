@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <ufw/data.hpp>
+#include <common/digi.h>
 #include <common/sand.h>
 #include <common/truth.h>
 #include <grain/grain.h>
@@ -10,9 +11,7 @@
 namespace sand::grain {
 
   struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct signal : public sand::true_hits {
-      /// The readout channel associated with the signal.
-      channel_id channel;
+    struct signal : public reco::digi {
       /// Calibrated time [ns] of rising edge since start of context.
       double time_rising_edge;
       /// Calibrated time [ns] over threshold.

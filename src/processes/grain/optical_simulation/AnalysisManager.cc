@@ -66,6 +66,7 @@ void AnalysisManager::EndOfEvent(const G4Event* pEvent) {
         ph.scatter = sensorHit->scatter();
         ph.inside_camera = (sensorHit->productionVolume() == sensorHit->camName());
         ph.camera_id = geom.grain().at(sensorHit->camName()).id;
+        ph.true_hit = sensorHit->truth();
         hits.photons.push_back(ph);
       }
     }

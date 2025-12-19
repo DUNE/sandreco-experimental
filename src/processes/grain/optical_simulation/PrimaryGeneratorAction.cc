@@ -41,6 +41,7 @@
 #include "G4Navigator.hh"
 #include "G4TransportationManager.hh"
 #include "G4VPhysicalVolume.hh"
+#include "G4OpticalPhoton.hh"
 #include "G4Poisson.hh"
 
 #include <ufw/context.hpp>
@@ -62,12 +63,12 @@ void PrimaryGeneratorAction::ApplyTranslation(){
 
 void PrimaryGeneratorAction::nextIteration() {
     const auto& tree = m_optmen_edepsim->instance<sand::edep_reader>();
-    
+
     if(m_optmen_edepsim->getStartRun()) {
         m_tree_it = tree.begin();
         m_optmen_edepsim->setStartRun(false);
     }
-    
+
     if(m_tree_it == tree.end()) {
         UFW_FATAL("Reached end of tree");
     }
@@ -97,13 +98,13 @@ void PrimaryGeneratorAction::nextIteration() {
     }
 }
 
-bool isInArgon(const G4ThreeVector& myPhotonPosition) 
+bool isInArgon(const G4ThreeVector& myPhotonPosition)
 {
     G4Navigator* tracking_navigator = G4TransportationManager::GetTransportationManager()->GetNavigatorForTracking();
     G4VPhysicalVolume* myVolume  = tracking_navigator->LocateGlobalPointAndSetup(myPhotonPosition);
 
     std::string matname =  myVolume->GetLogicalVolume()->GetMaterial()->GetName();
-    
+
     //true if it must be skipped becausa it's not emitted in LAr
     return (matname.find("G4_lAr") != std::string::npos);
 }
@@ -122,11 +123,11 @@ std::pair<G4ThreeVector,G4ThreeVector> PrimaryGeneratorAction::GenerateRandomMom
 	G4double pz = cost;
 
 	G4ThreeVector myPhotonMomentum ( px, py, pz );
-	
+
 	G4double sx = cost*cosp;
 	G4double sy = cost*sinp;
 	G4double sz = -sint;
-	
+
 	G4ThreeVector myPhotonPolarization ( sx, sy, sz );
 	G4ThreeVector myPerpendicular = myPhotonMomentum.cross( myPhotonPolarization );
 
@@ -136,7 +137,7 @@ std::pair<G4ThreeVector,G4ThreeVector> PrimaryGeneratorAction::GenerateRandomMom
 
 	myPhotonPolarization = cosp * myPhotonPolarization + sinp * myPhotonMomentum ;
 	myPhotonPolarization = myPhotonPolarization.unit();
-	
+
 	return std::make_pair(myPhotonMomentum, myPhotonPolarization);
 }
 
@@ -146,14 +147,14 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 
     // Get lAr info
     m_optmen_edepsim->properties();
-    
+
     nextIteration();
-    
-    //apply shift 
+
+    //apply shift
     ApplyTranslation();
 
     G4int myPDG = m_hits_it->GetPrimaryId();
-    G4ParticleDefinition *myParticle = G4ParticleTable::GetParticleTable()->FindParticle(myPDG);	
+    G4ParticleDefinition *myParticle = G4ParticleTable::GetParticleTable()->FindParticle(myPDG);
 
     //This is code from EDepSim to deal with nuclear PDGs
     if (!myParticle) {
@@ -188,11 +189,12 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     // COMPUTATION FOR NUMBER of PHOTONS
     // The fraction of the energy deposit that ends up producing photons is already computed by EDepSim
     // using the Doke-Birks NEST model and store in "SecondaryDeposit".
-    // This ALREADY takes into account excitons and the fraction of recombinating ions 
-    
+    // This ALREADY takes into account excitons and the fraction of recombinating ions
+
     // photons (excitons + recombinating ions)
     G4double myphotons = m_hits_it->GetSecondaryDeposit() * m_optmen_edepsim->properties().m_scintillation_yield;
-    
+    m_optmen_edepsim->set_current_truth_id(m_hits_it->GetId());
+
     int myNumPhotons = 0;
     if(myphotons < 20)     myNumPhotons = int(G4Poisson(myphotons) + 0.5);
     else                   myNumPhotons = int(G4RandGauss::shoot(myphotons, sqrt(myphotons))+0.5);
@@ -216,7 +218,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     // slow/fast components ratio
     G4double mySingletTripletRatio = GetSingletTripletRatio(myZ, m_hits_it->GetEnergyDeposit(), myVertexKinEne);
 
-    G4ParticleDefinition *particle = G4ParticleTable::GetParticleTable()->FindParticle("opticalphoton"); 
+    G4ParticleDefinition *particle = G4OpticalPhoton::OpticalPhotonDefinition();
     fParticleGun.SetParticleDefinition(particle);
 
     for(int j = 0; j< myNumPhotons; j++){
@@ -234,7 +236,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
         G4ThreeVector myPhotonPosition = translated_start + random * (translated_stop - translated_start);
 
         if(!isInArgon(myPhotonPosition)) continue; // skip if not in LAr
-        fParticleGun.SetParticlePosition(myPhotonPosition);					
+        fParticleGun.SetParticlePosition(myPhotonPosition);
 
         // Time & Energy
         // photonTime = Global Time ( + Recombination Time ) + Singlet/Triplet Time
@@ -261,7 +263,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
         }
 
         fParticleGun.SetParticleEnergy(mySampledEnergy);
-        fParticleGun.SetParticleTime(myPhotonTime);		
+        fParticleGun.SetParticleTime(myPhotonTime);
 
         //SHOOT PHOTON!!
         fParticleGun.GeneratePrimaryVertex(event);
@@ -272,7 +274,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     // Xe-DOPING --> Xe-doping increases the overall LY to 1.20 pure LAr
     // emit here the additional photons which are all slow component
     for(int j = 0; j < myXeAddition; j++){
-        
+
         // Momentum & Polarization
         std::pair<G4ThreeVector,G4ThreeVector>  myMomentumPolarization = GenerateRandomMomentumPolarization();
         fParticleGun.SetParticleMomentumDirection(myMomentumPolarization.first);
@@ -285,7 +287,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
         G4ThreeVector translated_stop(m_hits_it->GetStop().X() - m_centre.x(), m_hits_it->GetStop().Y() - m_centre.y(), m_hits_it->GetStop().Z() - m_centre.z());
         G4ThreeVector myPhotonPosition = translated_start + random * (translated_stop - translated_start);
         if(!isInArgon(myPhotonPosition)) continue; // skip if not in LAr
-        fParticleGun.SetParticlePosition(myPhotonPosition);					
+        fParticleGun.SetParticlePosition(myPhotonPosition);
 
         // Time & Energy
         // (slow component only)
@@ -293,7 +295,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
         G4double mySampledEnergy = m_optmen_edepsim->properties().m_slow_component_distribution->GetRandom();
 
         fParticleGun.SetParticleEnergy(mySampledEnergy);
-        fParticleGun.SetParticleTime(myPhotonTime);		
+        fParticleGun.SetParticleTime(myPhotonTime);
 
         fParticleGun.GeneratePrimaryVertex(event);
     }
@@ -325,19 +327,19 @@ G4double PrimaryGeneratorAction::GetSingletTripletRatio(double myZ, double myDep
     }
     // -- Alphas
     else if( myZ == 2 ){
-        mySingletTripletRatio = (-0.065492+1.9996*exp(-myDepEne/MeV))/(1+0.082154/pow(myDepEne/MeV,2.)) + 2.1811; 
+        mySingletTripletRatio = (-0.065492+1.9996*exp(-myDepEne/MeV))/(1+0.082154/pow(myDepEne/MeV,2.)) + 2.1811;
     }
     //-- Nuclear Recoils
     else{
-        double myVisEne = VertexKinEne /keV; 
+        double myVisEne = VertexKinEne /keV;
         //sarebbe InitialKinEne/fQuenchingFactor, ma InitialKinEne = VertexKinEne * fQuenchingFactor....
         if (myVisEne>180 ) myVisEne = 180 ;
 
-        double ratio_p0                        =     0.513575   ;///-   0.00935121  
-        double ratio_p1                        =   0.00664834   ;///-   0.000618988 
-        double ratio_p2                        = -7.26861e-05   ;///-   1.22681e-05 
-        double ratio_p3                        =  3.69379e-07   ;///-   9.10873e-08 
-        double ratio_p4                        = -7.04932e-10   ;///-   2.24589e-10 
+        double ratio_p0                        =     0.513575   ;///-   0.00935121
+        double ratio_p1                        =   0.00664834   ;///-   0.000618988
+        double ratio_p2                        = -7.26861e-05   ;///-   1.22681e-05
+        double ratio_p3                        =  3.69379e-07   ;///-   9.10873e-08
+        double ratio_p4                        = -7.04932e-10   ;///-   2.24589e-10
         mySingletTripletRatio = ratio_p0 - 0.045 +  ratio_p1*myVisEne + ratio_p2*pow(myVisEne,2) +  ratio_p3*pow(myVisEne,3 )
             + ratio_p4*pow(myVisEne , 4) ;
     }

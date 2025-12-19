@@ -322,8 +322,8 @@ namespace sand::drift {
       
       auto signal = process_hits_for_wire(hits, *wire);
       if (signal) {
+        std::for_each(hits.begin(), hits.end(), [&signal](const auto& hit) { signal->insert(hit.GetId()); });
         digi.signals.emplace_back(std::move(*signal));
-        std::for_each(hits.begin(), hits.end(), [&](const auto& hit) { digi.add(hit.GetId()); });
       }
       
     }
@@ -331,15 +331,14 @@ namespace sand::drift {
   }
 
   tracker::digi::signal fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
-    tracker::digi::signal signal;
-    std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc);
-    auto ran       = gaussian_error(random_engine());
-    signal.tdc     = wire_time + ran;
-    signal.adc     = edep_total;
-    signal.channel = channel;
+    std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc); //FIXME should be member
+    auto ran = gaussian_error(random_engine());
+    //FIXME replace 200 with maximum drift + signal time
+    reco::digi::time trange{wire_time - 200., wire_time, wire_time + 5. * m_sigma_tdc};
+    tracker::digi::signal signal{reco::digi{channel, trange}, wire_time + ran, edep_total};
 
     UFW_DEBUG("  Created signal: Channel(subdetector {}, channel {}), TDC = {}, ADC = {}",
-              static_cast<int>(signal.channel.subdetector), static_cast<int>(signal.channel.channel), signal.tdc,
+              static_cast<int>(signal.channel().subdetector), static_cast<int>(signal.channel().channel), signal.tdc,
               signal.adc);
 
     return signal;
