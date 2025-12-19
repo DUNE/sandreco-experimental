@@ -323,7 +323,7 @@ namespace sand::drift {
       auto signal = process_hits_for_wire(hits, *wire);
       if (signal) {
         digi.signals.emplace_back(std::move(*signal));
-        std::for_each(hits.begin(), hits.end(), [&](const auto& hit) { digi.add(hit.GetId()); });
+        std::for_each(hits.begin(), hits.end(), [&](const auto& hit) { digi.insert(hit.GetId()); });
       }
       
     }
