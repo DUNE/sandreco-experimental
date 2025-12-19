@@ -37,61 +37,70 @@ namespace sand {
 
   void geoinfo::tracker_info::add_volume(const geo_path& p, const gas_volume& v) { m_volumes[p] = v; }
 
-  std::vector<vec_4d> geoinfo::tracker_info::closest_points(const vec_4d& hit_start, const vec_4d& hit_stop,
-                                                            const double& v_drift, const wire& w) const {
-    std::vector<vec_4d> closest_points;
+  // std::pair<vec_4d,vec_4d> geoinfo::tracker_info::closest_points(const vec_4d& hit_start, const vec_4d& hit_stop,  //TO-DO move to fast_digi
+  //                                                           double v_drift, const wire& w) const {
+  //   std::pair<vec_4d,vec_4d> closest_points;
 
-    pos_3d start(hit_start.X(), hit_start.Y(), hit_start.Z());
-    pos_3d stop(hit_stop.X(), hit_stop.Y(), hit_stop.Z());
+  //   pos_3d start(hit_start.X(), hit_start.Y(), hit_start.Z());
+  //   pos_3d stop(hit_stop.X(), hit_stop.Y(), hit_stop.Z());
 
-    std::vector<double> seg_params = w.closest_approach_segment(start, stop);
+  //   auto seg_params = w.closest_approach_segment(start, stop);
 
-    std::vector<vec_4d> result;
+  //   std::vector<vec_4d> result;
 
-    if (seg_params.empty() == false) {
-      double& t       = seg_params[0]; // Parameter along s
-      double& t_prime = seg_params[1]; // Parameter along r
+  //   double& t       = seg_params.first; // Parameter along s
+  //   double& t_prime = seg_params.second; // Parameter along r
 
-      // Calculate the closest point on the line segment
-      pos_3d closest_point_hit = start + (stop - start) * t;
+  //   // Calculate the closest point on the line segment
+  //   pos_3d closest_point_hit = start + (stop - start) * t;
 
-      if (t == 0 || t == 1) {
-        dir_3d AP = closest_point_hit - w.head;
-        t_prime   = AP.Dot(w.direction()) / w.direction().Mag2();
-        t_prime   = std::max(0.0, std::min(1.0, t_prime));
-      }
+  //   if (t == 0 || t == 1) {
+  //     dir_3d AP = closest_point_hit - w.head;
+  //     t_prime   = AP.Dot(w.direction()) / w.direction().Mag2();
+  //     t_prime   = std::max(0.0, std::min(1.0, t_prime));
+  //   }
 
-      // Calculate the corresponding point on the wire
-      pos_3d closest_point_wire = w.head + w.direction() * t_prime;
+  //   // Calculate the corresponding point on the wire
+  //   pos_3d closest_point_wire = w.head + w.direction() * t_prime;
 
-      double fraction = sqrt((closest_point_hit - start).Mag2() / (stop - start).Mag2());
-      vec_4d closest_point_hit_l(closest_point_hit.X(), closest_point_hit.Y(), closest_point_hit.Z(),
-                                 hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
+  //   double fraction = sqrt((closest_point_hit - start).Mag2() / (stop - start).Mag2());
+  //   vec_4d closest_point_hit_l(closest_point_hit.X(), closest_point_hit.Y(), closest_point_hit.Z(),
+  //                               hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
 
-      result.push_back(closest_point_hit_l);
+  //   closest_points.first = closest_point_hit_l;
 
-      vec_4d closest_point_wire_l(closest_point_wire.X(), closest_point_wire.Y(), closest_point_wire.Z(),
-                                  closest_point_hit_l.T()
-                                      + sqrt((closest_point_hit - closest_point_wire).Mag2()) / v_drift);
+  //   vec_4d closest_point_wire_l(closest_point_wire.X(), closest_point_wire.Y(), closest_point_wire.Z(),
+  //                               closest_point_hit_l.T()
+  //                                   + sqrt((closest_point_hit - closest_point_wire).Mag2()) / v_drift);
 
-      result.push_back(closest_point_wire_l);
+  //   closest_points.second = closest_point_wire_l;
 
-      return result;
+  //   return closest_points;
+  // }
 
-    } else {
-      // Lines are parallel; handle this case if necessary
-      UFW_WARN("Lines are parallel; no unique closest point.");
-      return result;
-    }
-  }
+  // vec_4d geoinfo::tracker_info::closest_point(const vec_4d& point, double v_drift, const wire& w) const {
+  //   pos_3d p(point.X(), point.Y(), point.Z());
 
-  double geoinfo::tracker_info::get_min_time(const vec_4d& point, const double& v_signal_inwire, const wire& w) const {
-    return point.T() + sqrt((pos_3d(point.Vect()) - w.head).Mag2()) / v_signal_inwire;
-  }
+  //   double t_prime = w.closest_approach_point(p);
 
-  std::vector<double> geoinfo::tracker_info::wire::closest_approach_segment(const pos_3d& seg_start,
+
+  //   // Calculate the corresponding point on the wire
+  //   pos_3d closest_point_wire = w.head + w.direction() * t_prime;
+
+  //   vec_4d closest_point_wire_l(closest_point_wire.X(), closest_point_wire.Y(), closest_point_wire.Z(),
+  //                               point.T()
+  //                                   + sqrt((p - closest_point_wire).Mag2()) / v_drift);
+
+  //   return closest_point_wire_l;
+  // }
+
+  // double geoinfo::tracker_info::get_min_time(const vec_4d& point, double v_signal_inwire, const wire& w) const {
+  //   return point.T() + sqrt((pos_3d(point.Vect()) - w.head).Mag2()) / v_signal_inwire;
+  // }
+
+  std::pair<double,double> geoinfo::tracker_info::wire::closest_approach_segment(const pos_3d& seg_start, //TO-DO should always produce a resulut, even in the parallel case
                                                                             const pos_3d& seg_stop) const {
-    std::vector<double> result;
+    std::pair<double,double> result;
 
     dir_3d d = seg_start - head;     // Vector from wire head to point start
     dir_3d s = seg_stop - seg_start; // Vector from point start to point stop
@@ -106,8 +115,13 @@ namespace sand {
     double denominator = A * C - B * B;
 
     if (std::abs(denominator) < 1e-8) {
-      // Lines are parallel; handle this case if necessary
-      UFW_WARN("Lines are parallel; no unique closest point.");
+      // Lines are parallel; choose midpoint of the segment
+      double t = 0.5;
+      double t_prime = closest_approach_point(seg_start + s * t);
+
+      result.first = t;
+      result.second = t_prime;
+
       return result;
     } else {
       double t       = (B * E - C * D) / denominator; // Parameter along s
@@ -117,8 +131,8 @@ namespace sand {
       t       = std::max(0.0, std::min(1.0, t));
       t_prime = std::max(0.0, std::min(1.0, t_prime));
 
-      result.push_back(t);
-      result.push_back(t_prime);
+      result.first = t;
+      result.second = t_prime;
 
       return result;
     }
@@ -131,12 +145,6 @@ namespace sand {
     double C = r.Dot(r); // r . r
     double E = r.Dot(d); // r . (point - head)
 
-    if (std::abs(C) < 1e-12) {
-      // Wire has no direction — degenerate case
-      UFW_WARN("Wire direction vector has near-zero length.");
-      return std::numeric_limits<double>::quiet_NaN();
-    }
-
     // Parameter along the wire direction from the head to the closest point
     double t_prime = E / C;
 
@@ -144,6 +152,40 @@ namespace sand {
     t_prime = std::max(0.0, std::min(1.0, t_prime));
 
     return t_prime;
+  }
+
+  xform_3d geoinfo::tracker_info::wire::wire_plane_transform() const {
+    double c = std::cos(angle());
+    double s = std::sin(angle());
+    pos_3d center = pos_3d(0.5 * (parent->top_north.X() + parent->bottom_south.X()),
+                           0.5 * (parent->top_north.Y() + parent->bottom_south.Y()),
+                           head.Z());
+    xform_3d wire_rot(c, -s, 0., center.X(),
+                      s,  c, 0., center.Y(),
+                      0., 0., 1, center.Z());
+    return wire_rot;
+  }
+
+  std::pair<const geoinfo::tracker_info::wire*, size_t> geoinfo::tracker_info::closest_wire_in_list(wire_list list, pos_3d point) const {
+    double min_dist = std::numeric_limits<double>::max();
+    const geoinfo::tracker_info::wire* closest_wire = nullptr;
+    size_t closest_wire_index = 0;
+    size_t current_index = 0;
+
+    for (const auto wire : list) {
+      auto closest_point_param = wire->closest_approach_point(point);
+
+      double dist = sqrt((pos_3d(wire->head + wire->direction() * closest_point_param) - point).Mag2());
+
+      if (dist < min_dist) {
+        min_dist = dist;
+        closest_wire = wire;
+        closest_wire_index = current_index;
+      }
+      ++current_index;
+    }
+
+    return {closest_wire, closest_wire_index};
   }
 
 } // namespace sand

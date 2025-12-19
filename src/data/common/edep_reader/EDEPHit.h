@@ -16,6 +16,8 @@ class EDEPHit {
    * @brief Constructor for EDEPHit.
    * @param hit The TG4HitSegment object containing hit information.
    */
+  EDEPHit() = default;
+  
   EDEPHit(TG4HitSegment hit)
     : start_(hit.GetStart()),
       stop_(hit.GetStop()),
@@ -38,6 +40,33 @@ class EDEPHit {
       track_length_(hit.GetTrackLength()),
       contrib_(hit.Contrib[0]),
       primary_id_(hit.GetPrimaryId()),
+      h_index(i) {};
+  /**
+   * @brief Constructor for EDEPHit.
+   * @param start The start position of the hit.
+   * @param stop The stop position of the hit.
+   * @param energy_deposit The energy deposited by the hit.
+   * @param secondary_deposit The secondary deposition of the hit.
+   * @param track_length The track length of the hit.
+   * @param contrib The main contributor of the hit.
+   * @param primary_id The ID of the primary particle generating the hit.
+   * @param i The index of the hit.
+   */
+  EDEPHit(TLorentzVector start,
+          TLorentzVector stop,
+          double energy_deposit,
+          double secondary_deposit,
+          double track_length,
+          int contrib,
+          int primary_id,
+          int i)
+    : start_(start),
+      stop_(stop),
+      energy_deposit_(energy_deposit),
+      secondary_deposit_(secondary_deposit),
+      track_length_(track_length),
+      contrib_(contrib),
+      primary_id_(primary_id),
       h_index(i) {};
   /**
    * @brief Destructor for EDEPHit.

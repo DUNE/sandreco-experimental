@@ -105,28 +105,54 @@ namespace sand::common {
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
 
+    bool isSTT = (gi.tracker().path().find("STT") != std::string::npos);
+    if (isSTT) UFW_INFO("TRACKER is STT");
+    else UFW_INFO("TRACKER is DRIFT");
+
     if (!m_test_path.empty()) {
-      UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
-      auto ID = gi.tracker().id(gi.tracker().partial_path(m_test_path, gi));
-      UFW_INFO("ID function test (SubdetectorID: {}", ID.subdetector);
-      UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
-    } else {
-      UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
-    }
+        UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
+        auto ID = gi.tracker().id(gi.tracker().partial_path(m_test_path, gi));
+        if (isSTT) {
+          UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector,
+                  ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
+        } else {
+          UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {})", ID.subdetector,
+                  ID.drift.supermodule, ID.drift.plane);
+        }
+        UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
+      } else {
+        UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
+      }
+
     UFW_INFO("TRACKER position: '{}'", gi.tracker().transform());
 
     int i = 0;
     for (const auto& s : gi.tracker().stations()) {
-      auto nhor = s->select([](auto& w) { return std::fmod(w.angle(), M_PI) < 1e-3; }).size();
-      auto nver = s->select([](auto& w) {
-                     return !std::fmod(w.angle(), M_PI) < 1e-3 && std::fmod(w.angle(), M_PI_2) < 1e-3;
-                   }).size();
-      UFW_INFO(
-          "Station {}:\n - corners: [{}, {}, {}, {}];\n - {} horizontal and {} vertical wires;\n - target material {}",
-          i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
+      if (isSTT) {
+        auto nhor = s->select([](auto& w) { return std::fmod(w.angle(), M_PI) < 1e-3; }).size();
+        auto nver = s->select([](auto& w) {
+                       return !std::fmod(w.angle(), M_PI) < 1e-3 && std::fmod(w.angle(), M_PI_2) < 1e-3;
+                     }).size();
+        UFW_INFO(
+            "Station {}:\n - corners: [{}, {}, {}, {}];\n - {} h and {} v wires;\n - target material {}",
+            i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
+        } else {   
+        auto nx = s->select([&](const auto& w) {
+          return std::abs(w.angle() - 0.0) < 1e-6;
+        }).size();
+        auto nu = s->select([&](const auto& w) {
+          return std::abs(w.angle() - (M_PI / 36.0)) < 1e-6;
+        }).size(); 
+        auto nv = s->select([&](const auto& w) {
+          return std::abs(w.angle() + (M_PI / 36.0)) < 1e-6;
+        }).size();
+        UFW_INFO(
+            "Station {}:\n - corners: [{}, {}, {}, {}];\n - {} x, {} u, and {} v wires;\n - target material {}",
+            i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nx, nu, nv, s->target);
+        }
     }
-  }
 
+  }
 } // namespace sand::common
 
 UFW_REGISTER_PROCESS(sand::common::geoinfo_test)

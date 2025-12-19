@@ -20,26 +20,15 @@
 namespace sand {
 
   geoinfo::geoinfo(const ufw::config& cfg) {
-    m_root_path      = cfg.value("basepath", "/volWorld/rockBox_lv_0/volDetEnclosure_0/volSAND_0/MagIntVol_volume_0/");
-    m_edep_root_path = cfg.value(
-        "edep_basepath", "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/");
+    m_root_path      = cfg.value("basepath", "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/");
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
 
     auto grain_path = cfg.at("grain_geometry");
+    auto drift_view_angle = cfg.value("drift_view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
+    auto drift_view_offset = cfg.value("drift_view_offset", std::array<double, 3>{10.0, 10.0, 10.0});
+    auto drift_view_spacing = cfg.value("drift_view_spacing", std::array<double, 3>{10.0, 10.0, 10.0});
 
     auto nav               = tgm.navigator();
-    std::string world_path = nav->GetPath();
-    bool PV_needed         = world_path.find("_PV") != std::string::npos;
-
-    if (PV_needed) {
-      // Step 1: Add _PV before _0
-      std::regex pattern_with_0("(_0)");
-      m_root_path = std::regex_replace(m_root_path, pattern_with_0, "_PV$1");
-
-      // Step 2: Add _PV after World
-      std::regex pattern_without_0("(volWorld)");
-      m_root_path = std::regex_replace(m_root_path, pattern_without_0, "$1_PV");
-    }
 
     try {
       nav->cd(m_root_path.c_str());
@@ -53,12 +42,7 @@ namespace sand {
     m_ecal.reset(new ecal_info(*this));
 
     auto subpath = m_root_path;
-
-    if (PV_needed) {
-      subpath = m_root_path / "sand_inner_volume_PV_0";
-    } else {
-      subpath = m_root_path / "sand_inner_volume_0";
-    }
+    subpath = m_root_path / "sand_inner_volume_PV_0";
 
     nav->cd(subpath.c_str());
     bool isSTT = false;
@@ -75,7 +59,7 @@ namespace sand {
       m_tracker.reset(new stt_info(*this));
     } else {
       UFW_INFO("Drift subdetector implementation detected.");
-      m_tracker.reset(new drift_info(*this));
+      m_tracker.reset(new drift_info(*this, drift_view_angle, drift_view_offset, drift_view_spacing));
     }
   }
 
@@ -106,5 +90,65 @@ namespace sand {
     }
     return gp;
   }
+
+  // Solve  p+t*dir = v1 + s*(v2-v1)
+  bool geoinfo::getXYLineSegmentIntersection(
+    const pos_3d& v1,
+    const pos_3d& v2,
+    const pos_3d& p,
+    const dir_3d& dir,
+    pos_3d& intersection_point)
+    {
+        // Segment direction vector
+        double delta_x = v1.X() - v2.X();
+        double delta_y = v1.Y() - v2.Y();
+
+        // Determinant for solving the linear system
+        double det = dir.X() * delta_y - dir.Y() * delta_x;
+
+        // If det is ~0, the lines are parallel or nearly parallel → no intersection
+        if (std::fabs(det) < 1e-9) {
+            return false;
+        }
+
+        // Solve parametric values t (for infinite line p + t*dir) and s (segment)
+        double t = ((v1.X() - p.X()) * delta_y -
+                    (v1.Y() - p.Y()) * delta_x) / det;
+
+        double s = ((p.X() - v1.X()) * dir.Y() -
+                    (p.Y() - v1.Y()) * dir.X()) / det;
+
+        // Intersection must lie on the segment (s ∈ [0,1])
+        if (s < 0.0 || s > 1.0) {
+            return false;
+        }
+
+        // Compute intersection point 
+        intersection_point = p;
+        intersection_point.SetX(p.X() + t * dir.X());
+        intersection_point.SetY(p.Y() + t * dir.Y());
+        intersection_point.SetZ(p.Z());
+
+
+        return true;
+    }
+
+  std::vector<pos_3d> geoinfo::getXYLinePolygonIntersections(
+    const std::vector<pos_3d>& v,
+    const pos_3d& p,
+    const dir_3d& dir){
+      std::vector<pos_3d> intersections;
+      for (int i = 0; i < v.size(); i++) {
+        pos_3d intersection;
+        const auto& current_v = v[i];
+        const auto& next_v    = v[(i + 1) % v.size()]; // wraps to first
+        if(getXYLineSegmentIntersection(current_v, next_v, p, dir, intersection)) {
+          intersections.push_back(intersection);
+        }
+      }
+      return intersections;
+    }
+
+
 
 } // namespace sand

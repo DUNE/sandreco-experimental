@@ -7,7 +7,10 @@
   },
   "globals" : {
     "sand::root_tgeomanager" : { "geometry" : "test/sand-drift-events.10.edep.root" },
-    "sand::geoinfo" : { "grain_geometry" : "gdml-masks" },
+    "sand::geoinfo" : { "grain_geometry" : "gdml-masks", 
+                         "drift_view_angle" : [0.0, -0.087266463, 0.087266463],
+                         "drift_view_offset" : [10.0, 10.0, 10.0],
+                         "drift_view_spacing" : [10.0, 10.0, 10.0] },
     "sand::grain::geant_gdml_parser" : {
       "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" },
       "gdml-lenses" : {}
@@ -19,7 +22,7 @@
   },
   "run" : [
     {
-      "sand::common::geoinfo_test" : { "test_path" : "sand_inner_volume_PV_0/SANDtracker_PV_0/SuperMod_B_PV_1/C3H6Mod_B_PV_2/C3H6DriftChamber_B_PV_0/C3H6DriftModule_1_B_PV_0/C3H6DriftModule_1_B_Fwire_PV_1", "mask_or_lens" : "mask"},
+      "sand::common::geoinfo_test" : {"test_path" : "sand_inner_volume_PV_0/SANDtracker_PV_0/SuperMod_B_PV_1/C3H6Mod_B_PV_2/C3H6DriftChamber_B_PV_0/C3H6DriftModule_1_B_PV_0", "mask_or_lens" : "mask"},
       "reqs" : {},
       "prods" : {}
     }

@@ -49,8 +49,9 @@ namespace sand {
       double length() const { return std::sqrt(direction().Mag2()); } ///< length of the line between
       pos_3d actual(pos_3d) const;
       std::size_t segment(pos_3d x) const;
-      std::vector<double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
+      std::pair<double,double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
       double closest_approach_point(const pos_3d&) const;
+      xform_3d wire_plane_transform() const; /// transform from local wire plane to global coordinates
     };
 
     using wire_ptr  = std::unique_ptr<const wire>;
@@ -70,6 +71,7 @@ namespace sand {
       pos_3d bottom_north;
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
+      tracker_info * parent;
       template <typename Func>
       wire_list select(Func&& f) const {
         wire_list wl;
@@ -101,9 +103,12 @@ namespace sand {
 
     const std::vector<station_ptr>& stations() const { return m_stations; }
 
-    std::vector<vec_4d> closest_points(const vec_4d&, const vec_4d&, const double&, const wire&) const;
+    const station* get_station_by_ID(std::size_t i) const { return m_stations.at(i).get(); }
 
-    double get_min_time(const vec_4d&, const double&, const wire&) const;
+    // std::pair<vec_4d,vec_4d> closest_points(const vec_4d&, const vec_4d&, double, const wire&) const; //TO-DO use pos_3d if time is not needed
+    // vec_4d closest_point(const vec_4d&, double, const wire&) const;
+    // double get_min_time(const vec_4d&, double, const wire&) const;
+    std::pair<const wire*, size_t> closest_wire_in_list(wire_list, pos_3d) const;
 
    protected:
     void add_station(station_ptr&&);

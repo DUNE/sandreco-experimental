@@ -47,6 +47,8 @@ namespace sand {
       boxcorner.SetX(-boxcorner.x());
       stat->top_south    = centre + boxcorner;
       stat->bottom_north = centre - boxcorner;
+      stat->parent = this;
+      
       nav->for_each_node([&](auto plane) {
         // The plane does not carry useful information for us.
         std::string plname = plane->GetName();
@@ -94,48 +96,24 @@ namespace sand {
     geo_id gi;
     auto path      = gp;
     gi.subdetector = STT;
-    // abuse the bad notation here, module/plane/straw
-    if (path.find("PV_") != std::string::npos) {
-      std::string straw(path.token(2));
-      auto i1 = straw.find('_');
-      auto i2 = straw.find('_', i1 + 1);
-      auto i3 = straw.find('_', i2 + 1);
-      auto i4 = straw.find('_', i3 + 1);
-      auto i5 = straw.find('_', i4 + 1);
-      if (i5 != std::string::npos) {
-        gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
-        gi.stt.plane       = 0;
-        if (straw.at(i3 - 1) == 'Y') {
-          gi.stt.plane = 1;
-        } else if (path.token(1).back() == '1') {
-          gi.stt.plane = 2;
-        }
-        gi.stt.tube = std::stoi(straw.substr(i5 + 1));
-      } else {
-        UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
+    std::string straw(path.token(2));
+    auto i1 = straw.find('_');
+    auto i2 = straw.find('_', i1 + 1);
+    auto i3 = straw.find('_', i2 + 1);
+    auto i4 = straw.find('_', i3 + 1);
+    auto i5 = straw.find('_', i4 + 1);
+    if (i5 != std::string::npos) {
+      gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
+      gi.stt.plane       = 0;
+      if (straw.at(i3 - 1) == 'Y') {
+        gi.stt.plane = 1;
+      } else if (path.token(1).back() == '1') {
+        gi.stt.plane = 2;
       }
-    } else { // root geometry notation with no PV
-      std::string straw(path.token(2));
-      auto i1 = straw.find('_');
-      auto i2 = straw.find('_', i1 + 1);
-      auto i3 = straw.find('_', i2 + 1);
-      if (i3 != std::string::npos) {
-        gi.stt.supermodule = std::stoi(straw.substr(i1 + 1, i2 - i1 - 1));
-        gi.stt.plane       = 0;
-        if (straw.at(i3 - 1) == 'Y') {
-          gi.stt.plane = 1;
-        } else if (path.token(0).back() == '1') {
-          gi.stt.plane = 2;
-        }
-        size_t pos = straw.find('#');
-        if (pos != std::string::npos) {
-          gi.stt.tube = std::stoi(straw.substr(pos + 1));
-        } else {
-          gi.stt.tube = 0;
-        }
-      } else {
-        UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
-      }
+      gi.stt.tube = std::stoi(straw.substr(i5 + 1));
+      
+    } else {
+      UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
     }
     return gi;
   }
@@ -144,9 +122,7 @@ namespace sand {
     // TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
     geo_path gp           = path();
-    std::string placement = (gp.find("_PV") != std::string::npos)
-                              ? "_PV"
-                              : ""; // check if we are using the edepsim or ROOT geometry notation
+    std::string placement = "_PV";
     auto stat             = at(gi.stt.supermodule);
     std::string module_name;
     switch (stat->target) {
@@ -173,18 +149,12 @@ namespace sand {
       gp /= module_name + placement + "_0";
     } else if (gi.stt.plane == 2 && stat->target == TRKONLY) {
       module_name += "_planeXX";
-      if (placement == "PV_")
-        gp /= module_name + placement + "_1";
-      else
-        gp /= module_name + "#1";
+      gp /= module_name + placement + "_1";
     } else {
       UFW_ERROR("Plane '{}' unsupported.", gi.stt.plane);
     }
     // TODO check max tube for this layer
-    if (placement == "_PV")
-      gp /= module_name + "_straw_PV_" + gi.stt.tube;
-    else
-      gp /= module_name + "_straw_0" + (gi.stt.tube == 0 ? "" : fmt::format("#{}", gi.stt.tube));
+    gp /= module_name + "_straw_PV_" + gi.stt.tube;
     return gp;
   }
 
