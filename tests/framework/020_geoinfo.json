@@ -7,7 +7,10 @@
   },
   "globals" : {
     "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
-    "sand::geoinfo" : { "grain_geometry" : "gdml-lenses" },
+    "sand::geoinfo" : { "grain_geometry" : "gdml-lenses", 
+                         "drift_view_angle" : [0.0, -0.087266463, 0.087266463],
+                         "drift_view_offset" : [10.0, 10.0, 10.0],
+                         "drift_view_spacing" : [10.0, 10.0, 10.0] },
     "sand::grain::geant_gdml_parser" : {
       "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" },
       "gdml-lenses" : { "path" : "geometries/grain/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}

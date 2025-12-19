@@ -47,6 +47,8 @@ namespace sand {
       boxcorner.SetX(-boxcorner.x());
       stat->top_south    = centre + boxcorner;
       stat->bottom_north = centre - boxcorner;
+      stat->parent = this;
+      
       nav->for_each_node([&](auto plane) {
         // The plane does not carry useful information for us.
         std::string plname = plane->GetName();
