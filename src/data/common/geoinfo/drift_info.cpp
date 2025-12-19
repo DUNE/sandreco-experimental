@@ -15,11 +15,18 @@ namespace sand {
    *
    * @param gi
    */
-  geoinfo::drift_info::drift_info(const geoinfo& gi) : tracker_info(gi, s_drift_path) {
+  geoinfo::drift_info::drift_info(const geoinfo& gi, 
+                                  const std::array<double, 3>& view_angle, 
+                                  const std::array<double, 3>& view_offset, 
+                                  const std::array<double, 3>& view_spacing) : tracker_info(gi, s_drift_path) {
     // UFW_FATAL("drift");
     auto& tgm      = ufw::context::current()->instance<root_tgeomanager>();
     auto nav       = tgm.navigator();
     auto driftpath = gi.root_path() / path();
+
+    m_view_angle = view_angle;
+    m_view_offset = view_offset;
+    m_view_spacing =  view_spacing;
 
     nav->cd(driftpath);
     nav->for_each_node([&](auto supermod) {
@@ -61,6 +68,7 @@ namespace sand {
         boxcorner.SetX(-boxcorner.x());
         stat->top_south    = centre + boxcorner;
         stat->bottom_north = centre - boxcorner;
+        stat->parent = this;
 
 
         if (tgt == TRKONLY) {
@@ -291,8 +299,9 @@ namespace sand {
     }
 
     // Setting up rotation matrix for wires
-    double c = std::cos(view_angle[view_ID]);
-    double s = std::sin(view_angle[view_ID]);
+    auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
+    double c = std::cos(drift->view_angle()[view_ID]);
+    double s = std::sin(drift->view_angle()[view_ID]);
     xform_3d wire_rot(c, -s, 0., 0.,
                       s,  c, 0., 0.,
                       0., 0., 1, 0.);   
@@ -308,7 +317,7 @@ namespace sand {
   
 
     /// Find intersections of wires with frame
-    double transverse_position = max_wire_plane_y - view_offset[view_ID];
+    double transverse_position = max_wire_plane_y - drift->view_offset()[view_ID];
     while (transverse_position > -max_wire_plane_y) {
       pos_3d wire_centre_rot(0., transverse_position, 0.); // origin of the vector in rotated frame
 
@@ -329,34 +338,37 @@ namespace sand {
         w->parent             = this;
         w->head               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[1] : intersections_global[0];
         w->tail               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[0] : intersections_global[1];
-        w->max_radius         = view_spacing[view_ID] / 2.0;
+        w->max_radius         = drift->view_spacing()[view_ID] / 2.0;
         wires.emplace_back(std::move(w));
       } else {
         UFW_DEBUG("Transverse position {} has {} intersections, skipping.", transverse_position, intersections_global.size());
       }
 
-      transverse_position -= view_spacing[view_ID];
+      transverse_position -= drift->view_spacing()[view_ID];
 
     }
   }
 
   geoinfo::drift_info::wire_list geoinfo::drift_info::station::x_view() const {
+    auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
     wire_list wl = select([&](const wire& w) {
-      return std::abs(w.angle() - view_angle[geo_x.drift.plane]) < 1e-6;
+      return std::abs(w.angle() - drift->view_angle()[geo_x.drift.plane]) < 1e-6;
     });
     return wl;
   }
 
   geoinfo::drift_info::wire_list geoinfo::drift_info::station::u_view() const {
+    auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
     wire_list wl = select([&](const wire& w) {
-      return std::abs(w.angle() - view_angle[geo_u.drift.plane]) < 1e-6;
+      return std::abs(w.angle() - drift->view_angle()[geo_u.drift.plane]) < 1e-6;
     });
     return wl;
   }
 
   geoinfo::drift_info::wire_list geoinfo::drift_info::station::v_view() const {
+    auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
     wire_list wl = select([&](const wire& w) {
-      return std::abs(w.angle() - view_angle[geo_v.drift.plane]) < 1e-6;
+      return std::abs(w.angle() - drift->view_angle()[geo_v.drift.plane]) < 1e-6;
     });
     return wl;
   }

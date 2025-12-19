@@ -16,7 +16,7 @@ namespace sand {
       void set_wire_list(const size_t &);
     };
 
-    drift_info(const geoinfo&);
+    drift_info(const geoinfo&, const std::array<double, 3>&, const std::array<double, 3>&, const std::array<double, 3>&);
 
     virtual ~drift_info();
 
@@ -26,27 +26,15 @@ namespace sand {
 
     geo_path path(geo_id) const override;
 
-    static constexpr std::array<double, 3> view_angle = {
-        0.0,
-        -M_PI / 36.0,
-        M_PI / 36.0
-    };
+    const std::array<double, 3> & view_angle() const { return m_view_angle; }
+    const std::array<double, 3> & view_offset() const { return m_view_offset; }
+    const std::array<double, 3> & view_spacing() const { return m_view_spacing; }
 
-    static constexpr std::array<double, 3> view_offset = {
-        10.0, 10.0, 10.0
-    };
+  private:
 
-    static constexpr std::array<double, 3> view_spacing = {
-        10.0, 10.0, 10.0
-    };
-
-    static constexpr std::array<double, 3> view_length = {
-        0.0, 0.0, 0.0
-    };
-
-    static constexpr std::array<double, 3> view_velocity = {
-        0.05, 0.05, 0.05
-    };
+    std::array<double, 3> m_view_angle ;
+    std::array<double, 3> m_view_offset ;
+    std::array<double, 3> m_view_spacing ;
     
   };
 

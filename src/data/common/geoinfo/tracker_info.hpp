@@ -71,6 +71,7 @@ namespace sand {
       pos_3d bottom_north;
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
+      tracker_info * parent;
       template <typename Func>
       wire_list select(Func&& f) const {
         wire_list wl;

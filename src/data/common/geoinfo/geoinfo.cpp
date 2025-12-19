@@ -24,6 +24,9 @@ namespace sand {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
 
     auto grain_path = cfg.at("grain_geometry");
+    auto drift_view_angle = cfg.value("drift_view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
+    auto drift_view_offset = cfg.value("drift_view_offset", std::array<double, 3>{10.0, 10.0, 10.0});
+    auto drift_view_spacing = cfg.value("drift_view_spacing", std::array<double, 3>{10.0, 10.0, 10.0});
 
     auto nav               = tgm.navigator();
 
@@ -56,7 +59,7 @@ namespace sand {
       m_tracker.reset(new stt_info(*this));
     } else {
       UFW_INFO("Drift subdetector implementation detected.");
-      m_tracker.reset(new drift_info(*this));
+      m_tracker.reset(new drift_info(*this, drift_view_angle, drift_view_offset, drift_view_spacing));
     }
   }
 
