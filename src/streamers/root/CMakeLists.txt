@@ -6,7 +6,7 @@ target_sources(tree_streamer PRIVATE
 
 target_include_directories(tree_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include)
 
-target_link_libraries(tree_streamer ROOT::RIO ROOT::Tree ufw::ufw)
+target_link_libraries(tree_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw)
 
 #The streamer relies on dictionary generation and its own definitions for
 #correct representation of any user type. This requires all said types to be known.
