@@ -30,9 +30,37 @@ namespace sand {
             light_velocity(1./5.85) {}
     };
 
-    inline constexpr fiber_plane12 = fiber(430.0);
-    inline constexpr fiber_plane3  = fiber(380.0);
-    inline constexpr fiber_plane45 = fiber(330.0);    
+    inline static /*constexpr*/ fiber fiber_plane12{430.0};
+    inline static /*constexpr*/ fiber fiber_plane3{380.0};
+    inline static /*constexpr*/ fiber fiber_plane45{330.0};
+
+    // cell
+
+    struct cell_element_face  {
+      pos_3d p1;
+      pos_3d p2;
+      pos_3d p3;
+      pos_3d p4;
+
+      dir_3d normal_dir;
+
+      cell_element_face() = delete;
+      cell_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
+
+      dir_3d normal() const;
+    };
+    
+    enum class cell_element_type { straight, curved };
+
+    struct cell_element {
+      cell_element_face face1;
+      cell_element_face face2;
+
+      cell_element_type type;
+  
+      cell_element() = delete;
+      cell_element(const cell_element_face& f1, const cell_element_face& f2);
+    };
     
     enum class cell_type { barrel, endcap };
 
