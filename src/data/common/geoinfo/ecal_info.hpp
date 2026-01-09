@@ -62,13 +62,15 @@ namespace sand {
       cell_element(const cell_element_face& f1, const cell_element_face& f2);
     };
     
-    enum class cell_type { barrel, endcap };
+    enum class subdetector { barrel, endcapA, endcapB };
 
     struct cell {
       geo_id id;
       pos_3d centre;
       double length;
-      cell_type type;
+      fiber fib;
+      std::vector<cell_element> elements;
+      subdetector subdect;
     };
 
    public:

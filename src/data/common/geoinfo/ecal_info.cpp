@@ -1,4 +1,6 @@
 #include <ecal_info.hpp>
+#include <root_tgeomanager/root_tgeomanager.hpp>
+#include <ufw/context.hpp>
 
 namespace sand {
 
@@ -36,12 +38,23 @@ namespace sand {
         type = cell_element_type::curved;
       }
       else {
-        UFW_EXCEPT(std::invalid_argument, 
-          std::string("cell_element: faces normals are neither parallel nor orthogonal"));
+        UFW_EXCEPT(std::invalid_argument, "cell_element: faces normals are neither parallel nor orthogonal");
       }
     }
 
-  geoinfo::ecal_info::ecal_info(const geoinfo& gi) : subdetector_info(gi, "kloe_calo_volume_PV_0") {}
+  geoinfo::ecal_info::ecal_info(const geoinfo& gi) : subdetector_info(gi, "kloe_calo_volume_PV_0") {
+    UFW_INFO("ecal_info: constructed ECAL geoinfo");
+
+    
+    auto& tgm      = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav       = tgm.navigator();
+
+    auto ecal_path = gi.root_path() / path();
+    nav->cd(ecal_path);
+    auto nd = nav->get_node();
+
+    UFW_INFO(fmt::format("ECAL node name: {}", nd->GetName()));
+  }
 
   geoinfo::ecal_info::~ecal_info() = default;
 
