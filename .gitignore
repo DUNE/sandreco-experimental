@@ -5,3 +5,5 @@ install/
 compile_commands.json
 src/streamers/root/tree_streamer_linkdef.h
 src/streamers/root/tree_streamer_types.hpp
+*log
+.vscode/
