@@ -7,9 +7,9 @@
 /// \file
 
 /// @brief Enum representing different components in the detector.
-enum class component { GRAIN, STRAW, DRIFT, ECAL, MAGNET, WORLD };
+enum class component { GRAIN, STRAW, DRIFT, ECAL, MAGNET, WORLD, OTHER };
 
-extern component components[6];
+extern component components[7];
 
 extern std::map<component, std::string> component_to_string;
 

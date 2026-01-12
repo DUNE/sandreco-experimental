@@ -127,7 +127,11 @@ void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
   for (auto hmap : edep_event.SegmentDetectors) {
     for (uint i = 0; i < hmap.second.size(); i++) {
       auto h = hmap.second[i];
-      hit_map[h.Contrib[0]][string_to_component[hmap.first]].push_back(EDEPHit(h, i));
+      if(string_to_component.find(hmap.first) == string_to_component.end()) {
+ 	hit_map[h.Contrib[0]][component::OTHER].push_back(EDEPHit(h, i));
+      } else {
+     	 hit_map[h.Contrib[0]][string_to_component[hmap.first]].push_back(EDEPHit(h, i));
+      }
     }
   }
   std::vector<EDEPTrajectory> trajectories;
