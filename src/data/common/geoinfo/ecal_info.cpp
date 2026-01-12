@@ -2,58 +2,118 @@
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <ufw/context.hpp>
 
+#include <TGeoBoolNode.h>
+#include <TGeoCompositeShape.h>
+
 namespace sand {
 
-  geoinfo::ecal_info::cell_element_face::cell_element_face(const pos_3d& v1, const pos_3d& v2, const pos_3d& v3, const pos_3d& v4)
+  bool geoinfo::ecal_info::cell::element::face::are_points_coplanar() const {
+    // Check coplanarity: four points are coplanar if the scalar triple product is zero
+    // (p2-p1) · ((p3-p1) × (p4-p1)) = 0
+    dir_3d u              = (p2 - p1).Unit();
+    dir_3d w              = (p3 - p1).Unit();
+    dir_3d z              = (p4 - p1).Unit();
+    double triple_product = u.Dot(w.Cross(z));
+
+    return is_zero_within_tolerance(triple_product);
+  }
+
+  geoinfo::ecal_info::cell::element::face::face(const pos_3d& v1, const pos_3d& v2, const pos_3d& v3, const pos_3d& v4)
     : p1(v1), p2(v2), p3(v3), p4(v4) {
-      // Check coplanarity: four points are coplanar if the scalar triple product is zero
-      // (p2-p1) · ((p3-p1) × (p4-p1)) = 0
-      dir_3d u = (p2 - p1).Unit();
-      dir_3d w = (p3 - p1).Unit();
-      dir_3d z = (p4 - p1).Unit();
-      double triple_product = u.Dot(w.Cross(z));
-      
-      const double tolerance = 1e-10;
+    UFW_ASSERT(are_points_coplanar(), std::string("cell_face: four points are not coplanar"));
 
-      UFW_ASSERT(std::abs(triple_product) < tolerance, fmt::format("cell_face: four points are not coplanar (triple product = {})", triple_product));
+    normal_dir = normal();
+  }
 
-      normal_dir = normal();
+  dir_3d geoinfo::ecal_info::cell::element::face::normal() const {
+    dir_3d u = p2 - p1;
+    dir_3d w = p3 - p1;
+    return u.Cross(w).Unit();
+  }
+
+  bool geoinfo::ecal_info::cell::element::are_faces_parallel() const {
+    double cross_product_norm = face1.normal_dir.Cross(face2.normal_dir).R();
+    return is_zero_within_tolerance(cross_product_norm);
+  }
+
+  bool geoinfo::ecal_info::cell::element::are_faces_perpendicular() const {
+    double dot_product = face1.normal_dir.Dot(face2.normal_dir);
+    return is_zero_within_tolerance(dot_product);
+  }
+
+  geoinfo::ecal_info::cell::element::element(const face& f1, const face& f2) : face1(f1), face2(f2) {
+    constexpr double tolerance = 1e-10;
+
+    if (are_faces_parallel()) {
+      type = element_type::straight;
+    } else if (are_faces_perpendicular()) {
+      type = element_type::curved;
+    } else {
+      UFW_EXCEPT(std::invalid_argument, "cell_element: faces normals are neither parallel nor perpendicular");
     }
-  
-  dir_3d geoinfo::ecal_info::cell_element_face::normal() const {
-      dir_3d u = p2 - p1;
-      dir_3d w = p3 - p1;
-      return u.Cross(w).Unit();
-    };
+  }
 
-  geoinfo::ecal_info::cell_element::cell_element(const cell_element_face& f1, const cell_element_face& f2)
-    : face1(f1), face2(f2) {
-      
-      const double tolerance = 1e-10;
-      if((face1.normal_dir - face2.normal_dir).R() < tolerance || 
-         (face1.normal_dir + face2.normal_dir).R() < tolerance) {
-        type = cell_element_type::straight; 
-      }
-      else if(face1.normal_dir.Cross(face2.normal_dir).R() - 1. < 0) {
-        type = cell_element_type::curved;
-      }
-      else {
-        UFW_EXCEPT(std::invalid_argument, "cell_element: faces normals are neither parallel nor orthogonal");
-      }
+  void find_basic_element(TGeoShape* shape, std::vector<TGeoShape*>& module_elements) {
+    if (shape->IsComposite()) {
+      auto c = static_cast<TGeoCompositeShape*>(shape);
+      auto u = static_cast<TGeoUnion*>(c->GetBoolNode());
+      auto l = u->GetLeftShape();
+      auto r = u->GetRightShape();
+      find_basic_element(l, module_elements);
+      find_basic_element(r, module_elements);
+    } else {
+      module_elements.push_back(shape);
     }
+  };
 
   geoinfo::ecal_info::ecal_info(const geoinfo& gi) : subdetector_info(gi, "kloe_calo_volume_PV_0") {
     UFW_INFO("ecal_info: constructed ECAL geoinfo");
 
-    
-    auto& tgm      = ufw::context::current()->instance<root_tgeomanager>();
-    auto nav       = tgm.navigator();
+    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav  = tgm.navigator();
 
     auto ecal_path = gi.root_path() / path();
     nav->cd(ecal_path);
-    auto nd = nav->get_node();
+    auto calo = nav->get_node();
 
-    UFW_INFO(fmt::format("ECAL node name: {}", nd->GetName()));
+    for (int i = 0; i < calo->GetNdaughters(); ++i) {
+      auto module = calo->GetDaughter(i);
+      if (string_begins_with(module->GetName(), "ECAL_endcap_lv_PV_")) {
+        auto endcap = module;
+        for (int j = 0; j < endcap->GetNdaughters(); ++j) {
+          module               = endcap->GetDaughter(j);
+          auto module_elements = std::vector<TGeoShape*>();
+
+          find_basic_element(module->GetVolume()->GetShape(), module_elements);
+
+          for (auto& elem : module_elements) {
+            UFW_INFO(fmt::format("      Module: {} -> Element Shape: {}", module->GetName(), elem->GetName()));
+          }
+
+          // UFW_INFO(fmt::format("    Endcap Module {}: {}", j, module->GetName()));
+
+          // Process endcap modules here
+          // TGeoBoolNode Class for Endcap volumes
+
+          // auto s       = static_cast<TGeoCompositeShape*>(module->GetVolume()->GetShape());
+          // auto union1  = static_cast<TGeoUnion*>(s->GetBoolNode());
+          // auto s_left  = union1->GetLeftShape();
+          // auto s_right = union1->GetRightShape();
+
+          // UFW_INFO(
+          //     fmt::format("      Shape Left: {} {}", s_left->GetName(), s_left->IsComposite() ? "(composite)" : ""));
+          // UFW_INFO(
+          //     fmt::format("      Shape Right: {} {}", s_right->GetName(), s_right->IsComposite() ? "(composite)" :
+          //     ""));
+        }
+      } else if (string_begins_with(module->GetName(), "ECAL_lv_PV_")) {
+        UFW_INFO(fmt::format("    Barrel Module {}: {}", i, module->GetName()));
+
+        // Process barrel modules here
+
+        auto s = module->GetVolume()->GetShape();
+      }
+    }
   }
 
   geoinfo::ecal_info::~ecal_info() = default;
