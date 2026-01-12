@@ -33,77 +33,53 @@ namespace sand {
     inline static /*constexpr*/ fiber kfiber_plane3{380.0};
     inline static /*constexpr*/ fiber kfiber_plane45{330.0};
 
-    // shape element
+    // face
+    struct shape_element_face {
+     public:
+      pos_3d p1;
+      pos_3d p2;
+      pos_3d p3;
+      pos_3d p4;
 
+      dir_3d normal_dir;
+
+      shape_element_face() = delete;
+      shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
+      void transform(const xform_3d transf) {
+        p1         = transf * p1;
+        p2         = transf * p2;
+        p3         = transf * p3;
+        p4         = transf * p4;
+        normal_dir = transf * normal_dir;
+      }
+
+     private:
+      dir_3d normal() const;
+      bool are_points_coplanar() const;
+    };
+
+    // shape element
     enum class shape_element_type { straight, curved };
 
     struct shape_element {
      public:
-      struct face {
-       public:
-        pos_3d p1;
-        pos_3d p2;
-        pos_3d p3;
-        pos_3d p4;
-
-        dir_3d normal_dir;
-
-        face() = delete;
-        face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
-
-       private:
-        dir_3d normal() const;
-        bool are_points_coplanar() const;
-      };
-
-      face face1;
-      face face2;
+      shape_element_face face1;
+      shape_element_face face2;
 
       shape_element_type type;
 
       shape_element() = delete;
-      shape_element(const face& f1, const face& f2);
+      shape_element(const shape_element_face& f1, const shape_element_face& f2);
+
+      void transform(const xform_3d transf) {
+        face1.transform(transf);
+        face2.transform(transf);
+      }
 
      private:
       bool are_faces_parallel() const;
       bool are_faces_perpendicular() const;
     };
-
-    // cell
-
-    // enum class cell_element_type { straight, curved };
-
-    // struct cell_element {
-    //  public:
-    //   struct face {
-    //    public:
-    //     pos_3d p1;
-    //     pos_3d p2;
-    //     pos_3d p3;
-    //     pos_3d p4;
-
-    //     dir_3d normal_dir;
-
-    //     face() = delete;
-    //     face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
-
-    //    private:
-    //     dir_3d normal() const;
-    //     bool are_points_coplanar() const;
-    //   };
-
-    //   face face1;
-    //   face face2;
-
-    //   cell_element_type type;
-
-    //   cell_element() = delete;
-    //   cell_element(const face& f1, const face& f2);
-
-    //  private:
-    //   bool are_faces_parallel() const;
-    //   bool are_faces_perpendicular() const;
-    // };
 
     enum class subdetector { barrel, endcapA, endcapB };
 
