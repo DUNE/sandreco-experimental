@@ -6,6 +6,7 @@
 #include <TGeoCompositeShape.h>
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
+#include <TMath.h>
 
 namespace sand {
 
@@ -21,6 +22,71 @@ namespace sand {
       return xform_3d(rotation, translation);
     }
 
+    geoinfo::ecal_info::shape_element tube_to_shape_element(TGeoTubeSeg* tube) {
+      auto rmin = tube->GetRmin();
+      auto rmax = tube->GetRmax();
+      auto dz   = tube->GetDz();
+      auto phi1 = tube->GetPhi1();
+      auto phi2 = tube->GetPhi2();
+
+      geoinfo::ecal_info::shape_element el(
+          geoinfo::ecal_info::shape_element_face(
+              pos_3d(rmin * std::cos(phi1 * TMath::DegToRad()), rmin * std::sin(phi1 * TMath::DegToRad()), dz),
+              pos_3d(rmin * std::cos(phi1 * TMath::DegToRad()), rmin * std::sin(phi1 * TMath::DegToRad()), -dz),
+              pos_3d(rmax * std::cos(phi1 * TMath::DegToRad()), rmax * std::sin(phi1 * TMath::DegToRad()), dz),
+              pos_3d(rmax * std::cos(phi1 * TMath::DegToRad()), rmax * std::sin(phi1 * TMath::DegToRad()), -dz)),
+          geoinfo::ecal_info::shape_element_face(
+              pos_3d(rmin * std::cos(phi2 * TMath::DegToRad()), rmin * std::sin(phi2 * TMath::DegToRad()), dz),
+              pos_3d(rmin * std::cos(phi2 * TMath::DegToRad()), rmin * std::sin(phi2 * TMath::DegToRad()), -dz),
+              pos_3d(rmax * std::cos(phi2 * TMath::DegToRad()), rmax * std::sin(phi2 * TMath::DegToRad()), dz),
+              pos_3d(rmax * std::cos(phi2 * TMath::DegToRad()), rmax * std::sin(phi2 * TMath::DegToRad()), -dz)));
+
+      return el;
+    }
+
+    geoinfo::ecal_info::shape_element box_to_shape_element(TGeoBBox* box) {
+      auto dx = box->GetDX();
+      auto dy = box->GetDY();
+      auto dz = box->GetDZ();
+
+      geoinfo::ecal_info::shape_element el(
+          geoinfo::ecal_info::shape_element_face(pos_3d(-dx, -dy, dz), pos_3d(-dx, -dy, -dz), pos_3d(dx, -dy, dz),
+                                                 pos_3d(dx, -dy, -dz)),
+          geoinfo::ecal_info::shape_element_face(pos_3d(-dx, dy, dz), pos_3d(-dx, dy, -dz), pos_3d(dx, dy, dz),
+                                                 pos_3d(dx, dy, -dz)));
+      return el;
+    }
+
+    geoinfo::ecal_info::shape_element trd2_to_shape_element(TGeoTrd2* trd) {
+      auto dx1 = trd->GetDx1();
+      auto dx2 = trd->GetDx2();
+      auto dy1 = trd->GetDy1();
+      auto dy2 = trd->GetDy2();
+      auto dz  = trd->GetDz();
+
+      geoinfo::ecal_info::shape_element el(
+          geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, -dy1, -dz), pos_3d(dx1, -dy1, -dz),
+                                                 pos_3d(-dx2, -dy1, dz), pos_3d(dx2, -dy1, dz)),
+          geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, dy1, -dz), pos_3d(dx1, dy1, -dz), pos_3d(-dx2, dy1, dz),
+                                                 pos_3d(dx2, dy1, dz)));
+      return el;
+    }
+
+    void print_shape_element_info(const geoinfo::ecal_info::shape_element& el, const TGeoShape* shape) {
+      UFW_INFO("Found ECAL {} module element: {} ({})", shape->TestShapeBit(TGeoShape::kGeoTrd2) ? "barrel" : "endcap",
+               shape->GetName(), el.type == geoinfo::ecal_info::shape_element_type::straight ? "straight" : "curved");
+      UFW_INFO("  ** Face 1 **");
+      UFW_INFO("  Point 1: {}", el.face1.p1);
+      UFW_INFO("  Point 2: {}", el.face1.p2);
+      UFW_INFO("  Point 3: {}", el.face1.p3);
+      UFW_INFO("  Point 4: {}", el.face1.p4);
+      UFW_INFO("  ** Face 2 **");
+      UFW_INFO("  Point 1: {}", el.face2.p1);
+      UFW_INFO("  Point 2: {}", el.face2.p2);
+      UFW_INFO("  Point 3: {}", el.face2.p3);
+      UFW_INFO("  Point 4: {}", el.face2.p4);
+    }
+
     void process_element(TGeoShape* shape, TGeoHMatrix geo_transf, geoinfo::ecal_info::module& mod) {
       if (shape->IsComposite()) {
         auto c  = static_cast<TGeoCompositeShape*>(shape);
@@ -33,72 +99,20 @@ namespace sand {
         process_element(r, geo_transf * (*rt), mod);
       } else {
         if (shape->TestShapeBit(TGeoShape::kGeoTubeSeg)) {
-          auto tube = static_cast<TGeoTubeSeg*>(shape);
-          auto rmin = tube->GetRmin();
-          auto rmax = tube->GetRmax();
-          auto dz   = tube->GetDz();
-          auto phi1 = tube->GetPhi1();
-          auto phi2 = tube->GetPhi2();
-
           auto transf = to_xform_3d(geo_transf);
-
-          geoinfo::ecal_info::shape_element el(
-              geoinfo::ecal_info::shape_element_face(
-                  pos_3d(rmin * std::cos(phi1 * TMath::DegToRad()), rmin * std::sin(phi1 * TMath::DegToRad()), dz),
-                  pos_3d(rmin * std::cos(phi1 * TMath::DegToRad()), rmin * std::sin(phi1 * TMath::DegToRad()), -dz),
-                  pos_3d(rmax * std::cos(phi1 * TMath::DegToRad()), rmax * std::sin(phi1 * TMath::DegToRad()), dz),
-                  pos_3d(rmax * std::cos(phi1 * TMath::DegToRad()), rmax * std::sin(phi1 * TMath::DegToRad()), -dz)),
-              geoinfo::ecal_info::shape_element_face(
-                  pos_3d(rmin * std::cos(phi2 * TMath::DegToRad()), rmin * std::sin(phi2 * TMath::DegToRad()), dz),
-                  pos_3d(rmin * std::cos(phi2 * TMath::DegToRad()), rmin * std::sin(phi2 * TMath::DegToRad()), -dz),
-                  pos_3d(rmax * std::cos(phi2 * TMath::DegToRad()), rmax * std::sin(phi2 * TMath::DegToRad()), dz),
-                  pos_3d(rmax * std::cos(phi2 * TMath::DegToRad()), rmax * std::sin(phi2 * TMath::DegToRad()), -dz)));
+          auto el     = tube_to_shape_element(static_cast<TGeoTubeSeg*>(shape));
 
           el.transform(transf);
           mod.elements.push_back(el);
-
-          UFW_INFO("Found ECAL endcap module element: {} ({})", shape->GetName(),
-                   el.type == geoinfo::ecal_info::shape_element_type::straight ? "straight" : "curved");
-          UFW_INFO("  ** Face 1 **");
-          UFW_INFO("  Point 1: {}", el.face1.p1);
-          UFW_INFO("  Point 2: {}", el.face1.p2);
-          UFW_INFO("  Point 3: {}", el.face1.p3);
-          UFW_INFO("  Point 4: {}", el.face1.p4);
-          UFW_INFO("  ** Face 2 **");
-          UFW_INFO("  Point 1: {}", el.face2.p1);
-          UFW_INFO("  Point 2: {}", el.face2.p2);
-          UFW_INFO("  Point 3: {}", el.face2.p3);
-          UFW_INFO("  Point 4: {}", el.face2.p4);
+          print_shape_element_info(el, shape);
 
         } else if (shape->TestShapeBit(TGeoShape::kGeoBox)) {
-          auto box = static_cast<TGeoBBox*>(shape);
-          auto dx  = box->GetDX();
-          auto dy  = box->GetDY();
-          auto dz  = box->GetDZ();
-
           auto transf = to_xform_3d(geo_transf);
-
-          geoinfo::ecal_info::shape_element el(
-              geoinfo::ecal_info::shape_element_face(pos_3d(-dx, -dy, dz), pos_3d(-dx, -dy, -dz), pos_3d(dx, -dy, dz),
-                                                     pos_3d(dx, -dy, -dz)),
-              geoinfo::ecal_info::shape_element_face(pos_3d(-dx, dy, dz), pos_3d(-dx, dy, -dz), pos_3d(dx, dy, dz),
-                                                     pos_3d(dx, dy, -dz)));
+          auto el     = box_to_shape_element(static_cast<TGeoBBox*>(shape));
 
           el.transform(transf);
           mod.elements.push_back(el);
-
-          UFW_INFO("Found ECAL endcap module element: {} ({})", shape->GetName(),
-                   el.type == geoinfo::ecal_info::shape_element_type::straight ? "straight" : "curved");
-          UFW_INFO("  ** Face 1 **");
-          UFW_INFO("  Point 1: {}", el.face1.p1);
-          UFW_INFO("  Point 2: {}", el.face1.p2);
-          UFW_INFO("  Point 3: {}", el.face1.p3);
-          UFW_INFO("  Point 4: {}", el.face1.p4);
-          UFW_INFO("  ** Face 2 **");
-          UFW_INFO("  Point 1: {}", el.face2.p1);
-          UFW_INFO("  Point 2: {}", el.face2.p2);
-          UFW_INFO("  Point 3: {}", el.face2.p3);
-          UFW_INFO("  Point 4: {}", el.face2.p4);
+          print_shape_element_info(el, shape);
 
         } else {
           UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected shape: {}", shape->GetName()));
@@ -107,8 +121,24 @@ namespace sand {
     }
 
     geoinfo::ecal_info::module get_module(TGeoShape* shape, TGeoHMatrix transf) {
+      UFW_INFO("Processing ECAL module ==================================================");
+      UFW_INFO("Matrix:");
+      UFW_INFO("Rotation Matrix:");
+      UFW_INFO(fmt::format("{:10.6f}  {:10.6f}  {:10.6f}", transf.GetRotationMatrix()[0], transf.GetRotationMatrix()[1],
+                           transf.GetRotationMatrix()[2]));
+      UFW_INFO(fmt::format("{:10.6f}  {:10.6f}  {:10.6f}", transf.GetRotationMatrix()[3], transf.GetRotationMatrix()[4],
+                           transf.GetRotationMatrix()[5]));
+      UFW_INFO(fmt::format("{:10.6f}  {:10.6f}  {:10.6f}", transf.GetRotationMatrix()[6], transf.GetRotationMatrix()[7],
+                           transf.GetRotationMatrix()[8]));
+      UFW_INFO("Translation Vector:");
+      UFW_INFO(fmt::format("{:10.6f}  {:10.6f}  {:10.6f}", transf.GetTranslation()[0], transf.GetTranslation()[1],
+                           transf.GetTranslation()[2]));
+      UFW_INFO("Rotation Matrix:");
+      UFW_INFO("Rotation Matrix:");
+      UFW_INFO("Rotation Matrix:");
       geoinfo::ecal_info::module mod;
       process_element(shape, transf, mod);
+      UFW_INFO("=========================================================================");
       return mod;
     };
   } // namespace
@@ -179,34 +209,11 @@ namespace sand {
         auto ecal_barrel_module_path = ecal_path / std::string(node->GetName());
         nav->cd(ecal_barrel_module_path);
         auto geo_transf = nav->get_hmatrix();
+        auto transf     = to_xform_3d(geo_transf);
         auto trd        = static_cast<TGeoTrd2*>(nav->get_node()->GetVolume()->GetShape());
-        auto dx1        = trd->GetDx1();
-        auto dx2        = trd->GetDx2();
-        auto dy1        = trd->GetDy1();
-        auto dy2        = trd->GetDy2();
-        auto dz         = trd->GetDz();
-
-        auto transf = to_xform_3d(geo_transf);
-
-        geoinfo::ecal_info::shape_element el(
-            geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, -dy1, -dz), pos_3d(dx1, -dy1, -dz),
-                                                   pos_3d(-dx2, -dy1, dz), pos_3d(dx2, -dy1, dz)),
-            geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, dy1, -dz), pos_3d(dx1, dy1, -dz), pos_3d(-dx2, dy1, dz),
-                                                   pos_3d(dx2, dy1, dz)));
+        auto el         = trd2_to_shape_element(trd);
         el.transform(transf);
-
-        UFW_INFO("Found ECAL barrel module element: {} ({})", nav->get_node()->GetName(),
-                 el.type == geoinfo::ecal_info::shape_element_type::straight ? "straight" : "curved");
-        UFW_INFO("  ** Face 1 **");
-        UFW_INFO("  Point 1: {}", el.face1.p1);
-        UFW_INFO("  Point 2: {}", el.face1.p2);
-        UFW_INFO("  Point 3: {}", el.face1.p3);
-        UFW_INFO("  Point 4: {}", el.face1.p4);
-        UFW_INFO("  ** Face 2 **");
-        UFW_INFO("  Point 1: {}", el.face2.p1);
-        UFW_INFO("  Point 2: {}", el.face2.p2);
-        UFW_INFO("  Point 3: {}", el.face2.p3);
-        UFW_INFO("  Point 4: {}", el.face2.p4);
+        print_shape_element_info(el, trd);
       } else {
         UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected node: {}", node->GetName()));
       }
