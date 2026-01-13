@@ -101,7 +101,7 @@ namespace sand {
           UFW_INFO("  Point 4: {}", el.face2.p4);
 
         } else {
-          UFW_ERROR("Unexpected shape: {}", shape->GetName());
+          UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected shape: {}", shape->GetName()));
         }
       }
     }
@@ -207,6 +207,8 @@ namespace sand {
         UFW_INFO("  Point 2: {}", el.face2.p2);
         UFW_INFO("  Point 3: {}", el.face2.p3);
         UFW_INFO("  Point 4: {}", el.face2.p4);
+      } else {
+        UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected node: {}", node->GetName()));
       }
     });
   }
