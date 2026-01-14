@@ -73,18 +73,29 @@ namespace sand {
     }
 
     void print_shape_element_info(const geoinfo::ecal_info::shape_element& el, const TGeoShape* shape) {
-      UFW_INFO("Found ECAL {} module element: {} ({})", shape->TestShapeBit(TGeoShape::kGeoTrd2) ? "barrel" : "endcap",
-               shape->GetName(), el.type == geoinfo::ecal_info::shape_element_type::straight ? "straight" : "curved");
-      UFW_INFO("  ** Face 1 **");
-      UFW_INFO("  Point 1: {}", el.face1.p1);
-      UFW_INFO("  Point 2: {}", el.face1.p2);
-      UFW_INFO("  Point 3: {}", el.face1.p3);
-      UFW_INFO("  Point 4: {}", el.face1.p4);
-      UFW_INFO("  ** Face 2 **");
-      UFW_INFO("  Point 1: {}", el.face2.p1);
-      UFW_INFO("  Point 2: {}", el.face2.p2);
-      UFW_INFO("  Point 3: {}", el.face2.p3);
-      UFW_INFO("  Point 4: {}", el.face2.p4);
+      UFW_DEBUG("Found ECAL {} module element: {} ({})", shape->TestShapeBit(TGeoShape::kGeoTrd2) ? "barrel" : "endcap",
+                shape->GetName(), el.type == geoinfo::ecal_info::shape_element_type::straight ? "straight" : "curved");
+      UFW_DEBUG("  ** Face 1 **");
+      UFW_DEBUG("  Point 1: {}", el.face1.p1);
+      UFW_DEBUG("  Point 2: {}", el.face1.p2);
+      UFW_DEBUG("  Point 3: {}", el.face1.p3);
+      UFW_DEBUG("  Point 4: {}", el.face1.p4);
+      UFW_DEBUG("  ** Face 2 **");
+      UFW_DEBUG("  Point 1: {}", el.face2.p1);
+      UFW_DEBUG("  Point 2: {}", el.face2.p2);
+      UFW_DEBUG("  Point 3: {}", el.face2.p3);
+      UFW_DEBUG("  Point 4: {}", el.face2.p4);
+    }
+
+    void print_hmatrix(TGeoHMatrix& mat) {
+      const Double_t* r = mat.GetRotationMatrix();
+      const Double_t* t = mat.GetTranslation();
+
+      UFW_DEBUG("Rotation Matrix:");
+      UFW_DEBUG("| {: .4f} {: .4f} {: .4f} |", r[0], r[1], r[2]);
+      UFW_DEBUG("| {: .4f} {: .4f} {: .4f} |", r[3], r[4], r[5]);
+      UFW_DEBUG("| {: .4f} {: .4f} {: .4f} |", r[6], r[7], r[8]);
+      UFW_DEBUG("Translation Vector: ({: .4f}, {: .4f}, {: .4f})", t[0], t[1], t[2]);
     }
 
     void process_element(TGeoShape* shape, TGeoHMatrix geo_transf, geoinfo::ecal_info::module& mod) {
@@ -115,30 +126,17 @@ namespace sand {
           print_shape_element_info(el, shape);
 
         } else {
-          UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected shape: {}", shape->GetName()));
+          UFW_ERROR(fmt::format("Unexpected shape: {}", shape->GetName()));
         }
       }
     }
 
     geoinfo::ecal_info::module get_module(TGeoShape* shape, TGeoHMatrix transf) {
-      UFW_INFO("Processing ECAL module ==================================================");
-      UFW_INFO("Matrix:");
-      UFW_INFO("Rotation Matrix:");
-      UFW_INFO(fmt::format("{:10.6f}  {:10.6f}  {:10.6f}", transf.GetRotationMatrix()[0], transf.GetRotationMatrix()[1],
-                           transf.GetRotationMatrix()[2]));
-      UFW_INFO(fmt::format("{:10.6f}  {:10.6f}  {:10.6f}", transf.GetRotationMatrix()[3], transf.GetRotationMatrix()[4],
-                           transf.GetRotationMatrix()[5]));
-      UFW_INFO(fmt::format("{:10.6f}  {:10.6f}  {:10.6f}", transf.GetRotationMatrix()[6], transf.GetRotationMatrix()[7],
-                           transf.GetRotationMatrix()[8]));
-      UFW_INFO("Translation Vector:");
-      UFW_INFO(fmt::format("{:10.6f}  {:10.6f}  {:10.6f}", transf.GetTranslation()[0], transf.GetTranslation()[1],
-                           transf.GetTranslation()[2]));
-      UFW_INFO("Rotation Matrix:");
-      UFW_INFO("Rotation Matrix:");
-      UFW_INFO("Rotation Matrix:");
+      UFW_DEBUG("Processing ECAL module ==================================================");
+      print_hmatrix(transf);
       geoinfo::ecal_info::module mod;
       process_element(shape, transf, mod);
-      UFW_INFO("=========================================================================");
+      UFW_DEBUG("=========================================================================");
       return mod;
     };
   } // namespace
@@ -199,14 +197,18 @@ namespace sand {
     nav->cd(ecal_path);
 
     nav->for_each_node([&](auto node) {
-      if (string_begins_with(node->GetName(), "ECAL_endcap_lv_PV_")) {
-        auto ecal_endcap_path = ecal_path / std::string(node->GetName());
+      auto node_name = std::string(node->GetName());
+      if (node_name.rfind("ECAL_endcap_lv_PV_") == 0) {
+        auto ecal_endcap_path = ecal_path / node_name;
         nav->cd(ecal_endcap_path);
-        auto transf = nav->get_hmatrix();
-        nav->for_each_node(
-            [&](auto ecal_endcap_module) { get_module(ecal_endcap_module->GetVolume()->GetShape(), transf); });
-      } else if (string_begins_with(node->GetName(), "ECAL_lv_PV_")) {
-        auto ecal_barrel_module_path = ecal_path / std::string(node->GetName());
+        nav->for_each_node([&](auto ecal_endcap_module) {
+          auto ecal_endcap_module_path = ecal_endcap_path / std::string(ecal_endcap_module->GetName());
+          nav->cd(ecal_endcap_module_path);
+          auto transf = nav->get_hmatrix();
+          get_module(ecal_endcap_module->GetVolume()->GetShape(), transf);
+        });
+      } else if (node_name.rfind("ECAL_lv_PV_") == 0) {
+        auto ecal_barrel_module_path = ecal_path / node_name;
         nav->cd(ecal_barrel_module_path);
         auto geo_transf = nav->get_hmatrix();
         auto transf     = to_xform_3d(geo_transf);
@@ -215,7 +217,7 @@ namespace sand {
         el.transform(transf);
         print_shape_element_info(el, trd);
       } else {
-        UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected node: {}", node->GetName()));
+        UFW_ERROR(fmt::format("Unexpected node: {}", node->GetName()));
       }
     });
   }

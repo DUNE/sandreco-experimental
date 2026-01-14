@@ -94,7 +94,9 @@ namespace sand {
     };
 
     struct module {
+      int id;
       std::vector<shape_element> elements;
+      subdetector subdect;
     };
 
    public:
