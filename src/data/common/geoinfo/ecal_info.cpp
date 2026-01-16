@@ -10,9 +10,13 @@
 
 namespace sand {
 
+  //////////////////////////////////////////////////////
+  // stuff
+  //////////////////////////////////////////////////////
+
   namespace {
 
-    xform_3d to_xform_3d(TGeoHMatrix& mat) {
+    xform_3d to_xform_3d(const TGeoHMatrix& mat) {
       const Double_t* r = mat.GetRotationMatrix();
       const Double_t* t = mat.GetTranslation();
 
@@ -141,6 +145,10 @@ namespace sand {
     };
   } // namespace
 
+  //////////////////////////////////////////////////////
+  // geoinfo::ecal_info::shape_element_face
+  //////////////////////////////////////////////////////
+
   bool geoinfo::ecal_info::shape_element_face::are_points_coplanar() const {
     // Check coplanarity: four points are coplanar if the scalar triple product is zero
     // (p2-p1) · ((p3-p1) × (p4-p1)) = 0
@@ -166,6 +174,10 @@ namespace sand {
     return u.Cross(w).Unit();
   }
 
+  //////////////////////////////////////////////////////
+  // geoinfo::ecal_info::shape_element
+  //////////////////////////////////////////////////////
+
   bool geoinfo::ecal_info::shape_element::are_faces_parallel() const {
     double cross_product_norm = face1.normal_dir.Cross(face2.normal_dir).R();
     return is_zero_within_tolerance(cross_product_norm);
@@ -187,39 +199,47 @@ namespace sand {
     }
   }
 
+  //////////////////////////////////////////////////////
+  // geoinfo::ecal_info
+  //////////////////////////////////////////////////////
+
   geoinfo::ecal_info::ecal_info(const geoinfo& gi) : subdetector_info(gi, "kloe_calo_volume_PV_0") {
     UFW_INFO("ecal_info: constructed ECAL geoinfo");
 
-    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-    auto nav  = tgm.navigator();
+    ///////////////////////////////
+    find_pattern(gi.root_path() / path());
+    ///////////////////////////////
 
-    auto ecal_path = gi.root_path() / path();
-    nav->cd(ecal_path);
+    // auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    // auto nav  = tgm.navigator();
 
-    nav->for_each_node([&](auto node) {
-      auto node_name = std::string(node->GetName());
-      if (node_name.rfind("ECAL_endcap_lv_PV_") == 0) {
-        auto ecal_endcap_path = ecal_path / node_name;
-        nav->cd(ecal_endcap_path);
-        nav->for_each_node([&](auto ecal_endcap_module) {
-          auto ecal_endcap_module_path = ecal_endcap_path / std::string(ecal_endcap_module->GetName());
-          nav->cd(ecal_endcap_module_path);
-          auto transf = nav->get_hmatrix();
-          get_module(ecal_endcap_module->GetVolume()->GetShape(), transf);
-        });
-      } else if (node_name.rfind("ECAL_lv_PV_") == 0) {
-        auto ecal_barrel_module_path = ecal_path / node_name;
-        nav->cd(ecal_barrel_module_path);
-        auto geo_transf = nav->get_hmatrix();
-        auto transf     = to_xform_3d(geo_transf);
-        auto trd        = static_cast<TGeoTrd2*>(nav->get_node()->GetVolume()->GetShape());
-        auto el         = trd2_to_shape_element(trd);
-        el.transform(transf);
-        print_shape_element_info(el, trd);
-      } else {
-        UFW_ERROR(fmt::format("Unexpected node: {}", node->GetName()));
-      }
-    });
+    // auto ecal_path = gi.root_path() / path();
+    // nav->cd(ecal_path);
+
+    // nav->for_each_node([&](auto node) {
+    //   auto node_name = std::string(node->GetName());
+    //   if (node_name.rfind("ECAL_endcap_lv_PV_") == 0) {
+    //     auto ecal_endcap_path = ecal_path / node_name;
+    //     nav->cd(ecal_endcap_path);
+    //     nav->for_each_node([&](auto ecal_endcap_module) {
+    //       auto ecal_endcap_module_path = ecal_endcap_path / std::string(ecal_endcap_module->GetName());
+    //       nav->cd(ecal_endcap_module_path);
+    //       auto transf = nav->get_hmatrix();
+    //       get_module(ecal_endcap_module->GetVolume()->GetShape(), transf);
+    //     });
+    //   } else if (node_name.rfind("ECAL_lv_PV_") == 0) {
+    //     auto ecal_barrel_module_path = ecal_path / node_name;
+    //     nav->cd(ecal_barrel_module_path);
+    //     auto geo_transf = nav->get_hmatrix();
+    //     auto transf     = to_xform_3d(geo_transf);
+    //     auto trd        = static_cast<TGeoTrd2*>(nav->get_node()->GetVolume()->GetShape());
+    //     auto el         = trd2_to_shape_element(trd);
+    //     el.transform(transf);
+    //     print_shape_element_info(el, trd);
+    //   } else {
+    //     UFW_ERROR(fmt::format("Unexpected node: {}", node->GetName()));
+    //   }
+    // });
   }
 
   geoinfo::ecal_info::~ecal_info() = default;
@@ -361,6 +381,55 @@ namespace sand {
       UFW_ERROR("Invalid ECAL region type");
     }
     return gp;
+  }
+
+  void geoinfo::ecal_info::find_pattern(const geo_path& path) {
+    std::smatch m;
+    if (regex_search(path, m, re_ecal_barrel_module)) {
+      barrel_module_cells(path);
+      return;
+    } else if (regex_search(path, m, re_ecal_endcap_module)) {
+      endcap_module_cells(path);
+      return;
+    } else {
+      auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
+      nav->cd(path);
+      nav->for_each_node([&](auto node) { find_pattern(path / std::string(node->GetName())); });
+    }
+  }
+
+  void geoinfo::ecal_info::endcap_module_cells(const geo_path& path) {
+    auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
+    nav->cd(path);
+    module m;
+    nav->for_each_node([&](auto node) {
+      auto shape = node->GetVolume()->GetShape();
+      nav->cd(path / std::string(node->GetName()));
+      auto transf = to_xform_3d(nav->get_hmatrix());
+      if (shape->TestShapeBit(TGeoShape::kGeoTubeSeg)) {
+        auto el = tube_to_shape_element(static_cast<TGeoTubeSeg*>(shape));
+        el.transform(transf);
+        m.elements.push_back(el);
+      } else if (shape->TestShapeBit(TGeoShape::kGeoBox)) {
+        auto el = box_to_shape_element(static_cast<TGeoBBox*>(shape));
+        el.transform(transf);
+        m.elements.push_back(el);
+      } else {
+        UFW_ERROR(fmt::format("Unexpected shape: {}", shape->GetName()));
+      }
+    });
+  }
+
+  void geoinfo::ecal_info::barrel_module_cells(const geo_path& path) {
+    module m;
+    auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
+    nav->cd(path);
+    auto shape      = nav->get_node()->GetVolume()->GetShape();
+    auto geo_transf = nav->get_hmatrix();
+    auto transf     = to_xform_3d(geo_transf);
+    auto el         = trd2_to_shape_element(static_cast<TGeoTrd2*>(shape));
+    el.transform(transf);
+    m.elements.push_back(el);
   }
 
 } // namespace sand

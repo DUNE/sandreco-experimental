@@ -82,10 +82,19 @@ namespace sand {
       bool are_faces_perpendicular() const;
     };
 
-    enum class subdetector { barrel, endcapA, endcapB };
+    enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
+    using module_t = uint8_t;
+    using plane_t  = uint8_t;
+    using column_t = uint8_t;
 
-    enum class cell_id : int {};
-    enum class module_id : int {};
+    struct cell_id {
+      uint8_t reserved___0;
+      subdetector_t subdetector;
+      module_t region;
+      plane_t supermodule;
+      column_t element;
+      uint8_t padding___1[3];
+    };
 
     struct cell {
      public:
@@ -95,7 +104,6 @@ namespace sand {
     };
 
     struct module {
-      module_id id;
       std::vector<shape_element> elements;
     };
 
@@ -126,6 +134,9 @@ namespace sand {
 
    private:
     static inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
+    void find_pattern(const geo_path& path);
+    void endcap_module_cells(const geo_path& path);
+    void barrel_module_cells(const geo_path& path);
   };
 
 } // namespace sand
