@@ -1,6 +1,7 @@
 #pragma once
 
 #include <geoinfo/subdetector_info.hpp>
+#include <regex>
 
 namespace sand {
 
@@ -83,20 +84,19 @@ namespace sand {
 
     enum class subdetector { barrel, endcapA, endcapB };
 
+    enum class cell_id : int {};
+    enum class module_id : int {};
+
     struct cell {
      public:
-      geo_id id;
-      pos_3d centre;
-      double length;
+      cell_id id;
       fiber fib;
       std::vector<shape_element> elements;
-      subdetector subdect;
     };
 
     struct module {
-      int id;
+      module_id id;
       std::vector<shape_element> elements;
-      subdetector subdect;
     };
 
    public:
@@ -106,8 +106,6 @@ namespace sand {
 
     const cell& at(pos_3d);
 
-    const cell& at(geo_id);
-
     using subdetector_info::path;
 
     geo_id id(const geo_path&) const override;
@@ -115,14 +113,19 @@ namespace sand {
     geo_path path(geo_id) const override;
 
    private:
-    std::map<geo_id, cell> cells_;
+    using cell_ref = std::vector<cell>::const_iterator;
+    std::map<geo_id, std::vector<cell_ref>> m_cell_map;
+    std::vector<cell> m_cells;
     static constexpr double ktolerance = 1e-10;
+    static inline const std::regex re_ecal_barrel_module{"/ECAL_lv_PV_(\\d+)$"};
+    static inline const std::regex re_ecal_endcap_module{"/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)$"};
+    static inline const std::regex re_ecal_barrel_sensible_volume{"/ECAL_lv_PV_(\\d+)/volECALActiveSlab_(\\d+)_PV_0$"};
+    static inline const std::regex re_ecal_endcap_sensible_volume{
+        "/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)/ECAL_ec_mod_(curv|vert|hor)_(\\d+)_lv_PV_(\\d+)/"
+        "endvolECAL(curv|straight|)ActiveSlab_(\\d+)(_|)(\\d+)_PV_(\\d+)$"};
 
    private:
     static inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
-    static inline bool string_begins_with(const char* str, const char* prefix) {
-      return std::string(str).rfind(prefix) == 0;
-    }
   };
 
 } // namespace sand

@@ -224,13 +224,142 @@ namespace sand {
 
   geoinfo::ecal_info::~ecal_info() = default;
 
-  geo_id geoinfo::ecal_info::id(const geo_path&) const {
+  geo_id geoinfo::ecal_info::id(const geo_path& path) const {
+    // /volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_0/volECALActiveSlab_0_PV_0
+    // -> reegex:
+    // \/volWorld_PV_1\/rockBox_lv_PV_0\/volDetEnclosure_PV_0\/volSAND_PV_0\/MagIntVol_volume_PV_0\/kloe_calo_volume_PV_0\/ECAL_lv_PV_(\d+)\/volECALActiveSlab_(\d+)_PV_0$
+    // -> working:
+    // "^\\/volWorld_PV_1\\/rockBox_lv_PV_0\\/volDetEnclosure_PV_0\\/volSAND_PV_0\\/MagIntVol_volume_PV_0\\/kloe_calo_volume_PV_0\\/ECAL_lv_PV_(\\d+)\\/volECALActiveSlab_(\\d+)_PV_0$"
+    // active volume pth for barrel
+    // /volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_endcap_lv_PV_1/ECAL_ec_mod_0_lv_PV_0/ECAL_ec_mod_curv_0_lv_PV_1/endvolECALcurvActiveSlab_0_0_PV_0
+    // root [57] n->GetDaughter(0)->GetName()
+    // (const char *) "ECAL_ec_mod_vert_8_lv_PV_0"
+    // root [58] n->GetDaughter(1)->GetName()
+    // (const char *) "ECAL_ec_mod_curv_8_lv_PV_0"
+    // root [59] n->GetDaughter(2)->GetName()
+    // (const char *) "ECAL_ec_mod_curv_8_lv_PV_1"
+    // root [60] n->GetDaughter(3)->GetName()
+    // (const char *) "ECAL_ec_mod_hor_8_lv_PV_0"
+    // root [61] n->GetDaughter(4)->GetName()
+    // (const char *) "ECAL_ec_mod_hor_8_lv_PV_1"
+    // kloe_calo_volume_PV_0/
+    //   ECAL_endcap_lv_PV_0
+    //   ECAL_endcap_lv_PV_1
+    //     ECAL_ec_mod_0_lv_PV_0
+    //     ECAL_ec_mod_0_lv_PV_1
+    //     ECAL_ec_mod_1_lv_PV_0
+    //     ...
+    //     ECAL_ec_mod_15_lv_PV_1
+    //       ECAL_ec_mod_vert_15_lv_PV_0
+    //         endvolECALActiveSlab_15_PV_0
+    //         endvolECALActiveSlab_15_PV_1
+    //       ECAL_ec_mod_curv_15_lv_PV_0
+    //         endvolECALcurvActiveSlab_15_0_PV_0
+    //         endvolECALcurvActiveSlab_15_1_PV_0
+    //       ECAL_ec_mod_curv_15_lv_PV_1
+    //         ECAL_ec_mod_curv_Alplate_15_lv_PV_0
+    //         endvolECALcurvActiveSlab_15_0_PV_0
+    //         endvolECALcurvPassiveSlab_15_0_PV_0
+    //         endvolECALcurvPassiveSlab_15_1_PV_0
+    //         endvolECALcurvActiveSlab_15_208_PV_0
+    //       ECAL_ec_mod_hor_15_lv_PV_0
+    //         endvolECALstraightActiveSlab_15_PV_0
+    //         endvolECALstraightActiveSlab_15_PV_1
+    //       ECAL_ec_mod_hor_15_lv_PV_1
     geo_id gi;
+    std::smatch m;
+    if (regex_search(path, m, re_ecal_barrel_sensible_volume)) {
+      gi.ecal.subdetector = sand::subdetector_t::ECAL;
+      gi.ecal.region      = sand::geo_id::region_t::BARREL;
+      gi.ecal.supermodule = static_cast<sand::geo_id::supermodule_t>(std::stoi(m[1]));
+      gi.ecal.element     = sand::geo_id::element_t::NONE;
+      gi.ecal.plane       = static_cast<sand::geo_id::plane_t>(std::stoi(m[2]));
+    } else if (regex_search(path, m, re_ecal_endcap_sensible_volume)) {
+      gi.ecal.subdetector = sand::subdetector_t::ECAL;
+      gi.ecal.region      = (m[1] == "0") ? sand::geo_id::region_t::ENDCAP_A : sand::geo_id::region_t::ENDCAP_B;
+      gi.ecal.supermodule = static_cast<sand::geo_id::supermodule_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
+      if (m[4] == "vert") {
+        gi.ecal.element = sand::geo_id::element_t::ENDCAP_VERTICAL;
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[11]));
+      } else if (m[4] == "curv" && std::stoi(m[6]) == 0) {
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[10]));
+        gi.ecal.element = sand::geo_id::element_t::ENDCAP_CURVE_TOP;
+      } else if (m[4] == "curv" && std::stoi(m[6]) == 1) {
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[10]));
+        gi.ecal.element = sand::geo_id::element_t::ENDCAP_CURVE_BOT;
+      } else if (m[4] == "hor" && std::stoi(m[6]) == 0) {
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[11]));
+        gi.ecal.element = sand::geo_id::element_t::ENDCAP_HOR_TOP;
+      } else if (m[4] == "hor" && std::stoi(m[6]) == 1) {
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[11]));
+        gi.ecal.element = sand::geo_id::element_t::ENDCAP_HOR_BOT;
+      } else {
+        UFW_ERROR(fmt::format("Unknown ECAL endcap element type: {}", m[4].str()));
+      }
+    } else {
+      UFW_ERROR(fmt::format("Provided geo_path {} does not match ECAL sensible volume pattern", path));
+    }
     return gi;
   }
 
-  geo_path geoinfo::ecal_info::path(geo_id) const {
-    geo_path gp;
+  geo_path geoinfo::ecal_info::path(geo_id id) const {
+    geo_path gp = path();
+    if (id.ecal.region == sand::geo_id::region_t::BARREL) {
+      gp /= fmt::format("ECAL_lv_PV_{}/volECALActiveSlab_{}_PV_0", id.ecal.supermodule, id.ecal.plane);
+    } else if ((id.ecal.region == sand::geo_id::region_t::ENDCAP_A)
+               || (id.ecal.region == sand::geo_id::region_t::ENDCAP_B)) {
+      int index1 = (id.ecal.region == sand::geo_id::region_t::ENDCAP_A) ? 0 : 1;
+      std::string str1;
+      std::string str2;
+      std::string str3;
+      int index2;
+      int index3;
+      switch (id.ecal.element) {
+      case sand::geo_id::element_t::ENDCAP_VERTICAL:
+        str1   = "vert";
+        str2   = "";
+        str3   = "";
+        index2 = 0;
+        index3 = id.ecal.plane;
+        break;
+      case sand::geo_id::element_t::ENDCAP_CURVE_TOP:
+        str1   = "curv";
+        str2   = "curv";
+        str3   = "_" + std::to_string(id.ecal.plane);
+        index2 = 0;
+        index3 = 0;
+        break;
+      case sand::geo_id::element_t::ENDCAP_CURVE_BOT:
+        str1   = "curv";
+        str2   = "curv";
+        str3   = "_" + std::to_string(id.ecal.plane);
+        index2 = 1;
+        index3 = 0;
+        break;
+      case sand::geo_id::element_t::ENDCAP_HOR_TOP:
+        str1   = "hor";
+        str2   = "straight";
+        str3   = "";
+        index2 = 0;
+        index3 = id.ecal.plane;
+        break;
+      case sand::geo_id::element_t::ENDCAP_HOR_BOT:
+        str1   = "hor";
+        str2   = "straight";
+        str3   = "";
+        index2 = 1;
+        index3 = id.ecal.plane;
+        break;
+      default:
+        UFW_ERROR("Invalid ECAL endcap element type");
+      }
+      gp /= fmt::format(
+          "ECAL_endcap_lv_PV_{}/ECAL_ec_mod_{}_lv_PV_{}/ECAL_ec_mod_{}_{}_lv_PV_{}/endvolECAL{}ActiveSlab_{}_PV_{}",
+          index1, id.ecal.supermodule % 16, id.ecal.supermodule / 16, str1, id.ecal.supermodule, index2, str2,
+          id.ecal.supermodule, str3, index3);
+    } else {
+      UFW_ERROR("Invalid ECAL region type");
+    }
     return gp;
   }
 
