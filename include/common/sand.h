@@ -208,7 +208,7 @@ namespace sand {
         supermodule_t supermodule;
         element_t element;
         plane_t plane;
-        uint8_t padding___1[3];
+        uint8_t padding___1[2];
       } ecal;
       struct {
         uint8_t reserved___0;
@@ -229,6 +229,8 @@ namespace sand {
     uint64_t raw = -1;
 #endif //__CLING__
   };
+
+  static_assert(sizeof(geo_id) == sizeof(uint64_t), "geo_id size is not 8 bytes");
 
   // Equality operator
   inline bool operator== (geo_id lhs, geo_id rhs) { return lhs.raw == rhs.raw; }
