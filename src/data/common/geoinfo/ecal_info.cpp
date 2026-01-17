@@ -76,32 +76,6 @@ namespace sand {
       return el;
     }
 
-    void print_shape_element_info(const geoinfo::ecal_info::shape_element& el, const TGeoShape* shape) {
-      UFW_DEBUG("Found ECAL {} module element: {} ({})", shape->TestShapeBit(TGeoShape::kGeoTrd2) ? "barrel" : "endcap",
-                shape->GetName(), el.type == geoinfo::ecal_info::shape_element_type::straight ? "straight" : "curved");
-      UFW_DEBUG("  ** Face 1 **");
-      UFW_DEBUG("  Point 1: {}", el.face1.p1);
-      UFW_DEBUG("  Point 2: {}", el.face1.p2);
-      UFW_DEBUG("  Point 3: {}", el.face1.p3);
-      UFW_DEBUG("  Point 4: {}", el.face1.p4);
-      UFW_DEBUG("  ** Face 2 **");
-      UFW_DEBUG("  Point 1: {}", el.face2.p1);
-      UFW_DEBUG("  Point 2: {}", el.face2.p2);
-      UFW_DEBUG("  Point 3: {}", el.face2.p3);
-      UFW_DEBUG("  Point 4: {}", el.face2.p4);
-    }
-
-    void print_hmatrix(TGeoHMatrix& mat) {
-      const Double_t* r = mat.GetRotationMatrix();
-      const Double_t* t = mat.GetTranslation();
-
-      UFW_DEBUG("Rotation Matrix:");
-      UFW_DEBUG("| {: .4f} {: .4f} {: .4f} |", r[0], r[1], r[2]);
-      UFW_DEBUG("| {: .4f} {: .4f} {: .4f} |", r[3], r[4], r[5]);
-      UFW_DEBUG("| {: .4f} {: .4f} {: .4f} |", r[6], r[7], r[8]);
-      UFW_DEBUG("Translation Vector: ({: .4f}, {: .4f}, {: .4f})", t[0], t[1], t[2]);
-    }
-
     void process_element(TGeoShape* shape, TGeoHMatrix geo_transf, geoinfo::ecal_info::module& mod) {
       if (shape->IsComposite()) {
         auto c  = static_cast<TGeoCompositeShape*>(shape);
@@ -119,7 +93,6 @@ namespace sand {
 
           el.transform(transf);
           mod.elements.push_back(el);
-          print_shape_element_info(el, shape);
 
         } else if (shape->TestShapeBit(TGeoShape::kGeoBox)) {
           auto transf = to_xform_3d(geo_transf);
@@ -127,7 +100,6 @@ namespace sand {
 
           el.transform(transf);
           mod.elements.push_back(el);
-          print_shape_element_info(el, shape);
 
         } else {
           UFW_ERROR(fmt::format("Unexpected shape: {}", shape->GetName()));
@@ -137,7 +109,6 @@ namespace sand {
 
     geoinfo::ecal_info::module get_module(TGeoShape* shape, TGeoHMatrix transf) {
       UFW_DEBUG("Processing ECAL module ==================================================");
-      print_hmatrix(transf);
       geoinfo::ecal_info::module mod;
       process_element(shape, transf, mod);
       UFW_DEBUG("=========================================================================");
@@ -152,47 +123,64 @@ namespace sand {
   bool geoinfo::ecal_info::shape_element_face::are_points_coplanar() const {
     // Check coplanarity: four points are coplanar if the scalar triple product is zero
     // (p2-p1) · ((p3-p1) × (p4-p1)) = 0
-    dir_3d u              = (p2 - p1).Unit();
-    dir_3d w              = (p3 - p1).Unit();
-    dir_3d z              = (p4 - p1).Unit();
+    dir_3d u              = (v[1] - v[0]).Unit();
+    dir_3d w              = (v[2] - v[0]).Unit();
+    dir_3d z              = (v[3] - v[0]).Unit();
     double triple_product = u.Dot(w.Cross(z));
 
     return is_zero_within_tolerance(triple_product);
   }
 
-  geoinfo::ecal_info::shape_element_face::shape_element_face(const pos_3d& v1, const pos_3d& v2, const pos_3d& v3,
-                                                             const pos_3d& v4)
-    : p1(v1), p2(v2), p3(v3), p4(v4) {
+  geoinfo::ecal_info::shape_element_face::shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3,
+                                                             const pos_3d& p4)
+    : v{p1, p2, p3, p4} {
     UFW_ASSERT(are_points_coplanar(), std::string("cell_face: four points are not coplanar"));
 
-    normal_dir = normal();
+    centroid = std::reduce(v.begin(), v.end(), pos_3d(), [](const pos_3d& left, const pos_3d& right) {
+      return pos_3d(left.x() + right.x(), left.y() + right.y(), left.z() + right.z());
+    });
+
+    // signed angle wrt z axis
+    auto pos_3d_signed_z_angle = [&](const dir_3d& v) {
+      return (std::signbit(normal.Dot(v.Cross(dir_3d{0, 0, 1.}))) ? -1 : 1)
+           * TMath::ACos(v.Dot(dir_3d{0, 0, 1.}) / v.R());
+    };
+
+    // sort by angle wrt angle z
+    std::sort(v.begin(), v.end(), [&](const pos_3d& left, const pos_3d& right) {
+      return pos_3d_signed_z_angle(left - centroid) > pos_3d_signed_z_angle(right - centroid);
+    });
+
+    dir_3d u = v[1] - v[0];
+    dir_3d w = v[2] - v[0];
+    normal   = u.Cross(w).Unit();
   }
 
-  dir_3d geoinfo::ecal_info::shape_element_face::normal() const {
-    dir_3d u = p2 - p1;
-    dir_3d w = p3 - p1;
-    return u.Cross(w).Unit();
+  bool geoinfo::ecal_info::shape_element_face::operator== (const shape_element_face& other) const {
+    for (auto const& pair : boost::combine(v, other.v)) {
+      pos_3d p1, p2;
+      boost::tie(p1, p2) = pair;
+      if (!is_zero_within_tolerance((p1 - p2).R()))
+        return false;
+    }
+    return true;
+  }
+
+  void geoinfo::ecal_info::shape_element_face::transform(const xform_3d transf) {
+    std::for_each(v.begin(), v.end(), [&](pos_3d& p) { transf* p; });
+    centroid = transf * centroid;
+    normal   = transf * normal;
   }
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::shape_element
   //////////////////////////////////////////////////////
 
-  bool geoinfo::ecal_info::shape_element::are_faces_parallel() const {
-    double cross_product_norm = face1.normal_dir.Cross(face2.normal_dir).R();
-    return is_zero_within_tolerance(cross_product_norm);
-  }
-
-  bool geoinfo::ecal_info::shape_element::are_faces_perpendicular() const {
-    double dot_product = face1.normal_dir.Dot(face2.normal_dir);
-    return is_zero_within_tolerance(dot_product);
-  }
-
   geoinfo::ecal_info::shape_element::shape_element(const shape_element_face& f1, const shape_element_face& f2)
     : face1(f1), face2(f2) {
-    if (are_faces_parallel()) {
+    if (face1.is_parallel_to(face2)) {
       type = shape_element_type::straight;
-    } else if (are_faces_perpendicular()) {
+    } else if (face1.is_perpendicular_to(face2)) {
       type = shape_element_type::curved;
     } else {
       UFW_EXCEPT(std::invalid_argument, "cell_element: faces normals are neither parallel nor perpendicular");
@@ -209,37 +197,6 @@ namespace sand {
     ///////////////////////////////
     find_pattern(gi.root_path() / path());
     ///////////////////////////////
-
-    // auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-    // auto nav  = tgm.navigator();
-
-    // auto ecal_path = gi.root_path() / path();
-    // nav->cd(ecal_path);
-
-    // nav->for_each_node([&](auto node) {
-    //   auto node_name = std::string(node->GetName());
-    //   if (node_name.rfind("ECAL_endcap_lv_PV_") == 0) {
-    //     auto ecal_endcap_path = ecal_path / node_name;
-    //     nav->cd(ecal_endcap_path);
-    //     nav->for_each_node([&](auto ecal_endcap_module) {
-    //       auto ecal_endcap_module_path = ecal_endcap_path / std::string(ecal_endcap_module->GetName());
-    //       nav->cd(ecal_endcap_module_path);
-    //       auto transf = nav->get_hmatrix();
-    //       get_module(ecal_endcap_module->GetVolume()->GetShape(), transf);
-    //     });
-    //   } else if (node_name.rfind("ECAL_lv_PV_") == 0) {
-    //     auto ecal_barrel_module_path = ecal_path / node_name;
-    //     nav->cd(ecal_barrel_module_path);
-    //     auto geo_transf = nav->get_hmatrix();
-    //     auto transf     = to_xform_3d(geo_transf);
-    //     auto trd        = static_cast<TGeoTrd2*>(nav->get_node()->GetVolume()->GetShape());
-    //     auto el         = trd2_to_shape_element(trd);
-    //     el.transform(transf);
-    //     print_shape_element_info(el, trd);
-    //   } else {
-    //     UFW_ERROR(fmt::format("Unexpected node: {}", node->GetName()));
-    //   }
-    // });
   }
 
   geoinfo::ecal_info::~ecal_info() = default;

@@ -1,11 +1,17 @@
 #pragma once
 
 #include <geoinfo/subdetector_info.hpp>
+#include <boost/range/combine.hpp>
+#include <numeric>
 #include <regex>
 
 namespace sand {
 
   class geoinfo::ecal_info : public subdetector_info {
+   private:
+    static constexpr double ktolerance = 1e-10;
+    static inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
+
    public:
     // fiber
     struct fiber {
@@ -37,25 +43,24 @@ namespace sand {
     // face
     struct shape_element_face {
      public:
-      pos_3d p1;
-      pos_3d p2;
-      pos_3d p3;
-      pos_3d p4;
-
-      dir_3d normal_dir;
-
       shape_element_face() = delete;
       shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
-      void transform(const xform_3d transf) {
-        p1         = transf * p1;
-        p2         = transf * p2;
-        p3         = transf * p3;
-        p4         = transf * p4;
-        normal_dir = transf * normal_dir;
-      }
+      bool operator== (const shape_element_face& other) const;
+      void transform(const xform_3d transf);
+      inline bool is_parallel_to(const shape_element_face& other) const {
+        return is_zero_within_tolerance(normal.Cross(other.normal).R());
+      };
+
+      inline bool is_perpendicular_to(const shape_element_face& other) const {
+        return is_zero_within_tolerance(normal.Dot(other.normal));
+      };
 
      private:
-      dir_3d normal() const;
+      std::vector<pos_3d> v;
+      dir_3d normal;
+      pos_3d centroid;
+
+     private:
       bool are_points_coplanar() const;
     };
 
@@ -76,10 +81,6 @@ namespace sand {
         face1.transform(transf);
         face2.transform(transf);
       }
-
-     private:
-      bool are_faces_parallel() const;
-      bool are_faces_perpendicular() const;
     };
 
     enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
@@ -124,7 +125,6 @@ namespace sand {
     using cell_ref = std::vector<cell>::const_iterator;
     std::map<geo_id, std::vector<cell_ref>> m_cell_map;
     std::vector<cell> m_cells;
-    static constexpr double ktolerance = 1e-10;
     static inline const std::regex re_ecal_barrel_module{"/ECAL_lv_PV_(\\d+)$"};
     static inline const std::regex re_ecal_endcap_module{"/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)$"};
     static inline const std::regex re_ecal_barrel_sensible_volume{"/ECAL_lv_PV_(\\d+)/volECALActiveSlab_(\\d+)_PV_0$"};
@@ -133,7 +133,6 @@ namespace sand {
         "endvolECAL(curv|straight|)ActiveSlab_(\\d+)(_|)(\\d+)_PV_(\\d+)$"};
 
    private:
-    static inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
     void find_pattern(const geo_path& path);
     void endcap_module_cells(const geo_path& path);
     void barrel_module_cells(const geo_path& path);
