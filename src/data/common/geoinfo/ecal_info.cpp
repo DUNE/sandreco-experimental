@@ -136,20 +136,20 @@ namespace sand {
     : v{p1, p2, p3, p4} {
     UFW_ASSERT(are_points_coplanar(), std::string("cell_face: four points are not coplanar"));
 
-    centroid = std::reduce(v.begin(), v.end(), pos_3d(), [](const pos_3d& left, const pos_3d& right) {
-      return pos_3d(left.x() + right.x(), left.y() + right.y(), left.z() + right.z());
+    centroid = std::reduce(v.begin(), v.end(), pos_3d(), [&](const pos_3d& left, const pos_3d& right) {
+      return pos_3d(left.x() + right.x(), left.y() + right.y(), left.z() + right.z()) / v.size();
     });
 
-    // signed angle wrt z axis
-    auto pos_3d_signed_z_angle = [&](const dir_3d& v) {
-      return (std::signbit(normal.Dot(v.Cross(dir_3d{0, 0, 1.}))) ? -1 : 1)
-           * TMath::ACos(v.Dot(dir_3d{0, 0, 1.}) / v.R());
-    };
+    // // signed angle wrt z axis
+    // auto pos_3d_signed_z_angle = [&](const dir_3d& v) {
+    //   return (std::signbit(normal.Dot(v.Cross(dir_3d{0, 0, 1.}))) ? -1 : 1)
+    //        * TMath::ACos(v.Dot(dir_3d{0, 0, 1.}) / v.R());
+    // };
 
-    // sort by angle wrt angle z
-    std::sort(v.begin(), v.end(), [&](const pos_3d& left, const pos_3d& right) {
-      return pos_3d_signed_z_angle(left - centroid) > pos_3d_signed_z_angle(right - centroid);
-    });
+    // // sort by angle wrt angle z
+    // std::sort(v.begin(), v.end(), [&](const pos_3d& left, const pos_3d& right) {
+    //   return pos_3d_signed_z_angle(left - centroid) > pos_3d_signed_z_angle(right - centroid);
+    // });
 
     dir_3d u = v[1] - v[0];
     dir_3d w = v[2] - v[0];
@@ -157,13 +157,27 @@ namespace sand {
   }
 
   bool geoinfo::ecal_info::shape_element_face::operator== (const shape_element_face& other) const {
-    for (auto const& pair : boost::combine(v, other.v)) {
-      pos_3d p1, p2;
-      boost::tie(p1, p2) = pair;
-      if (!is_zero_within_tolerance((p1 - p2).R()))
-        return false;
+    auto mycopy_for = other;
+    auto mycopy_rev = other;
+    std::reverse(mycopy_rev.v.begin(), mycopy_rev.v.end());
+
+    auto static same_elements = [](const shape_element_face& lhs, const shape_element_face& rhs) {
+      for (auto const& pair : boost::combine(lhs.v, rhs.v)) {
+        pos_3d p1, p2;
+        boost::tie(p1, p2) = pair;
+        if (!is_zero_within_tolerance((p1 - p2).R()))
+          return false;
+      }
+      return true;
+    };
+
+    for (int i = 0; i < v.size(); ++i) {
+      if (same_elements(*this, mycopy_for) || same_elements(*this, mycopy_rev))
+        return true;
+      std::rotate(mycopy_for.v.begin(), mycopy_for.v.begin() + 1, mycopy_for.v.end());
+      std::rotate(mycopy_rev.v.begin(), mycopy_rev.v.begin() + 1, mycopy_rev.v.end());
     }
-    return true;
+    return false;
   }
 
   void geoinfo::ecal_info::shape_element_face::transform(const xform_3d transf) {
@@ -186,6 +200,41 @@ namespace sand {
       UFW_EXCEPT(std::invalid_argument, "cell_element: faces normals are neither parallel nor perpendicular");
     }
   }
+
+  void geoinfo::ecal_info::shape_element::transform(const xform_3d transf) {
+    face1.transform(transf);
+    face2.transform(transf);
+  };
+
+  pos_3d geoinfo::ecal_info::shape_element::axis_pos() const {
+    pos_3d p;
+    if (type == shape_element_type::curved) {
+    } else {
+    }
+    return p;
+  };
+
+  dir_3d geoinfo::ecal_info::shape_element::axis_dir() const {
+    dir_3d d;
+    if (type == shape_element_type::curved) {
+    } else {
+    }
+    return d;
+  };
+
+  double geoinfo::ecal_info::shape_element::length() const {
+    UFW_ASSERT(type == shape_element_type::curved, "length function only for curved shape");
+    double l;
+    return l;
+  };
+
+  pos_3d geoinfo::ecal_info::shape_element::to_face(int face_id) const {
+    pos_3d p;
+    if (type == shape_element_type::straight) {
+    } else {
+    }
+    return p;
+  };
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info

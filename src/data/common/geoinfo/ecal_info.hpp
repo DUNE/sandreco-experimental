@@ -55,6 +55,11 @@ namespace sand {
         return is_zero_within_tolerance(normal.Dot(other.normal));
       };
 
+      inline dir_3d operator* (const shape_element_face& other) const {
+        auto ax = normal.Cross(other.normal);
+        return ax / ax.R();
+      };
+
      private:
       std::vector<pos_3d> v;
       dir_3d normal;
@@ -77,10 +82,11 @@ namespace sand {
       shape_element() = delete;
       shape_element(const shape_element_face& f1, const shape_element_face& f2);
 
-      void transform(const xform_3d transf) {
-        face1.transform(transf);
-        face2.transform(transf);
-      }
+      void transform(const xform_3d transf);
+      pos_3d axis_pos() const;
+      dir_3d axis_dir() const;
+      double length() const;
+      pos_3d to_face(int face_id) const;
     };
 
     enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
