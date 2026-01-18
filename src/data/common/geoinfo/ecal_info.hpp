@@ -46,24 +46,28 @@ namespace sand {
       shape_element_face() = delete;
       shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
       bool operator== (const shape_element_face& other) const;
-      void transform(const xform_3d transf);
-      inline bool is_parallel_to(const shape_element_face& other) const {
-        return is_zero_within_tolerance(normal.Cross(other.normal).R());
+      shape_element_face transform(const xform_3d& transf);
+      inline bool is_straight(shape_element_face other) const {
+        return *this == other.transform(xform_3d(centroid_ - other.centroid_));
       };
 
       inline bool is_perpendicular_to(const shape_element_face& other) const {
-        return is_zero_within_tolerance(normal.Dot(other.normal));
+        // this has to be implemented with a transform and ==
+        return is_zero_within_tolerance(normal_.Dot(other.normal_));
       };
 
       inline dir_3d operator* (const shape_element_face& other) const {
-        auto ax = normal.Cross(other.normal);
+        auto ax = normal_.Cross(other.normal_);
         return ax / ax.R();
       };
+      inline const pos_3d& at(std::size_t i) const { return v_[i]; };
+      inline const dir_3d& normal() const { return normal_; };
+      inline const pos_3d& centroid() const { return centroid_; };
 
      private:
-      std::vector<pos_3d> v;
-      dir_3d normal;
-      pos_3d centroid;
+      std::vector<pos_3d> v_;
+      dir_3d normal_;
+      pos_3d centroid_;
 
      private:
       bool are_points_coplanar() const;
@@ -73,16 +77,17 @@ namespace sand {
     enum class shape_element_type { straight, curved };
 
     struct shape_element {
-     public:
+     private:
       shape_element_face face1;
       shape_element_face face2;
 
+     public:
       shape_element_type type;
 
       shape_element() = delete;
       shape_element(const shape_element_face& f1, const shape_element_face& f2);
 
-      void transform(const xform_3d transf);
+      void transform(const xform_3d& transf);
       pos_3d axis_pos() const;
       dir_3d axis_dir() const;
       double length() const;
