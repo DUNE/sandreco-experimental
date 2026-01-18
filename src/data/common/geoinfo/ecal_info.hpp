@@ -1,17 +1,11 @@
 #pragma once
 
 #include <geoinfo/subdetector_info.hpp>
-#include <boost/range/combine.hpp>
-#include <numeric>
 #include <regex>
 
 namespace sand {
 
   class geoinfo::ecal_info : public subdetector_info {
-   private:
-    static constexpr double ktolerance = 1e-10;
-    static inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
-
    public:
     // fiber
     struct fiber {
@@ -47,20 +41,11 @@ namespace sand {
       shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
       bool operator== (const shape_element_face& other) const;
       shape_element_face transform(const xform_3d& transf);
-      inline bool is_straight(shape_element_face other) const {
-        return *this == other.transform(xform_3d(centroid_ - other.centroid_));
-      };
+      bool is_straight(shape_element_face other) const;
+      bool is_curved(shape_element_face other) const;
 
-      inline bool is_perpendicular_to(const shape_element_face& other) const {
-        // this has to be implemented with a transform and ==
-        return is_zero_within_tolerance(normal_.Dot(other.normal_));
-      };
-
-      inline dir_3d operator* (const shape_element_face& other) const {
-        auto ax = normal_.Cross(other.normal_);
-        return ax / ax.R();
-      };
-      inline const pos_3d& at(std::size_t i) const { return v_[i]; };
+      inline dir_3d side(size_t idx) const { return idx == 3 ? vtx(3) - vtx(0) : vtx(idx) - vtx(idx + 1); };
+      inline const pos_3d& vtx(std::size_t i) const { return v_[i]; };
       inline const dir_3d& normal() const { return normal_; };
       inline const pos_3d& centroid() const { return centroid_; };
 
@@ -78,8 +63,10 @@ namespace sand {
 
     struct shape_element {
      private:
-      shape_element_face face1;
-      shape_element_face face2;
+      shape_element_face face1_;
+      shape_element_face face2_;
+      pos_3d axis_pos_;
+      dir_3d axis_dir_;
 
      public:
       shape_element_type type;
@@ -88,10 +75,12 @@ namespace sand {
       shape_element(const shape_element_face& f1, const shape_element_face& f2);
 
       void transform(const xform_3d& transf);
-      pos_3d axis_pos() const;
-      dir_3d axis_dir() const;
-      double length() const;
-      pos_3d to_face(int face_id) const;
+      const pos_3d& axis_pos() const { return axis_pos_; };
+      const dir_3d& axis_dir() const { return axis_dir_; };
+      const shape_element_face& face1() const { return face1_; };
+      const shape_element_face& face2() const { return face2_; };
+      pos_3d to_face(const pos_3d& p, size_t face_id) const;
+      double pathlength(const pos_3d& p1, const pos_3d& p2) const;
     };
 
     enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };

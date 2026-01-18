@@ -22,7 +22,7 @@ target_sources(geoinfo PRIVATE
 
 target_include_directories(geoinfo PRIVATE . .. ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/grain)
 
-target_link_libraries(geoinfo ROOT::Geom ROOT::MathCore ROOT::Matrix geant_gdml_parser root_tgeomanager ufw::ufw)
+target_link_libraries(geoinfo ROOT::Geom ROOT::MathCore ROOT::Matrix ROOT::GenVector geant_gdml_parser root_tgeomanager ufw::ufw)
 
 install(TARGETS geoinfo EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
