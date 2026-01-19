@@ -20,7 +20,8 @@ namespace sand {
   //////////////////////////////////////////////////////
 
   namespace {
-    constexpr double ktolerance = 1e-10;
+    constexpr double ktolerance(1e-10);
+    constexpr pos_3d orig(0., 0., 0.);
     inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
 
     xform_3d to_xform_3d(const TGeoHMatrix& mat) {
@@ -123,30 +124,30 @@ namespace sand {
     // };
 
     // to be removed
-    bool lines_intercept(const pos_3d& p1, const dir_3d& v1, const pos_3d& p2, const dir_3d& v2) {
-      return is_zero_within_tolerance(v1.Cross(v2).Dot(p1 - p2));
-    }
+    // bool lines_intercept(const pos_3d& p1, const dir_3d& v1, const pos_3d& p2, const dir_3d& v2) {
+    //   return is_zero_within_tolerance(v1.Cross(v2).Dot(p1 - p2));
+    // }
 
     // to be removed
-    bool find_intercepting_sides(const geoinfo::ecal_info::shape_element_face& f1,
-                                 const geoinfo::ecal_info::shape_element_face& f2, size_t& idx1, size_t& idx2) {
-      for (idx1 = 0; idx1 < 4; idx1++) {
-        for (idx2 = 0; idx2 < 4; idx2++) {
-          if (lines_intercept(f1.vtx(idx1), f1.side(idx1), f2.vtx(idx2), f2.side(idx2)))
-            return true;
-        }
-      }
-      return false;
-    }
+    // bool find_intercepting_sides(const geoinfo::ecal_info::shape_element_face& f1,
+    //                              const geoinfo::ecal_info::shape_element_face& f2, size_t& idx1, size_t& idx2) {
+    //   for (idx1 = 0; idx1 < 4; idx1++) {
+    //     for (idx2 = 0; idx2 < 4; idx2++) {
+    //       if (lines_intercept(f1.vtx(idx1), f1.side(idx1), f2.vtx(idx2), f2.side(idx2)))
+    //         return true;
+    //     }
+    //   }
+    //   return false;
+    // }
 
     // to be removed
-    pos_3d intercepting_point(const pos_3d& p1, const dir_3d& v1, const pos_3d& p2, const dir_3d& v2) {
-      dir_3d vp = v2.Cross(p1 - p2);
-      dir_3d vv = v2.Cross(v1);
+    // pos_3d intercepting_point(const pos_3d& p1, const dir_3d& v1, const pos_3d& p2, const dir_3d& v2) {
+    //   dir_3d vp = v2.Cross(p1 - p2);
+    //   dir_3d vv = v2.Cross(v1);
 
-      int sign = vp.Dot(vv) > 0 ? +1 : -1;
-      return p1 + sign * vp.R() / vv.R() * v1;
-    }
+    //   int sign = vp.Dot(vv) > 0 ? +1 : -1;
+    //   return p1 + sign * vp.R() / vv.R() * v1;
+    // }
 
     inline dir_3d radius_from_line(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
       return (p - l_pos) - (p - l_pos).Dot(l_dir) / l_dir.R() * l_dir;
@@ -154,6 +155,25 @@ namespace sand {
 
     inline pos_3d nearest_point_in_line(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
       return p + radius_from_line(p, l_pos, l_dir);
+    }
+
+    void print_face(const geoinfo::ecal_info::shape_element_face& f) {
+      UFW_DEBUG(fmt::format("Vertices:"));
+      for (size_t i = 0; i < 4; i++)
+        UFW_DEBUG(fmt::format(" {}- {}", i, f.vtx(i)));
+      UFW_DEBUG(fmt::format("Normal  : {}", f.normal()));
+      UFW_DEBUG(fmt::format("Centroid: {}", f.centroid()));
+    }
+
+    void print_element(const geoinfo::ecal_info::shape_element& el) {
+      UFW_DEBUG(fmt::format("Element type: {}",
+                            el.type() == geoinfo::ecal_info::shape_element_type::curved ? "curved" : "straight"));
+      UFW_DEBUG(fmt::format("face #1: "));
+      print_face(el.face1());
+      UFW_DEBUG(fmt::format("face #2: "));
+      print_face(el.face2());
+      UFW_DEBUG(fmt::format("Axis Position : {}", el.axis_pos()));
+      UFW_DEBUG(fmt::format("Axis Direction: {}", el.axis_dir()));
     }
 
   } // namespace
@@ -178,9 +198,7 @@ namespace sand {
     : v_{p1, p2, p3, p4} {
     UFW_ASSERT(are_points_coplanar(), std::string("cell_face: four points are not coplanar"));
 
-    centroid_ = std::reduce(v_.begin(), v_.end(), pos_3d(), [&](const pos_3d& left, const pos_3d& right) {
-      return pos_3d(left.x() + right.x(), left.y() + right.y(), left.z() + right.z()) / v_.size();
-    });
+    centroid_ = vtx(0) + 0.25 * ((vtx(1) - vtx(0)) + (vtx(2) - vtx(0)) + (vtx(3) - vtx(0)));
 
     dir_3d u = vtx(1) - vtx(0);
     dir_3d w = vtx(2) - vtx(0);
@@ -212,34 +230,39 @@ namespace sand {
   }
 
   geoinfo::ecal_info::shape_element_face geoinfo::ecal_info::shape_element_face::transform(const xform_3d& transf) {
-    std::for_each(v_.begin(), v_.end(), [&](pos_3d& p) { transf* p; });
+    std::for_each(v_.begin(), v_.end(), [&](pos_3d& p) { p = transf * p; });
     centroid_ = transf * centroid();
     normal_   = transf * normal();
     return *this;
   }
 
   bool geoinfo::ecal_info::shape_element_face::is_straight(shape_element_face other) const {
-    return *this == other.transform(xform_3d(other.centroid_ - centroid_));
+    return *this == other.transform(xform_3d(centroid_ - other.centroid_));
   };
 
   bool geoinfo::ecal_info::shape_element_face::is_curved(shape_element_face other) const {
     // find two side whose lines crosses each other (i.e. having a common point)
 
-    auto& f1  = *this;
-    auto& f2  = other;
-    auto nyz1 = dir_3d(0, f1.normal().y(), f1.normal().z());
-    auto nyz2 = dir_3d(0, f2.normal().y(), f2.normal().z());
-    auto axis_pos =
-        pos_3d(0.,
-               (f2.normal().z() * f1.normal().Dot(f1.centroid()) - f1.normal().z() * f2.normal().Dot(f2.centroid()))
-                   / (f2.normal().z() * nyz1 - f1.normal().z() * nyz2).R(),
-               (f2.normal().y() * f1.normal().Dot(f1.centroid()) - f1.normal().y() * f2.normal().Dot(f2.centroid()))
-                   / (f2.normal().y() * nyz1 - f1.normal().y() * nyz2).R());
-    auto axis_dir = f1.normal().Cross(f2.normal());
-    // sign depends on order
-    auto angle = 0.5 * TMath::Pi();
+    auto& f1 = *this;
+    auto& f2 = other;
+    auto h1  = f1.normal().Dot(f1.centroid());
+    auto h2  = f2.normal().Dot(f2.centroid());
+    auto dpr = f1.normal().Dot(f2.normal());
+    auto det = (1 - dpr * dpr);
 
-    return f1 == f2.transform(xform_3d(rot_3d(rot_ang(axis_dir, angle)), axis_pos));
+    if (is_zero_within_tolerance(det))
+      return false;
+
+    auto c1       = (h1 - h2 * dpr) / det;
+    auto c2       = (h2 - h1 * dpr) / det;
+    auto axis_pos = c1 * f1.normal() + c2 * f2.normal();
+    auto axis_dir = f1.normal().Cross(f2.normal());
+    auto angle    = TMath::ACos(f1.normal().Dot(f2.normal()));
+
+    if (!is_zero_within_tolerance(std::fabs(angle) - 0.5 * TMath::Pi()))
+      return false;
+
+    return f1 == f2.transform(xform_3d(rot_3d(rot_ang(axis_dir, -angle)), axis_pos));
   };
 
   //////////////////////////////////////////////////////
@@ -248,13 +271,16 @@ namespace sand {
 
   geoinfo::ecal_info::shape_element::shape_element(const shape_element_face& f1, const shape_element_face& f2)
     : face1_(f1), face2_(f2) {
-    if (face1_.is_straight(face2_)) {
-      type      = shape_element_type::straight;
-      axis_pos_ = face1_.centroid();
-      axis_dir_ = face2_.centroid() - face1_.centroid();
-    } else if (face1_.is_curved(face2_)) {
-      type = shape_element_type::curved;
-
+    UFW_DEBUG(fmt::format("Face #1"));
+    print_face(face1());
+    UFW_DEBUG(fmt::format("Face #1"));
+    print_face(face2());
+    if (face1().is_straight(face2())) {
+      type_     = shape_element_type::straight;
+      axis_pos_ = face1().centroid();
+      axis_dir_ = face2().centroid() - face1().centroid();
+    } else if (face1().is_curved(face2())) {
+      type_     = shape_element_type::curved;
       auto nyz1 = dir_3d(0, f1.normal().y(), f1.normal().z());
       auto nyz2 = dir_3d(0, f2.normal().y(), f2.normal().z());
       auto axis_pos_ =
@@ -313,20 +339,19 @@ namespace sand {
       return pos_3d();
     }
 
-    if (type == shape_element_type::straight) {
+    if (type() == shape_element_type::straight) {
       return p + f->normal().Dot(f->centroid() - p) / f->normal().Dot(axis_dir()) * axis_dir();
     } else {
-      auto orig = pos_3d();
-      auto rp   = radius_from_line(p, axis_pos(), axis_dir());
-      auto rv   = radius_from_line(f->vtx(0), axis_pos(), axis_dir());
-      auto ang  = TMath::ACos(rp.Dot(rv) / (rp.R() * rv.R()));
-      auto trf  = xform_3d(rot_3d(rot_ang(axis_dir(), -ang)), axis_pos() - orig);
+      auto rp  = radius_from_line(p, axis_pos(), axis_dir());
+      auto rv  = radius_from_line(f->vtx(0), axis_pos(), axis_dir());
+      auto ang = TMath::ACos(rp.Dot(rv) / (rp.R() * rv.R()));
+      auto trf = xform_3d(rot_3d(rot_ang(axis_dir(), -ang)), axis_pos() - orig);
       return trf * p;
     }
   };
 
   double geoinfo::ecal_info::shape_element::pathlength(const pos_3d& p1, const pos_3d& p2) const {
-    if (type == shape_element_type::straight) {
+    if (type() == shape_element_type::straight) {
       if (!is_zero_within_tolerance(axis_dir().Cross(p1 - p2).R())) {
         UFW_ERROR(fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
         return -1.;
@@ -335,7 +360,7 @@ namespace sand {
     } else {
       auto r1 = radius_from_line(p1, axis_pos(), axis_dir());
       auto r2 = radius_from_line(p2, axis_pos(), axis_dir());
-      if (!is_zero_within_tolerance(r1.R() - r2.R())) {
+      if (!is_zero_within_tolerance(r1.R() - r2.R()) || !is_zero_within_tolerance(((p1 + r1) - (p2 + r2)).R())) {
         UFW_ERROR(fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
         return -1.;
       }

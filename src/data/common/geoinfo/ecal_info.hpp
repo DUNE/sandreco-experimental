@@ -69,16 +69,17 @@ namespace sand {
       dir_3d axis_dir_;
 
      public:
-      shape_element_type type;
+      shape_element_type type_;
 
       shape_element() = delete;
       shape_element(const shape_element_face& f1, const shape_element_face& f2);
 
       void transform(const xform_3d& transf);
-      const pos_3d& axis_pos() const { return axis_pos_; };
-      const dir_3d& axis_dir() const { return axis_dir_; };
-      const shape_element_face& face1() const { return face1_; };
-      const shape_element_face& face2() const { return face2_; };
+      inline const pos_3d& axis_pos() const { return axis_pos_; };
+      inline const dir_3d& axis_dir() const { return axis_dir_; };
+      inline const shape_element_face& face1() const { return face1_; };
+      inline const shape_element_face& face2() const { return face2_; };
+      inline const shape_element_type type() const { return type_; };
       pos_3d to_face(const pos_3d& p, size_t face_id) const;
       double pathlength(const pos_3d& p1, const pos_3d& p2) const;
     };
