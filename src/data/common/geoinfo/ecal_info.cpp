@@ -122,10 +122,12 @@ namespace sand {
     //   return mod;
     // };
 
+    // to be removed
     bool lines_intercept(const pos_3d& p1, const dir_3d& v1, const pos_3d& p2, const dir_3d& v2) {
       return is_zero_within_tolerance(v1.Cross(v2).Dot(p1 - p2));
     }
 
+    // to be removed
     bool find_intercepting_sides(const geoinfo::ecal_info::shape_element_face& f1,
                                  const geoinfo::ecal_info::shape_element_face& f2, size_t& idx1, size_t& idx2) {
       for (idx1 = 0; idx1 < 4; idx1++) {
@@ -137,6 +139,7 @@ namespace sand {
       return false;
     }
 
+    // to be removed
     pos_3d intercepting_point(const pos_3d& p1, const dir_3d& v1, const pos_3d& p2, const dir_3d& v2) {
       dir_3d vp = v2.Cross(p1 - p2);
       dir_3d vv = v2.Cross(v1);
@@ -145,8 +148,12 @@ namespace sand {
       return p1 + sign * vp.R() / vv.R() * v1;
     }
 
-    inline dir_3d distance_from_line(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
+    inline dir_3d radius_from_line(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
       return (p - l_pos) - (p - l_pos).Dot(l_dir) / l_dir.R() * l_dir;
+    }
+
+    inline pos_3d nearest_point_in_line(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
+      return p + radius_from_line(p, l_pos, l_dir);
     }
 
   } // namespace
@@ -217,27 +224,22 @@ namespace sand {
 
   bool geoinfo::ecal_info::shape_element_face::is_curved(shape_element_face other) const {
     // find two side whose lines crosses each other (i.e. having a common point)
-    auto& f1                    = *this;
-    auto& f2                    = other;
-    size_t idx1                 = -1;
-    size_t idx2                 = -1;
-    auto have_intercepting_side = find_intercepting_sides(f1, f2, idx1, idx2);
 
-    if (!have_intercepting_side)
-      return false;
+    auto& f1  = *this;
+    auto& f2  = other;
+    auto nyz1 = dir_3d(0, f1.normal().y(), f1.normal().z());
+    auto nyz2 = dir_3d(0, f2.normal().y(), f2.normal().z());
+    auto axis_pos =
+        pos_3d(0.,
+               (f2.normal().z() * f1.normal().Dot(f1.centroid()) - f1.normal().z() * f2.normal().Dot(f2.centroid()))
+                   / (f2.normal().z() * nyz1 - f1.normal().z() * nyz2).R(),
+               (f2.normal().y() * f1.normal().Dot(f1.centroid()) - f1.normal().y() * f2.normal().Dot(f2.centroid()))
+                   / (f2.normal().y() * nyz1 - f1.normal().y() * nyz2).R());
+    auto axis_dir = f1.normal().Cross(f2.normal());
+    // sign depends on order
+    auto angle = 0.5 * TMath::Pi();
 
-    pos_3d p1 = f1.vtx(idx1);
-    pos_3d p2 = f2.vtx(idx2);
-
-    dir_3d v1 = f1.side(idx1);
-    dir_3d v2 = f2.side(idx2);
-
-    auto orig     = pos_3d();
-    auto axis_pos = intercepting_point(p1, v1, p2, v2) - orig;
-    auto axis_dir = v1.Cross(v2);
-    auto angle    = TMath::ACos(v1.Dot(v2)) / (v1.R() * v2.R());
-
-    return f1 == f2.transform(xform_3d(rot_3d(rot_ang(axis_dir, -angle)), axis_pos));
+    return f1 == f2.transform(xform_3d(rot_3d(rot_ang(axis_dir, angle)), axis_pos));
   };
 
   //////////////////////////////////////////////////////
@@ -251,17 +253,17 @@ namespace sand {
       axis_pos_ = face1_.centroid();
       axis_dir_ = face2_.centroid() - face1_.centroid();
     } else if (face1_.is_curved(face2_)) {
-      type        = shape_element_type::curved;
-      size_t idx1 = -1;
-      size_t idx2 = -1;
-      find_intercepting_sides(face1_, face2_, idx1, idx2);
-      pos_3d p1 = f1.vtx(idx1);
-      pos_3d p2 = f2.vtx(idx2);
-      dir_3d v1 = f1.side(idx1);
-      dir_3d v2 = f2.side(idx2);
-      auto orig = pos_3d();
-      axis_pos_ = intercepting_point(p1, v1, p2, v2) - orig;
-      axis_dir_ = v1.Cross(v2);
+      type = shape_element_type::curved;
+
+      auto nyz1 = dir_3d(0, f1.normal().y(), f1.normal().z());
+      auto nyz2 = dir_3d(0, f2.normal().y(), f2.normal().z());
+      auto axis_pos_ =
+          pos_3d(0.,
+                 (f2.normal().z() * f1.normal().Dot(f1.centroid()) - f1.normal().z() * f2.normal().Dot(f2.centroid()))
+                     / (f2.normal().z() * nyz1 - f1.normal().z() * nyz2).R(),
+                 (f2.normal().y() * f1.normal().Dot(f1.centroid()) - f1.normal().y() * f2.normal().Dot(f2.centroid()))
+                     / (f2.normal().y() * nyz1 - f1.normal().y() * nyz2).R());
+      auto axis_dir_ = f1.normal().Cross(f2.normal());
     } else {
       UFW_EXCEPT(std::invalid_argument, "cell_element: faces normals are neither parallel nor perpendicular");
     }
@@ -315,8 +317,8 @@ namespace sand {
       return p + f->normal().Dot(f->centroid() - p) / f->normal().Dot(axis_dir()) * axis_dir();
     } else {
       auto orig = pos_3d();
-      auto rp   = distance_from_line(p, axis_pos(), axis_dir());
-      auto rv   = distance_from_line(f->vtx(0), axis_pos(), axis_dir());
+      auto rp   = radius_from_line(p, axis_pos(), axis_dir());
+      auto rv   = radius_from_line(f->vtx(0), axis_pos(), axis_dir());
       auto ang  = TMath::ACos(rp.Dot(rv) / (rp.R() * rv.R()));
       auto trf  = xform_3d(rot_3d(rot_ang(axis_dir(), -ang)), axis_pos() - orig);
       return trf * p;
@@ -331,8 +333,8 @@ namespace sand {
       }
       return (p1 - p2).R();
     } else {
-      auto r1 = distance_from_line(p1, axis_pos(), axis_dir());
-      auto r2 = distance_from_line(p2, axis_pos(), axis_dir());
+      auto r1 = radius_from_line(p1, axis_pos(), axis_dir());
+      auto r2 = radius_from_line(p2, axis_pos(), axis_dir());
       if (!is_zero_within_tolerance(r1.R() - r2.R())) {
         UFW_ERROR(fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
         return -1.;
