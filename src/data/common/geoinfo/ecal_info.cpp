@@ -271,24 +271,19 @@ namespace sand {
 
   geoinfo::ecal_info::shape_element::shape_element(const shape_element_face& f1, const shape_element_face& f2)
     : face1_(f1), face2_(f2) {
-    UFW_DEBUG(fmt::format("Face #1"));
-    print_face(face1());
-    UFW_DEBUG(fmt::format("Face #1"));
-    print_face(face2());
     if (face1().is_straight(face2())) {
       type_     = shape_element_type::straight;
       axis_pos_ = face1().centroid();
       axis_dir_ = face2().centroid() - face1().centroid();
     } else if (face1().is_curved(face2())) {
-      type_     = shape_element_type::curved;
-      auto nyz1 = dir_3d(0, f1.normal().y(), f1.normal().z());
-      auto nyz2 = dir_3d(0, f2.normal().y(), f2.normal().z());
-      auto axis_pos_ =
-          pos_3d(0.,
-                 (f2.normal().z() * f1.normal().Dot(f1.centroid()) - f1.normal().z() * f2.normal().Dot(f2.centroid()))
-                     / (f2.normal().z() * nyz1 - f1.normal().z() * nyz2).R(),
-                 (f2.normal().y() * f1.normal().Dot(f1.centroid()) - f1.normal().y() * f2.normal().Dot(f2.centroid()))
-                     / (f2.normal().y() * nyz1 - f1.normal().y() * nyz2).R());
+      type_          = shape_element_type::curved;
+      auto h1        = face1().normal().Dot(face1().centroid());
+      auto h2        = face2().normal().Dot(face2().centroid());
+      auto dpr       = face1().normal().Dot(face2().normal());
+      auto det       = (1 - dpr * dpr);
+      auto c1        = (h1 - h2 * dpr) / det;
+      auto c2        = (h2 - h1 * dpr) / det;
+      auto axis_pos_ = c1 * f1.normal() + c2 * f2.normal();
       auto axis_dir_ = f1.normal().Cross(f2.normal());
     } else {
       UFW_EXCEPT(std::invalid_argument, "cell_element: faces normals are neither parallel nor perpendicular");
