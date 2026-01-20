@@ -21,6 +21,7 @@
  *  is the target. Some info on the nu and the target must be read from here since they are not present in the EvtCode
  *  string;
  * - I'm not sure about how we should use the data exclusive of the t2k_rootracker format.
+ * test/sand-spill-events.9.edep.root
  */
 
 #ifndef FAKE_RECO_HPP
@@ -53,6 +54,7 @@ namespace sand::fake_reco {
                                                     std::size_t interaction_index) const;
     void set_true_interaction_vectors_capacities_(::caf::SRTrueInteraction& true_interaction,
                                                   std::size_t edep_first_index, std::size_t edep_size) const;
+    [[nodiscard]] ::caf::SRTrueParticle SRTrueParticle_from_edep(const EDEPTrajectory& particle) const;
     void assert_sizes() const;
    public:
     fake_reco();

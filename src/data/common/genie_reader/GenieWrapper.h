@@ -55,7 +55,7 @@ struct StdHep {
   std::vector<genie::GHepStatus_t> Status_{};
   std::vector<int> Rescat_{};
 
-  std::vector<ROOT::Math::XYZTVector> X4_{};
+  std::vector<ROOT::Math::XYZTVector> X4_{}; //[fm]
   std::vector<ROOT::Math::PxPyPzEVector> P4_{};
   std::vector<ROOT::Math::XYZVector> Polz_{};
 
@@ -70,22 +70,21 @@ struct NuParent {
 
   NuParent(const int Pdg, const int DecMode, const double DecP4[4], const double DecX4[4], const double ProP4[4],
            const double ProX4[4], const int ProNVtx)
-    : Pdg_{Pdg}, DecMode_{DecMode}, DecP4_{}, DecX4_{}, ProP4_{}, ProX4_{}, ProNVtx_{ProNVtx} {
-    for (int i = 0; i < 4; i++) {
-      DecP4_[i] = DecP4[i];
-      DecX4_[i] = DecX4[i];
-      ProP4_[i] = ProP4[i];
-      ProX4_[i] = ProX4[i];
-    }
-  }
+    : Pdg_{Pdg},
+      DecMode_{DecMode},
+      DecP4_{DecP4[0], DecP4[1], DecP4[2], DecP4[3]},
+      DecX4_{DecX4[0], DecX4[1], DecX4[2], DecX4[3]},
+      ProP4_{ProP4[0], ProP4[1], ProP4[2], ProP4[3]},
+      ProX4_{ProX4[0], ProX4[1], ProX4[2], ProX4[3]},
+      ProNVtx_{ProNVtx} {}
 
   int Pdg_;
   int DecMode_;
 
-  std::array<double, 4> DecP4_;
-  std::array<double, 4> DecX4_;
-  std::array<double, 4> ProP4_;
-  std::array<double, 4> ProX4_;
+  ROOT::Math::PxPyPzEVector DecP4_;
+  ROOT::Math::XYZTVector DecX4_;
+  ROOT::Math::PxPyPzEVector ProP4_;
+  ROOT::Math::XYZTVector ProX4_;
 
   int ProNVtx_;
 };

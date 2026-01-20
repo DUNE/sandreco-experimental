@@ -14,6 +14,7 @@
 
 #include <duneanaobj/StandardRecord/StandardRecord.h>
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -34,17 +35,18 @@ namespace sand::fake_reco {
     // Initialize spill structures
     set_branches_capacities_();
 
-    auto& true_interactions_vector = standard_record_->mc.nu;
     // Loop over interactions (nu vertices)
     for (std::size_t interaction_index = 0; interaction_index < edep_map.size(); interaction_index++) {
       const auto [edep_first_index, edep_size] = edep_map[interaction_index];
       // Create empty interactions
-      ::caf::SRTrueInteraction& true_interaction = true_interactions_vector.emplace_back();
+      ::caf::SRTrueInteraction& true_interaction = standard_record_->mc.nu.emplace_back();
       // caf::SRInteraction reco_interaction      = empty_interaction_from_vertex(edep);
 
       // Fill the interactions with nu data
-      initialize_SRTrueInteraction(true_interaction, genie_->events_[interaction_index],
-                                   genie_->stdHeps_[interaction_index]);
+      initialize_SRTrueInteraction(
+          true_interaction, genie_->events_[interaction_index], genie_->stdHeps_[interaction_index],
+          edep_->GetChildrenTrajectories()[edep_first_index].GetTrajectoryPointsVect().front().GetPosition());
+      true_interaction.id = genie_->events_[interaction_index].EvtNum_; // Each ND experiment does whatever it wants
       true_interaction.genieIdx = genie_->events_[interaction_index].EvtNum_;
 
       fill_true_interaction_with_preFSI_hadrons_(true_interaction, interaction_index);
@@ -160,6 +162,37 @@ namespace sand::fake_reco {
           return acc + std::distance(++subtree_vertex, last_subtree_element);
         });
     true_interaction.sec.reserve(secondary_n);
+  }
+
+  ::caf::SRTrueParticle fake_reco::SRTrueParticle_from_edep(const EDEPTrajectory& particle) const {
+    const auto trajectory_points = particle.GetTrajectoryPointsVect();
+    auto output                  = ::caf::SRTrueParticle{
+                         .pdg  = particle.GetPDGCode(),
+                         .G4ID = particle.GetId(), // This is the GEANT trajectory id. The CafMaker reset this index at each interaction
+                         .interaction_id = {}, // This will be filled by fake_reco loop
+                         .time           = static_cast<float>(trajectory_points.front().GetPosition().T()), // ?
+                         .ancestor_id    = {}, // This will be filled by fake_reco loop
+                         .p              = particle.GetInitialMomentum(),
+                         .start_pos =
+            ::caf::SRVector3D{
+                trajectory_points.front().GetPosition().Vect() // are these [cm]?
+            },
+                         .end_pos          = ::caf::SRVector3D{trajectory_points.back().GetPosition().Vect()},
+                         .parent           = particle.GetParentId(),
+                         .daughters        = {},
+                         .first_process    = static_cast<unsigned int>(trajectory_points.front().GetProcess()),
+                         .first_subprocess = static_cast<unsigned int>(trajectory_points.front().GetSubprocess()),
+                         .end_process      = static_cast<unsigned int>(trajectory_points.back().GetProcess()),
+                         .end_subprocess   = static_cast<unsigned int>(trajectory_points.back().GetSubprocess())};
+
+    const auto first_daughter_it = ++edep_->GetTrajectory(particle.GetId());
+    const auto last_daughter_it  = edep_->GetTrajectoryEnd(edep_->GetTrajectory(particle.GetId()));
+    output.daughters.reserve(std::distance(first_daughter_it, last_daughter_it));
+    for (auto it = first_daughter_it; it != last_daughter_it; ++it) {
+      output.daughters.push_back(it->GetId());
+    }
+
+    return output;
   }
 
   void fake_reco::assert_sizes() const {

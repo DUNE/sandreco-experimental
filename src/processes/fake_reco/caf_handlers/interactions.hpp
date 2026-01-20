@@ -34,7 +34,7 @@ namespace sand::fake_reco {
   }
 
   inline void initialize_SRTrueInteraction(::caf::SRTrueInteraction& interaction, const GRooTrackerEvent& genie_event,
-                                           const StdHep& genie_stdhep) {
+                                           const StdHep& genie_stdhep, const TLorentzVector& vtx) {
     // data got via  genie_stdhep.(...)[0].(...) are relative to the nu
     // data got via  genie_stdhep.(...)[1].(...) are relative to the target
 
@@ -67,9 +67,9 @@ namespace sand::fake_reco {
     interaction.momentum.y = static_cast<float>(nu_p4.Py());
     interaction.momentum.z = static_cast<float>(nu_p4.Pz());
 
-    // interaction.vtx = // FIXME: waiting for the geo manager (this will require edep)
-    // interaction.isvtxcont = // Same
-    // interaction.time = // Same
+    interaction.vtx = vtx.Vect();
+    interaction.isvtxcont = true; // No cosmic or rock nu simulated
+    interaction.time = static_cast<float>(vtx.T());
 
     const auto nu_daughters_indexes = genie_stdhep.daughters_indexes_of_part(static_cast<int>(StdHepIndex::nu));
     if (nu_daughters_indexes.size() != 1) {
@@ -111,6 +111,11 @@ namespace sand::fake_reco {
 
     // FIXME: all the fields from baseline to imp_weight should be filled with genie NuParent data, but they are all
     //  empty at the moment
+    //
+    // need to fill the flux variables in.  for 2x2, info should come from a genie::flux::GNuMIFluxPassThroughInfo
+    // object created by the flux driver.
+    //       for DUNE beam, I assume there's an analogous thing?
+    // (https://github.com/DUNE/ND_CAFMaker/blob/972f11bc5b69ea1f595e14ed16e09162f512011e/src/truth/FillTruth.cxx#L278C14-L279C65)
 
     interaction.generator = ::caf::kGENIE;
     // interaction.genVersion = ?
