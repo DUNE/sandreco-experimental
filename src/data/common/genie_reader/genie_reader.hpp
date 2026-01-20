@@ -6,6 +6,7 @@
 
 #include <genie_reader/GenieWrapper.h>
 
+#include <TBits.h>
 #include <TObjString.h>
 
 #include <utility>
@@ -46,6 +47,7 @@ class ufw::data::factory<sand::genie_reader> {
   bool hasNumiFlux = false;
 
   int EvtNum{};
+  TBits* EvtFlags{};
   TObjString* EvtCode{};
   double EvtXSec{};
   double EvtDXSec{};

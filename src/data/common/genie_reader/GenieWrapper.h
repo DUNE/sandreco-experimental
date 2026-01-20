@@ -2,6 +2,7 @@
 
 #include <Math/Vector3D.h>
 #include <Math/Vector4D.h>
+#include <TBits.h>
 
 #include <array>
 #include <optional>
@@ -37,6 +38,7 @@ struct GRooTrackerEvent {
   double EvtProb_;
   std::array<double, 4> EvtVtx_;
   std::string EvtCode_;
+  TBits* EvtFlags_;
 };
 
 enum class StdHepIndex : int { nu = 0, tgt = 1 };

@@ -34,7 +34,7 @@ namespace sand::fake_reco {
   }
 
   inline void initialize_SRTrueInteraction(::caf::SRTrueInteraction& interaction, const GRooTrackerEvent& genie_event,
-                                           const StdHep& genie_stdhep, const TLorentzVector& vtx) {
+                                           const StdHep& genie_stdhep, const std::array<double, 4>& vtx) {
     // data got via  genie_stdhep.(...)[0].(...) are relative to the nu
     // data got via  genie_stdhep.(...)[1].(...) are relative to the target
 
@@ -67,9 +67,10 @@ namespace sand::fake_reco {
     interaction.momentum.y = static_cast<float>(nu_p4.Py());
     interaction.momentum.z = static_cast<float>(nu_p4.Pz());
 
-    interaction.vtx = vtx.Vect();
+    interaction.vtx =
+        ::caf::SRVector3D{static_cast<float>(vtx[0]), static_cast<float>(vtx[1]), static_cast<float>(vtx[2])};
     interaction.isvtxcont = true; // No cosmic or rock nu simulated
-    interaction.time = static_cast<float>(vtx.T());
+    interaction.time      = static_cast<float>(vtx[3]);
 
     const auto nu_daughters_indexes = genie_stdhep.daughters_indexes_of_part(static_cast<int>(StdHepIndex::nu));
     if (nu_daughters_indexes.size() != 1) {

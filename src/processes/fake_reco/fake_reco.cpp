@@ -44,9 +44,8 @@ namespace sand::fake_reco {
       // caf::SRInteraction reco_interaction      = empty_interaction_from_vertex(edep);
 
       // Fill the interactions with nu data
-      initialize_SRTrueInteraction(
-          true_interaction, genie_->events_[interaction_index], genie_->stdHeps_[interaction_index],
-          edep_->GetChildrenTrajectories()[edep_first_index].GetTrajectoryPointsVect().front().GetPosition());
+      initialize_SRTrueInteraction(true_interaction, genie_->events_[interaction_index],
+                                   genie_->stdHeps_[interaction_index], genie_->events_[interaction_index].EvtVtx_);
       true_interaction.id = genie_->events_[interaction_index].EvtNum_; // Each ND experiment does whatever it wants
       true_interaction.genieIdx = genie_->events_[interaction_index].EvtNum_;
 

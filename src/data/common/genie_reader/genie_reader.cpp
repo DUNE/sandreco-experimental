@@ -64,7 +64,7 @@ namespace ufw::data {
       // Copy EvtCode string (handle null pointer)
       std::string evtCodeStr = EvtCode ? EvtCode->GetString().Data() : "";
 
-      reader.events_.push_back({EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr});
+      reader.events_.push_back({EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
 
       reader.stdHeps_.emplace_back(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
                                    StdHepFd, StdHepLd, StdHepFm, StdHepLm);
@@ -261,6 +261,16 @@ namespace ufw::data {
     }
     if (reader.numiFluxes_.has_value()) {
       reader.numiFluxes_->clear();
+    }
+
+    const auto spill_size = spills_boundaries[i].second - spills_boundaries[i].first;
+    reader.events_.reserve(spill_size);
+    reader.stdHeps_.reserve(spill_size);
+    if (reader.nuParents_.has_value()) {
+      reader.nuParents_->reserve(spill_size);
+    }
+    if (reader.numiFluxes_.has_value()) {
+      reader.numiFluxes_->reserve(spill_size);
     }
   }
 
