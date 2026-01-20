@@ -74,7 +74,8 @@ namespace sand::utils {
 
      private:
       friend class list<T>;
-      friend bool operator== (const_iterator, const_iterator);
+      template <typename U>
+      friend bool operator== (const typename list<U>::const_iterator&, const typename list<U>::const_iterator&);
       const_iterator(const T* n) : m_node(n) {}
 
      private:
@@ -120,7 +121,8 @@ namespace sand::utils {
 
      private:
       friend class list<T>;
-      friend bool operator== (iterator, iterator);
+      template <typename U>
+      friend bool operator== (const typename list<U>::iterator&, const typename list<U>::iterator &);
       iterator(T* n) : m_node(n) {}
 
      private:
@@ -216,22 +218,22 @@ namespace sand::utils {
   };
 
   template <typename T>
-  bool operator== (typename list<T>::const_iterator lhs, typename list<T>::const_iterator rhs) {
+  bool operator== (const typename list<T>::const_iterator& lhs, const typename list<T>::const_iterator& rhs) {
     return lhs.m_node == rhs.m_node;
   }
 
   template <typename T>
-  bool operator!= (typename list<T>::const_iterator lhs, typename list<T>::const_iterator rhs) {
+  bool operator!= (const typename list<T>::const_iterator& lhs, const typename list<T>::const_iterator& rhs) {
     return !(lhs == rhs);
   }
 
   template <typename T>
-  bool operator== (typename list<T>::iterator lhs, typename list<T>::iterator rhs) {
+  bool operator== (const typename list<T>::iterator& lhs, const typename list<T>::iterator& rhs) {
     return lhs.m_node == rhs.m_node;
   }
 
   template <typename T>
-  bool operator!= (typename list<T>::iterator lhs, typename list<T>::iterator rhs) {
+  bool operator!= (const typename list<T>::iterator& lhs, const typename list<T>::iterator& rhs) {
     return !(lhs == rhs);
   }
 
