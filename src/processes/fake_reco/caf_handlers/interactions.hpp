@@ -38,7 +38,7 @@ namespace sand::fake_reco {
     // data got via  genie_stdhep.(...)[0].(...) are relative to the nu
     // data got via  genie_stdhep.(...)[1].(...) are relative to the target
 
-    const std::string_view interaction_string = genie_event.EvtCode_->GetString().Data();
+    const std::string_view interaction_string = genie_event.EvtCode_;
     const EventSummary summary{interaction_string};
 
     // interaction.id = ? // TODO: understand what goes here
@@ -139,6 +139,7 @@ namespace sand::fake_reco {
       break;
     case -211:
       interaction.npim++;
+      break;
     case 111:
       interaction.npi0++;
       break;
