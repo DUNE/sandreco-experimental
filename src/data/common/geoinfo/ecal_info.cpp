@@ -41,19 +41,14 @@ namespace sand {
       auto phi1 = tube->GetPhi1();
       auto phi2 = tube->GetPhi2();
 
-      geoinfo::ecal_info::shape_element el(
-          geoinfo::ecal_info::shape_element_face(
-              pos_3d(rmin * std::cos(phi1 * TMath::DegToRad()), rmin * std::sin(phi1 * TMath::DegToRad()), dz),
-              pos_3d(rmin * std::cos(phi1 * TMath::DegToRad()), rmin * std::sin(phi1 * TMath::DegToRad()), -dz),
-              pos_3d(rmax * std::cos(phi1 * TMath::DegToRad()), rmax * std::sin(phi1 * TMath::DegToRad()), dz),
-              pos_3d(rmax * std::cos(phi1 * TMath::DegToRad()), rmax * std::sin(phi1 * TMath::DegToRad()), -dz)),
-          geoinfo::ecal_info::shape_element_face(
-              pos_3d(rmin * std::cos(phi2 * TMath::DegToRad()), rmin * std::sin(phi2 * TMath::DegToRad()), dz),
-              pos_3d(rmin * std::cos(phi2 * TMath::DegToRad()), rmin * std::sin(phi2 * TMath::DegToRad()), -dz),
-              pos_3d(rmax * std::cos(phi2 * TMath::DegToRad()), rmax * std::sin(phi2 * TMath::DegToRad()), dz),
-              pos_3d(rmax * std::cos(phi2 * TMath::DegToRad()), rmax * std::sin(phi2 * TMath::DegToRad()), -dz)));
-
-      return el;
+      auto to_shape_element_face = [&](double phi) {
+        return geoinfo::ecal_info::shape_element_face(
+            pos_3d(rmin * std::cos(phi * TMath::DegToRad()), rmin * std::sin(phi * TMath::DegToRad()), dz),
+            pos_3d(rmin * std::cos(phi * TMath::DegToRad()), rmin * std::sin(phi * TMath::DegToRad()), -dz),
+            pos_3d(rmax * std::cos(phi * TMath::DegToRad()), rmax * std::sin(phi * TMath::DegToRad()), -dz),
+            pos_3d(rmax * std::cos(phi * TMath::DegToRad()), rmax * std::sin(phi * TMath::DegToRad()), dz));
+      };
+      return geoinfo::ecal_info::shape_element(to_shape_element_face(phi1), to_shape_element_face(phi2));
     }
 
     geoinfo::ecal_info::shape_element box_to_shape_element(TGeoBBox* box) {
@@ -61,12 +56,11 @@ namespace sand {
       auto dy = box->GetDY();
       auto dz = box->GetDZ();
 
-      geoinfo::ecal_info::shape_element el(
-          geoinfo::ecal_info::shape_element_face(pos_3d(-dx, -dy, dz), pos_3d(-dx, -dy, -dz), pos_3d(dx, -dy, dz),
-                                                 pos_3d(dx, -dy, -dz)),
-          geoinfo::ecal_info::shape_element_face(pos_3d(-dx, dy, dz), pos_3d(-dx, dy, -dz), pos_3d(dx, dy, dz),
-                                                 pos_3d(dx, dy, -dz)));
-      return el;
+      return geoinfo::ecal_info::shape_element(
+          geoinfo::ecal_info::shape_element_face(pos_3d(-dx, -dy, dz), pos_3d(-dx, -dy, -dz), pos_3d(dx, -dy, -dz),
+                                                 pos_3d(dx, -dy, dz)),
+          geoinfo::ecal_info::shape_element_face(pos_3d(-dx, dy, dz), pos_3d(-dx, dy, -dz), pos_3d(dx, dy, -dz),
+                                                 pos_3d(dx, dy, dz)));
     }
 
     geoinfo::ecal_info::shape_element trd2_to_shape_element(TGeoTrd2* trd) {
@@ -76,12 +70,11 @@ namespace sand {
       auto dy2 = trd->GetDy2();
       auto dz  = trd->GetDz();
 
-      geoinfo::ecal_info::shape_element el(
-          geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, -dy1, -dz), pos_3d(dx1, -dy1, -dz),
-                                                 pos_3d(-dx2, -dy1, dz), pos_3d(dx2, -dy1, dz)),
-          geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, dy1, -dz), pos_3d(dx1, dy1, -dz), pos_3d(-dx2, dy1, dz),
-                                                 pos_3d(dx2, dy1, dz)));
-      return el;
+      return geoinfo::ecal_info::shape_element(
+          geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, -dy1, -dz), pos_3d(dx1, -dy1, -dz), pos_3d(dx2, -dy1, dz),
+                                                 pos_3d(-dx2, -dy1, dz)),
+          geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, dy1, -dz), pos_3d(dx1, dy1, -dz), pos_3d(dx2, dy1, dz),
+                                                 pos_3d(-dx2, dy1, dz)));
     }
 
     // void process_element(TGeoShape* shape, TGeoHMatrix geo_transf, geoinfo::ecal_info::module& mod) {
@@ -417,11 +410,65 @@ namespace sand {
   // geoinfo::ecal_info::module
   //////////////////////////////////////////////////////
 
-  std::vector<geoinfo::ecal_info::cell> geoinfo::ecal_info::module::construct_cells() const {
+  std::vector<geoinfo::ecal_info::cell> geoinfo::ecal_info::module::construct_cells() {
+    order_elements();
     return std::vector<geoinfo::ecal_info::cell>();
   };
 
-  void geoinfo::ecal_info::module::order_elements() {};
+  void geoinfo::ecal_info::module::order_elements() {
+    if (elements_.size() == 1)
+      return;
+
+    std::vector<shape_element> tmp;
+    tmp.swap(elements_);
+
+    auto insert = [&](const std::vector<shape_element>::iterator& it_insert,
+                      const std::vector<shape_element>::iterator& it_erase) {
+      elements_.insert(it_insert, *it_erase);
+      tmp.erase(it_erase);
+    };
+    auto insert_front = [&](const std::vector<shape_element>::iterator& it) { insert(elements_.begin(), it); };
+    auto insert_back  = [&](const std::vector<shape_element>::iterator& it) { insert(elements_.end(), it); };
+
+    auto first_el       = tmp.begin();
+    auto current_face_1 = first_el->face1();
+    auto current_face_2 = first_el->face2();
+
+    insert_front(first_el);
+
+    while (tmp.size() != 0) {
+      auto found = false;
+      for (auto it = tmp.begin(); it != tmp.end(); it++) {
+        if (current_face_1 == it->face2()) {
+          found          = true;
+          current_face_1 = it->face1();
+          insert_front(it);
+          break;
+        } else if (current_face_1 == it->face1()) {
+          found = true;
+          it->swap_faces();
+          current_face_1 = it->face1();
+          insert_front(it);
+          break;
+        } else if (current_face_2 == it->face2()) {
+          found = true;
+          it->swap_faces();
+          current_face_2 = it->face2();
+          insert_back(it);
+          break;
+        } else if (current_face_2 == it->face1()) {
+          found          = true;
+          current_face_2 = it->face2();
+          insert_back(it);
+          break;
+        }
+      }
+
+      if (found == false) {
+        UFW_ERROR("Module disconnected: At least one shape element has not faces in common");
+      }
+    }
+  };
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info
@@ -602,19 +649,20 @@ namespace sand {
       if (shape->TestShapeBit(TGeoShape::kGeoTubeSeg)) {
         auto el = tube_to_shape_element(static_cast<TGeoTubeSeg*>(shape));
         el.transform(transf);
-        m.elements.push_back(el);
+        m.add(el);
       } else if (shape->TestShapeBit(TGeoShape::kGeoBox)) {
         auto el = box_to_shape_element(static_cast<TGeoBBox*>(shape));
         el.transform(transf);
-        m.elements.push_back(el);
+        m.add(el);
       } else {
         UFW_ERROR(fmt::format("Unexpected shape: {}", shape->GetName()));
       }
     });
+    m.construct_cells();
   }
 
   void geoinfo::ecal_info::barrel_module_cells(const geo_path& path) {
-    // module m;
+    module m;
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
     auto shape      = nav->get_node()->GetVolume()->GetShape();
@@ -622,7 +670,8 @@ namespace sand {
     auto transf     = to_xform_3d(geo_transf);
     auto el         = trd2_to_shape_element(static_cast<TGeoTrd2*>(shape));
     el.transform(transf);
-    // m.elements.push_back(el);
+    m.add(el);
+    m.construct_cells();
   }
 
 } // namespace sand

@@ -83,6 +83,10 @@ namespace sand {
       inline const shape_element_type type() const { return type_; };
       pos_3d to_face_point(const pos_3d& p, size_t face_id) const;
       double to_face_pathlength(const pos_3d& p, size_t faceid) const;
+      void swap_faces() {
+        std::swap(face1_, face2_);
+        axis_dir_ *= -1;
+      };
 
      private:
       bool is_straight();
@@ -112,11 +116,13 @@ namespace sand {
 
     struct module {
      public:
-      std::vector<cell> construct_cells() const;
-      std::vector<shape_element> elements;
+      std::vector<cell> construct_cells();
+      inline void add(const shape_element& el) { elements_.push_back(el); };
+      inline const shape_element& at(size_t idx) { return elements_.at(idx); };
 
      private:
       void order_elements();
+      std::vector<shape_element> elements_;
     };
 
    public:
