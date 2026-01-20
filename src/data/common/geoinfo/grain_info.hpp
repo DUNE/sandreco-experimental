@@ -135,3 +135,10 @@ namespace sand {
   }
 
 } // namespace sand
+
+template <>
+struct fmt::formatter<sand::geoinfo::grain_info::rect_f> : formatter<string_view> {
+  auto format(const sand::geoinfo::grain_info::rect_f& r, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "bottom: {}, left: {}, top: {}, right: {}", r.bottom, r.left, r.top, r.right);
+  }
+};

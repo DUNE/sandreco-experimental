@@ -1,0 +1,39 @@
+{
+    "ufw" : {
+      "ufw-loglevel" : "debug",
+      "ufw-basepath" : "/usr/local/share/sandreco/data",
+      "ufw-ldpath" : ["/usr/local/lib64"],
+      "ufw-env" : {}
+    },
+    "globals" : {
+    "sand::cl::platform" : {},
+    "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
+    "sand::geoinfo" : { "grain_geometry" : "gdml-masks" },
+    "sand::grain::geant_gdml_parser" : {
+      "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" }
+    },
+    "sand::hdf5::ndarray" : {
+        "angle_writer" : {
+          "uri" : "test/voxel_weights.h5",
+          "io" : "overwrite"
+        }
+      }
+    },
+    "contexts" : {
+      "keys" : 1,
+      "locals" : {}
+    },
+    "run" : [
+      {
+        "sand::grain::mask_weights_computation" : {
+          "voxel_size" : 150.0,
+          "lar_attenuation_length" : 5000.0,
+          "pde" : 1.0,
+          "minivoxels_per_side" : 2
+        },
+        "reqs" : {},
+        "prods" : {}
+      }
+    ]
+  }
+  

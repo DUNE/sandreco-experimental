@@ -38,21 +38,21 @@ namespace sand {
 
 template <>
 struct fmt::formatter<sand::pos_3d> : formatter<string_view> {
-  auto format(sand::pos_3d c, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::pos_3d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({:.3f}, {:.3f}, {:.3f})", c.x(), c.y(), c.z());
   }
 };
 
 template <>
 struct fmt::formatter<sand::dir_3d> : formatter<string_view> {
-  auto format(sand::dir_3d c, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::dir_3d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({:.3f}, {:.3f}, {:.3f})", c.x(), c.y(), c.z());
   }
 };
 
 template <>
 struct fmt::formatter<sand::vec_4d> : formatter<string_view> {
-  auto format(sand::vec_4d c, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::vec_4d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({:.3f}, {:.3f}, {:.3f}, {:.3f})", c.x(), c.y(), c.z(), c.t());
   }
 };
@@ -285,7 +285,7 @@ struct fmt::formatter<sand::subdetector_t> : formatter<string_view> {
 
 template <>
 struct fmt::formatter<sand::geo_id> : formatter<string_view> {
-  auto format(sand::geo_id gid, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::geo_id& gid, format_context& ctx) const -> format_context::iterator {
     switch (gid.subdetector) {
     case sand::DRIFT:
       return fmt::format_to(ctx.out(), "[{}: module {}, plane {}]", gid.subdetector, gid.drift.supermodule,
@@ -306,7 +306,7 @@ struct fmt::formatter<sand::geo_id> : formatter<string_view> {
 
 template <>
 struct fmt::formatter<sand::channel_id> : formatter<string_view> {
-  auto format(sand::channel_id chid, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::channel_id& chid, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "[{}: link {}, channel {}]", chid.subdetector, chid.link, chid.channel);
   }
 };

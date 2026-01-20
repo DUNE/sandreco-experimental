@@ -10,6 +10,9 @@
 
 #define CL_FUNCTION(f) #f "\n"
 
+#define CL_STRUCT_BASE(s) #s "\n"
+#define CL_STRUCT(s)      CL_STRUCT_BASE(s)
+
 #define CL_KERNEL(k) "__kernel " #k
 
 namespace sand::cl {
@@ -57,6 +60,24 @@ namespace sand::cl {
   }
 
   /**
+   * Build program and get errors if any
+   */
+  void build_program(cl::Program& program, cl::platform& platform, const char* kernel_src) {
+    try {
+      program = cl::Program(platform.context(), kernel_src);
+      program.build(platform.devices());
+    } catch (const cl::Error& e) {
+      UFW_WARN("OpenCL Program Build Error: {} ({})", e.what(), e.err());
+      // Fetch logs from each device
+      for (const auto& dev : platform.devices()) {
+        UFW_WARN("Device: {}", dev.getInfo<CL_DEVICE_NAME>());
+        UFW_WARN("{}", program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev));
+      }
+      throw;
+    }
+  }
+
+  /**
    * It can be useful to pass data between different CL based processes without actually getting this data off the GPU
    * memory: this class provides a named buffer that can be passed around as a variable in the configuration.
    *
@@ -98,7 +119,7 @@ namespace sand::cl {
         return map_ptr;
       };
 
-      operator void*() { return get(); };
+      operator void* () { return get(); };
 
       cl::Event& event() { return map_evt; }
 
