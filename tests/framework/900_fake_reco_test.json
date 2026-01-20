@@ -18,9 +18,6 @@
       },
       "sand::genie_reader": {
         "uri": "test/full-events.0000000.OVERLAY.root"
-      },
-      "sand::caf::caf_wrapper": {
-        "produced_caf": {}
       }
     }
   },
