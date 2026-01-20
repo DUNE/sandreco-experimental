@@ -28,6 +28,13 @@
       "prods": {
         "output_caf": "produced_caf"
       }
+    },
+    {
+      "sand::caf::caf_streamer" : {
+        "uri" : "test/output.caf.root",
+        "tree" : "StandardRecords"
+      },
+      "write" : ["produced_caf"]
     }
   ]
 }

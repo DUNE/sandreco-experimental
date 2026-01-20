@@ -24,10 +24,10 @@ public:
 
     ~caf_streamer() override;
 
-    void configure(const ufw::config&, const ufw::type_id&,
+    void configure(const ufw::config&,
                    ufw::op_type) override;
 
-    void attach(ufw::data::data_base&) override;
+    void attach(ufw::data::data_base&, const ufw::public_id&) override;
 
     void read(ufw::context_id) override;
 
