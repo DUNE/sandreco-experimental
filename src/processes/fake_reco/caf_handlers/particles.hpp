@@ -18,6 +18,7 @@ namespace sand::fake_reco {
 
     // Handle case where trajectory has no points
     if (trajectory_points.empty()) {
+      UFW_WARN("Reco particle from true particle: {} has no trajectory points", particle.GetId());
       return {
           .primary      = true,
           .pdg          = particle.GetPDGCode(),

@@ -163,24 +163,42 @@ namespace sand::fake_reco {
 
   ::caf::SRTrueParticle fake_reco::SRTrueParticle_from_edep(const EDEPTrajectory& particle) const {
     const auto trajectory_points = particle.GetTrajectoryPointsVect();
-    auto output                  = ::caf::SRTrueParticle{
-                         .pdg  = particle.GetPDGCode(),
-                         .G4ID = particle.GetId(), // This is the GEANT trajectory id. The CafMaker reset this index at each interaction
-                         .interaction_id = {}, // This will be filled by fake_reco loop
-                         .time           = static_cast<float>(trajectory_points.front().GetPosition().T()), // ?
-                         .ancestor_id    = {}, // This will be filled by fake_reco loop
-                         .p              = particle.GetInitialMomentum(),
-                         .start_pos =
+    // Handle case where trajectory has no points
+    if (trajectory_points.empty()) {
+      UFW_WARN("Particle {} has no trajectory points", particle.GetId());
+      return {.pdg              = particle.GetPDGCode(),
+              .G4ID             = particle.GetId(),
+              .interaction_id   = {},
+              .time             = 0.0f,
+              .ancestor_id      = {},
+              .p                = particle.GetInitialMomentum(),
+              .start_pos        = {},
+              .end_pos          = {},
+              .parent           = particle.GetParentId(),
+              .daughters        = {},
+              .first_process    = 0,
+              .first_subprocess = 0,
+              .end_process      = 0,
+              .end_subprocess   = 0};
+    }
+    auto output = ::caf::SRTrueParticle{
+        .pdg  = particle.GetPDGCode(),
+        .G4ID = particle.GetId(), // This is the GEANT trajectory id. The CafMaker reset this index at each interaction
+        .interaction_id = {},     // This will be filled by fake_reco loop
+        .time           = static_cast<float>(trajectory_points.front().GetPosition().T()), // ?
+        .ancestor_id    = {}, // This will be filled by fake_reco loop
+        .p              = particle.GetInitialMomentum(),
+        .start_pos =
             ::caf::SRVector3D{
                 trajectory_points.front().GetPosition().Vect() // are these [cm]?
             },
-                         .end_pos          = ::caf::SRVector3D{trajectory_points.back().GetPosition().Vect()},
-                         .parent           = particle.GetParentId(),
-                         .daughters        = {},
-                         .first_process    = static_cast<unsigned int>(trajectory_points.front().GetProcess()),
-                         .first_subprocess = static_cast<unsigned int>(trajectory_points.front().GetSubprocess()),
-                         .end_process      = static_cast<unsigned int>(trajectory_points.back().GetProcess()),
-                         .end_subprocess   = static_cast<unsigned int>(trajectory_points.back().GetSubprocess())};
+        .end_pos          = ::caf::SRVector3D{trajectory_points.back().GetPosition().Vect()},
+        .parent           = particle.GetParentId(),
+        .daughters        = {},
+        .first_process    = static_cast<unsigned int>(trajectory_points.front().GetProcess()),
+        .first_subprocess = static_cast<unsigned int>(trajectory_points.front().GetSubprocess()),
+        .end_process      = static_cast<unsigned int>(trajectory_points.back().GetProcess()),
+        .end_subprocess   = static_cast<unsigned int>(trajectory_points.back().GetSubprocess())};
 
     const auto first_daughter_it = ++edep_->GetTrajectory(particle.GetId());
     const auto last_daughter_it  = edep_->GetTrajectoryEnd(edep_->GetTrajectory(particle.GetId()));
