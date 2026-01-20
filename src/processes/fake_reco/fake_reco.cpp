@@ -38,6 +38,7 @@ namespace sand::fake_reco {
     // Loop over interactions (nu vertices)
     for (std::size_t interaction_index = 0; interaction_index < edep_map.size(); interaction_index++) {
       const auto [edep_first_index, edep_size] = edep_map[interaction_index];
+
       // Create empty interactions
       ::caf::SRTrueInteraction& true_interaction = true_interactions_vector.emplace_back();
       // caf::SRInteraction reco_interaction      = empty_interaction_from_vertex(edep);
@@ -57,20 +58,22 @@ namespace sand::fake_reco {
         // Create the primary true particle
         const auto& primary_particle = edep_->GetChildrenTrajectories()[edep_index];
 
-        auto true_primary_particle           = SRTrueParticle_from_edep(primary_particle);
-        true_primary_particle.interaction_id = true_interaction.id;
-        true_primary_particle.ancestor_id    = {static_cast<int>(interaction_index), ::caf::TrueParticleID::kPrimary,
-                                                true_interaction.nprim};
+        auto true_primary_particle             = SRTrueParticle_from_edep(primary_particle);
+        true_primary_particle.interaction_id   = true_interaction.id;
+        true_primary_particle.ancestor_id.ixn  = static_cast<int>(interaction_index);
+        true_primary_particle.ancestor_id.type = ::caf::TrueParticleID::kPrimary;
+        true_primary_particle.ancestor_id.part = true_interaction.nprim;
 
         for (auto it = ++edep_->GetTrajectory(primary_particle.GetId());
              it != edep_->GetTrajectoryEnd(edep_->GetTrajectory(primary_particle.GetId())); ++it) {
           // Create the secondary true particles from this primary
           const auto& secondary_particle = *it;
 
-          auto true_secondary_particle           = SRTrueParticle_from_edep(secondary_particle);
-          true_secondary_particle.interaction_id = true_interaction.id;
-          true_secondary_particle.ancestor_id    = {static_cast<int>(interaction_index), ::caf::TrueParticleID::kPrimary,
-                                                    true_interaction.nprim};
+          auto true_secondary_particle             = SRTrueParticle_from_edep(secondary_particle);
+          true_secondary_particle.interaction_id   = true_interaction.id;
+          true_secondary_particle.ancestor_id.ixn  = static_cast<int>(interaction_index);
+          true_secondary_particle.ancestor_id.type = ::caf::TrueParticleID::kPrimary;
+          true_secondary_particle.ancestor_id.part = true_interaction.nprim;
           true_interaction.sec.push_back(true_secondary_particle);
           true_interaction.nsec++;
           update_true_interaction_pdg_counters(true_interaction, true_secondary_particle.pdg);
@@ -108,20 +111,15 @@ namespace sand::fake_reco {
   }
 
   void fake_reco::set_branches_capacities_() const {
-    auto& truth_branch             = standard_record_->mc;
-    auto& true_interactions_vector = truth_branch.nu;
-    truth_branch.nnu               = genie_->events_.size();
-    true_interactions_vector.reserve(genie_->events_.size());
+    auto& truth_branch = standard_record_->mc;
+    truth_branch.nnu   = genie_->events_.size();
+    truth_branch.nu.reserve(genie_->events_.size());
 
-    auto& common_branch            = standard_record_->common.ixn;
-    auto& reco_interactions_vector = common_branch.sandreco;
-    common_branch.nsandreco        = genie_->events_.size();
-    reco_interactions_vector.reserve(genie_->events_.size());
+    // Don't set nsandreco yet - will be set when sandreco is actually populated
+    standard_record_->common.ixn.sandreco.reserve(genie_->events_.size());
 
-    auto& sand_branch              = standard_record_->nd.sand;
-    auto& sand_interactions_vector = sand_branch.ixn;
-    sand_branch.nixn               = genie_->events_.size();
-    sand_interactions_vector.reserve(genie_->events_.size());
+    // Don't set nixn yet - will be set when ixn is actually populated
+    standard_record_->nd.sand.ixn.reserve(genie_->events_.size());
   }
 
   void fake_reco::fill_true_interaction_with_preFSI_hadrons_(::caf::SRTrueInteraction& true_interaction,

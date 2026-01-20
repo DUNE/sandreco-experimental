@@ -2,10 +2,10 @@
 
 #include <Math/Vector3D.h>
 #include <Math/Vector4D.h>
-#include <TBits.h>
-#include <TObjString.h>
 
+#include <array>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace genie {
@@ -35,9 +35,8 @@ struct GRooTrackerEvent {
   double EvtKPS_;
   double EvtWght_;
   double EvtProb_;
-  double* EvtVtx_;
-  TObjString* EvtCode_;
-  TBits* EvtFlags_;
+  std::array<double, 4> EvtVtx_;
+  std::string EvtCode_;
 };
 
 enum class StdHepIndex : int { nu = 0, tgt = 1 };

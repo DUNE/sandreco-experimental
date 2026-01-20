@@ -1,5 +1,12 @@
+#include <Geant4/CLHEP/Units/SystemOfUnits.h>
 #include <TFile.h>
 #include <TTree.h>
+
+#include <algorithm>
+#include <array>
+#include <climits>
+
+#include <EDepSim/TG4Event.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -18,16 +25,15 @@ namespace sand {
 
 namespace ufw::data {
   factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_file{nullptr} {
-    // Find gRooTracker tree
     const auto path = cfg.path_at("uri");
     input_file.reset(TFile::Open(path.c_str()));
     input_tree = input_file->Get<TTree>("gRooTracker");
-    if (!input_tree) {
+    if (input_tree == nullptr) {
       UFW_DEBUG("gRooTracker tree not found in the root directory of file '{}'.", path.c_str());
       UFW_DEBUG("Trying the edepsim path: {}/DetSimPassThru/gRooTracker.", path.c_str());
 
       input_tree = input_file->Get<TTree>("DetSimPassThru/gRooTracker");
-      if (!input_tree) {
+      if (input_tree == nullptr) {
         UFW_ERROR("gRooTracker tree not found in file '{}'.", path.c_str());
       }
       UFW_DEBUG("Found");
@@ -51,7 +57,14 @@ namespace ufw::data {
     for (Long64_t j = spills_boundaries[i].first; j < spills_boundaries[i].second; j++) {
       input_tree->GetEntry(j);
 
-      reader.events_.push_back({EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, EvtVtx, EvtCode, EvtFlags});
+      // Copy EvtVtx array to std::array
+      std::array<double, 4> evtVtxCopy{};
+      std::copy(std::begin(EvtVtx), std::end(EvtVtx), evtVtxCopy.begin());
+
+      // Copy EvtCode string (handle null pointer)
+      std::string evtCodeStr = EvtCode ? EvtCode->GetString().Data() : "";
+
+      reader.events_.push_back({EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr});
 
       reader.stdHeps_.emplace_back(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
                                  StdHepFd, StdHepLd, StdHepFm, StdHepLm);
@@ -94,28 +107,45 @@ namespace ufw::data {
   }
 
   void factory<sand::genie_reader>::populate_spills_boundaries() {
-    input_tree->ResetBranchAddresses();
+    // Get spill boundaries from EDepSimEvents tree using InteractionNumber from TG4PrimaryVertex.
+    // Each spill in EDepSimEvents contains multiple primary vertices, and each vertex has an
+    // InteractionNumber that corresponds to the entry index in gRooTracker.
 
-    // In the gRooTracker format, the end of a spill si marked by an event with just one invalid particle.
-    const auto StdHepN_branch = input_tree->GetBranch("StdHepN");
-    if (StdHepN_branch == nullptr) {
-      UFW_ERROR("Missing required branch 'StdHepN' in gRooTracker");
+    UFW_DEBUG("Looking for EDepSimEvents tree...");
+    auto* edep_tree = input_file->Get<TTree>("EDepSimEvents");
+    if (edep_tree == nullptr) {
+      UFW_ERROR("EDepSimEvents tree not found in file. Cannot determine spill boundaries.");
+      return;
     }
-    StdHepN_branch->SetAddress(&StdHepN);
+    UFW_DEBUG("Found EDepSimEvents with {} entries", edep_tree->GetEntries());
 
-    std::vector<Long64_t> separator_indexes{};
-    for (Long64_t i{0}; i < input_tree->GetEntries(); i++) {
-      input_tree->GetEntry(i);
-      if (StdHepN == 1) {
-        separator_indexes.push_back(i);
+    TG4Event* event = new TG4Event();
+    edep_tree->SetBranchAddress("Event", &event);
+    UFW_DEBUG("Branch address set");
+
+    const Long64_t n_spills = edep_tree->GetEntries();
+    spills_boundaries.reserve(n_spills);
+
+    for (Long64_t spill = 0; spill < n_spills; spill++) {
+      edep_tree->GetEntry(spill);
+
+      if (event->Primaries.empty()) {
+        UFW_WARN("Spill {} has no primary vertices", spill);
+        continue;
       }
+
+      // Get first and last InteractionNumber for this spill
+      const Long64_t first_idx = event->Primaries.front().GetInteractionNumber();
+      const Long64_t last_idx  = event->Primaries.back().GetInteractionNumber();
+
+      // Boundaries are [first, last+1) to match the original convention
+      spills_boundaries.emplace_back(first_idx, last_idx + 1);
     }
 
-    spills_boundaries.reserve(separator_indexes.size());
-    spills_boundaries.emplace_back(0, separator_indexes[0]);
-    for (std::size_t i = 1; i < separator_indexes.size(); i++) {
-      spills_boundaries.emplace_back(separator_indexes[i - 1] + 1, separator_indexes[i]);
-    }
+    delete event;
+    edep_tree->ResetBranchAddresses();
+
+    UFW_DEBUG("Found {} spills from EDepSimEvents", spills_boundaries.size());
   }
 
   void factory<sand::genie_reader>::attach_branches() {
@@ -134,7 +164,6 @@ namespace ufw::data {
     set("EvtProb", &EvtProb);
     set("EvtVtx", &EvtVtx);
     set("EvtCode", &EvtCode);
-    set("EvtFlags", &EvtFlags);
 
     set("StdHepN", &StdHepN);
     set("StdHepPdg", &StdHepPdg);
@@ -227,14 +256,12 @@ namespace ufw::data {
   void factory<sand::genie_reader>::clear_reader(const ufw::context_id i) {
     reader.events_.clear();
     reader.stdHeps_.clear();
-    reader.nuParents_->clear();
-    reader.numiFluxes_->clear();
-
-    const auto spill_size = spills_boundaries[i].second - spills_boundaries[i].first;
-    reader.events_.reserve(spill_size);
-    reader.stdHeps_.reserve(spill_size);
-    reader.nuParents_->reserve(spill_size);
-    reader.numiFluxes_->reserve(spill_size);
+    if (reader.nuParents_.has_value()) {
+      reader.nuParents_->clear();
+    }
+    if (reader.numiFluxes_.has_value()) {
+      reader.numiFluxes_->clear();
+    }
   }
 
 } // namespace ufw::data

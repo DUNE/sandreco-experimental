@@ -2,24 +2,25 @@
   "ufw": {
     "ufw-loglevel": "debug",
     "ufw-basepath": "/usr/local/share/sandreco/data",
-    "ufw-ldpath": [
-      "/usr/local/lib64"
-    ],
+    "ufw-ldpath": ["/usr/local/lib64"],
     "ufw-env": {}
   },
   "globals": {
-    "sand::root_tgeomanager" : { "geometry" : "test/sand-spill-events.9.edep.root" }
+    "sand::root_tgeomanager": {
+      "geometry": "test/full-events.0000000.OVERLAY.root"
+    }
   },
   "contexts": {
-    "keys": [
-      1
-    ],
+    "keys": [1],
     "locals": {
       "sand::edep_reader": {
-        "uri": "test/sand-spill-events.9.edep.root"
+        "uri": "test/full-events.0000000.OVERLAY.root"
       },
       "sand::genie_reader": {
-        "uri": "test/sand-spill-events.9.edep.root"
+        "uri": "test/full-events.0000000.OVERLAY.root"
+      },
+      "sand::caf::caf_wrapper": {
+        "produced_caf": {}
       }
     }
   },

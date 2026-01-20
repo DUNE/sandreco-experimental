@@ -38,7 +38,7 @@ namespace sand::common {
 
       UFW_INFO("Event num {}", event.EvtNum_);
       UFW_INFO("Event vertex {}, {}, {}, {}.", event.EvtVtx_[0], event.EvtVtx_[1], event.EvtVtx_[2], event.EvtVtx_[3]);
-      UFW_INFO("Event code {}.", event.EvtCode_->String());
+      UFW_INFO("Event code {}.", event.EvtCode_);
 
       UFW_INFO("StdHep N {}.", stdHep.N_);
       UFW_INFO("StdHep P4 (p, E) {}, {}, {}, {}.", stdHep.P4_[0].Px(), stdHep.P4_[0].Py(), stdHep.P4_[0].Pz(),
