@@ -40,9 +40,10 @@ namespace sand {
       shape_element_face() = delete;
       shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
       bool operator== (const shape_element_face& other) const;
+      inline bool operator!= (const shape_element_face& other) const { return !(*this == other); };
       shape_element_face transform(const xform_3d& transf);
-      bool is_straight(shape_element_face other) const;
-      bool is_curved(shape_element_face other) const;
+      // bool is_straight(shape_element_face other) const;
+      // bool is_curved(shape_element_face other) const;
 
       inline dir_3d side(size_t idx) const { return idx == 3 ? vtx(3) - vtx(0) : vtx(idx) - vtx(idx + 1); };
       inline const pos_3d& vtx(std::size_t i) const { return v_[i]; };
@@ -80,8 +81,12 @@ namespace sand {
       inline const shape_element_face& face1() const { return face1_; };
       inline const shape_element_face& face2() const { return face2_; };
       inline const shape_element_type type() const { return type_; };
-      pos_3d to_face(const pos_3d& p, size_t face_id) const;
-      double pathlength(const pos_3d& p1, const pos_3d& p2) const;
+      pos_3d to_face_point(const pos_3d& p, size_t face_id) const;
+      double to_face_pathlength(const pos_3d& p, size_t faceid) const;
+
+     private:
+      bool is_straight();
+      bool is_curved();
     };
 
     enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
@@ -106,7 +111,12 @@ namespace sand {
     };
 
     struct module {
+     public:
+      std::vector<cell> construct_cells() const;
       std::vector<shape_element> elements;
+
+     private:
+      void order_elements();
     };
 
    public:
