@@ -153,7 +153,7 @@ namespace sand::stt {
       return std::nullopt;
     }
 
-    return create_signal(wire_time, edep_total, wire.channel);
+    return create_signal(wire_time, edep_total, wire.daq_channel);
   }
 
   std::pair<vec_4d,vec_4d> fast_digi::closest_points_hit_wire(const vec_4d& hit_start, const vec_4d& hit_stop,  //TO-DO move to fast_digi

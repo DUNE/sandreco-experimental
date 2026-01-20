@@ -382,7 +382,7 @@ namespace sand::drift {
       return std::nullopt;
     }
 
-    return create_signal(wire_time, edep_total, wire.channel);
+    return create_signal(wire_time, edep_total, wire.daq_channel);
   }
 
   // TO-DO: For now identical to stt implementation, need to modify for drift specifics

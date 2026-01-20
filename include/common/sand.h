@@ -236,7 +236,8 @@ namespace sand {
   inline bool operator< (geo_id lhs, geo_id rhs) { return lhs.raw < rhs.raw; }
 
   /**
-   * Unique identifier for channels as known by the data acquisition system.
+   * Unique identifier for channels as known by the data acquisition system. There is a many-to-many correspondence
+   * between these and geo_ids.
    */
   struct channel_id {
     using link_t    = uint8_t;
@@ -258,6 +259,12 @@ namespace sand {
     uint64_t raw = -1;
 #endif //__CLING__
   };
+
+  // Equality operator
+  inline bool operator== (channel_id lhs, channel_id rhs) { return lhs.raw == rhs.raw; }
+
+  // Less-than operator for ordering
+  inline bool operator< (channel_id lhs, channel_id rhs) { return lhs.raw < rhs.raw; }
 
 } // namespace sand
 
