@@ -8,7 +8,7 @@ target_sources(caf_streamer PRIVATE
 
 target_include_directories(caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include)
 
-target_link_libraries(caf_streamer ROOT::RIO ROOT::Tree ufw::ufw duneanaobj::StandardRecord)
+target_link_libraries(caf_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw duneanaobj::StandardRecord)
 
 include(GNUInstallDirs)
 set(DUNEANAOBJ_HEADERS "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/duneanaobj/StandardRecord")
