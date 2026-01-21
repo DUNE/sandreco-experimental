@@ -59,10 +59,7 @@ namespace sand {
         nav->for_each_node([&](auto tube) {
           std::string tname = tube->GetName();
           nav->cd(sttpath / smodname / plname / tname);
-          /*FIXED to support both TGeoTubeSeg and TGeoTube used in more recent geometries*/
-          auto* generic_tube_shape = tube->GetVolume()->GetShape();
-
-          auto process_tube = [&](auto* tube_shape) {
+          if (auto* tube_shape = dynamic_cast<TGeoTube*>(tube->GetVolume()->GetShape())) {
             auto matrix  = nav->get_hmatrix();
             double* tran = matrix.GetTranslation();
             double* rot  = matrix.GetRotationMatrix();
@@ -76,11 +73,12 @@ namespace sand {
             w->tail               = centre - globalhalfsize;
             w->max_radius         = tube_shape->GetRmax();
             w->geo                = id(geo_path(smodname.c_str()) / plname / tname);
+            // FIXME temporary implementation of w->channel
+            w->daq_channel.subdetector = STT;
+            w->daq_channel.link = w->geo.stt.supermodule;
+            w->daq_channel.channel = (w->geo.stt.plane << 16) | w->geo.stt.tube;
+            stat->daq_link = w->geo.stt.supermodule;
             stat->wires.emplace_back(std::move(w));
-          };
-
-          if (auto* tube_shape = dynamic_cast<TGeoTube*>(generic_tube_shape)) {
-            process_tube(tube_shape);
           } else {
             UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
           }
