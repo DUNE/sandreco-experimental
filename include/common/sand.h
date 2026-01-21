@@ -19,10 +19,10 @@ namespace sand {
    */
   using pos_3d = ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>>;
   using dir_3d = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<double>>;
-  using vec_4d = ROOT::Math::PxPyPzEVector;
+  using vec_4d = ROOT::Math::XYZTVector;
 
   using mom_3d = dir_3d;
-  using mom_4d = vec_4d;
+  using mom_4d = ROOT::Math::PxPyPzEVector;
 
   using rot_3d = ROOT::Math::Rotation3D;
   /**
