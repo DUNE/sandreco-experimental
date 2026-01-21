@@ -1,6 +1,8 @@
 #pragma once
 
 #include <TG4Event.h>
+#include <Math/Vector4D.h>
+#include <Math/Vector3D.h>
 
 /**
  * @class EDEPTrajectoryPoint
@@ -33,15 +35,15 @@ class EDEPTrajectoryPoint {
 
   /**
    * @brief Get the position of the trajectory point.
-   * @return The position as a TLorentzVector.
+   * @return The position as a XYZTVector.
    */
-  const TLorentzVector& GetPosition() const { return position_; };
+  const ROOT::Math::XYZTVector& GetPosition() const { return position_; };
 
   /**
    * @brief Get the momentum of the trajectory point.
-   * @return The momentum as a TVector3.
+   * @return The momentum as a XYZVector.
    */
-  const TVector3& GetMomentum() const { return momentum_; };
+  const ROOT::Math::XYZVector& GetMomentum() const { return momentum_; };
 
   /**
    * @brief Get the process associated with the trajectory point.
@@ -56,8 +58,8 @@ class EDEPTrajectoryPoint {
   const int& GetSubprocess() const { return sub_process_; };
 
  private:
-  TLorentzVector position_; ///< Position of the trajectory point.
-  TVector3 momentum_;       ///< Momentum of the trajectory point.
+  ROOT::Math::XYZTVector position_; ///< Position of the trajectory point.
+  ROOT::Math::XYZVector momentum_;       ///< Momentum of the trajectory point.
   int process_;             ///< Process associated with the trajectory point.
   int sub_process_;         ///< Subprocess associated with the trajectory point.
 };

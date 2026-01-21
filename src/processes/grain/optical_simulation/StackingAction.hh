@@ -5,7 +5,6 @@
 #include "G4UserStackingAction.hh"
 #include "AnalysisManager.hh"
 
-#include "TVector3.h"
 
 #include <string>
 #include <vector>

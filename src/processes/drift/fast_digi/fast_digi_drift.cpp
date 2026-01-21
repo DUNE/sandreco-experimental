@@ -188,9 +188,9 @@ namespace sand::drift {
                                         double total_time_span,
                                         double segment_fraction,
                                         const EDEPHit& original_hit) const {
-    const TLorentzVector segment_start_4d(segment_start_global.X(), segment_start_global.Y(),
+    const vec_4d segment_start_4d(segment_start_global.X(), segment_start_global.Y(),
                                           segment_start_global.Z(), segment_start_time);
-    const TLorentzVector segment_end_4d(segment_end_global.X(), segment_end_global.Y(),
+    const vec_4d segment_end_4d(segment_end_global.X(), segment_end_global.Y(),
                                         segment_end_global.Z(),
                                         segment_start_time + time_direction * total_time_span * segment_fraction);
 
@@ -215,7 +215,7 @@ namespace sand::drift {
     std::map<const geoinfo::tracker_info::wire *, EDEPHit> split_hit;
 
     // Extract hit segment properties
-    const double total_hit_length = (hit.GetStop().Vect() - hit.GetStart().Vect()).Mag();
+    const double total_hit_length = sqrt((hit.GetStop().Vect() - hit.GetStart().Vect()).Mag2());
     const double total_time_span = (hit.GetStop() - hit.GetStart()).T();
     const double hit_start_time = hit.GetStart().T();
 

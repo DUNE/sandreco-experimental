@@ -18,8 +18,8 @@ TGeoNode* GetNode(const TG4TrajectoryPoint& tpoint) {
   
   TGeoNode* node = nullptr;
 
-  TLorentzVector position = tpoint.GetPosition();
-  TVector3       mom = tpoint.GetMomentum();
+  ROOT::Math::XYZTVector position = tpoint.GetPosition();
+  ROOT::Math::XYZVector mom(tpoint.GetMomentum().X(), tpoint.GetMomentum().Y(), tpoint.GetMomentum().Z());
 
   node = tgm.navigator()->FindNode(position.X(), position.Y(), position.Z());
 
@@ -474,14 +474,14 @@ bool EDEPTrajectory::HasHitInTimeAndEnergy(double start_time, double stop_time, 
  * This function determines if the midpoint of any hit is closer than the
  * specified distance to the given point.
  *
- * @param point The reference point as a TVector3.
+ * @param point The reference point as a ROOT::Math::XYZVector.
  * @param distance The maximum distance to consider.
  * @return true if a hit is within the specified distance from the point, false otherwise.
  */
-bool EDEPTrajectory::HasHitNearPoint(TVector3 point, double distance) const {
+bool EDEPTrajectory::HasHitNearPoint(ROOT::Math::XYZVector point, double distance) const {
   return HasHitWhere([point, distance](const EDEPHit& hit) {
-    TVector3 middle_hit_point = (hit.GetStart().Vect() + hit.GetStop().Vect()) * 0.5;
-    double hit_point_distance = (middle_hit_point - point).Mag();
+    ROOT::Math::XYZVector middle_hit_point = (hit.GetStart().Vect() + hit.GetStop().Vect()) * 0.5;
+    double hit_point_distance = sqrt((middle_hit_point - point).Mag2());
     return fabs(hit_point_distance) < distance;
   });
 }
@@ -492,16 +492,16 @@ bool EDEPTrajectory::HasHitNearPoint(TVector3 point, double distance) const {
  * This function checks if the midpoint of any hit is within the specified spatial
  * distance and time difference from a given 4D point.
  *
- * @param point The reference 4D point as a TLorentzVector (includes both space and time).
+ * @param point The reference 4D point as a ROOT::Math::XYZTVector (includes both space and time).
  * @param distance The maximum spatial distance to consider.
  * @param time The maximum time difference to consider.
  * @return true if a hit is within the specified space and time distance from the point, false otherwise.
  */
-bool EDEPTrajectory::HasHitNear4DPoint(TLorentzVector point, double distance, double time) const {
+bool EDEPTrajectory::HasHitNear4DPoint(ROOT::Math::XYZTVector point, double distance, double time) const {
   return HasHitWhere([&](const EDEPHit& hit) {
-    TVector3 middle_hit_point             = (hit.GetStart().Vect() + hit.GetStop().Vect()) * 0.5;
+    ROOT::Math::XYZVector middle_hit_point             = (hit.GetStart().Vect() + hit.GetStop().Vect()) * 0.5;
     double middle_hit_point_time          = (hit.GetStart().T() + hit.GetStop().T()) * 0.5;
-    double hit_point_space_distance       = (middle_hit_point - point.Vect()).Mag();
+    double hit_point_space_distance       = sqrt((middle_hit_point - point.Vect()).Mag2());
     double middle_hit_point_time_distance = (middle_hit_point_time - point.T());
     return (fabs(hit_point_space_distance) < distance) && (fabs(middle_hit_point_time_distance) < time);
   });
@@ -514,17 +514,17 @@ bool EDEPTrajectory::HasHitNear4DPoint(TLorentzVector point, double distance, do
  * distance and time difference from the given 4D point. It returns an iterator
  * to the first hit that matches the criteria.
  *
- * @param point The reference 4D point as a TLorentzVector (includes space and time components).
+ * @param point The reference 4D point as a ROOT::Math::XYZTVector (includes space and time components).
  * @param distance The maximum allowed spatial distance.
  * @param time The maximum allowed time difference.
  * @return An iterator to the first hit that is near the specified 4D point, or the end iterator if no hit matches.
  */
-std::vector<EDEPHit>::const_iterator EDEPTrajectory::GetHitNear4DPoint(TLorentzVector point, double distance,
+std::vector<EDEPHit>::const_iterator EDEPTrajectory::GetHitNear4DPoint(ROOT::Math::XYZTVector point, double distance,
                                                                        double time) {
   return GetHitWhere([&](const EDEPHit& hit) {
-    TVector3 middle_hit_point             = (hit.GetStart().Vect() + hit.GetStop().Vect()) * 0.5;
+    ROOT::Math::XYZVector middle_hit_point             = (hit.GetStart().Vect() + hit.GetStop().Vect()) * 0.5;
     double middle_hit_point_time          = (hit.GetStart().T() + hit.GetStop().T()) * 0.5;
-    double hit_point_space_distance       = (middle_hit_point - point.Vect()).Mag();
+    double hit_point_space_distance       = sqrt((middle_hit_point - point.Vect()).Mag2());
     double middle_hit_point_time_distance = (middle_hit_point_time - point.T());
     return (fabs(hit_point_space_distance) < distance) && (fabs(middle_hit_point_time_distance) < time);
   });

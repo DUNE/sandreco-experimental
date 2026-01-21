@@ -2,6 +2,8 @@
 #include <edep_reader/EDEPUtils.h>
 
 #include <TG4Event.h>
+#include <Math/Vector4D.h>
+#include <Math/Vector3D.h>
 
 /**
  * @class EDEPHit
@@ -52,8 +54,8 @@ class EDEPHit {
    * @param primary_id The ID of the primary particle generating the hit.
    * @param i The index of the hit.
    */
-  EDEPHit(TLorentzVector start,
-          TLorentzVector stop,
+  EDEPHit(ROOT::Math::XYZTVector start,
+          ROOT::Math::XYZTVector stop,
           double energy_deposit,
           double secondary_deposit,
           double track_length,
@@ -75,15 +77,15 @@ class EDEPHit {
 
   /**
    * @brief Get the start position of the hit.
-   * @return The start position as a TLorentzVector.
+   * @return The start position as a XYZTVector.
    */
-  const TLorentzVector& GetStart() const { return start_; };
+  const ROOT::Math::XYZTVector& GetStart() const { return start_; };
 
   /**
    * @brief Get the stop position of the hit.
-   * @return The stop position as a TLorentzVector.
+   * @return The stop position as a XYZTVector.
    */
-  const TLorentzVector& GetStop() const { return stop_; };
+  const ROOT::Math::XYZTVector& GetStop() const { return stop_; };
 
   /**
    * @brief Get the energy deposited by the hit.
@@ -122,8 +124,8 @@ class EDEPHit {
   const int& GetId() const { return h_index; };
 
  private:
-  TLorentzVector start_;     ///< Start position of the hit.
-  TLorentzVector stop_;      ///< Stop position of the hit.
+  ROOT::Math::XYZTVector start_;     ///< Start position of the hit.
+  ROOT::Math::XYZTVector stop_;      ///< Stop position of the hit.
   double energy_deposit_;    ///< Energy deposited by the hit.
   double secondary_deposit_; ///< Secondary deposition of the hit.
   double track_length_;      ///< Track length of the hit.
