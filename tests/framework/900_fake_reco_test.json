@@ -11,7 +11,7 @@
     }
   },
   "contexts": {
-    "keys": [1],
+    "keys": 2,
     "locals": {
       "sand::edep_reader": {
         "uri": "test/full-events.0000000.OVERLAY.root"
@@ -30,11 +30,11 @@
       }
     },
     {
-      "sand::caf::caf_streamer" : {
-        "uri" : "test/output.caf.root",
-        "tree" : "StandardRecords"
+      "sand::caf::caf_streamer": {
+        "uri": "test/output.caf.root",
+        "tree": "SR"
       },
-      "write" : ["produced_caf"]
+      "write": ["produced_caf"]
     }
   ]
 }
