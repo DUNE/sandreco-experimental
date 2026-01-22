@@ -2,7 +2,7 @@ find_package(duneanaobj REQUIRED)
 
 add_library(caf_streamer)
 
-target_sources(caf_streamer PRIVATE 
+target_sources(caf_streamer PRIVATE
     caf_streamer.hpp
     caf_streamer.cpp)
 
@@ -34,9 +34,9 @@ file(APPEND caf_streamer_types.hpp ${USER_TYPES_INCLUDES})
 #Generate the linkdef file caf_streamer_linkdef.h
 set(USER_TYPES_LINKDEF "")
 foreach(USER_TYPE_PATH ${USER_TYPES})
-  file(STRINGS "${DUNEANAOBJ_HEADERS}/${USER_TYPE_PATH}" USER_FILE_LINES REGEX "(class|struct) +(SR[A-Za-z0-9_]*)")
+  file(STRINGS "${DUNEANAOBJ_HEADERS}/${USER_TYPE_PATH}" USER_FILE_LINES REGEX "(class|struct) +(SR[A-Za-z0-9_]*|StandardRecord|TrueParticleID|FlashMatch)")
   foreach(LINE ${USER_FILE_LINES})
-    string(REGEX MATCH "(class|struct) +(SR[A-Za-z0-9_]*)" _ ${LINE})
+    string(REGEX MATCH "(class|struct) +(SR[A-Za-z0-9_]*|StandardRecord|TrueParticleID|FlashMatch)" _ ${LINE})
     list(APPEND USER_TYPES_LINKDEF ${CMAKE_MATCH_2})
   endforeach()
 endforeach()
