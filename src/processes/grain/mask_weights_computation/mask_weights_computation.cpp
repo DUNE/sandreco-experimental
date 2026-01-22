@@ -36,8 +36,8 @@ namespace sand::grain {
 
   void mask_weights_computation::configure_frustum(cl::platform& platform) {
     const char* frustum_kernel_src =
-#include "cl_src/common_functions.cl"
 #include "cl_src/common_structs.cl"
+#include "cl_src/common_functions.cl"
 #include "cl_src/make_frustum.cl"
         ;
     platform.build_program(m_frustum_program, frustum_kernel_src);
@@ -46,8 +46,8 @@ namespace sand::grain {
 
   void mask_weights_computation::configure_solidangle(cl::platform& platform) {
     const char* solidangle_kernel_src =
-#include "cl_src/common_functions.cl"
 #include "cl_src/common_structs.cl"
+#include "cl_src/common_functions.cl"
 #include "cl_src/solidangle.cl"
         ;
     platform.build_program(m_solidangle_program, solidangle_kernel_src);
@@ -81,7 +81,7 @@ namespace sand::grain {
 
     cl::NDRange solidangle_global_size(voxels.size().x(), voxels.size().y(), voxels.size().z());
     UFW_DEBUG("Solidangle global work size: ({},{},{})", solidangle_global_size[0], solidangle_global_size[1],
-              solidangle_global_size[2]);
+             solidangle_global_size[2]);
 
     // Setup output file
     auto& array = instance<sand::hdf5::ndarray>("angle_writer");
@@ -173,7 +173,7 @@ namespace sand::grain {
 
       // Write to hdf5
       array.write(camera.name, range, h_solidangle_array.get());
-      auto t_stop         = std::chrono::high_resolution_clock::now();
+      auto t_stop = std::chrono::high_resolution_clock::now();
       double elapsed_time = std::chrono::duration<double>(t_stop - t_start).count();
       UFW_INFO("{} completed, time taken: {} s", camera.name, elapsed_time);
     }
