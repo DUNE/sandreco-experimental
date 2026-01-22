@@ -1,2 +1,1 @@
 add_subdirectory(geoinfo_test)
-add_subdirectory(opencl_test)

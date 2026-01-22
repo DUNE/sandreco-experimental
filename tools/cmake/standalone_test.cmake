@@ -7,6 +7,6 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/src/)
 
 function(add_test_with_libs target)
-  target_link_libraries(${target} Boost::unit_test_framework ${ARGN})
+  target_link_libraries(${target} PRIVATE Boost::unit_test_framework ${ARGN})
   add_test(NAME ${target} COMMAND ${target})
 endfunction()
