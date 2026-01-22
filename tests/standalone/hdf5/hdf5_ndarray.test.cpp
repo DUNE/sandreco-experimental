@@ -51,4 +51,4 @@ BOOST_AUTO_TEST_CASE(hdf5_write) {
   UFW_INFO("Wrote to file!");
 }
 
-BOOST_AUTO_TEST_CASE(dummy) { sand::test_exit(); }
+FIX_TEST_EXIT
