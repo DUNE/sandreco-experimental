@@ -27,8 +27,7 @@ BOOST_AUTO_TEST_CASE(run_kernel) {
   ufw::config cfg = ufw::json::parse(R"({ "accept_fallback" : true })");
   sand::cl::platform platform(cfg);
   BOOST_TEST(platform.devices().size() > 0);
-  m_program = cl::Program(platform.context(), kernel_src);
-  m_program.build(platform.devices());
+  platform.build_program(m_program, kernel_src);
   m_kernel = cl::Kernel(m_program, "vector_add");
   // allocate host memory and create input data
   std::unique_ptr<float[]> A(new float[m_array_size]);
