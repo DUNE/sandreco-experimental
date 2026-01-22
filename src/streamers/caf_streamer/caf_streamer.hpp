@@ -13,7 +13,7 @@ namespace sand::caf {
 class caf_streamer : public ufw::streamer {
 
     std::unique_ptr<TFile> file_{nullptr};
-    std::unique_ptr<TTree> tree_{nullptr};
+    TTree* tree_{nullptr};
     caf_wrapper* data_ptr_{nullptr};
     ufw::context_id context_id_{};
     long last_entry_{};

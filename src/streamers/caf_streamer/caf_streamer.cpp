@@ -21,7 +21,7 @@ namespace sand::caf {
       file_->cd();
       tree_->Write(nullptr, TObject::kOverwrite);
     }
-    // File closed on unique_ptr delete
+    file_->Close();
   }
 
   void caf_streamer::configure(const ufw::config& cfg, ufw::op_type op) {
@@ -52,9 +52,9 @@ namespace sand::caf {
 
     const std::string& tree_name = cfg.at("tree");
     if (op & ufw::op_type::ro) {
-      tree_.reset(file_->Get<TTree>(tree_name.c_str()));
+      tree_ = file_->Get<TTree>(tree_name.c_str());
     } else {
-      tree_ = std::make_unique<TTree>(tree_name.c_str(), "");
+      tree_ = new TTree(tree_name.c_str(), "");
     }
   }
 
