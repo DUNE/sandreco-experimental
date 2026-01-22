@@ -1,4 +1,13 @@
-find_package(duneanaobj REQUIRED)
+include(FetchContent)
+
+# Fetch duneanaobj from the 63-skip-cet-option branch
+FetchContent_Declare(
+  duneanaobj
+  GIT_REPOSITORY https://github.com/DUNE/duneanaobj.git
+  GIT_TAG        63-skip-cet-option
+)
+set(SKIP_CET ON CACHE BOOL "Skip CET build system for duneanaobj")
+FetchContent_MakeAvailable(duneanaobj)
 
 add_library(caf_streamer)
 
@@ -6,16 +15,17 @@ target_sources(caf_streamer PRIVATE
     caf_streamer.hpp
     caf_streamer.cpp)
 
-target_include_directories(caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_SOURCE_DIR})
 
-target_link_libraries(caf_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw duneanaobj::StandardRecord)
+target_link_libraries(caf_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw StandardRecord)
 
 include(GNUInstallDirs)
-set(DUNEANAOBJ_HEADERS "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/duneanaobj/StandardRecord")
+set(DUNEANAOBJ_HEADERS "${duneanaobj_SOURCE_DIR}/duneanaobj/StandardRecord")
 #The streamer relies on dictionary generation and its own definitions for
 #correct representation of any user type. This requires all said types to be known.
 #The code below attempts to grab all user types from include/
-file(GLOB_RECURSE USER_TYPES
+#Note: using GLOB instead of GLOB_RECURSE to exclude Proxy/ and Flat/ subdirectories
+file(GLOB USER_TYPES
         RELATIVE "${DUNEANAOBJ_HEADERS}"
         "${DUNEANAOBJ_HEADERS}/*.hxx"
         "${DUNEANAOBJ_HEADERS}/*.hpp"
@@ -52,6 +62,7 @@ file(APPEND caf_streamer_linkdef.h ${USER_TYPES_LINKDEF})
 file(APPEND caf_streamer_linkdef.h "#endif\n")
 
 
+include_directories(${duneanaobj_SOURCE_DIR})
 ROOT_GENERATE_DICTIONARY(caf_streamer_dictionaries caf_streamer_types.hpp MODULE caf_streamer LINKDEF caf_streamer_linkdef.h)
 
 install(TARGETS caf_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
