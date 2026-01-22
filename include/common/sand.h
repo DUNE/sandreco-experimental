@@ -19,10 +19,10 @@ namespace sand {
    */
   using pos_3d = ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>>;
   using dir_3d = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<double>>;
-  using vec_4d = ROOT::Math::PxPyPzEVector;
+  using vec_4d = ROOT::Math::XYZTVector;
 
   using mom_3d = dir_3d;
-  using mom_4d = vec_4d;
+  using mom_4d = ROOT::Math::PxPyPzEVector;
 
   using rot_3d = ROOT::Math::Rotation3D;
   /**
@@ -38,21 +38,21 @@ namespace sand {
 
 template <>
 struct fmt::formatter<sand::pos_3d> : formatter<string_view> {
-  auto format(sand::pos_3d c, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::pos_3d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({:.3f}, {:.3f}, {:.3f})", c.x(), c.y(), c.z());
   }
 };
 
 template <>
 struct fmt::formatter<sand::dir_3d> : formatter<string_view> {
-  auto format(sand::dir_3d c, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::dir_3d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({:.3f}, {:.3f}, {:.3f})", c.x(), c.y(), c.z());
   }
 };
 
 template <>
 struct fmt::formatter<sand::vec_4d> : formatter<string_view> {
-  auto format(sand::vec_4d c, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::vec_4d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({:.3f}, {:.3f}, {:.3f}, {:.3f})", c.x(), c.y(), c.z(), c.t());
   }
 };
@@ -236,7 +236,8 @@ namespace sand {
   inline bool operator< (geo_id lhs, geo_id rhs) { return lhs.raw < rhs.raw; }
 
   /**
-   * Unique identifier for channels as known by the data acquisition system.
+   * Unique identifier for channels as known by the data acquisition system. There is a many-to-many correspondence
+   * between these and geo_ids.
    */
   struct channel_id {
     using link_t    = uint8_t;
@@ -258,6 +259,12 @@ namespace sand {
     uint64_t raw = -1;
 #endif //__CLING__
   };
+
+  // Equality operator
+  inline bool operator== (channel_id lhs, channel_id rhs) { return lhs.raw == rhs.raw; }
+
+  // Less-than operator for ordering
+  inline bool operator< (channel_id lhs, channel_id rhs) { return lhs.raw < rhs.raw; }
 
 } // namespace sand
 
@@ -285,7 +292,7 @@ struct fmt::formatter<sand::subdetector_t> : formatter<string_view> {
 
 template <>
 struct fmt::formatter<sand::geo_id> : formatter<string_view> {
-  auto format(sand::geo_id gid, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::geo_id& gid, format_context& ctx) const -> format_context::iterator {
     switch (gid.subdetector) {
     case sand::DRIFT:
       return fmt::format_to(ctx.out(), "[{}: module {}, plane {}]", gid.subdetector, gid.drift.supermodule,
@@ -306,7 +313,7 @@ struct fmt::formatter<sand::geo_id> : formatter<string_view> {
 
 template <>
 struct fmt::formatter<sand::channel_id> : formatter<string_view> {
-  auto format(sand::channel_id chid, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::channel_id& chid, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "[{}: link {}, channel {}]", chid.subdetector, chid.link, chid.channel);
   }
 };

@@ -91,6 +91,12 @@ namespace sand::grain {
 
     size_3d size() const { return m_size; }
 
+    xform_3d xform_id_to_fiducial(dir_3d voxel_size) const {
+      return xform_3d(voxel_size.x(), 0.0, 0.0, (0.5 - 0.5 * m_size.x()) * voxel_size.x(), 0.0, voxel_size.y(), 0.0,
+                      (0.5 - 0.5 * m_size.y()) * voxel_size.y(), 0.0, 0.0, voxel_size.z(),
+                      (0.5 - 0.5 * m_size.z()) * voxel_size.z());
+    }
+
     template <typename Func, typename... Args>
     void for_each(Func&& f, Args&&... args) const {
       for (size_t x = 0u; x != m_size.x(); ++x) {
@@ -127,14 +133,14 @@ namespace sand::grain {
 
 template <>
 struct fmt::formatter<sand::grain::index_3d> : formatter<string_view> {
-  auto format(sand::grain::index_3d c, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::grain::index_3d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({}, {}, {})", c.x(), c.y(), c.z());
   }
 };
 
 template <>
 struct fmt::formatter<sand::grain::size_3d> : formatter<string_view> {
-  auto format(sand::grain::size_3d c, format_context& ctx) const -> format_context::iterator {
+  auto format(const sand::grain::size_3d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({}, {}, {})", c.x(), c.y(), c.z());
   }
 };
