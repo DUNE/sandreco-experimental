@@ -7,17 +7,17 @@
   },
   "globals": {
     "sand::root_tgeomanager": {
-      "geometry": "test/full-events.0000000.OVERLAY.root"
+      "geometry": "test/sand-events-prova.0000000.OVERLAY.root"
     }
   },
   "contexts": {
     "keys": 2,
     "locals": {
       "sand::edep_reader": {
-        "uri": "test/full-events.0000000.OVERLAY.root"
+        "uri": "test/sand-events-prova.0000000.OVERLAY.root"
       },
       "sand::genie_reader": {
-        "uri": "test/full-events.0000000.OVERLAY.root"
+        "uri": "test/sand-events-prova.0000000.OVERLAY.root"
       }
     }
   },

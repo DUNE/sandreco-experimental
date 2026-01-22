@@ -26,7 +26,10 @@ namespace sand::fake_reco {
           .score        = std::numeric_limits<float>::signaling_NaN(),
           .E            = 0,
           .E_method     = ::caf::PartEMethod::kUnknownMethod,
-          .p            = ::caf::SRVector3D{particle.GetInitialMomentum().Vect()},
+          .p            = ::caf::SRVector3D{
+              static_cast<float>(particle.GetInitialMomentum().Vect().X()),
+              static_cast<float>(particle.GetInitialMomentum().Vect().Y()),
+              static_cast<float>(particle.GetInitialMomentum().Vect().Z())},
           .start        = {},
           .end          = {},
           .contained    = false,
@@ -42,12 +45,19 @@ namespace sand::fake_reco {
         .score    = std::numeric_limits<float>::signaling_NaN(), // ?
         .E        = 0,                                           // ?
         .E_method = ::caf::PartEMethod::kUnknownMethod,          // ?
-        .p        = ::caf::SRVector3D{particle.GetInitialMomentum().Vect()},
+        .p        = ::caf::SRVector3D{
+            static_cast<float>(particle.GetInitialMomentum().Vect().X()),
+            static_cast<float>(particle.GetInitialMomentum().Vect().Y()),
+            static_cast<float>(particle.GetInitialMomentum().Vect().Z())},
         .start =
             ::caf::SRVector3D{
-                trajectory_points.front().GetPosition().Vect() // are these [cm]?
-            },
-        .end          = ::caf::SRVector3D{trajectory_points.back().GetPosition().Vect()},
+                static_cast<float>(trajectory_points.front().GetPosition().Vect().X()),
+                static_cast<float>(trajectory_points.front().GetPosition().Vect().Y()),
+                static_cast<float>(trajectory_points.front().GetPosition().Vect().Z())},
+        .end          = ::caf::SRVector3D{
+            static_cast<float>(trajectory_points.back().GetPosition().Vect().X()),
+            static_cast<float>(trajectory_points.back().GetPosition().Vect().Y()),
+            static_cast<float>(trajectory_points.back().GetPosition().Vect().Z())},
         .contained    = false, // ?
         .truth        = {},    // ?
         .truthOverlap = {}     // ?
@@ -70,6 +80,8 @@ namespace sand::fake_reco {
   inline ::caf::SRTrueParticle SRTrueParticle_from_edep(const EDEPTrajectory& particle) {
     const auto trajectory_points = particle.GetTrajectoryPointsVect();
 
+    const auto mom = particle.GetInitialMomentum();
+
     // Handle case where trajectory has no points
     if (trajectory_points.empty()) {
       return {.pdg            = particle.GetPDGCode(),
@@ -77,7 +89,7 @@ namespace sand::fake_reco {
               .interaction_id = {},
               .time           = 0.0f,
               .ancestor_id    = {},
-              .p              = particle.GetInitialMomentum(),
+              .p              = TLorentzVector{mom.Px(), mom.Py(), mom.Pz(), mom.E()},
               .start_pos      = {},
               .end_pos        = {},
               .parent         = particle.GetParentId(),
@@ -94,12 +106,16 @@ namespace sand::fake_reco {
             .interaction_id = {}, // This will be filled by fake_reco loop
             .time           = static_cast<float>(trajectory_points.front().GetPosition().T()), // ?
             .ancestor_id    = {}, // This will be filled by fake_reco loop
-            .p              = particle.GetInitialMomentum(),
+            .p              = TLorentzVector{mom.Px(), mom.Py(), mom.Pz(), mom.E()},
             .start_pos =
                 ::caf::SRVector3D{
-                    trajectory_points.front().GetPosition().Vect() // are these [cm]?
-                },
-            .end_pos          = ::caf::SRVector3D{trajectory_points.back().GetPosition().Vect()},
+                    static_cast<float>(trajectory_points.front().GetPosition().Vect().X()),
+                    static_cast<float>(trajectory_points.front().GetPosition().Vect().Y()),
+                    static_cast<float>(trajectory_points.front().GetPosition().Vect().Z())},
+            .end_pos          = ::caf::SRVector3D{
+                static_cast<float>(trajectory_points.back().GetPosition().Vect().X()),
+                static_cast<float>(trajectory_points.back().GetPosition().Vect().Y()),
+                static_cast<float>(trajectory_points.back().GetPosition().Vect().Z())},
             .parent           = particle.GetParentId(),
             .daughters        = {}, // should I get this visiting the whole children tree or just the first layer?
             .first_process    = static_cast<unsigned int>(trajectory_points.front().GetProcess()),

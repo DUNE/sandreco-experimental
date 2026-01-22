@@ -163,15 +163,19 @@ namespace sand::fake_reco {
 
   ::caf::SRTrueParticle fake_reco::SRTrueParticle_from_edep(const EDEPTrajectory& particle) const {
     const auto trajectory_points = particle.GetTrajectoryPointsVect();
-    // Handle case where trajectory has no points
+    const auto mom = particle.GetInitialMomentum();
+
+    // Handle case where trajectory has no points inside SAND
+    // when the events are generated with the whole ND geometry
     if (trajectory_points.empty()) {
-      UFW_WARN("Particle {} has no trajectory points", particle.GetId());
+
+      UFW_DEBUG("Particle {} has no trajectory points inside SAND", particle.GetId());
       return {.pdg              = particle.GetPDGCode(),
               .G4ID             = particle.GetId(),
               .interaction_id   = {},
               .time             = 0.0f,
               .ancestor_id      = {},
-              .p                = particle.GetInitialMomentum(),
+              .p                = TLorentzVector{mom.Px(), mom.Py(), mom.Pz(), mom.E()},
               .start_pos        = {},
               .end_pos          = {},
               .parent           = particle.GetParentId(),
@@ -187,12 +191,16 @@ namespace sand::fake_reco {
         .interaction_id = {},     // This will be filled by fake_reco loop
         .time           = static_cast<float>(trajectory_points.front().GetPosition().T()), // ?
         .ancestor_id    = {}, // This will be filled by fake_reco loop
-        .p              = particle.GetInitialMomentum(),
+        .p              = TLorentzVector{mom.Px(), mom.Py(), mom.Pz(), mom.E()},
         .start_pos =
             ::caf::SRVector3D{
-                trajectory_points.front().GetPosition().Vect() // are these [cm]?
-            },
-        .end_pos          = ::caf::SRVector3D{trajectory_points.back().GetPosition().Vect()},
+                static_cast<float>(trajectory_points.front().GetPosition().Vect().X()),
+                static_cast<float>(trajectory_points.front().GetPosition().Vect().Y()),
+                static_cast<float>(trajectory_points.front().GetPosition().Vect().Z())},
+        .end_pos          = ::caf::SRVector3D{
+            static_cast<float>(trajectory_points.back().GetPosition().Vect().X()),
+            static_cast<float>(trajectory_points.back().GetPosition().Vect().Y()),
+            static_cast<float>(trajectory_points.back().GetPosition().Vect().Z())},
         .parent           = particle.GetParentId(),
         .daughters        = {},
         .first_process    = static_cast<unsigned int>(trajectory_points.front().GetProcess()),
