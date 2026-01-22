@@ -74,4 +74,21 @@ namespace sand::cl {
     }
   }
 
+  /**
+   * Build program and get errors if any
+   */
+  void platform::build_program(cl::Program& program, const char* kernel_src) {
+    try {
+      program = cl::Program(context(), kernel_src);
+      program.build(devices());
+    } catch (const cl::Error& e) {
+      UFW_WARN("OpenCL Program Build Error: {} ({})", e.what(), e.err());
+      // Fetch logs from each device
+      for (const auto& dev : devices()) {
+        UFW_WARN("Device: {}", dev.getInfo<CL_DEVICE_NAME>());
+        UFW_WARN("{}", program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev));
+      }
+      UFW_ERROR("Program Build Failed.");
+    }
+  }
 }; // namespace sand::cl
