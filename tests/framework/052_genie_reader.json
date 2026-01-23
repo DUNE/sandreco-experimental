@@ -9,7 +9,7 @@
   "contexts": {
     "keys": 5,
     "locals": {
-      "sand::genie_reader": { "uri": "test/full-events.0000000.OVERLAY.root" }
+      "sand::genie_reader": { "uri": "test/sand-spills.5.edep.root" }
     }
   },
   "run": [
