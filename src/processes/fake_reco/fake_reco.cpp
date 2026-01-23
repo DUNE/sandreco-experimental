@@ -14,7 +14,6 @@
 
 #include <duneanaobj/StandardRecord/StandardRecord.h>
 
-#include <algorithm>
 #include <utility>
 #include <vector>
 
