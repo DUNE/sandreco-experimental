@@ -1,11 +1,9 @@
-//
-// Created by paolo on 08/05/2025.
-//
-
 #include "fake_reco.hpp"
 
 #include "caf_handlers/interactions.hpp"
 #include "caf_handlers/particles.hpp"
+#include "caf_handlers/tracks_showers.hpp"
+#include "caf_handlers/utils.hpp"
 
 #include <edep_reader/edep_reader.hpp>
 #include <genie_reader/genie_reader.hpp>
@@ -40,7 +38,6 @@ namespace sand::fake_reco {
 
       // Create empty interactions
       ::caf::SRTrueInteraction& true_interaction = standard_record_->mc.nu.emplace_back();
-      // caf::SRInteraction reco_interaction      = empty_interaction_from_vertex(edep);
 
       // Fill the interactions with nu data
       initialize_SRTrueInteraction(true_interaction, genie_->events_[interaction_index],
@@ -52,37 +49,37 @@ namespace sand::fake_reco {
 
       set_true_interaction_vectors_capacities_(true_interaction, edep_first_index, edep_size);
 
-      // Fill the interaction with particles propagated by GEANT
-      // Loop over edep tree particles
-      for (std::size_t edep_index = edep_first_index; edep_index < edep_first_index + edep_size; edep_index++) {
-        // Create the primary true particle
-        const auto& primary_particle = edep_->GetChildrenTrajectories()[edep_index];
+      // Create fake reconstructed interaction (common branch)
+      ::caf::SRInteraction& reco_interaction = standard_record_->common.ixn.sandreco.emplace_back();
+      standard_record_->common.ixn.nsandreco++;
 
-        auto true_primary_particle             = SRTrueParticle_from_edep(primary_particle);
-        true_primary_particle.interaction_id   = true_interaction.id;
-        true_primary_particle.ancestor_id.ixn  = static_cast<int>(interaction_index);
-        true_primary_particle.ancestor_id.type = ::caf::TrueParticleID::kPrimary;
-        true_primary_particle.ancestor_id.part = true_interaction.nprim;
+      // Create SAND-specific reconstructed interaction
+      ::caf::SRSANDInt& sand_interaction = standard_record_->nd.sand.ixn.emplace_back();
+      standard_record_->nd.sand.nixn++;
 
-        for (auto it = ++edep_->GetTrajectory(primary_particle.GetId());
-             it != edep_->GetTrajectoryEnd(edep_->GetTrajectory(primary_particle.GetId())); ++it) {
-          // Create the secondary true particles from this primary
-          const auto& secondary_particle = *it;
+      // Initialize reco interaction from true interaction
+      reco_interaction.id  = true_interaction.id;
+      reco_interaction.vtx = true_interaction.vtx;
 
-          auto true_secondary_particle             = SRTrueParticle_from_edep(secondary_particle);
-          true_secondary_particle.interaction_id   = true_interaction.id;
-          true_secondary_particle.ancestor_id.ixn  = static_cast<int>(interaction_index);
-          true_secondary_particle.ancestor_id.type = ::caf::TrueParticleID::kPrimary;
-          true_secondary_particle.ancestor_id.part = true_interaction.nprim;
-          true_interaction.sec.push_back(true_secondary_particle);
-          true_interaction.nsec++;
-          update_true_interaction_pdg_counters(true_interaction, true_secondary_particle.pdg);
-        }
-        // Now add the primary to its vector, just to use nprim in the previous loop
-        true_interaction.prim.push_back(true_primary_particle);
-        true_interaction.nprim++;
-        update_true_interaction_pdg_counters(true_interaction, true_primary_particle.pdg);
+      // Link to true interaction (index in mc.nu vector)
+      reco_interaction.truth.push_back(interaction_index);
+      reco_interaction.truthOverlap.push_back(1.0f);
+
+      // Fake reco: use true neutrino energy
+      reco_interaction.Enu.calo = true_interaction.E;
+
+      // Process all particles for this interaction
+      process_interaction_particles_(true_interaction, reco_interaction, sand_interaction,
+                                     interaction_index, edep_first_index, edep_size);
+
+      // Compute direction from sum of particle momenta
+      float sum_px = 0, sum_py = 0, sum_pz = 0;
+      for (const auto& part : reco_interaction.part.sandreco) {
+        sum_px += part.p.x;
+        sum_py += part.p.y;
+        sum_pz += part.p.z;
       }
+      reco_interaction.dir.part_mom_sum = normalize_to_direction(sum_px, sum_py, sum_pz);
     }
     assert_sizes();
   }
@@ -129,9 +126,7 @@ namespace sand::fake_reco {
       if (genie_->stdHeps_[interaction_index].Status_[particle_index] != ::genie::EGHepStatus::kIStHadronInTheNucleus) {
         continue;
       }
-      if (genie_->stdHeps_[interaction_index].Pdg_[particle_index] == 2000000101) {
-        // Skip GENIE "bindino"
-        // https://github.com/DUNE/ND_CAFMaker/blob/972f11bc5b69ea1f595e14ed16e09162f512011e/src/truth/FillTruth.cxx#L223
+      if (genie_->stdHeps_[interaction_index].Pdg_[particle_index] == kBindinoPdg) {
         continue;
       }
       ::caf::SRTrueParticle true_particle =
@@ -215,6 +210,63 @@ namespace sand::fake_reco {
     }
 
     return output;
+  }
+
+  void fake_reco::process_interaction_particles_(::caf::SRTrueInteraction& true_interaction,
+                                                   ::caf::SRInteraction& reco_interaction,
+                                                   ::caf::SRSANDInt& sand_interaction,
+                                                   const std::size_t interaction_index,
+                                                   const std::size_t edep_first_index,
+                                                   const std::size_t edep_size) const {
+    // Loop over edep tree particles (primaries from this interaction)
+    for (std::size_t edep_index = edep_first_index; edep_index < edep_first_index + edep_size; edep_index++) {
+      const auto& primary_particle = edep_->GetChildrenTrajectories()[edep_index];
+
+      // Create the primary true particle
+      auto true_primary_particle             = SRTrueParticle_from_edep(primary_particle);
+      true_primary_particle.interaction_id   = true_interaction.id;
+      true_primary_particle.ancestor_id.ixn  = static_cast<int>(interaction_index);
+      true_primary_particle.ancestor_id.type = ::caf::TrueParticleID::kPrimary;
+      true_primary_particle.ancestor_id.part = true_interaction.nprim;
+
+      // Create secondary true particles from this primary
+      for (auto it = ++edep_->GetTrajectory(primary_particle.GetId());
+           it != edep_->GetTrajectoryEnd(edep_->GetTrajectory(primary_particle.GetId())); ++it) {
+        const auto& secondary_particle = *it;
+
+        auto true_secondary_particle             = SRTrueParticle_from_edep(secondary_particle);
+        true_secondary_particle.interaction_id   = true_interaction.id;
+        true_secondary_particle.ancestor_id.ixn  = static_cast<int>(interaction_index);
+        true_secondary_particle.ancestor_id.type = ::caf::TrueParticleID::kPrimary;
+        true_secondary_particle.ancestor_id.part = true_interaction.nprim;
+
+        true_interaction.sec.push_back(true_secondary_particle);
+        true_interaction.nsec++;
+        update_true_interaction_pdg_counters(true_interaction, true_secondary_particle.pdg);
+      }
+
+      // Add the primary (after secondaries to use nprim in ancestor_id)
+      true_interaction.prim.push_back(true_primary_particle);
+      true_interaction.nprim++;
+      update_true_interaction_pdg_counters(true_interaction, true_primary_particle.pdg);
+
+      // === FAKE RECONSTRUCTION ===
+      // Create SRRecoParticle and add to reco interaction
+      auto reco_particle = SRRecoParticle_from_true_particle(true_primary_particle, true_primary_particle.ancestor_id);
+      reco_interaction.part.sandreco.push_back(reco_particle);
+      reco_interaction.part.nsandreco++;
+
+      // Create SRTrack or SRShower based on particle type
+      if (is_track_like(true_primary_particle.pdg)) {
+        auto track = SRTrack_from_true_particle(true_primary_particle, true_primary_particle.ancestor_id);
+        sand_interaction.tracks.push_back(track);
+        sand_interaction.ntracks++;
+      } else if (is_shower_like(true_primary_particle.pdg)) {
+        auto shower = SRShower_from_true_particle(true_primary_particle, true_primary_particle.ancestor_id);
+        sand_interaction.showers.push_back(shower);
+        sand_interaction.nshowers++;
+      }
+    }
   }
 
   void fake_reco::assert_sizes() const {

@@ -1,7 +1,3 @@
-//
-// Created by paolo on 08/05/2025.
-//
-
 /**
  * The TTree read from the genie_reader should be a gRooTracker in "t2k_rootracker" format created from a GHEP format
  * root file (which, as far as I understand, should be the standard output format of GENIE.) with the GENIE "gntpc"
@@ -24,8 +20,8 @@
  * test/sand-spill-events.9.edep.root
  */
 
-#ifndef FAKE_RECO_HPP
-#define FAKE_RECO_HPP
+#ifndef SANDRECO_FAKE_RECO_HPP
+#define SANDRECO_FAKE_RECO_HPP
 
 #include <edep_reader/edep_reader.hpp>
 #include <genie_reader/genie_reader.hpp>
@@ -44,9 +40,6 @@ namespace sand::fake_reco {
 
     sand::caf::caf_wrapper* standard_record_{};
 
-    // caf::SRTruthBranch& truth_branch_;
-    // caf::SRInteractionBranch& common_branch_;
-
     [[nodiscard]] std::vector<std::pair<std::size_t, std::size_t>> make_edep_interaction_map() const;
 
     void set_branches_capacities_() const;
@@ -55,15 +48,25 @@ namespace sand::fake_reco {
     void set_true_interaction_vectors_capacities_(::caf::SRTrueInteraction& true_interaction,
                                                   std::size_t edep_first_index, std::size_t edep_size) const;
     [[nodiscard]] ::caf::SRTrueParticle SRTrueParticle_from_edep(const EDEPTrajectory& particle) const;
+
+    void process_interaction_particles_(::caf::SRTrueInteraction& true_interaction,
+                                        ::caf::SRInteraction& reco_interaction,
+                                        ::caf::SRSANDInt& sand_interaction,
+                                        std::size_t interaction_index,
+                                        std::size_t edep_first_index,
+                                        std::size_t edep_size) const;
+
     void assert_sizes() const;
+
    public:
     fake_reco();
 
     void configure(const ufw::config& cfg) override;
     void run() override;
   };
+
 } // namespace sand::fake_reco
 
 UFW_REGISTER_PROCESS(sand::fake_reco::fake_reco);
 
-#endif // FAKE_RECO_HPP
+#endif // SANDRECO_FAKE_RECO_HPP
