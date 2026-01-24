@@ -1,10 +1,7 @@
-//
-// Created by Paolo Forni on 27/09/2025.
-//
+#ifndef SANDRECO_FAKE_RECO_INTERACTIONS_HPP
+#define SANDRECO_FAKE_RECO_INTERACTIONS_HPP
 
-#ifndef SR_INTERACTIONS_HANDLERS_HPP
-#define SR_INTERACTIONS_HANDLERS_HPP
-
+#include "utils.hpp"
 #include "../genie_helpers/EvtCode_parser.hpp"
 
 #include <edep_reader/EDEPTree.h>
@@ -77,21 +74,20 @@ namespace sand::fake_reco {
       // not sure if this is the right way to address this problem (is this even possible?)
       UFW_ERROR("Nu produced more than one lepton, it produced {} leptons", nu_daughters_indexes.size());
     }
-    if ((genie_stdhep.Pdg_[nu_daughters_indexes[0]] < 11 || genie_stdhep.Pdg_[nu_daughters_indexes[0]] > 16)
-        && (genie_stdhep.Pdg_[nu_daughters_indexes[0]] > -11 || genie_stdhep.Pdg_[nu_daughters_indexes[0]] < -16)) {
-      UFW_ERROR("Nu didn't produced a lepton, PDG code produced: {}", genie_stdhep.Pdg_[nu_daughters_indexes[0]]);
+    if (!is_lepton_pdg(genie_stdhep.Pdg_[nu_daughters_indexes[0]])) {
+      UFW_ERROR("Nu didn't produce a lepton, PDG code produced: {}", genie_stdhep.Pdg_[nu_daughters_indexes[0]]);
     }
     const auto& final_lepton_p4 = genie_stdhep.P4_[nu_daughters_indexes[0]];
 
     // true 4-momentum transfer
-    const auto q         = nu_p4 - final_lepton_p4;
-    constexpr float Mnuc = 0.939; // average nucleon mass
+    const auto q = nu_p4 - final_lepton_p4;
 
-    interaction.Q2       = static_cast<float>(-q.M2());
-    interaction.q0       = static_cast<float>(q.E());
-    interaction.modq     = static_cast<float>(q.P());
-    interaction.W        = static_cast<float>(std::sqrt(Mnuc * Mnuc + 2. * interaction.q0 * Mnuc + q.M2())); // "Wexp"
-    interaction.bjorkenX = interaction.Q2 / (2 * Mnuc * interaction.q0);
+    interaction.Q2   = static_cast<float>(-q.M2());
+    interaction.q0   = static_cast<float>(q.E());
+    interaction.modq = static_cast<float>(q.P());
+    interaction.W =
+        static_cast<float>(std::sqrt(kNucleonMass_GeV * kNucleonMass_GeV + 2. * interaction.q0 * kNucleonMass_GeV + q.M2())); // "Wexp"
+    interaction.bjorkenX     = interaction.Q2 / (2 * kNucleonMass_GeV * interaction.q0);
     interaction.inelasticity = interaction.q0 / interaction.E;
 
     if (interaction.mode == ::caf::kCoh || interaction.mode == ::caf::kDiffractive) {
@@ -149,4 +145,4 @@ namespace sand::fake_reco {
     }
   }
 } // namespace sand::fake_reco
-#endif // SR_INTERACTIONS_HANDLERS_HPP
+#endif // SANDRECO_FAKE_RECO_INTERACTIONS_HPP
