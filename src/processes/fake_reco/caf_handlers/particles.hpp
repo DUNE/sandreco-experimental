@@ -1,69 +1,14 @@
-//
-// Created by Paolo Forni on 27/09/2025.
-//
-
-#ifndef SR_PARTICLES_HANDLERS_HPP
-#define SR_PARTICLES_HANDLERS_HPP
+#ifndef SANDRECO_FAKE_RECO_PARTICLES_HPP
+#define SANDRECO_FAKE_RECO_PARTICLES_HPP
 
 #include <genie_reader/genie_reader.hpp>
-#include <edep_reader/EDEPTrajectory.h>
 
 #include <duneanaobj/StandardRecord/SRRecoParticle.h>
 #include <duneanaobj/StandardRecord/SRTrueParticle.h>
 
 namespace sand::fake_reco {
 
-  inline ::caf::SRRecoParticle reco_particle_from_edep_trajectory(const EDEPTrajectory& particle) {
-    const auto trajectory_points = particle.GetTrajectoryPointsVect();
-
-    // Handle case where trajectory has no points
-    if (trajectory_points.empty()) {
-      UFW_WARN("Reco particle from true particle: {} has no trajectory points", particle.GetId());
-      return {
-          .primary      = true,
-          .pdg          = particle.GetPDGCode(),
-          .tgtA         = 0,
-          .score        = std::numeric_limits<float>::signaling_NaN(),
-          .E            = 0,
-          .E_method     = ::caf::PartEMethod::kUnknownMethod,
-          .p            = ::caf::SRVector3D{
-              static_cast<float>(particle.GetInitialMomentum().Vect().X()),
-              static_cast<float>(particle.GetInitialMomentum().Vect().Y()),
-              static_cast<float>(particle.GetInitialMomentum().Vect().Z())},
-          .start        = {},
-          .end          = {},
-          .contained    = false,
-          .truth        = {},
-          .truthOverlap = {}
-      };
-    }
-
-    return {
-        .primary  = true,
-        .pdg      = particle.GetPDGCode(),
-        .tgtA     = 0,                                           // ?
-        .score    = std::numeric_limits<float>::signaling_NaN(), // ?
-        .E        = 0,                                           // ?
-        .E_method = ::caf::PartEMethod::kUnknownMethod,          // ?
-        .p        = ::caf::SRVector3D{
-            static_cast<float>(particle.GetInitialMomentum().Vect().X()),
-            static_cast<float>(particle.GetInitialMomentum().Vect().Y()),
-            static_cast<float>(particle.GetInitialMomentum().Vect().Z())},
-        .start =
-            ::caf::SRVector3D{
-                static_cast<float>(trajectory_points.front().GetPosition().Vect().X()),
-                static_cast<float>(trajectory_points.front().GetPosition().Vect().Y()),
-                static_cast<float>(trajectory_points.front().GetPosition().Vect().Z())},
-        .end          = ::caf::SRVector3D{
-            static_cast<float>(trajectory_points.back().GetPosition().Vect().X()),
-            static_cast<float>(trajectory_points.back().GetPosition().Vect().Y()),
-            static_cast<float>(trajectory_points.back().GetPosition().Vect().Z())},
-        .contained    = false, // ?
-        .truth        = {},    // ?
-        .truthOverlap = {}     // ?
-    };
-  }
-
+  /// Create SRTrueParticle from GENIE StdHep data (pre-FSI particles)
   inline ::caf::SRTrueParticle SRTrueParticle_from_genie(const std::size_t i, const StdHep& std_hep) {
     return {
         .pdg            = std_hep.Pdg_[i],
@@ -77,53 +22,6 @@ namespace sand::fake_reco {
     };
   }
 
-  inline ::caf::SRTrueParticle SRTrueParticle_from_edep(const EDEPTrajectory& particle) {
-    const auto trajectory_points = particle.GetTrajectoryPointsVect();
-
-    const auto mom = particle.GetInitialMomentum();
-
-    // Handle case where trajectory has no points
-    if (trajectory_points.empty()) {
-      return {.pdg            = particle.GetPDGCode(),
-              .G4ID           = particle.GetId(),
-              .interaction_id = {},
-              .time           = 0.0f,
-              .ancestor_id    = {},
-              .p              = TLorentzVector{mom.Px(), mom.Py(), mom.Pz(), mom.E()},
-              .start_pos      = {},
-              .end_pos        = {},
-              .parent         = particle.GetParentId(),
-              .daughters      = {},
-              .first_process  = 0,
-              .first_subprocess = 0,
-              .end_process      = 0,
-              .end_subprocess   = 0};
-    }
-
-    return {.pdg = particle.GetPDGCode(),
-            .G4ID =
-                particle.GetId(), // This is the GEANT trajectory id. The CafMaker reset this index at each interaction
-            .interaction_id = {}, // This will be filled by fake_reco loop
-            .time           = static_cast<float>(trajectory_points.front().GetPosition().T()), // ?
-            .ancestor_id    = {}, // This will be filled by fake_reco loop
-            .p              = TLorentzVector{mom.Px(), mom.Py(), mom.Pz(), mom.E()},
-            .start_pos =
-                ::caf::SRVector3D{
-                    static_cast<float>(trajectory_points.front().GetPosition().Vect().X()),
-                    static_cast<float>(trajectory_points.front().GetPosition().Vect().Y()),
-                    static_cast<float>(trajectory_points.front().GetPosition().Vect().Z())},
-            .end_pos          = ::caf::SRVector3D{
-                static_cast<float>(trajectory_points.back().GetPosition().Vect().X()),
-                static_cast<float>(trajectory_points.back().GetPosition().Vect().Y()),
-                static_cast<float>(trajectory_points.back().GetPosition().Vect().Z())},
-            .parent           = particle.GetParentId(),
-            .daughters        = {}, // should I get this visiting the whole children tree or just the first layer?
-            .first_process    = static_cast<unsigned int>(trajectory_points.front().GetProcess()),
-            .first_subprocess = static_cast<unsigned int>(trajectory_points.front().GetSubprocess()),
-            .end_process      = static_cast<unsigned int>(trajectory_points.back().GetProcess()),
-            .end_subprocess   = static_cast<unsigned int>(trajectory_points.back().GetSubprocess())};
-  }
-
 } // namespace sand::fake_reco
 
-#endif // SR_PARTICLES_HANDLERS_HPP
+#endif // SANDRECO_FAKE_RECO_PARTICLES_HPP
