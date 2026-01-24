@@ -2,8 +2,8 @@
 // Created by Paolo Forni on 11/26/25.
 //
 
-#ifndef SANDRECO_EVTCODE_PARSER_HPP
-#define SANDRECO_EVTCODE_PARSER_HPP
+#ifndef SANDRECO_FAKE_RECO_EVTCODE_PARSER_HPP
+#define SANDRECO_FAKE_RECO_EVTCODE_PARSER_HPP
 
 #include <duneanaobj/StandardRecord/SREnums.h>
 
@@ -66,7 +66,6 @@ namespace sand::fake_reco {
     std::optional<int> hit_quark_pdg{};
     bool hit_sea_quark{false}; // true if (s), false if (v)
 
-    // TODO: reason on the option to switch to string_view
     std::string interaction_type{};
     ::caf::ScatteringMode scattering_type{};
 
@@ -285,4 +284,4 @@ namespace sand::fake_reco {
   };
 } // namespace sand::fake_reco
 
-#endif // SANDRECO_EVTCODE_PARSER_HPP
+#endif // SANDRECO_FAKE_RECO_EVTCODE_PARSER_HPP
