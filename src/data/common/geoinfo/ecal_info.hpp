@@ -42,8 +42,6 @@ namespace sand {
       bool operator== (const shape_element_face& other) const;
       inline bool operator!= (const shape_element_face& other) const { return !(*this == other); };
       shape_element_face transform(const xform_3d& transf);
-      // bool is_straight(shape_element_face other) const;
-      // bool is_curved(shape_element_face other) const;
 
       inline dir_3d side(size_t idx) const { return vtx(idx) - vtx(idx + 1); };
       inline const std::vector<pos_3d>& vtx() const { return v_; };
@@ -63,16 +61,17 @@ namespace sand {
     // shape element
     enum class shape_element_type { straight, curved };
 
+    class module;
+
     struct shape_element {
      private:
       shape_element_face face1_;
       shape_element_face face2_;
       pos_3d axis_pos_;
       dir_3d axis_dir_;
-
-     public:
       shape_element_type type_;
 
+     public:
       shape_element() = delete;
       shape_element(const shape_element_face& f1, const shape_element_face& f2);
 
@@ -83,6 +82,10 @@ namespace sand {
       inline const shape_element_face& face2() const { return face2_; };
       const shape_element_face& face(size_t face_id) const;
       inline const shape_element_type type() const { return type_; };
+
+     private:
+      bool is_straight();
+      bool is_curved();
       double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const;
       pos_3d to_face(const pos_3d& p, size_t face_id) const;
       shape_element_face to_face(const shape_element_face& f, size_t face_id) const {
@@ -94,9 +97,7 @@ namespace sand {
         axis_dir_ *= -1;
       };
 
-     private:
-      bool is_straight();
-      bool is_curved();
+      friend class module;
     };
 
     enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };

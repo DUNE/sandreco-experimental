@@ -178,9 +178,9 @@ namespace sand {
 
   bool geoinfo::ecal_info::shape_element_face::operator== (const shape_element_face& other) const {
     UFW_DEBUG("face1:");
-    print_face(*this);
+    // print_face(*this);
     UFW_DEBUG("face2:");
-    print_face(other);
+    // print_face(other);
     UFW_DEBUG("Checking faces are the same");
 
     auto mycopy_for = other;
@@ -209,12 +209,12 @@ namespace sand {
   geoinfo::ecal_info::shape_element_face geoinfo::ecal_info::shape_element_face::transform(const xform_3d& transf) {
     UFW_DEBUG("Transform shape_element_face");
     UFW_DEBUG("Before: ");
-    print_face(*this);
+    // print_face(*this);
     std::for_each(v_.begin(), v_.end(), [&](pos_3d& p) { p = transf * p; });
     centroid_ = transf * centroid();
     normal_   = transf * normal();
     UFW_DEBUG("After: ");
-    print_face(*this);
+    // print_face(*this);
     return *this;
   }
 
@@ -233,7 +233,7 @@ namespace sand {
   void geoinfo::ecal_info::shape_element::transform(const xform_3d& transf) {
     UFW_DEBUG("Transform shape_element");
     UFW_DEBUG("Before: ");
-    print_element(*this);
+    // print_element(*this);
     face1_.transform(transf);
     face2_.transform(transf);
     axis_pos_ = transf * axis_pos();
@@ -244,7 +244,7 @@ namespace sand {
     UFW_ASSERT(axis_dir_.Mag2() > 0.1, fmt::format("Error axis dir is null!!! --> Dir: {}, {} --- {}", axis_dir_,
                                                    face1_.normal(), face2_.normal()));
     UFW_DEBUG("After: ");
-    print_element(*this);
+    // print_element(*this);
   };
 
   const geoinfo::ecal_info::shape_element_face& geoinfo::ecal_info::shape_element::face(size_t face_id) const {
@@ -262,8 +262,11 @@ namespace sand {
     UFW_DEBUG("Propagate point {} to face {}", p, face_id);
     auto& f = face(face_id);
     if (type() == shape_element_type::straight) {
-      UFW_DEBUG("Propagate to {}", p + f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir());
-      return p + f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir();
+      ROOT::Math::Translation3D fullTransform(f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir());
+      return fullTransform * p;
+
+      // UFW_DEBUG("Propagate to {}", p + f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir());
+      // return p + f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir();
     } else {
       UFW_DEBUG("Point    : {}", p);
       UFW_DEBUG("Centroid : {}", f.centroid());
@@ -816,7 +819,7 @@ namespace sand {
       }
     });
     m.construct_cells(m_cells);
-    print_module(m);
+    // print_module(m);
   }
 
   void geoinfo::ecal_info::barrel_module_cells(const geo_path& path) {
