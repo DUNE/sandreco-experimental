@@ -13,9 +13,9 @@
 #include <tracker/digi.h>
 namespace sand::stt {
 
-  class fast_digi : public ufw::process {
+  class stt_fast_digi : public ufw::process {
    public:
-    fast_digi();
+    stt_fast_digi();
     void configure(const ufw::config& cfg) override;
     void run() override;
 
@@ -42,5 +42,5 @@ namespace sand::stt {
 
 } // namespace sand::stt
 
-UFW_REGISTER_PROCESS(sand::stt::fast_digi)
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::stt::fast_digi)
+UFW_REGISTER_PROCESS(sand::stt::stt_fast_digi)
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::stt::stt_fast_digi)

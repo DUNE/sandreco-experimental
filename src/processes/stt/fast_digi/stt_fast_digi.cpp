@@ -12,23 +12,23 @@
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
 
-#include <fast_digi.hpp>
+#include <stt_fast_digi.hpp>
 
 namespace sand::stt {
 
-  void fast_digi::configure(const ufw::config& cfg) {
+  void stt_fast_digi::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_drift_velocity = cfg.at("drift_velocity");
     m_wire_velocity  = cfg.at("wire_velocity");
     m_sigma_tdc      = cfg.at("sigma_tdc");
   }
 
-  fast_digi::fast_digi() : process({}, {{"digi", "sand::tracker::digi"}}) {
-    UFW_DEBUG("Creating a fast_digi process at {}", fmt::ptr(this));
+  stt_fast_digi::stt_fast_digi() : process({}, {{"digi", "sand::tracker::digi"}}) {
+    UFW_DEBUG("Creating a stt_fast_digi process at {}", fmt::ptr(this));
   }
 
-  void fast_digi::run() {
-    UFW_DEBUG("Running fast_digi process at {}", fmt::ptr(this));
+  void stt_fast_digi::run() {
+    UFW_DEBUG("Running stt_fast_digi process at {}", fmt::ptr(this));
     const auto& tree = get<sand::edep_reader>();
     const auto& gi   = get<geoinfo>();
     auto& digi       = set<sand::tracker::digi>("digi");
@@ -39,7 +39,7 @@ namespace sand::stt {
     digitize_hits_in_tubes(hits_by_tube);
   }
 
-  std::map<geo_id, std::vector<EDEPHit>> fast_digi::group_hits_by_tube() {
+  std::map<geo_id, std::vector<EDEPHit>> stt_fast_digi::group_hits_by_tube() {
     const auto& gi   = get<geoinfo>();
     const auto& tree = get<sand::edep_reader>();
     auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
@@ -73,7 +73,7 @@ namespace sand::stt {
     return hits_by_tube;
   }
 
-  void fast_digi::digitize_hits_in_tubes(const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube) {
+  void stt_fast_digi::digitize_hits_in_tubes(const std::map<geo_id, std::vector<EDEPHit>>& hits_by_tube) {
     const auto& gi  = get<geoinfo>();
     auto& digi      = set<sand::tracker::digi>("digi");
     const auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
@@ -99,7 +99,7 @@ namespace sand::stt {
     }
   }
 
-  tracker::digi::signal fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
+  tracker::digi::signal stt_fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
     std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc); //FIXME should be member
     auto ran = gaussian_error(random_engine());
     //FIXME replace 200 with maximum drift + signal time
@@ -113,7 +113,7 @@ namespace sand::stt {
     return signal;
   }
 
-  std::optional<tracker::digi::signal> fast_digi::process_hits_for_wire(const std::vector<EDEPHit>& hits,
+  std::optional<tracker::digi::signal> stt_fast_digi::process_hits_for_wire(const std::vector<EDEPHit>& hits,
                                                                         const sand::geoinfo::stt_info::wire& wire) {
     const auto& gi     = get<geoinfo>();
     const auto* stt    = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
@@ -156,7 +156,7 @@ namespace sand::stt {
     return create_signal(wire_time, edep_total, wire.daq_channel);
   }
 
-  std::pair<vec_4d,vec_4d> fast_digi::closest_points_hit_wire(const vec_4d& hit_start, const vec_4d& hit_stop,  //TO-DO move to fast_digi
+  std::pair<vec_4d,vec_4d> stt_fast_digi::closest_points_hit_wire(const vec_4d& hit_start, const vec_4d& hit_stop,  //TO-DO move to fast_digi
                                                             double v_drift, const geoinfo::tracker_info::wire& w) const {
     std::pair<vec_4d,vec_4d> closest_points;
 
@@ -197,7 +197,7 @@ namespace sand::stt {
     return closest_points;
   }
 
-  double fast_digi::get_min_time(const vec_4d& point, double v_signal_inwire, const geoinfo::tracker_info::wire& w) const {
+  double stt_fast_digi::get_min_time(const vec_4d& point, double v_signal_inwire, const geoinfo::tracker_info::wire& w) const {
     return point.T() + sqrt((pos_3d(point.Vect()) - w.head).Mag2()) / v_signal_inwire;
   }
 
