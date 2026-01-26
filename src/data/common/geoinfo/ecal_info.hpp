@@ -41,7 +41,10 @@ namespace sand {
       shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
       bool operator== (const shape_element_face& other) const;
       inline bool operator!= (const shape_element_face& other) const { return !(*this == other); };
-      shape_element_face transform(const xform_3d& transf);
+      inline const shape_element_face& operator* (const xform_3d& transf) const {
+        return *(new shape_element_face(transf * vtx(0), transf * vtx(1), transf * vtx(2), transf * vtx(3)));
+      };
+      const shape_element_face& transform(const xform_3d& transf);
 
       inline dir_3d side(size_t idx) const { return vtx(idx) - vtx(idx + 1); };
       inline const std::vector<pos_3d>& vtx() const { return v_; };
@@ -62,6 +65,7 @@ namespace sand {
     enum class shape_element_type { straight, curved };
 
     class module;
+    class shape_element_collection;
 
     struct shape_element {
      private:
@@ -80,12 +84,12 @@ namespace sand {
       inline const dir_3d& axis_dir() const { return axis_dir_; };
       inline const shape_element_face& face1() const { return face1_; };
       inline const shape_element_face& face2() const { return face2_; };
-      const shape_element_face& face(size_t face_id) const;
+      inline const shape_element_face& face(size_t face_id) const { return face_id % 2 == 0 ? face2() : face1(); };
       inline const shape_element_type type() const { return type_; };
 
      private:
-      bool is_straight();
-      bool is_curved();
+      bool straight();
+      bool curved();
       double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const;
       pos_3d to_face(const pos_3d& p, size_t face_id) const;
       shape_element_face to_face(const shape_element_face& f, size_t face_id) const {
@@ -98,6 +102,81 @@ namespace sand {
       };
 
       friend class module;
+    };
+
+    struct shape_element_base {
+      shape_element_face face1_;
+      shape_element_face face2_;
+      pos_3d axis_pos_;
+      dir_3d axis_dir_;
+      // consider to remove
+      shape_element_type type_;
+
+     public:
+      shape_element_base() = delete;
+      shape_element_base(const shape_element_face& f1, const shape_element_face& f2) : face1_(f1), face2_(f2) {};
+
+      void transform(const xform_3d& transf);
+      inline const pos_3d& axis_pos() const { return axis_pos_; };
+      inline const dir_3d& axis_dir() const { return axis_dir_; };
+      inline const shape_element_face& face1() const { return face1_; };
+      inline const shape_element_face& face2() const { return face2_; };
+      inline const shape_element_face& face(size_t face_id) const { return face_id % 2 == 0 ? face2() : face1(); };
+      inline const shape_element_type type() const { return type_; };
+
+     private:
+      virtual double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const             = 0;
+      virtual pos_3d to_face(const pos_3d& p, size_t face_id) const                         = 0;
+      virtual shape_element_face to_face(const shape_element_face& f, size_t face_id) const = 0;
+
+      void swap_faces() {
+        std::swap(face1_, face2_);
+        axis_dir_ *= -1;
+      };
+
+      friend class shape_element_collection;
+    };
+
+    struct shape_element_straight : public shape_element_base {
+     public:
+      shape_element_straight(const shape_element_face& f1, const shape_element_face& f2);
+
+     private:
+      double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const override;
+      pos_3d to_face(const pos_3d& p, size_t face_id) const override;
+      shape_element_face to_face(const shape_element_face& f, size_t face_id) const override {
+        return shape_element_face(to_face(f.vtx(0), face_id), to_face(f.vtx(1), face_id), to_face(f.vtx(2), face_id),
+                                  to_face(f.vtx(3), face_id));
+      };
+
+      friend class module;
+    };
+
+    struct shape_element_curved : public shape_element_base {
+     public:
+      shape_element_curved(const shape_element_face& f1, const shape_element_face& f2);
+
+     private:
+      double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const override;
+      pos_3d to_face(const pos_3d& p, size_t face_id) const override;
+      shape_element_face to_face(const shape_element_face& f, size_t face_id) const override {
+        return shape_element_face(to_face(f.vtx(0), face_id), to_face(f.vtx(1), face_id), to_face(f.vtx(2), face_id),
+                                  to_face(f.vtx(3), face_id));
+      };
+
+      friend class module;
+    };
+
+    struct shape_element_collection {
+     private:
+      std::vector<std::unique_ptr<shape_element_base>> elements_;
+
+     public:
+      void add(const shape_element_straight& el) { elements_.push_back(std::make_unique<shape_element_straight>(el)); };
+      void add(const shape_element_curved& el) { elements_.push_back(std::make_unique<shape_element_curved>(el)); };
+      inline const shape_element_base& at(size_t idx) const { return *(elements_.at(idx)); };
+      inline size_t size() const { return elements_.size(); };
+      void order_elements();
     };
 
     enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };

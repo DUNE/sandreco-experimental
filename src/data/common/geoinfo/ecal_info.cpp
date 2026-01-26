@@ -91,6 +91,59 @@ namespace sand {
       return TMath::ACos(r1.Dot(r2) / (r1.R() * r2.R()));
     }
 
+    bool is_straight(const geoinfo::ecal_info::shape_element_face& f1,
+                     const geoinfo::ecal_info::shape_element_face& f2) {
+      UFW_DEBUG("Checking if shape_element is straight");
+      return f1 == f2 * xform_3d(f1.centroid() - f2.centroid());
+    }
+
+    bool is_curved(const geoinfo::ecal_info::shape_element_face& f1, const geoinfo::ecal_info::shape_element_face& f2) {
+      UFW_DEBUG("Checking if shape_element is curved");
+      auto h1  = f1.normal().Dot(f1.centroid());
+      auto h2  = f2.normal().Dot(f2.centroid());
+      auto dpr = f1.normal().Dot(f2.normal());
+      auto det = (1 - dpr * dpr);
+
+      if (is_zero_within_tolerance(det))
+        return false;
+
+      auto c1       = (h1 - h2 * dpr) / det;
+      auto c2       = (h2 - h1 * dpr) / det;
+      auto axis_pos = c1 * f1.normal() + c2 * f2.normal();
+      auto axis_dir = f1.normal().Cross(f2.normal());
+      UFW_ASSERT(axis_dir.Mag2() > 0.1,
+                 fmt::format("Error axis dir is null!!! --> Dir: {}, {} --- {}", axis_dir, f1.normal(), f2.normal()));
+      auto angle = TMath::ACos(f1.normal().Dot(f2.normal()));
+
+      if (!is_zero_within_tolerance(std::fabs(angle) - 0.5 * TMath::Pi()))
+        return false;
+
+      // 1. Create the rotation around the origin-aligned direction
+      ROOT::Math::AxisAngle rotation(axis_dir, -angle);
+      // 2. Define translations
+      ROOT::Math::Translation3D toOrigin(axis_pos);
+      ROOT::Math::Translation3D fromOrigin(-axis_pos);
+      // 3. Combine: TranslationBack * Rotation * TranslationToOrigin
+      // Note: ROOT applies transformations from right to left in operator*
+      ROOT::Math::Transform3D fullTransform = fromOrigin * rotation * toOrigin;
+
+      // if (f1 != f2.transform(xform_3d(rot_3d(rot_ang(axis_dir_, -angle)), axis_pos_ - orig)))
+      // if (f1 != f2.transform(fullTransform))
+      return f1 == f2 * fullTransform;
+    }
+
+    std::unique_ptr<geoinfo::ecal_info::shape_element_base>
+    construct_shape_element(const geoinfo::ecal_info::shape_element_face& f1,
+                            const geoinfo::ecal_info::shape_element_face& f2) {
+      if (is_straight(f1, f2)) {
+        return std::make_unique<geoinfo::ecal_info::shape_element_straight>(f1, f2);
+      } else if (is_curved(f1, f2)) {
+        return std::make_unique<geoinfo::ecal_info::shape_element_curved>(f1, f2);
+      } else {
+        UFW_EXCEPT(std::invalid_argument, "cell_element: Neither a straight element nor a curved element!!");
+      }
+    }
+
     void print_face(const geoinfo::ecal_info::shape_element_face& f) {
       UFW_DEBUG(fmt::format("Vertices:"));
       for (size_t i = 0; i < f.vtx().size(); i++)
@@ -177,9 +230,9 @@ namespace sand {
   }
 
   bool geoinfo::ecal_info::shape_element_face::operator== (const shape_element_face& other) const {
-    UFW_DEBUG("face1:");
+    // UFW_DEBUG("face1:");
     // print_face(*this);
-    UFW_DEBUG("face2:");
+    // UFW_DEBUG("face2:");
     // print_face(other);
     UFW_DEBUG("Checking faces are the same");
 
@@ -206,14 +259,15 @@ namespace sand {
     return false;
   }
 
-  geoinfo::ecal_info::shape_element_face geoinfo::ecal_info::shape_element_face::transform(const xform_3d& transf) {
+  const geoinfo::ecal_info::shape_element_face&
+  geoinfo::ecal_info::shape_element_face::transform(const xform_3d& transf) {
     UFW_DEBUG("Transform shape_element_face");
-    UFW_DEBUG("Before: ");
+    // UFW_DEBUG("Before: ");
     // print_face(*this);
     std::for_each(v_.begin(), v_.end(), [&](pos_3d& p) { p = transf * p; });
     centroid_ = transf * centroid();
     normal_   = transf * normal();
-    UFW_DEBUG("After: ");
+    // UFW_DEBUG("After: ");
     // print_face(*this);
     return *this;
   }
@@ -225,14 +279,14 @@ namespace sand {
   geoinfo::ecal_info::shape_element::shape_element(const shape_element_face& f1, const shape_element_face& f2)
     : face1_(f1), face2_(f2) {
     UFW_DEBUG("shape_element constructor");
-    if (!(is_straight() || is_curved())) {
+    if (!(straight() || curved())) {
       UFW_EXCEPT(std::invalid_argument, "cell_element: Neither a straight element nor a curved element!!");
     }
   }
 
   void geoinfo::ecal_info::shape_element::transform(const xform_3d& transf) {
     UFW_DEBUG("Transform shape_element");
-    UFW_DEBUG("Before: ");
+    // UFW_DEBUG("Before: ");
     // print_element(*this);
     face1_.transform(transf);
     face2_.transform(transf);
@@ -243,26 +297,27 @@ namespace sand {
     UFW_DEBUG("axis_dir_: {}", axis_dir_);
     UFW_ASSERT(axis_dir_.Mag2() > 0.1, fmt::format("Error axis dir is null!!! --> Dir: {}, {} --- {}", axis_dir_,
                                                    face1_.normal(), face2_.normal()));
-    UFW_DEBUG("After: ");
+    // UFW_DEBUG("After: ");
     // print_element(*this);
   };
 
-  const geoinfo::ecal_info::shape_element_face& geoinfo::ecal_info::shape_element::face(size_t face_id) const {
-    switch (face_id) {
-    case 1:
-      return face1();
-    case 2:
-      return face2();
-    default:
-      UFW_ERROR(fmt::format("faceid can be either 1 or 2; provided value: {}", face_id));
-    }
-  };
+  // const geoinfo::ecal_info::shape_element_face& geoinfo::ecal_info::shape_element::face(size_t face_id) const {
+  //   switch (face_id) {
+  //   case 1:
+  //     return face1();
+  //   case 2:
+  //     return face2();
+  //   default:
+  //     UFW_ERROR(fmt::format("faceid can be either 1 or 2; provided value: {}", face_id));
+  //   }
+  // };
 
   pos_3d geoinfo::ecal_info::shape_element::to_face(const pos_3d& p, size_t face_id) const {
     UFW_DEBUG("Propagate point {} to face {}", p, face_id);
     auto& f = face(face_id);
     if (type() == shape_element_type::straight) {
-      ROOT::Math::Translation3D fullTransform(f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir());
+      ROOT::Math::Translation3D fullTransform(f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir())
+                                              * axis_dir());
       return fullTransform * p;
 
       // UFW_DEBUG("Propagate to {}", p + f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir());
@@ -321,11 +376,12 @@ namespace sand {
     }
   };
 
-  bool geoinfo::ecal_info::shape_element::is_straight() {
+  bool geoinfo::ecal_info::shape_element::straight() {
     UFW_DEBUG("Checking if shape_element is straight");
-    auto test_face = face2();
+    // auto test_face = face2();
 
-    if (face1() != test_face.transform(xform_3d(face1().centroid() - face2().centroid())))
+    // if (face1() != test_face.transform(xform_3d(face1().centroid() - face2().centroid())))
+    if (face1() != face2() * xform_3d(face1().centroid() - face2().centroid()))
       return false;
 
     UFW_DEBUG("shape_element is straight!!!");
@@ -338,10 +394,10 @@ namespace sand {
     return true;
   };
 
-  bool geoinfo::ecal_info::shape_element::is_curved() {
+  bool geoinfo::ecal_info::shape_element::curved() {
     UFW_DEBUG("Checking if shape_element is curved");
     auto& f1 = face1();
-    auto f2  = face2();
+    auto& f2 = face2();
     auto h1  = f1.normal().Dot(f1.centroid());
     auto h2  = f2.normal().Dot(f2.centroid());
     auto dpr = f1.normal().Dot(f2.normal());
@@ -373,7 +429,8 @@ namespace sand {
     ROOT::Math::Transform3D fullTransform = fromOrigin * rotation * toOrigin;
 
     // if (f1 != f2.transform(xform_3d(rot_3d(rot_ang(axis_dir_, -angle)), axis_pos_ - orig)))
-    if (f1 != f2.transform(fullTransform))
+    // if (f1 != f2.transform(fullTransform))
+    if (f1 != f2 * fullTransform)
       return false;
 
     UFW_DEBUG("shape_element is curved!!!");
@@ -381,6 +438,162 @@ namespace sand {
     type_ = shape_element_type::curved;
 
     return true;
+  };
+
+  //////////////////////////////////////////////////////
+  // geoinfo::ecal_info::shape_element_straight
+  //////////////////////////////////////////////////////
+
+  geoinfo::ecal_info::shape_element_straight::shape_element_straight(const geoinfo::ecal_info::shape_element_face& f1,
+                                                                     const geoinfo::ecal_info::shape_element_face& f2)
+    : shape_element_base(f1, f2) {
+    UFW_DEBUG("Checking if shape_element is straight");
+    type_     = shape_element_type::straight;
+    axis_pos_ = face1().centroid();
+    axis_dir_ = face2().centroid() - face1().centroid();
+    UFW_ASSERT(axis_dir_.Mag2() > 0.1, fmt::format("Error axis dir is null!!! --> Dir: {}, {} --- {}", axis_dir_,
+                                                   face1().normal(), face1().normal()));
+  };
+
+  pos_3d geoinfo::ecal_info::shape_element_straight::to_face(const pos_3d& p, size_t face_id) const {
+    UFW_DEBUG("Propagate point {} to face {}", p, face_id);
+    auto& f = face(face_id);
+    ROOT::Math::Translation3D fullTransform(f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir());
+    return fullTransform * p;
+  };
+
+  double geoinfo::ecal_info::shape_element_straight::to_face(const pos_3d& p1, size_t face_id, pos_3d& p2) const {
+    p2 = to_face(p1, face_id);
+    if (!is_zero_within_tolerance(axis_dir().Cross(p1 - p2).R())) {
+      UFW_ERROR(fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
+      return -1.;
+    }
+    return (p1 - p2).R();
+  };
+
+  //////////////////////////////////////////////////////
+  // geoinfo::ecal_info::shape_element_curved
+  //////////////////////////////////////////////////////
+
+  geoinfo::ecal_info::shape_element_curved::shape_element_curved(const geoinfo::ecal_info::shape_element_face& f1,
+                                                                 const geoinfo::ecal_info::shape_element_face& f2)
+    : shape_element_base(f1, f2) {
+    UFW_DEBUG("Checking if shape_element is curved");
+    auto h1   = face1().normal().Dot(face1().centroid());
+    auto h2   = face2().normal().Dot(face2().centroid());
+    auto dpr  = face1().normal().Dot(face2().normal());
+    auto det  = (1 - dpr * dpr);
+    auto c1   = (h1 - h2 * dpr) / det;
+    auto c2   = (h2 - h1 * dpr) / det;
+    axis_pos_ = c1 * face1().normal() + c2 * face2().normal();
+    axis_dir_ = face1().normal().Cross(face2().normal());
+    type_     = shape_element_type::curved;
+  };
+
+  pos_3d geoinfo::ecal_info::shape_element_curved::to_face(const pos_3d& p, size_t face_id) const {
+    UFW_DEBUG("Propagate point {} to face {}", p, face_id);
+    auto& f = face(face_id);
+    UFW_DEBUG("Point    : {}", p);
+    UFW_DEBUG("Centroid : {}", f.centroid());
+    UFW_DEBUG("Axis Pos.: {}", axis_pos());
+    UFW_DEBUG("Axis Dir.: {}", axis_dir());
+    auto ang = ang_wrt_axis(p, f.centroid(), axis_pos(), axis_dir());
+    UFW_DEBUG("Angle: {}", ang);
+    auto trf = xform_3d(rot_3d(rot_ang(axis_dir(), -ang)), axis_pos() - orig);
+    UFW_DEBUG("Matrice: {}", trf);
+    UFW_DEBUG("Propagate to {}", trf * p);
+
+    // 1. Create the rotation around the origin-aligned direction
+    ROOT::Math::AxisAngle rotation(axis_dir(), -ang);
+
+    // 2. Define translations
+    ROOT::Math::Translation3D toOrigin(axis_pos(), orig);
+    ROOT::Math::Translation3D fromOrigin(orig, axis_pos());
+
+    // 3. Combine: TranslationBack * Rotation * TranslationToOrigin
+    // Note: ROOT applies transformations from right to left in operator*
+    ROOT::Math::Transform3D fullTransform = fromOrigin * rotation * toOrigin;
+    UFW_DEBUG("Matrice: {}", fullTransform);
+    UFW_DEBUG("Propagate to {}", fullTransform * p);
+
+    return fullTransform * p;
+  };
+
+  double geoinfo::ecal_info::shape_element_curved::to_face(const pos_3d& p1, size_t face_id, pos_3d& p2) const {
+    p2      = to_face(p1, face_id);
+    auto r1 = r_wrt_axis(p1, axis_pos(), axis_dir());
+    auto r2 = r_wrt_axis(p2, axis_pos(), axis_dir());
+    auto z1 = z_wrt_axis(p1, axis_pos(), axis_dir());
+    auto z2 = z_wrt_axis(p2, axis_pos(), axis_dir());
+    UFW_DEBUG("r1: {}", r1);
+    UFW_DEBUG("r2: {}", r2);
+    UFW_DEBUG("z1: {}", z1);
+    UFW_DEBUG("z2: {}", z2);
+    if (!is_zero_within_tolerance(r1.R() - r2.R()) || !is_zero_within_tolerance((z1 - z2).R())) {
+      UFW_ERROR(fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
+      return -1.;
+    }
+    auto ang = ang_wrt_axis(p1, p2, axis_pos(), axis_dir());
+    return r1.R() * std::fabs(ang);
+  };
+
+  //////////////////////////////////////////////////////
+  // geoinfo::ecal_info::shape_element_collection
+  //////////////////////////////////////////////////////
+
+  void geoinfo::ecal_info::shape_element_collection::order_elements() {
+    if (elements_.size() == 1)
+      return;
+
+    std::vector<std::unique_ptr<shape_element_base>> tmp;
+    tmp.swap(elements_);
+
+    auto insert = [&](const std::vector<std::unique_ptr<shape_element_base>>::iterator& it_insert,
+                      const std::vector<std::unique_ptr<shape_element_base>>::iterator& it_erase) {
+      elements_.insert(it_insert, std::move(*it_erase));
+      tmp.erase(it_erase);
+    };
+    auto insert_front = [&](const std::vector<std::unique_ptr<shape_element_base>>::iterator& it) { insert(elements_.begin(), it); };
+    auto insert_back  = [&](const std::vector<std::unique_ptr<shape_element_base>>::iterator& it) { insert(elements_.end(), it); };
+
+    auto first_el       = tmp.begin();
+    auto current_face_1 = (*first_el)->face1();
+    auto current_face_2 = (*first_el)->face2();
+
+    insert_front(first_el);
+
+    while (tmp.size() != 0) {
+      auto found = false;
+      for (auto it = tmp.begin(); it != tmp.end(); it++) {
+        if (current_face_1 == (*it)->face2()) {
+          found          = true;
+          current_face_1 = (*it)->face1();
+          insert_front(it);
+          break;
+        } else if (current_face_1 == (*it)->face1()) {
+          found = true;
+          (*it)->swap_faces();
+          current_face_1 = (*it)->face1();
+          insert_front(it);
+          break;
+        } else if (current_face_2 == (*it)->face2()) {
+          found = true;
+          (*it)->swap_faces();
+          current_face_2 = (*it)->face2();
+          insert_back(it);
+          break;
+        } else if (current_face_2 == (*it)->face1()) {
+          found          = true;
+          current_face_2 = (*it)->face2();
+          insert_back(it);
+          break;
+        }
+      }
+
+      if (found == false) {
+        UFW_ERROR("Module disconnected: At least one shape element has not faces in common");
+      }
+    }
   };
 
   //////////////////////////////////////////////////////
