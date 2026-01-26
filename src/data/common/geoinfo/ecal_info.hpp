@@ -45,8 +45,9 @@ namespace sand {
       // bool is_straight(shape_element_face other) const;
       // bool is_curved(shape_element_face other) const;
 
-      inline dir_3d side(size_t idx) const { return idx == 3 ? vtx(3) - vtx(0) : vtx(idx) - vtx(idx + 1); };
-      inline const pos_3d& vtx(std::size_t i) const { return v_[i]; };
+      inline dir_3d side(size_t idx) const { return vtx(idx) - vtx(idx + 1); };
+      inline const std::vector<pos_3d>& vtx() const { return v_; };
+      inline const pos_3d& vtx(std::size_t i) const { return v_[i % 4]; };
       inline const dir_3d& normal() const { return normal_; };
       inline const pos_3d& centroid() const { return centroid_; };
 
@@ -80,9 +81,14 @@ namespace sand {
       inline const dir_3d& axis_dir() const { return axis_dir_; };
       inline const shape_element_face& face1() const { return face1_; };
       inline const shape_element_face& face2() const { return face2_; };
+      const shape_element_face& face(size_t face_id) const;
       inline const shape_element_type type() const { return type_; };
-      pos_3d to_face_point(const pos_3d& p, size_t face_id) const;
-      double to_face_pathlength(const pos_3d& p, size_t faceid) const;
+      double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const;
+      pos_3d to_face(const pos_3d& p, size_t face_id) const;
+      shape_element_face to_face(const shape_element_face& f, size_t face_id) const {
+        return shape_element_face(to_face(f.vtx(0), face_id), to_face(f.vtx(1), face_id), to_face(f.vtx(2), face_id),
+                                  to_face(f.vtx(3), face_id));
+      };
       void swap_faces() {
         std::swap(face1_, face2_);
         axis_dir_ *= -1;
@@ -95,34 +101,74 @@ namespace sand {
 
     enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
     using module_t = uint8_t;
-    using plane_t  = uint8_t;
+    using row_t    = uint8_t;
     using column_t = uint8_t;
 
-    struct cell_id {
-      uint8_t reserved___0;
+    struct module_id {
       subdetector_t subdetector;
-      module_t region;
-      plane_t supermodule;
-      column_t element;
-      uint8_t padding___1[3];
+      module_t module;
+    };
+
+    struct cell_id {
+      module_id module;
+      row_t row;
+      column_t column;
     };
 
     struct cell {
      public:
-      cell_id id;
-      fiber fib;
-      std::vector<shape_element> elements;
+      cell() = delete;
+      cell(cell_id id, const fiber& f) : id_(id), fib_(f) {};
+      void add(const shape_element& el) { elements_.push_back(el); };
+      inline const shape_element& at(size_t idx) const { return elements_.at(idx); };
+      inline size_t size() const { return elements_.size(); };
+      const fiber& get_fiber() const { return fib_; };
+      cell_id id() const { return id_; };
+
+     private:
+      cell_id id_;
+      fiber fib_;
+      std::vector<shape_element> elements_;
     };
 
+    using cell_ref = std::vector<cell>::const_iterator;
+
     struct module {
+     private:
+      module_id id_;
+      std::vector<shape_element> elements_;
+
+      struct grid {
+       private:
+        std::vector<pos_3d> nodes_;
+        size_t nrow_;
+        size_t ncol_;
+
+       public:
+        grid() = delete;
+        grid(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4, const std::vector<double>& div12,
+             const std::vector<double>& div14);
+        shape_element_face face(size_t irow, size_t icol);
+        inline size_t nrow() { return nrow_; };
+        inline size_t ncol() { return ncol_; };
+
+       private:
+        inline pos_3d& node(size_t irow, size_t icol) { return nodes_[irow + nrow_ * icol]; };
+      };
+
      public:
-      std::vector<cell> construct_cells();
+      module() = delete;
+      module(module_id id) :id_(id) {};
+      inline module_id id() const { return id_; };
       inline void add(const shape_element& el) { elements_.push_back(el); };
-      inline const shape_element& at(size_t idx) { return elements_.at(idx); };
+      inline const shape_element& at(size_t idx) const { return elements_.at(idx); };
+      inline size_t size() const { return elements_.size(); };
+      void construct_cells(std::vector<geoinfo::ecal_info::cell>& cells);
 
      private:
       void order_elements();
-      std::vector<shape_element> elements_;
+      cell construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const;
+      grid construct_grid() const;
     };
 
    public:
@@ -135,11 +181,9 @@ namespace sand {
     using subdetector_info::path;
 
     geo_id id(const geo_path&) const override;
-
     geo_path path(geo_id) const override;
 
    private:
-    using cell_ref = std::vector<cell>::const_iterator;
     std::map<geo_id, std::vector<cell_ref>> m_cell_map;
     std::vector<cell> m_cells;
     static inline const std::regex re_ecal_barrel_module{"/ECAL_lv_PV_(\\d+)$"};
@@ -150,6 +194,7 @@ namespace sand {
         "endvolECAL(curv|straight|)ActiveSlab_(\\d+)(_|)(\\d+)_PV_(\\d+)$"};
 
    private:
+    static module_id to_module_id(const geo_path& path);
     void find_pattern(const geo_path& path);
     void endcap_module_cells(const geo_path& path);
     void barrel_module_cells(const geo_path& path);
