@@ -3,6 +3,20 @@
 #include <geoinfo/subdetector_info.hpp>
 #include <regex>
 
+// construct_cells(std::vector<cell>& cells, map<cell_id, cell_ref>)
+
+// in barrel_module_cells loop over nodes
+//   -> find active volume
+//     -> get geo_id
+//       -> get region      : i.e. barrel, endcap_A, endcap_B
+//       -> get supermodule : i.e. module
+//       -> get plane       : i.e. plane
+//       -> construct vector of cell_red
+//       -> loop over column while it is no more found and construct cell: i.e module, row, column
+//         -> get cell_ref from cell_id using the map
+//         -> add cell_ref
+//       -> add vector to the map<geo_id, vector<cell_ref>>
+
 namespace sand {
 
   class geoinfo::ecal_info : public subdetector_info {
@@ -81,6 +95,7 @@ namespace sand {
       inline const shape_element_face& face2() const { return face2_; };
       inline const shape_element_face& face(size_t face_id) const { return face_id % 2 == 0 ? face2() : face1(); };
       inline const shape_element_type type() const { return type_; };
+      // virtual bool is_inside(const pos_3d& p) const = 0;
 
      private:
       virtual double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const             = 0;
@@ -103,6 +118,7 @@ namespace sand {
     struct shape_element_straight : public shape_element_base {
      public:
       shape_element_straight(const shape_element_face& f1, const shape_element_face& f2);
+      // bool is_inside(const pos_3d& p) const;
 
      private:
       double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const override;
@@ -118,6 +134,7 @@ namespace sand {
     struct shape_element_curved : public shape_element_base {
      public:
       shape_element_curved(const shape_element_face& f1, const shape_element_face& f2);
+      // bool is_inside(const pos_3d& p) const;
 
      private:
       double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const override;
@@ -148,14 +165,25 @@ namespace sand {
     using column_t = uint8_t;
 
     struct module_id {
-      subdetector_t subdetector;
-      module_t module;
+      union {
+        struct {
+          subdetector_t subdetector;
+          module_t module;
+        };
+        uint16_t raw = -1;
+      };
     };
 
     struct cell_id {
-      module_id module;
-      row_t row;
-      column_t column;
+      union {
+        struct {
+          subdetector_t subdetector;
+          module_t module;
+          row_t row;
+          column_t column;
+        };
+        uint32_t raw = -1;
+      };
     };
 
     struct cell {
@@ -166,6 +194,16 @@ namespace sand {
       inline const shape_element_collection& element_collection() const { return el_collection_; };
       inline const fiber& get_fiber() const { return fib_; };
       inline cell_id id() const { return id_; };
+      // bool is_inside(const pos_3d& p) const {
+      //   for (const auto& el : element_collection().elements())
+      //     if (el->is_inside(p))
+      //       return true;
+      //   return false;
+      // };
+      // double pathlength(const pos_3d& p, size_t face_id) const;
+      // double attenuation(const pos_3d& p, size_t face_id) const;
+      // pos_3d offset2position(double pathlength_from_center) const;
+      // double total_pathlength() const;
 
      private:
       cell_id id_;
@@ -200,7 +238,7 @@ namespace sand {
       inline module_id id() const { return id_; };
       void add(const p_shape_element_base& el) { el_collection_.add(el); };
       inline const shape_element_collection& element_collection() const { return el_collection_; };
-      void construct_cells(std::vector<geoinfo::ecal_info::cell>& cells);
+      void construct_cells(std::vector<cell>& cells, std::map<cell_id, cell_ref>& m);
 
      private:
       cell construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const;
@@ -213,9 +251,7 @@ namespace sand {
 
    public:
     ecal_info(const geoinfo&);
-
     virtual ~ecal_info();
-
     const cell& at(pos_3d);
 
     using subdetector_info::path;
@@ -224,7 +260,7 @@ namespace sand {
     geo_path path(geo_id) const override;
 
    private:
-    std::map<geo_id, std::vector<cell_ref>> m_cell_map;
+    std::map<geo_id, std::vector<cell_ref>> m_cells_map;
     std::vector<cell> m_cells;
     static inline const std::regex re_ecal_barrel_module{"/ECAL_lv_PV_(\\d+)$"};
     static inline const std::regex re_ecal_endcap_module{"/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)$"};
@@ -235,9 +271,10 @@ namespace sand {
 
    private:
     static module_id to_module_id(const geo_path& path);
-    void find_pattern(const geo_path& path);
-    void endcap_module_cells(const geo_path& path);
-    void barrel_module_cells(const geo_path& path);
+    void find_modules(const geo_path& path);
+    void find_active_volumes(const geo_path& path, const std::regex& re, const std::map<cell_id, cell_ref>& cells_map);
+    void endcap_module_cells(const geo_path& path, std::map<cell_id, cell_ref>& cells_map);
+    void barrel_module_cells(const geo_path& path, std::map<cell_id, cell_ref>& cells_map);
   };
 
 } // namespace sand

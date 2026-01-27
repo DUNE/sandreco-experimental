@@ -21,6 +21,7 @@ namespace sand {
   using grid                     = geoinfo::ecal_info::module::grid;
   using module                   = geoinfo::ecal_info::module;
   using cell                     = geoinfo::ecal_info::cell;
+  using cell_id                  = geoinfo::ecal_info::cell_id;
 
   using p_shape_element_base = std::shared_ptr<shape_element_base>;
   using el_vec               = std::vector<p_shape_element_base>;
@@ -29,6 +30,12 @@ namespace sand {
   //////////////////////////////////////////////////////
   // stuff
   //////////////////////////////////////////////////////
+
+  // Equality operator
+  inline bool operator== (cell_id lhs, cell_id rhs) { return lhs.raw == rhs.raw; }
+
+  // Less-than operator for ordering
+  inline bool operator< (cell_id lhs, cell_id rhs) { return lhs.raw < rhs.raw; }
 
   namespace {
     constexpr double ktolerance(1e-10);
@@ -142,7 +149,6 @@ namespace sand {
       auto r2 = r_wrt_axis(p2, l_pos, l_dir);
       return TMath::ACos(r1.Dot(r2) / (r1.R() * r2.R()));
     }
-
   } // namespace
 
   //////////////////////////////////////////////////////
@@ -380,7 +386,7 @@ namespace sand {
   // geoinfo::ecal_info::module
   //////////////////////////////////////////////////////
 
-  void module::construct_cells(std::vector<cell>& cells) {
+  void module::construct_cells(std::vector<cell>& cells, std::map<cell_id, cell_ref>& cells_map) {
     el_collection_.order_elements();
     auto grid = construct_grid();
     geoinfo::ecal_info::fiber* fib;
@@ -400,11 +406,13 @@ namespace sand {
           break;
         }
         geoinfo::ecal_info::cell_id cid;
-        cid.module = id();
-        cid.row    = irow;
-        cid.column = icol;
-        auto f     = grid.face(irow, icol);
+        cid.subdetector = id().subdetector;
+        cid.module      = id().module;
+        cid.row         = irow;
+        cid.column      = icol;
+        auto f          = grid.face(irow, icol);
         cells.push_back(construct_cell(f, cid, *fib));
+        cells_map[cid] = --cells.end();
       }
   };
 
@@ -485,7 +493,7 @@ namespace sand {
   //////////////////////////////////////////////////////
 
   geoinfo::ecal_info::ecal_info(const geoinfo& gi) : subdetector_info(gi, "kloe_calo_volume_PV_0") {
-    find_pattern(gi.root_path() / path());
+    find_modules(gi.root_path() / path());
   }
 
   geoinfo::ecal_info::~ecal_info() = default;
@@ -588,18 +596,53 @@ namespace sand {
     return gp;
   }
 
-  void geoinfo::ecal_info::find_pattern(const geo_path& path) {
+  void geoinfo::ecal_info::find_modules(const geo_path& path) {
     std::smatch m;
     if (regex_search(path, m, re_ecal_barrel_module)) {
-      barrel_module_cells(path);
+      std::map<cell_id, cell_ref> cells_map;
+      barrel_module_cells(path, cells_map);
+      find_active_volumes(path, re_ecal_barrel_sensible_volume, cells_map);
       return;
     } else if (regex_search(path, m, re_ecal_endcap_module)) {
-      endcap_module_cells(path);
+      std::map<cell_id, cell_ref> cells_map;
+      endcap_module_cells(path, cells_map);
+      find_active_volumes(path, re_ecal_endcap_sensible_volume, cells_map);
       return;
     } else {
       auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
       nav->cd(path);
-      nav->for_each_node([&](auto node) { find_pattern(path / std::string(node->GetName())); });
+      nav->for_each_node([&](auto node) { find_modules(path / std::string(node->GetName())); });
+    }
+  }
+
+  void geoinfo::ecal_info::find_active_volumes(const geo_path& path, const std::regex& re,
+                                               const std::map<cell_id, cell_ref>& cells_map) {
+    std::smatch m;
+    if (regex_search(path, m, re)) {
+      auto gid = id(path);
+      cell_id cid;
+      cid.subdetector = geoinfo::ecal_info::subdetector_t(gid.ecal.subdetector);
+      cid.module      = geoinfo::ecal_info::module_t(gid.ecal.supermodule);
+      if (gid.ecal.plane < uint8_t(40))
+        cid.row = uint8_t(0);
+      else if (gid.ecal.plane < uint8_t(80))
+        cid.row = uint8_t(1);
+      else if (gid.ecal.plane < uint8_t(120))
+        cid.row = uint8_t(2);
+      else if (gid.ecal.plane < uint8_t(160))
+        cid.row = uint8_t(3);
+      else
+        cid.row = uint8_t(4);
+      cid.column = 0;
+      while (cells_map.count(cid)) {
+        m_cells_map[gid].push_back(cells_map.at(cid));
+        cid.column += 1;
+      }
+      return;
+    } else {
+      auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
+      nav->cd(path);
+      nav->for_each_node([&](auto node) { find_active_volumes(path / std::string(node->GetName()), re, cells_map); });
     }
   }
 
@@ -619,7 +662,7 @@ namespace sand {
     return mid;
   }
 
-  void geoinfo::ecal_info::endcap_module_cells(const geo_path& path) {
+  void geoinfo::ecal_info::endcap_module_cells(const geo_path& path, std::map<cell_id, cell_ref>& cells_map) {
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
     module m(to_module_id(path));
@@ -639,10 +682,10 @@ namespace sand {
         UFW_ERROR(fmt::format("Unexpected shape: {}", shape->GetName()));
       }
     });
-    m.construct_cells(m_cells);
+    m.construct_cells(m_cells, cells_map);
   }
 
-  void geoinfo::ecal_info::barrel_module_cells(const geo_path& path) {
+  void geoinfo::ecal_info::barrel_module_cells(const geo_path& path, std::map<cell_id, cell_ref>& cells_map) {
     module m(to_module_id(path));
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
@@ -652,6 +695,6 @@ namespace sand {
     auto el         = trd2_to_shape_element(static_cast<TGeoTrd2*>(shape));
     el->transform(transf);
     m.add(el);
-    m.construct_cells(m_cells);
+    m.construct_cells(m_cells, cells_map);
   }
 } // namespace sand
