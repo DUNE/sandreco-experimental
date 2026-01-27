@@ -67,43 +67,6 @@ namespace sand {
     class module;
     class shape_element_collection;
 
-    struct shape_element {
-     private:
-      shape_element_face face1_;
-      shape_element_face face2_;
-      pos_3d axis_pos_;
-      dir_3d axis_dir_;
-      shape_element_type type_;
-
-     public:
-      shape_element() = delete;
-      shape_element(const shape_element_face& f1, const shape_element_face& f2);
-
-      void transform(const xform_3d& transf);
-      inline const pos_3d& axis_pos() const { return axis_pos_; };
-      inline const dir_3d& axis_dir() const { return axis_dir_; };
-      inline const shape_element_face& face1() const { return face1_; };
-      inline const shape_element_face& face2() const { return face2_; };
-      inline const shape_element_face& face(size_t face_id) const { return face_id % 2 == 0 ? face2() : face1(); };
-      inline const shape_element_type type() const { return type_; };
-
-     private:
-      bool straight();
-      bool curved();
-      double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const;
-      pos_3d to_face(const pos_3d& p, size_t face_id) const;
-      shape_element_face to_face(const shape_element_face& f, size_t face_id) const {
-        return shape_element_face(to_face(f.vtx(0), face_id), to_face(f.vtx(1), face_id), to_face(f.vtx(2), face_id),
-                                  to_face(f.vtx(3), face_id));
-      };
-      void swap_faces() {
-        std::swap(face1_, face2_);
-        axis_dir_ *= -1;
-      };
-
-      friend class module;
-    };
-
     struct shape_element_base {
       shape_element_face face1_;
       shape_element_face face2_;
@@ -135,6 +98,7 @@ namespace sand {
       };
 
       friend class shape_element_collection;
+      friend class module;
     };
 
     struct shape_element_straight : public shape_element_base {
@@ -169,11 +133,10 @@ namespace sand {
 
     struct shape_element_collection {
      private:
-      std::vector<std::unique_ptr<shape_element_base>> elements_;
+      std::vector<std::shared_ptr<shape_element_base>> elements_;
 
      public:
-      void add(const shape_element_straight& el) { elements_.push_back(std::make_unique<shape_element_straight>(el)); };
-      void add(const shape_element_curved& el) { elements_.push_back(std::make_unique<shape_element_curved>(el)); };
+      void add(const std::shared_ptr<shape_element_base>& el) { elements_.push_back(el); };
       inline const shape_element_base& at(size_t idx) const { return *(elements_.at(idx)); };
       inline size_t size() const { return elements_.size(); };
       void order_elements();
@@ -199,25 +162,20 @@ namespace sand {
      public:
       cell() = delete;
       cell(cell_id id, const fiber& f) : id_(id), fib_(f) {};
-      void add(const shape_element& el) { elements_.push_back(el); };
-      inline const shape_element& at(size_t idx) const { return elements_.at(idx); };
-      inline size_t size() const { return elements_.size(); };
-      const fiber& get_fiber() const { return fib_; };
-      cell_id id() const { return id_; };
+      void add(const std::shared_ptr<shape_element_base>& el) { el_collection_.add(el); };
+      inline const shape_element_collection& elements() const { return el_collection_; };
+      inline const fiber& get_fiber() const { return fib_; };
+      inline cell_id id() const { return id_; };
 
      private:
       cell_id id_;
       fiber fib_;
-      std::vector<shape_element> elements_;
+      shape_element_collection el_collection_;
     };
 
     using cell_ref = std::vector<cell>::const_iterator;
 
     struct module {
-     private:
-      module_id id_;
-      std::vector<shape_element> elements_;
-
       struct grid {
        private:
         std::vector<pos_3d> nodes_;
@@ -240,15 +198,17 @@ namespace sand {
       module() = delete;
       module(module_id id) :id_(id) {};
       inline module_id id() const { return id_; };
-      inline void add(const shape_element& el) { elements_.push_back(el); };
-      inline const shape_element& at(size_t idx) const { return elements_.at(idx); };
-      inline size_t size() const { return elements_.size(); };
+      void add(const std::shared_ptr<shape_element_base>& el) { el_collection_.add(el); };
+      inline const shape_element_collection& elements() const { return el_collection_; };
       void construct_cells(std::vector<geoinfo::ecal_info::cell>& cells);
 
      private:
-      void order_elements();
       cell construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const;
       grid construct_grid() const;
+
+     private:
+      module_id id_;
+      shape_element_collection el_collection_;
     };
 
    public:
