@@ -40,10 +40,6 @@ namespace sand {
       shape_element_face() = delete;
       shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
       bool operator== (const shape_element_face& other) const;
-      inline bool operator!= (const shape_element_face& other) const { return !(*this == other); };
-      inline const shape_element_face& operator* (const xform_3d& transf) const {
-        return *(new shape_element_face(transf * vtx(0), transf * vtx(1), transf * vtx(2), transf * vtx(3)));
-      };
       const shape_element_face& transform(const xform_3d& transf);
 
       inline dir_3d side(size_t idx) const { return vtx(idx) - vtx(idx + 1); };
@@ -72,7 +68,6 @@ namespace sand {
       shape_element_face face2_;
       pos_3d axis_pos_;
       dir_3d axis_dir_;
-      // consider to remove
       shape_element_type type_;
 
      public:
@@ -100,6 +95,10 @@ namespace sand {
       friend class shape_element_collection;
       friend class module;
     };
+
+    using p_shape_element_base = std::shared_ptr<shape_element_base>;
+    using el_vec               = std::vector<p_shape_element_base>;
+    using el_vec_it            = std::vector<p_shape_element_base>::iterator;
 
     struct shape_element_straight : public shape_element_base {
      public:
@@ -133,10 +132,11 @@ namespace sand {
 
     struct shape_element_collection {
      private:
-      std::vector<std::shared_ptr<shape_element_base>> elements_;
+      std::vector<p_shape_element_base> elements_;
 
      public:
-      void add(const std::shared_ptr<shape_element_base>& el) { elements_.push_back(el); };
+      inline const std::vector<p_shape_element_base>& elements() const { return elements_; };
+      void add(const p_shape_element_base& el) { elements_.push_back(el); };
       inline const shape_element_base& at(size_t idx) const { return *(elements_.at(idx)); };
       inline size_t size() const { return elements_.size(); };
       void order_elements();
@@ -162,8 +162,8 @@ namespace sand {
      public:
       cell() = delete;
       cell(cell_id id, const fiber& f) : id_(id), fib_(f) {};
-      void add(const std::shared_ptr<shape_element_base>& el) { el_collection_.add(el); };
-      inline const shape_element_collection& elements() const { return el_collection_; };
+      void add(const p_shape_element_base& el) { el_collection_.add(el); };
+      inline const shape_element_collection& element_collection() const { return el_collection_; };
       inline const fiber& get_fiber() const { return fib_; };
       inline cell_id id() const { return id_; };
 
@@ -198,8 +198,8 @@ namespace sand {
       module() = delete;
       module(module_id id) :id_(id) {};
       inline module_id id() const { return id_; };
-      void add(const std::shared_ptr<shape_element_base>& el) { el_collection_.add(el); };
-      inline const shape_element_collection& elements() const { return el_collection_; };
+      void add(const p_shape_element_base& el) { el_collection_.add(el); };
+      inline const shape_element_collection& element_collection() const { return el_collection_; };
       void construct_cells(std::vector<geoinfo::ecal_info::cell>& cells);
 
      private:

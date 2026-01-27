@@ -3,10 +3,7 @@
 #include <ufw/context.hpp>
 #include <boost/range/combine.hpp>
 
-// #include <TGeoBoolNode.h>
-// #include <TGeoCompositeShape.h>
 #include <Math/AxisAngle.h>
-// #include <Math/GenVector/3DConversions.h>
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
 #include <TMath.h>
@@ -16,6 +13,19 @@ namespace sand {
   using rot_ang = ROOT::Math::AxisAngle;
   using trl_3d  = ROOT::Math::Translation3D;
 
+  using shape_element_face       = geoinfo::ecal_info::shape_element_face;
+  using shape_element_base       = geoinfo::ecal_info::shape_element_base;
+  using shape_element_straight   = geoinfo::ecal_info::shape_element_straight;
+  using shape_element_curved     = geoinfo::ecal_info::shape_element_curved;
+  using shape_element_collection = geoinfo::ecal_info::shape_element_collection;
+  using grid                     = geoinfo::ecal_info::module::grid;
+  using module                   = geoinfo::ecal_info::module;
+  using cell                     = geoinfo::ecal_info::cell;
+
+  using p_shape_element_base = std::shared_ptr<shape_element_base>;
+  using el_vec               = std::vector<p_shape_element_base>;
+  using el_vec_it            = std::vector<p_shape_element_base>::iterator;
+
   //////////////////////////////////////////////////////
   // stuff
   //////////////////////////////////////////////////////
@@ -24,6 +34,10 @@ namespace sand {
     constexpr double ktolerance(1e-10);
     constexpr pos_3d orig(0., 0., 0.);
     inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
+
+    inline const shape_element_face& operator* (const xform_3d& transf, const shape_element_face& f) {
+      return *(new shape_element_face(transf * f.vtx(0), transf * f.vtx(1), transf * f.vtx(2), transf * f.vtx(3)));
+    };
 
     xform_3d to_xform_3d(const TGeoHMatrix& mat) {
       const Double_t* r = mat.GetRotationMatrix();
@@ -35,14 +49,11 @@ namespace sand {
       return xform_3d(rotation, translation);
     }
 
-    bool is_straight(const geoinfo::ecal_info::shape_element_face& f1,
-                     const geoinfo::ecal_info::shape_element_face& f2) {
-      UFW_DEBUG("Checking if shape_element is straight");
-      return f1 == f2 * xform_3d(f1.centroid() - f2.centroid());
+    bool is_straight(const shape_element_face& f1, const shape_element_face& f2) {
+      return f1 == xform_3d(f1.centroid() - f2.centroid()) * f2;
     }
 
-    bool is_curved(const geoinfo::ecal_info::shape_element_face& f1, const geoinfo::ecal_info::shape_element_face& f2) {
-      UFW_DEBUG("Checking if shape_element is curved");
+    bool is_curved(const shape_element_face& f1, const shape_element_face& f2) {
       auto h1  = f1.normal().Dot(f1.centroid());
       auto h2  = f2.normal().Dot(f2.centroid());
       auto dpr = f1.normal().Dot(f2.normal());
@@ -65,22 +76,20 @@ namespace sand {
       trl_3d fromOrigin(axis_pos);
       xform_3d fullTransform = fromOrigin * rotation * toOrigin;
 
-      return f1 == f2 * fullTransform;
+      return f1 == fullTransform * f2;
     }
 
-    std::shared_ptr<geoinfo::ecal_info::shape_element_base>
-    construct_shape_element(const geoinfo::ecal_info::shape_element_face& f1,
-                            const geoinfo::ecal_info::shape_element_face& f2) {
+    p_shape_element_base construct_shape_element(const shape_element_face& f1, const shape_element_face& f2) {
       if (is_straight(f1, f2)) {
-        return std::make_shared<geoinfo::ecal_info::shape_element_straight>(f1, f2);
+        return std::make_shared<shape_element_straight>(f1, f2);
       } else if (is_curved(f1, f2)) {
-        return std::make_shared<geoinfo::ecal_info::shape_element_curved>(f1, f2);
+        return std::make_shared<shape_element_curved>(f1, f2);
       } else {
         UFW_EXCEPT(std::invalid_argument, "cell_element: Neither a straight element nor a curved element!!");
       }
     }
 
-    std::shared_ptr<geoinfo::ecal_info::shape_element_base> tube_to_shape_element(TGeoTubeSeg* tube) {
+    p_shape_element_base tube_to_shape_element(TGeoTubeSeg* tube) {
       auto rmin = tube->GetRmin();
       auto rmax = tube->GetRmax();
       auto dz   = tube->GetDz();
@@ -88,7 +97,7 @@ namespace sand {
       auto phi2 = tube->GetPhi2();
 
       auto to_shape_element_face = [&](double phi) {
-        return geoinfo::ecal_info::shape_element_face(
+        return shape_element_face(
             pos_3d(rmin * std::cos(phi * TMath::DegToRad()), rmin * std::sin(phi * TMath::DegToRad()), dz),
             pos_3d(rmin * std::cos(phi * TMath::DegToRad()), rmin * std::sin(phi * TMath::DegToRad()), -dz),
             pos_3d(rmax * std::cos(phi * TMath::DegToRad()), rmax * std::sin(phi * TMath::DegToRad()), -dz),
@@ -97,29 +106,27 @@ namespace sand {
       return construct_shape_element(to_shape_element_face(phi1), to_shape_element_face(phi2));
     }
 
-    std::shared_ptr<geoinfo::ecal_info::shape_element_base> box_to_shape_element(TGeoBBox* box) {
+    p_shape_element_base box_to_shape_element(TGeoBBox* box) {
       auto dx = box->GetDX();
       auto dy = box->GetDY();
       auto dz = box->GetDZ();
 
-      return construct_shape_element(geoinfo::ecal_info::shape_element_face(pos_3d(-dx, -dy, dz), pos_3d(-dx, -dy, -dz),
-                                                                            pos_3d(dx, -dy, -dz), pos_3d(dx, -dy, dz)),
-                                     geoinfo::ecal_info::shape_element_face(pos_3d(-dx, dy, dz), pos_3d(-dx, dy, -dz),
-                                                                            pos_3d(dx, dy, -dz), pos_3d(dx, dy, dz)));
+      return construct_shape_element(
+          shape_element_face(pos_3d(-dx, -dy, dz), pos_3d(-dx, -dy, -dz), pos_3d(dx, -dy, -dz), pos_3d(dx, -dy, dz)),
+          shape_element_face(pos_3d(-dx, dy, dz), pos_3d(-dx, dy, -dz), pos_3d(dx, dy, -dz), pos_3d(dx, dy, dz)));
     }
 
-    std::shared_ptr<geoinfo::ecal_info::shape_element_base> trd2_to_shape_element(TGeoTrd2* trd) {
+    p_shape_element_base trd2_to_shape_element(TGeoTrd2* trd) {
       auto dx1 = trd->GetDx1();
       auto dx2 = trd->GetDx2();
       auto dy1 = trd->GetDy1();
       auto dy2 = trd->GetDy2();
       auto dz  = trd->GetDz();
 
-      return construct_shape_element(
-          geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, -dy1, -dz), pos_3d(dx1, -dy1, -dz), pos_3d(dx2, -dy1, dz),
-                                                 pos_3d(-dx2, -dy1, dz)),
-          geoinfo::ecal_info::shape_element_face(pos_3d(-dx1, dy1, -dz), pos_3d(dx1, dy1, -dz), pos_3d(dx2, dy1, dz),
-                                                 pos_3d(-dx2, dy1, dz)));
+      return construct_shape_element(shape_element_face(pos_3d(-dx1, -dy1, -dz), pos_3d(dx1, -dy1, -dz),
+                                                        pos_3d(dx2, -dy1, dz), pos_3d(-dx2, -dy1, dz)),
+                                     shape_element_face(pos_3d(-dx1, dy1, -dz), pos_3d(dx1, dy1, -dz),
+                                                        pos_3d(dx2, dy1, dz), pos_3d(-dx2, dy1, dz)));
     }
 
     inline dir_3d r_wrt_axis(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
@@ -142,7 +149,7 @@ namespace sand {
   // geoinfo::ecal_info::shape_element_face
   //////////////////////////////////////////////////////
 
-  bool geoinfo::ecal_info::shape_element_face::are_points_coplanar() const {
+  bool shape_element_face::are_points_coplanar() const {
     // Check coplanarity: four points are coplanar if the scalar triple product is zero
     // (p2-p1) · ((p3-p1) × (p4-p1)) = 0
     dir_3d u              = (vtx(1) - vtx(0)).Unit();
@@ -152,8 +159,7 @@ namespace sand {
     return is_zero_within_tolerance(triple_product);
   }
 
-  geoinfo::ecal_info::shape_element_face::shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3,
-                                                             const pos_3d& p4)
+  shape_element_face::shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4)
     : v_{p1, p2, p3, p4} {
     UFW_ASSERT(are_points_coplanar(), std::string("cell_face: four points are not coplanar"));
 
@@ -164,7 +170,7 @@ namespace sand {
     normal_  = u.Cross(w).Unit();
   }
 
-  bool geoinfo::ecal_info::shape_element_face::operator== (const shape_element_face& other) const {
+  bool shape_element_face::operator== (const shape_element_face& other) const {
     auto mycopy_for = other;
     auto mycopy_rev = other;
     std::reverse(mycopy_rev.v_.begin(), mycopy_rev.v_.end());
@@ -188,8 +194,7 @@ namespace sand {
     return false;
   }
 
-  const geoinfo::ecal_info::shape_element_face&
-  geoinfo::ecal_info::shape_element_face::transform(const xform_3d& transf) {
+  const shape_element_face& shape_element_face::transform(const xform_3d& transf) {
     std::for_each(v_.begin(), v_.end(), [&](pos_3d& p) { p = transf * p; });
     centroid_ = transf * centroid();
     normal_   = transf * normal();
@@ -200,7 +205,7 @@ namespace sand {
   // geoinfo::ecal_info::shape_element_base
   //////////////////////////////////////////////////////
 
-  void geoinfo::ecal_info::shape_element_base::transform(const xform_3d& transf) {
+  void shape_element_base::transform(const xform_3d& transf) {
     face1_.transform(transf);
     face2_.transform(transf);
     axis_pos_ = transf * axis_pos();
@@ -211,21 +216,20 @@ namespace sand {
   // geoinfo::ecal_info::shape_element_straight
   //////////////////////////////////////////////////////
 
-  geoinfo::ecal_info::shape_element_straight::shape_element_straight(const geoinfo::ecal_info::shape_element_face& f1,
-                                                                     const geoinfo::ecal_info::shape_element_face& f2)
+  shape_element_straight::shape_element_straight(const shape_element_face& f1, const shape_element_face& f2)
     : shape_element_base(f1, f2) {
     type_     = shape_element_type::straight;
     axis_pos_ = face1().centroid();
     axis_dir_ = face2().centroid() - face1().centroid();
   };
 
-  pos_3d geoinfo::ecal_info::shape_element_straight::to_face(const pos_3d& p, size_t face_id) const {
+  pos_3d shape_element_straight::to_face(const pos_3d& p, size_t face_id) const {
     auto& f = face(face_id);
     trl_3d fullTransform(f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir());
     return fullTransform * p;
   };
 
-  double geoinfo::ecal_info::shape_element_straight::to_face(const pos_3d& p1, size_t face_id, pos_3d& p2) const {
+  double shape_element_straight::to_face(const pos_3d& p1, size_t face_id, pos_3d& p2) const {
     p2 = to_face(p1, face_id);
     if (!is_zero_within_tolerance(axis_dir().Cross(p1 - p2).R())) {
       UFW_ERROR(fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
@@ -238,8 +242,7 @@ namespace sand {
   // geoinfo::ecal_info::shape_element_curved
   //////////////////////////////////////////////////////
 
-  geoinfo::ecal_info::shape_element_curved::shape_element_curved(const geoinfo::ecal_info::shape_element_face& f1,
-                                                                 const geoinfo::ecal_info::shape_element_face& f2)
+  shape_element_curved::shape_element_curved(const shape_element_face& f1, const shape_element_face& f2)
     : shape_element_base(f1, f2) {
     auto h1   = face1().normal().Dot(face1().centroid());
     auto h2   = face2().normal().Dot(face2().centroid());
@@ -252,7 +255,7 @@ namespace sand {
     type_     = shape_element_type::curved;
   };
 
-  pos_3d geoinfo::ecal_info::shape_element_curved::to_face(const pos_3d& p, size_t face_id) const {
+  pos_3d shape_element_curved::to_face(const pos_3d& p, size_t face_id) const {
     auto& f  = face(face_id);
     auto ang = ang_wrt_axis(p, f.centroid(), axis_pos(), axis_dir());
     rot_ang rotation(axis_dir(), -ang);
@@ -262,7 +265,7 @@ namespace sand {
     return fullTransform * p;
   };
 
-  double geoinfo::ecal_info::shape_element_curved::to_face(const pos_3d& p1, size_t face_id, pos_3d& p2) const {
+  double shape_element_curved::to_face(const pos_3d& p1, size_t face_id, pos_3d& p2) const {
     p2      = to_face(p1, face_id);
     auto r1 = r_wrt_axis(p1, axis_pos(), axis_dir());
     auto r2 = r_wrt_axis(p2, axis_pos(), axis_dir());
@@ -280,12 +283,9 @@ namespace sand {
   // geoinfo::ecal_info::shape_element_collection
   //////////////////////////////////////////////////////
 
-  void geoinfo::ecal_info::shape_element_collection::order_elements() {
+  void shape_element_collection::order_elements() {
     if (elements_.size() == 1)
       return;
-
-    using el_vec    = std::vector<std::shared_ptr<shape_element_base>>;
-    using el_vec_it = std::vector<std::shared_ptr<shape_element_base>>::iterator;
 
     el_vec tmp;
     tmp.swap(elements_);
@@ -341,8 +341,8 @@ namespace sand {
   // geoinfo::ecal_info::module::grid
   //////////////////////////////////////////////////////
 
-  geoinfo::ecal_info::module::grid::grid(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4,
-                                         const std::vector<double>& div12, const std::vector<double>& div14) {
+  grid::grid(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4, const std::vector<double>& div12,
+             const std::vector<double>& div14) {
     nrow_          = div12.size();
     ncol_          = div14.size();
     nodes_         = std::vector<pos_3d>((ncol_ + 1) * (nrow_ + 1));
@@ -362,26 +362,25 @@ namespace sand {
     auto scale14 = cumulnorm(div14);
 
     auto create_node = [&](size_t i12, size_t i14) {
-      auto pt1 = p1 + scale12[i12] * (p2 - p1);
-      auto pt2 = p4 + scale12[i12] * (p3 - p4);
-      return pt1 + scale14[i14] * (pt2 - pt1);
+      auto pt1       = p1 + scale12[i12] * (p2 - p1);
+      auto pt2       = p4 + scale12[i12] * (p3 - p4);
+      node(i12, i14) = pt1 + scale14[i14] * (pt2 - pt1);
     };
 
     for (size_t i12 = 0; i12 <= nrow_; i12++)
       for (size_t i14 = 0; i14 <= ncol_; i14++)
-        node(i12, i14) = create_node(i12, i14);
+        create_node(i12, i14);
   };
 
-  geoinfo::ecal_info::shape_element_face geoinfo::ecal_info::module::grid::face(size_t irow, size_t icol) {
-    return geoinfo::ecal_info::shape_element_face(node(irow, icol), node(irow + 1, icol), node(irow + 1, icol + 1),
-                                                  node(irow, icol + 1));
+  shape_element_face grid::face(size_t irow, size_t icol) {
+    return shape_element_face(node(irow, icol), node(irow + 1, icol), node(irow + 1, icol + 1), node(irow, icol + 1));
   };
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::module
   //////////////////////////////////////////////////////
 
-  void geoinfo::ecal_info::module::construct_cells(std::vector<geoinfo::ecal_info::cell>& cells) {
+  void module::construct_cells(std::vector<cell>& cells) {
     el_collection_.order_elements();
     auto grid = construct_grid();
     geoinfo::ecal_info::fiber* fib;
@@ -409,9 +408,9 @@ namespace sand {
       }
   };
 
-  geoinfo::ecal_info::module::grid geoinfo::ecal_info::module::construct_grid() const {
+  grid module::construct_grid() const {
     static std::vector<double> layers{40., 40., 40., 40., 49.};
-    auto& f = elements().at(0).face1();
+    auto& f = element_collection().at(0).face1();
     if (id().subdetector == geoinfo::ecal_info::subdetector_t::BARREL) {
       int idx = 0;
       for (int i = 1; i < f.vtx().size(); i++) {
@@ -425,8 +424,8 @@ namespace sand {
         pos_3d p_start = f.vtx(i) + 0.5 * f.side(i);
         pos_3d p_end;
         double l = 0.;
-        for (size_t i = 0; i < elements().size(); i++) {
-          l += elements().at(i).to_face(p_start, 2, p_end);
+        for (const auto& el : element_collection().elements()) {
+          l += el->to_face(p_start, 2, p_end);
           p_start = p_end;
         }
         return l;
@@ -437,7 +436,7 @@ namespace sand {
 
       for (int i = 1; i < f.vtx().size(); i++) {
         auto lel = length(i);
-        if (lel < idx) {
+        if (lel < lmin) {
           idx  = i;
           lmin = lel;
         }
@@ -463,17 +462,16 @@ namespace sand {
       }
       return grid(f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), std::vector<double>(ncol, 1.), layers);
     }
-    UFW_ERROR("Unknown subdetector: {}",id().subdetector);
+    UFW_ERROR("Unknown subdetector: {}", id().subdetector);
     return grid(orig, orig, orig, orig, {}, {});
   };
 
-  geoinfo::ecal_info::cell geoinfo::ecal_info::module::construct_cell(const shape_element_face& f, cell_id id,
-                                                                      const fiber& fib) const {
-    geoinfo::ecal_info::cell c(id, fib);
+  cell module::construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const {
+    cell c(id, fib);
     auto f1 = f;
-    for (size_t i = 0; i < elements().size(); i++) {
-      auto f2 = elements().at(i).to_face(f1, 2);
-      if (elements().at(i).type() == geoinfo::ecal_info::shape_element_type::straight)
+    for (const auto& el : element_collection().elements()) {
+      auto f2 = el->to_face(f1, 2);
+      if (el->type() == geoinfo::ecal_info::shape_element_type::straight)
         c.add(std::make_shared<shape_element_straight>(f1, f2));
       else
         c.add(std::make_shared<shape_element_curved>(f1, f2));
