@@ -40,7 +40,7 @@ namespace sand::grain {
 #include "cl_src/common_functions.cl"
 #include "cl_src/make_frustum.cl"
         ;
-    cl::build_program(m_frustum_program, platform, frustum_kernel_src);
+    platform.build_program(m_frustum_program, frustum_kernel_src);
     m_frustum_kernel = cl::Kernel(m_frustum_program, "make_frustum");
   }
 
@@ -50,7 +50,7 @@ namespace sand::grain {
 #include "cl_src/common_functions.cl"
 #include "cl_src/solidangle.cl"
         ;
-    cl::build_program(m_solidangle_program, platform, solidangle_kernel_src);
+    platform.build_program(m_solidangle_program, solidangle_kernel_src);
     m_solidangle_kernel = cl::Kernel(m_solidangle_program, "solidangle");
   }
 

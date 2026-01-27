@@ -41,6 +41,8 @@ namespace sand::cl {
 
     std::vector<cl::CommandQueue>& queues() { return m_queues; }
 
+    void build_program(cl::Program& program, const char* kernel_src);
+
    private:
     cl::Platform m_platform;
     cl::Context m_context;
@@ -57,24 +59,6 @@ namespace sand::cl {
     clGetEventProfilingInfo(ev.get(), CL_PROFILING_COMMAND_START, sizeof(qstart), &qstart, nullptr);
     clGetEventProfilingInfo(ev.get(), CL_PROFILING_COMMAND_END, sizeof(qend), &qend, nullptr);
     return 1e-6 * double(qend - qstart);
-  }
-
-  /**
-   * Build program and get errors if any
-   */
-  void build_program(cl::Program& program, cl::platform& platform, const char* kernel_src) {
-    try {
-      program = cl::Program(platform.context(), kernel_src);
-      program.build(platform.devices());
-    } catch (const cl::Error& e) {
-      UFW_WARN("OpenCL Program Build Error: {} ({})", e.what(), e.err());
-      // Fetch logs from each device
-      for (const auto& dev : platform.devices()) {
-        UFW_WARN("Device: {}", dev.getInfo<CL_DEVICE_NAME>());
-        UFW_WARN("{}", program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev));
-      }
-      throw;
-    }
   }
 
   /**
