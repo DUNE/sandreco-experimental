@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 enable_testing()
 
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
@@ -36,7 +35,5 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/fake_reco.test.cpp")
         add_test(NAME fake_reco.test COMMAND fake_reco.test)
 endif()
 
-=======
 add_subdirectory(hdf5)
 add_subdirectory(ocl)
->>>>>>> main
