@@ -3,20 +3,6 @@
 #include <geoinfo/subdetector_info.hpp>
 #include <regex>
 
-// construct_cells(std::vector<cell>& cells, map<cell_id, cell_ref>)
-
-// in barrel_module_cells loop over nodes
-//   -> find active volume
-//     -> get geo_id
-//       -> get region      : i.e. barrel, endcap_A, endcap_B
-//       -> get supermodule : i.e. module
-//       -> get plane       : i.e. plane
-//       -> construct vector of cell_red
-//       -> loop over column while it is no more found and construct cell: i.e module, row, column
-//         -> get cell_ref from cell_id using the map
-//         -> add cell_ref
-//       -> add vector to the map<geo_id, vector<cell_ref>>
-
 namespace sand {
 
   class geoinfo::ecal_info : public subdetector_info {
@@ -95,12 +81,14 @@ namespace sand {
       inline const shape_element_face& face2() const { return face2_; };
       inline const shape_element_face& face(size_t face_id) const { return face_id % 2 == 0 ? face2() : face1(); };
       inline const shape_element_type type() const { return type_; };
-      // virtual bool is_inside(const pos_3d& p) const = 0;
+      double total_pathlength() const;
+      bool is_inside(const pos_3d& p) const;
+      virtual double pathlength(const pos_3d& p1, const pos_3d& p2) const = 0;
+      virtual pos_3d to_face(const pos_3d& p, size_t face_id) const       = 0;
+      virtual pos_3d offset2position(double offset_from_center) const = 0;
 
      private:
-      virtual double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const             = 0;
-      virtual pos_3d to_face(const pos_3d& p, size_t face_id) const                         = 0;
-      virtual shape_element_face to_face(const shape_element_face& f, size_t face_id) const = 0;
+      shape_element_face to_face(const shape_element_face& f, size_t face_id) const;
 
       void swap_faces() {
         std::swap(face1_, face2_);
@@ -118,15 +106,9 @@ namespace sand {
     struct shape_element_straight : public shape_element_base {
      public:
       shape_element_straight(const shape_element_face& f1, const shape_element_face& f2);
-      // bool is_inside(const pos_3d& p) const;
-
-     private:
-      double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const override;
+      double pathlength(const pos_3d& p1, const pos_3d& p2) const override;
       pos_3d to_face(const pos_3d& p, size_t face_id) const override;
-      shape_element_face to_face(const shape_element_face& f, size_t face_id) const override {
-        return shape_element_face(to_face(f.vtx(0), face_id), to_face(f.vtx(1), face_id), to_face(f.vtx(2), face_id),
-                                  to_face(f.vtx(3), face_id));
-      };
+      pos_3d offset2position(double offset_from_center) const override;
 
       friend class module;
     };
@@ -134,15 +116,9 @@ namespace sand {
     struct shape_element_curved : public shape_element_base {
      public:
       shape_element_curved(const shape_element_face& f1, const shape_element_face& f2);
-      // bool is_inside(const pos_3d& p) const;
-
-     private:
-      double to_face(const pos_3d& p, size_t face_id, pos_3d& p2) const override;
+      double pathlength(const pos_3d& p1, const pos_3d& p2) const override;
       pos_3d to_face(const pos_3d& p, size_t face_id) const override;
-      shape_element_face to_face(const shape_element_face& f, size_t face_id) const override {
-        return shape_element_face(to_face(f.vtx(0), face_id), to_face(f.vtx(1), face_id), to_face(f.vtx(2), face_id),
-                                  to_face(f.vtx(3), face_id));
-      };
+      pos_3d offset2position(double offset_from_center) const override;
 
       friend class module;
     };
@@ -157,6 +133,7 @@ namespace sand {
       inline const shape_element_base& at(size_t idx) const { return *(elements_.at(idx)); };
       inline size_t size() const { return elements_.size(); };
       void order_elements();
+      double total_pathlength() const;
     };
 
     enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
@@ -194,16 +171,11 @@ namespace sand {
       inline const shape_element_collection& element_collection() const { return el_collection_; };
       inline const fiber& get_fiber() const { return fib_; };
       inline cell_id id() const { return id_; };
-      // bool is_inside(const pos_3d& p) const {
-      //   for (const auto& el : element_collection().elements())
-      //     if (el->is_inside(p))
-      //       return true;
-      //   return false;
-      // };
-      // double pathlength(const pos_3d& p, size_t face_id) const;
-      // double attenuation(const pos_3d& p, size_t face_id) const;
-      // pos_3d offset2position(double pathlength_from_center) const;
-      // double total_pathlength() const;
+      bool is_inside(const pos_3d& p) const;
+      double pathlength(const pos_3d& p, size_t face_id) const;
+      double attenuation(double d) const;
+      pos_3d offset2position(double offset_from_center) const;
+      inline double total_pathlength() const { return element_collection().total_pathlength(); };
 
      private:
       cell_id id_;
@@ -252,12 +224,12 @@ namespace sand {
    public:
     ecal_info(const geoinfo&);
     virtual ~ecal_info();
-    const cell& at(pos_3d);
+    const cell& at(const pos_3d& p) const;
 
     using subdetector_info::path;
 
-    geo_id id(const geo_path&) const override;
-    geo_path path(geo_id) const override;
+    geo_id id(const geo_path& path) const override;
+    geo_path path(geo_id gid) const override;
 
    private:
     std::map<geo_id, std::vector<cell_ref>> m_cells_map;

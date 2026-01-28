@@ -44,7 +44,7 @@ namespace sand {
 
     inline const shape_element_face& operator* (const xform_3d& transf, const shape_element_face& f) {
       return *(new shape_element_face(transf * f.vtx(0), transf * f.vtx(1), transf * f.vtx(2), transf * f.vtx(3)));
-    };
+    }
 
     xform_3d to_xform_3d(const TGeoHMatrix& mat) {
       const Double_t* r = mat.GetRotationMatrix();
@@ -149,6 +149,27 @@ namespace sand {
       auto r2 = r_wrt_axis(p2, l_pos, l_dir);
       return TMath::ACos(r1.Dot(r2) / (r1.R() * r2.R()));
     }
+
+    pos_3d project_to_plane(const pos_3d& p, const pos_3d& plane_pos, const dir_3d& plane_norm,
+                            const dir_3d& proj_dir) {
+      trl_3d fullTransform(plane_norm.Dot(plane_pos - p) / plane_norm.Dot(proj_dir) * proj_dir);
+      return fullTransform * p;
+    }
+
+    bool segments_intersect(const pos_3d& p11, const pos_3d& p12, const pos_3d& p21, const pos_3d& p22) {
+      auto s1  = p12 - p11;
+      auto s2  = p22 - p21;
+      auto x   = s1.Cross(s2);
+      auto det = x.Mag2();
+      if (is_zero_within_tolerance(det))
+        return false;
+      auto t = (p21 - p11).Cross(s2).Dot(x) / det;
+      if (t >= 0. && t <= 1.)
+        return true;
+      else
+        return false;
+    }
+
   } // namespace
 
   //////////////////////////////////////////////////////
@@ -216,7 +237,25 @@ namespace sand {
     face2_.transform(transf);
     axis_pos_ = transf * axis_pos();
     axis_dir_ = transf * axis_dir();
-  };
+  }
+
+  double shape_element_base::total_pathlength() const { return pathlength(face1().centroid(), face2().centroid()); }
+
+  bool shape_element_base::is_inside(const pos_3d& p) const {
+    constexpr size_t face_id = 1;
+    auto p_prj               = to_face(p, face_id);
+    for (size_t i = 0; i < face(face_id).vtx().size(); i++) {
+      if (segments_intersect(p_prj, face(face_id).centroid(), face(face_id).vtx(i), face(face_id).vtx(i + 1))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  shape_element_face shape_element_base::to_face(const shape_element_face& f, size_t face_id) const {
+    return shape_element_face(to_face(f.vtx(0), face_id), to_face(f.vtx(1), face_id), to_face(f.vtx(2), face_id),
+                              to_face(f.vtx(3), face_id));
+  }
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::shape_element_straight
@@ -227,22 +266,25 @@ namespace sand {
     type_     = shape_element_type::straight;
     axis_pos_ = face1().centroid();
     axis_dir_ = face2().centroid() - face1().centroid();
-  };
+  }
 
   pos_3d shape_element_straight::to_face(const pos_3d& p, size_t face_id) const {
     auto& f = face(face_id);
-    trl_3d fullTransform(f.normal().Dot(f.centroid() - p) / f.normal().Dot(axis_dir()) * axis_dir());
-    return fullTransform * p;
-  };
+    return project_to_plane(p, f.centroid(), f.normal(), axis_dir());
+  }
 
-  double shape_element_straight::to_face(const pos_3d& p1, size_t face_id, pos_3d& p2) const {
-    p2 = to_face(p1, face_id);
+  double shape_element_straight::pathlength(const pos_3d& p1, const pos_3d& p2) const {
     if (!is_zero_within_tolerance(axis_dir().Cross(p1 - p2).R())) {
       UFW_ERROR(fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
       return -1.;
     }
     return (p1 - p2).R();
-  };
+  }
+
+  pos_3d shape_element_straight::offset2position(double offset_from_center) const {
+    auto center = face1().centroid() + 0.5 * (face2().centroid() - face1().centroid());
+    return center + offset_from_center * axis_dir();
+  }
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::shape_element_curved
@@ -259,7 +301,7 @@ namespace sand {
     axis_pos_ = c1 * face1().normal() + c2 * face2().normal();
     axis_dir_ = face1().normal().Cross(face2().normal());
     type_     = shape_element_type::curved;
-  };
+  }
 
   pos_3d shape_element_curved::to_face(const pos_3d& p, size_t face_id) const {
     auto& f  = face(face_id);
@@ -269,10 +311,9 @@ namespace sand {
     trl_3d fromOrigin(orig, axis_pos());
     xform_3d fullTransform = fromOrigin * rotation * toOrigin;
     return fullTransform * p;
-  };
+  }
 
-  double shape_element_curved::to_face(const pos_3d& p1, size_t face_id, pos_3d& p2) const {
-    p2      = to_face(p1, face_id);
+  double shape_element_curved::pathlength(const pos_3d& p1, const pos_3d& p2) const {
     auto r1 = r_wrt_axis(p1, axis_pos(), axis_dir());
     auto r2 = r_wrt_axis(p2, axis_pos(), axis_dir());
     auto z1 = z_wrt_axis(p1, axis_pos(), axis_dir());
@@ -283,7 +324,20 @@ namespace sand {
     }
     auto ang = ang_wrt_axis(p1, p2, axis_pos(), axis_dir());
     return r1.R() * std::fabs(ang);
-  };
+  }
+
+  pos_3d shape_element_curved::offset2position(double offset_from_center) const {
+    auto p1                     = face1().centroid();
+    auto p2                     = face2().centroid();
+    auto ang_center             = 0.5 * ang_wrt_axis(p1, p2, axis_pos(), axis_dir());
+    auto ang_offset_from_center = offset_from_center / r_wrt_axis(p1, axis_pos(), axis_dir()).R();
+    // the sign has to be checked!!
+    rot_ang rotation(axis_dir(), ang_center + ang_offset_from_center);
+    trl_3d toOrigin(axis_pos(), orig);
+    trl_3d fromOrigin(orig, axis_pos());
+    xform_3d fullTransform = fromOrigin * rotation * toOrigin;
+    return fullTransform * p1;
+  }
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::shape_element_collection
@@ -341,7 +395,67 @@ namespace sand {
         UFW_ERROR("Module disconnected: At least one shape element has not faces in common");
       }
     }
-  };
+  }
+
+  double shape_element_collection::total_pathlength() const {
+    double l = 0.;
+    for (const auto& el : elements())
+      l += el->total_pathlength();
+    return l;
+  }
+
+  //////////////////////////////////////////////////////
+  // geoinfo::ecal_info::module::cell
+  //////////////////////////////////////////////////////
+
+  bool cell::is_inside(const pos_3d& p) const {
+    for (const auto& el : element_collection().elements())
+      if (el->is_inside(p))
+        return true;
+    return false;
+  }
+
+  double cell::pathlength(const pos_3d& p, size_t face_id) const {
+    double l  = 0.;
+    pos_3d p1 = p;
+    pos_3d p2;
+    for (auto it = element_collection().elements().begin(); it != element_collection().elements().end(); it++) {
+      if ((*it)->is_inside(p)) {
+        for (auto itt = it; itt != element_collection().elements().end(); itt++) {
+          p2 = (*itt)->to_face(p1, face_id);
+          l += (*itt)->pathlength(p1, p2);
+          std::swap(p1, p2);
+        }
+      }
+    }
+    return l;
+  }
+
+  double cell::attenuation(double d) const {
+    // dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
+    //  d    distance from photocatode - 2 PMTs/cell; d1 and d2
+    // atl1  50. cm
+    // atl2  430 cm planes 1-2    innermost plane is 1
+    //       380 cm plane 3
+    //       330 cm planes 4-5
+    //  p1   0.35
+    auto& f = get_fiber();
+    return f.fraction * TMath::Exp(-d / f.attenuation_length_1)
+         + (1. - f.fraction) * TMath::Exp(-d / f.attenuation_length_2);
+  }
+
+  pos_3d cell::offset2position(double offset_from_center) const {
+    if (offset_from_center < 0.5 * total_pathlength())
+      return element_collection().elements().front()->face1().centroid();
+    if (offset_from_center > 0.5 * total_pathlength())
+      return element_collection().elements().back()->face2().centroid();
+    auto from_face1   = 0.5 * total_pathlength() + offset_from_center;
+    auto this_element = element_collection().elements().begin();
+    while (from_face1 > (*this_element)->total_pathlength() && this_element != element_collection().elements().end()) {
+      from_face1 -= (*this_element++)->total_pathlength();
+    }
+    return (*this_element)->offset2position(from_face1 - 0.5 * (*this_element)->total_pathlength());
+  }
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::module::grid
@@ -376,11 +490,11 @@ namespace sand {
     for (size_t i12 = 0; i12 <= nrow_; i12++)
       for (size_t i14 = 0; i14 <= ncol_; i14++)
         create_node(i12, i14);
-  };
+  }
 
   shape_element_face grid::face(size_t irow, size_t icol) {
     return shape_element_face(node(irow, icol), node(irow + 1, icol), node(irow + 1, icol + 1), node(irow, icol + 1));
-  };
+  }
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::module
@@ -414,7 +528,7 @@ namespace sand {
         cells.push_back(construct_cell(f, cid, *fib));
         cells_map[cid] = --cells.end();
       }
-  };
+  }
 
   grid module::construct_grid() const {
     static std::vector<double> layers{40., 40., 40., 40., 49.};
@@ -433,7 +547,8 @@ namespace sand {
         pos_3d p_end;
         double l = 0.;
         for (const auto& el : element_collection().elements()) {
-          l += el->to_face(p_start, 2, p_end);
+          auto p_end = el->to_face(p_start, 2);
+          l += el->pathlength(p_start, p_end);
           p_start = p_end;
         }
         return l;
@@ -472,7 +587,7 @@ namespace sand {
     }
     UFW_ERROR("Unknown subdetector: {}", id().subdetector);
     return grid(orig, orig, orig, orig, {}, {});
-  };
+  }
 
   cell module::construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const {
     cell c(id, fib);
@@ -486,7 +601,7 @@ namespace sand {
       std::swap(f1, f2);
     }
     return c;
-  };
+  }
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info
@@ -497,6 +612,17 @@ namespace sand {
   }
 
   geoinfo::ecal_info::~ecal_info() = default;
+
+  const cell& geoinfo::ecal_info::at(const pos_3d& p) const {
+    auto nav  = ufw::context::current()->instance<root_tgeomanager>().navigator();
+    auto n    = nav->node_at(p);
+    auto path = nav->GetPath();
+    auto gid  = id(geo_path(path));
+    for (auto c : m_cells_map.at(gid))
+      if (c->is_inside(p))
+        return *c;
+    UFW_ERROR(fmt::format("Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid));
+  }
 
   geo_id geoinfo::ecal_info::id(const geo_path& path) const {
     geo_id gi;
