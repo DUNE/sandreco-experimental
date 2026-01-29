@@ -19,7 +19,7 @@ target_sources(sand_edep_reader PRIVATE
 
 target_include_directories(sand_edep_reader PRIVATE . .. ${CMAKE_SOURCE_DIR}/include)
 
-target_link_libraries(sand_edep_reader PUBLIC ufw::ufw EDepSim::edepsim_io PRIVATE ROOT::RIO ROOT::Tree root_tgeomanager)
+target_link_libraries(sand_edep_reader PUBLIC ufw::ufw EDepSim::edepsim_io PRIVATE ROOT::RIO ROOT::Tree sand_root_tgeomanager)
 
 install(TARGETS sand_edep_reader EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
