@@ -10,7 +10,7 @@ target_sources(sand_grain_geant_run_manager PRIVATE
 
 target_include_directories(sand_grain_geant_run_manager PRIVATE .)
 
-target_link_libraries(sand_grain_geant_run_manager ufw::ufw ${Geant4_LIBRARIES} PRIVATE z)
+target_link_libraries(sand_grain_geant_run_manager PUBLIC ufw::ufw ${Geant4_LIBRARIES} PRIVATE z)
 
 install(TARGETS sand_grain_geant_run_manager EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
