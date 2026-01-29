@@ -14,6 +14,6 @@ target_sources(optical_simulation PRIVATE
 
 target_include_directories(optical_simulation PRIVATE . ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/common ${CMAKE_SOURCE_DIR}/src/data/grain)
 
-target_link_libraries(optical_simulation ROOT::RIO ROOT::Tree ufw::ufw ${Geant4_LIBRARIES} z EDepSim::edepsim_io geant_run_manager sand_grain_geant_gdml_parser sand_root_tgeomanager sand_geoinfo sand_edep_reader)
+target_link_libraries(optical_simulation ROOT::RIO ROOT::Tree ufw::ufw ${Geant4_LIBRARIES} z EDepSim::edepsim_io sand_grain_geant_run_manager sand_grain_geant_gdml_parser sand_root_tgeomanager sand_geoinfo sand_edep_reader)
 
 install(TARGETS optical_simulation EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
