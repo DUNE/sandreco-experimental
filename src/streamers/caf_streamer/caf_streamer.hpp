@@ -10,29 +10,28 @@
 
 namespace sand::caf {
 
-class caf_streamer : public ufw::streamer {
+  /**
+   * @brief Streamer for CAF (Common Analysis Format) ROOT files.
+   *
+   * Manages reading/writing caf_wrapper data to/from TTree branches.
+   */
+  class caf_streamer : public ufw::streamer {
+    std::unique_ptr<TFile> file_;
+    TTree* tree_                                      = nullptr; // owned by file_ (ROOT ownership)
+    caf_wrapper* data_ptr_                            = nullptr; // non-owning, points to external data
+    ufw::context_id context_id_                       = {};
+    long last_entry_                                  = 0;
+    static constexpr const char* kContextIdBranchName = "context_id";
 
-    std::unique_ptr<TFile> file_{nullptr};
-    TTree* tree_{nullptr};
-    caf_wrapper* data_ptr_{nullptr};
-    ufw::context_id context_id_{};
-    long last_entry_{};
-    static constexpr auto s_id_brname = "context_id";
-
-public:
-    caf_streamer();
-
+   public:
+    caf_streamer() = default;
     ~caf_streamer() override;
 
-    void configure(const ufw::config&,
-                   ufw::op_type) override;
-
-    void attach(ufw::data::data_base&, const ufw::public_id&) override;
-
-    void read(ufw::context_id) override;
-
-    void write(ufw::context_id) override;
-};
+    void configure(const ufw::config& cfg, ufw::op_type op) override;
+    void attach(ufw::data::data_base& data, const ufw::public_id& id) override;
+    void read(ufw::context_id id) override;
+    void write(ufw::context_id id) override;
+  };
 
 } // namespace sand::caf
 

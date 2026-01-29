@@ -14,9 +14,25 @@
 
 namespace sand::caf {
 
-  caf_streamer::caf_streamer() : streamer{} {}
+  namespace {
+    const char* to_root_open_mode(ufw::op_type op) {
+      switch (op) {
+      case ufw::op_type::ro:
+        return "READ";
+      case ufw::op_type::wo:
+        return "RECREATE";
+      case ufw::op_type::rw:
+        return "UPDATE";
+      default:
+        return nullptr;
+      }
+    }
+  } // namespace
 
   caf_streamer::~caf_streamer() {
+    if (file_ == nullptr) {
+      return;
+    }
     if (operation() & ufw::op_type::wo) {
       file_->cd();
       tree_->Write(nullptr, TObject::kOverwrite);
@@ -26,26 +42,13 @@ namespace sand::caf {
 
   void caf_streamer::configure(const ufw::config& cfg, ufw::op_type op) {
     streamer::configure(cfg, op);
-    // const TClass* tcl = TClass::GetClass(tp.c_str());
-    // if (!tcl) {
-    //     UFW_ERROR("TClass for '{}' not found.", tp);
-    // }
-    const char* op_mode = "";
-    switch (op) {
-    case ufw::op_type::ro:
-      op_mode = "READ";
-      break;
-    case ufw::op_type::wo:
-      op_mode = "RECREATE";
-      break;
-    case ufw::op_type::rw:
-      op_mode = "UPDATE";
-      break;
-    default:
+
+    const char* open_mode = to_root_open_mode(op);
+    if (open_mode == nullptr) {
       UFW_ERROR("Mode {} is not supported by caf_streamer", op);
-      break;
     }
-    file_ = std::make_unique<TFile>(path().c_str(), op_mode);
+
+    file_ = std::make_unique<TFile>(path().c_str(), open_mode);
     if (!file_->IsOpen() || file_->IsZombie()) {
       UFW_ERROR("File {} could not be opened, already open or zombie", path().string());
     }
@@ -58,36 +61,37 @@ namespace sand::caf {
     }
   }
 
-  void caf_streamer::attach(ufw::data::data_base& d, const ufw::public_id& id) {
-    streamer::attach(d, id);
+  void caf_streamer::attach(ufw::data::data_base& data, const ufw::public_id& id) {
+    streamer::attach(data, id);
+
+    const var_info& info = info_map().at(id);
+    data_ptr_            = static_cast<caf_wrapper*>(&data);
+
+    const auto branch_name = ufw::simplified_name(info.type);
 
     TBranch* id_branch   = nullptr;
     TBranch* data_branch = nullptr;
-    const var_info& info  = info_map().at(id);
-    // Do we trust the ufw enough to use a static_cast?
-    data_ptr_ = static_cast<caf_wrapper*>(&d);
-    // remove any namespace from the branch name, for convenience.
-    const auto branch_name = ufw::simplified_name(info.type);
+
     if (operation() & ufw::op_type::ro) {
-      // attach index branch
-      id_branch = tree_->GetBranch(s_id_brname);
-      if (!id_branch) {
-        UFW_ERROR("TBranch '{}' not found.", s_id_brname);
+      id_branch = tree_->GetBranch(kContextIdBranchName);
+      if (id_branch == nullptr) {
+        UFW_ERROR("TBranch '{}' not found.", kContextIdBranchName);
       }
       id_branch->SetAddress(&context_id_);
-      // attach data branch
+
       data_branch = tree_->GetBranch(branch_name.c_str());
-      if (!data_branch) {
+      if (data_branch == nullptr) {
         UFW_ERROR("TBranch '{}' not found.", branch_name);
       }
       data_branch->SetAddress(&data_ptr_);
     } else if (operation() == ufw::op_type::wo) {
-      id_branch   = tree_->Branch(s_id_brname, &context_id_);
+      id_branch   = tree_->Branch(kContextIdBranchName, &context_id_);
       data_branch = tree_->Branch(branch_name.c_str(), info.type.c_str(), &data_ptr_);
     } else {
       UFW_FATAL("ufw::streamer::operation() returned an invalid value");
     }
-    // unclear if this is default...
+
+    // Prevent ROOT from auto-deleting branch data on GetEntry()
     id_branch->SetAutoDelete(false);
     data_branch->SetAutoDelete(false);
   }
@@ -96,11 +100,11 @@ namespace sand::caf {
     if (context_id_ == id) {
       return;
     }
-    file_->cd(); // TODO figure out why removing these causes crash at program
-                 //  exit (copy pasted from tree_streamer.cpp)
+
+    // Required to avoid crash at program exit (ROOT internal state)
+    file_->cd();
+
     const long entries = tree_->GetEntries();
-    // linear search
-    // while (++last_entry_ <= entries) {
     for (; last_entry_ < entries; ++last_entry_) {
       tree_->GetEntry(last_entry_);
       if (context_id_ == id) {

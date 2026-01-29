@@ -23,7 +23,7 @@
   },
   "run": [
     {
-      "sand::fake_reco::fake_reco": {},
+      "sand::fake_reco": {},
       "reqs": {},
       "prods": {
         "output_caf": "produced_caf"
