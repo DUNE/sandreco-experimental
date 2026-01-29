@@ -1,11 +1,9 @@
-find_package(HDF5 REQUIRED COMPONENTS CXX)
+add_library(sand_grain_mask_weights_computation)
 
-add_library(mask_weights_computation)
+target_sources(sand_grain_mask_weights_computation PRIVATE mask_weights_computation.cpp ${SOURCES})
 
-target_sources(mask_weights_computation PRIVATE mask_weights_computation.cpp ${SOURCES})
+target_include_directories(sand_grain_mask_weights_computation PRIVATE . ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/common)
 
-target_include_directories(mask_weights_computation PRIVATE . ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/common)
+target_link_libraries(sand_grain_mask_weights_computation PUBLIC ufw::ufw sand_cl PRIVATE sand_geoinfo sand_hdf5)
 
-target_link_libraries(mask_weights_computation PRIVATE ufw::ufw sand_cl sand_geoinfo sand_hdf5)
-
-install(TARGETS mask_weights_computation EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS sand_grain_mask_weights_computation EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
