@@ -34,7 +34,7 @@ namespace sand::common {
 
   void geoinfo_test::run() {
     const auto& gi = instance<geoinfo>();
-    UFW_INFO("Running a geoinfo_test process at {}.", fmt::ptr(this));
+    UFW_INFO("Running a geoinfo_test process at {}.", fmt::ptr(this)); /*
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
     UFW_INFO("GRAIN size (local bbox):\n - LAr {};\n - optics fiducial {};", gi.grain().LAr_bbox(),
@@ -101,28 +101,63 @@ namespace sand::common {
       }
       UFW_INFO("Last camera info: distance lens-sensor = {}", pix_spam.z_lens);
     }
+    */
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
+
+    for (uint8_t ism = 0; ism < 3; ism++) {
+      UFW_INFO("SM: {}", ism == 0 ? "BARREL" : (ism == 1 ? "ENDCAP_A" : "ENDCAP_B"));
+      for (uint8_t im = 0; im < (ism == 0 ? 24 : 32); im++) {
+        UFW_INFO("  MODULE: {}", im);
+        for (uint8_t ir = 0; ir < 5; ir++) {
+          uint8_t nc = 12;
+          if (ism != 0) {
+            auto iim = uint8_t(im % 16);
+            if (iim < 2)
+              nc = 6;
+            else if (iim > 11)
+              nc = 2;
+            else
+              nc = 3;
+          }
+          for (uint8_t ic = 0; ic < nc; ic++) {
+            sand::geoinfo::ecal_info::cell_id cid;
+            cid.subdetector = sand::geoinfo::ecal_info::subdetector_t(ism);
+            cid.module      = im;
+            cid.row         = ir;
+            cid.column      = ic;
+            auto& c         = gi.ecal().get_cell(cid);
+            UFW_INFO("    cell: {}, row: {}, column: {}", cid.raw, ir, ic);
+            UFW_INFO("    elements size: {}", c.element_collection().elements().size());
+            UFW_INFO("      face[1] centroid: {}", c.element_collection().elements().front()->face1().centroid());
+            UFW_INFO("      face[2] centroid: {}", c.element_collection().elements().back()->face2().centroid());
+          }
+        }
+      }
+    }
+
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
 
     bool isSTT = (gi.tracker().path().find("STT") != std::string::npos);
-    if (isSTT) UFW_INFO("TRACKER is STT");
-    else UFW_INFO("TRACKER is DRIFT");
+    if (isSTT)
+      UFW_INFO("TRACKER is STT");
+    else
+      UFW_INFO("TRACKER is DRIFT");
 
     if (!m_test_path.empty()) {
-        UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
-        auto ID = gi.tracker().id(gi.tracker().partial_path(m_test_path, gi));
-        if (isSTT) {
-          UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector,
-                  ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
-        } else {
-          UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {})", ID.subdetector,
-                  ID.drift.supermodule, ID.drift.plane);
-        }
-        UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
+      UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
+      auto ID = gi.tracker().id(gi.tracker().partial_path(m_test_path, gi));
+      if (isSTT) {
+        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector,
+                 ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
       } else {
-        UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
+        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {})", ID.subdetector,
+                 ID.drift.supermodule, ID.drift.plane);
       }
+      UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
+    } else {
+      UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
+    }
 
     UFW_INFO("TRACKER position: '{}'", gi.tracker().transform());
 
@@ -133,25 +168,16 @@ namespace sand::common {
         auto nver = s->select([](auto& w) {
                        return !std::fmod(w.angle(), M_PI) < 1e-3 && std::fmod(w.angle(), M_PI_2) < 1e-3;
                      }).size();
-        UFW_INFO(
-            "Station {}:\n - corners: [{}, {}, {}, {}];\n - {} h and {} v wires;\n - target material {}",
-            i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
-        } else {   
-        auto nx = s->select([&](const auto& w) {
-          return std::abs(w.angle() - 0.0) < 1e-6;
-        }).size();
-        auto nu = s->select([&](const auto& w) {
-          return std::abs(w.angle() - (M_PI / 36.0)) < 1e-6;
-        }).size(); 
-        auto nv = s->select([&](const auto& w) {
-          return std::abs(w.angle() + (M_PI / 36.0)) < 1e-6;
-        }).size();
-        UFW_INFO(
-            "Station {}:\n - corners: [{}, {}, {}, {}];\n - {} x, {} u, and {} v wires;\n - target material {}",
-            i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nx, nu, nv, s->target);
-        }
+        UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} h and {} v wires;\n - target material {}", i++,
+                 s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
+      } else {
+        auto nx = s->select([&](const auto& w) { return std::abs(w.angle() - 0.0) < 1e-6; }).size();
+        auto nu = s->select([&](const auto& w) { return std::abs(w.angle() - (M_PI / 36.0)) < 1e-6; }).size();
+        auto nv = s->select([&](const auto& w) { return std::abs(w.angle() + (M_PI / 36.0)) < 1e-6; }).size();
+        UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} x, {} u, and {} v wires;\n - target material {}",
+                 i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nx, nu, nv, s->target);
+      }
     }
-
   }
 } // namespace sand::common
 

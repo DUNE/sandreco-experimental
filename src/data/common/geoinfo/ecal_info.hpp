@@ -30,6 +30,7 @@ namespace sand {
           light_velocity(1. / 5.85) {}
     };
 
+    // inline static /*constexpr*/ fiber kfiber_undef{0.0};
     inline static /*constexpr*/ fiber kfiber_plane12{430.0};
     inline static /*constexpr*/ fiber kfiber_plane3{380.0};
     inline static /*constexpr*/ fiber kfiber_plane45{330.0};
@@ -60,9 +61,6 @@ namespace sand {
     // shape element
     enum class shape_element_type { straight, curved };
 
-    class module;
-    class shape_element_collection;
-
     struct shape_element_base {
       shape_element_face face1_;
       shape_element_face face2_;
@@ -85,18 +83,12 @@ namespace sand {
       bool is_inside(const pos_3d& p) const;
       virtual double pathlength(const pos_3d& p1, const pos_3d& p2) const = 0;
       virtual pos_3d to_face(const pos_3d& p, size_t face_id) const       = 0;
-      virtual pos_3d offset2position(double offset_from_center) const = 0;
-
-     private:
-      shape_element_face to_face(const shape_element_face& f, size_t face_id) const;
-
+      virtual pos_3d offset2position(double offset_from_center) const     = 0;
       void swap_faces() {
         std::swap(face1_, face2_);
         axis_dir_ *= -1;
       };
-
-      friend class shape_element_collection;
-      friend class module;
+      shape_element_face to_face(const shape_element_face& f, size_t face_id) const;
     };
 
     using p_shape_element_base = std::shared_ptr<shape_element_base>;
@@ -109,8 +101,6 @@ namespace sand {
       double pathlength(const pos_3d& p1, const pos_3d& p2) const override;
       pos_3d to_face(const pos_3d& p, size_t face_id) const override;
       pos_3d offset2position(double offset_from_center) const override;
-
-      friend class module;
     };
 
     struct shape_element_curved : public shape_element_base {
@@ -119,8 +109,6 @@ namespace sand {
       double pathlength(const pos_3d& p1, const pos_3d& p2) const override;
       pos_3d to_face(const pos_3d& p, size_t face_id) const override;
       pos_3d offset2position(double offset_from_center) const override;
-
-      friend class module;
     };
 
     struct shape_element_collection {
@@ -163,6 +151,25 @@ namespace sand {
       };
     };
 
+    struct grid {
+     private:
+      std::vector<pos_3d> nodes_;
+      size_t nrow_;
+      size_t ncol_;
+
+     public:
+      grid() = delete;
+      grid(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4, const std::vector<double>& div12,
+           const std::vector<double>& div14);
+      shape_element_face face(size_t irow, size_t icol) const;
+      inline size_t nrow() const { return nrow_; };
+      inline size_t ncol() const { return ncol_; };
+      inline const pos_3d& node(size_t irow, size_t icol) const { return nodes_.at(irow + nrow_ * icol); };
+
+     private:
+      inline pos_3d& node(size_t irow, size_t icol) { return nodes_[irow + nrow_ * icol]; };
+    };
+
     struct cell {
      public:
       cell() = delete;
@@ -183,38 +190,18 @@ namespace sand {
       shape_element_collection el_collection_;
     };
 
-    using cell_ref = std::vector<cell>::const_iterator;
+    using cell_ref = std::map<cell_id, cell>::const_iterator;
 
     struct module {
-      struct grid {
-       private:
-        std::vector<pos_3d> nodes_;
-        size_t nrow_;
-        size_t ncol_;
-
-       public:
-        grid() = delete;
-        grid(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4, const std::vector<double>& div12,
-             const std::vector<double>& div14);
-        shape_element_face face(size_t irow, size_t icol);
-        inline size_t nrow() { return nrow_; };
-        inline size_t ncol() { return ncol_; };
-
-       private:
-        inline pos_3d& node(size_t irow, size_t icol) { return nodes_[irow + nrow_ * icol]; };
-      };
-
      public:
       module() = delete;
       module(module_id id) :id_(id) {};
       inline module_id id() const { return id_; };
       void add(const p_shape_element_base& el) { el_collection_.add(el); };
       inline const shape_element_collection& element_collection() const { return el_collection_; };
-      void construct_cells(std::vector<cell>& cells, std::map<cell_id, cell_ref>& m);
-
-     private:
+      inline void order_elements() { el_collection_.order_elements(); };
+      grid construct_grid(const std::vector<double> col_widths, const std::vector<double> row_widths) const;
       cell construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const;
-      grid construct_grid() const;
 
      private:
       module_id id_;
@@ -225,6 +212,7 @@ namespace sand {
     ecal_info(const geoinfo&);
     virtual ~ecal_info();
     const cell& at(const pos_3d& p) const;
+    const cell& get_cell(cell_id cid) const;
 
     using subdetector_info::path;
 
@@ -232,8 +220,8 @@ namespace sand {
     geo_path path(geo_id gid) const override;
 
    private:
+    std::map<module_id, std::map<cell_id, cell>> m_modules_cells_maps;
     std::map<geo_id, std::vector<cell_ref>> m_cells_map;
-    std::vector<cell> m_cells;
     static inline const std::regex re_ecal_barrel_module{"/ECAL_lv_PV_(\\d+)$"};
     static inline const std::regex re_ecal_endcap_module{"/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)$"};
     static inline const std::regex re_ecal_barrel_sensible_volume{"/ECAL_lv_PV_(\\d+)/volECALActiveSlab_(\\d+)_PV_0$"};
@@ -244,9 +232,10 @@ namespace sand {
    private:
     static module_id to_module_id(const geo_path& path);
     void find_modules(const geo_path& path);
-    void find_active_volumes(const geo_path& path, const std::regex& re, const std::map<cell_id, cell_ref>& cells_map);
-    void endcap_module_cells(const geo_path& path, std::map<cell_id, cell_ref>& cells_map);
-    void barrel_module_cells(const geo_path& path, std::map<cell_id, cell_ref>& cells_map);
+    void find_active_volumes(const geo_path& path, const std::regex& re);
+    void endcap_module_cells(const geo_path& path);
+    void barrel_module_cells(const geo_path& path);
+    void construct_module_cells(const module& m, const grid& g);
   };
 
 } // namespace sand

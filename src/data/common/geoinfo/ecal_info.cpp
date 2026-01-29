@@ -18,10 +18,11 @@ namespace sand {
   using shape_element_straight   = geoinfo::ecal_info::shape_element_straight;
   using shape_element_curved     = geoinfo::ecal_info::shape_element_curved;
   using shape_element_collection = geoinfo::ecal_info::shape_element_collection;
-  using grid                     = geoinfo::ecal_info::module::grid;
-  using module                   = geoinfo::ecal_info::module;
+  using grid                     = geoinfo::ecal_info::grid;
   using cell                     = geoinfo::ecal_info::cell;
+  using module                   = geoinfo::ecal_info::module;
   using cell_id                  = geoinfo::ecal_info::cell_id;
+  using module_id                = geoinfo::ecal_info::module_id;
 
   using p_shape_element_base = std::shared_ptr<shape_element_base>;
   using el_vec               = std::vector<p_shape_element_base>;
@@ -36,6 +37,12 @@ namespace sand {
 
   // Less-than operator for ordering
   inline bool operator< (cell_id lhs, cell_id rhs) { return lhs.raw < rhs.raw; }
+
+  // Equality operator
+  inline bool operator== (module_id lhs, module_id rhs) { return lhs.raw == rhs.raw; }
+
+  // Less-than operator for ordering
+  inline bool operator< (module_id lhs, module_id rhs) { return lhs.raw < rhs.raw; }
 
   namespace {
     constexpr double ktolerance(1e-10);
@@ -463,8 +470,8 @@ namespace sand {
 
   grid::grid(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4, const std::vector<double>& div12,
              const std::vector<double>& div14) {
-    nrow_          = div12.size();
-    ncol_          = div14.size();
+    ncol_          = div12.size();
+    nrow_          = div14.size();
     nodes_         = std::vector<pos_3d>((ncol_ + 1) * (nrow_ + 1));
     auto cumulnorm = [](const std::vector<double>& v) {
       std::vector<double> r;
@@ -492,54 +499,23 @@ namespace sand {
         create_node(i12, i14);
   }
 
-  shape_element_face grid::face(size_t irow, size_t icol) {
-    return shape_element_face(node(irow, icol), node(irow + 1, icol), node(irow + 1, icol + 1), node(irow, icol + 1));
+  shape_element_face grid::face(size_t icol, size_t irow) const {
+    return shape_element_face(node(icol, irow), node(icol + 1, irow), node(icol + 1, irow + 1), node(icol, irow + 1));
   }
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::module
   //////////////////////////////////////////////////////
 
-  void module::construct_cells(std::vector<cell>& cells, std::map<cell_id, cell_ref>& cells_map) {
-    el_collection_.order_elements();
-    auto grid = construct_grid();
-    geoinfo::ecal_info::fiber* fib;
-
-    for (size_t irow = 0; irow < grid.nrow(); irow++)
-      for (size_t icol = 0; icol < grid.ncol(); icol++) {
-        switch (icol) {
-        case 0:
-        case 1:
-          fib = &geoinfo::ecal_info::kfiber_plane12;
-          break;
-        case 2:
-          fib = &geoinfo::ecal_info::kfiber_plane3;
-          break;
-        default:
-          fib = &geoinfo::ecal_info::kfiber_plane45;
-          break;
-        }
-        geoinfo::ecal_info::cell_id cid;
-        cid.subdetector = id().subdetector;
-        cid.module      = id().module;
-        cid.row         = irow;
-        cid.column      = icol;
-        auto f          = grid.face(irow, icol);
-        cells.push_back(construct_cell(f, cid, *fib));
-        cells_map[cid] = --cells.end();
-      }
-  }
-
-  grid module::construct_grid() const {
-    static std::vector<double> layers{40., 40., 40., 40., 49.};
-    auto& f = element_collection().at(0).face1();
+  grid module::construct_grid(const std::vector<double> col_widths, const std::vector<double> row_widths) const {
+    auto& f    = element_collection().at(0).face1();
+    size_t idx = 0;
     if (id().subdetector == geoinfo::ecal_info::subdetector_t::BARREL) {
-      int idx = 0;
+      idx = 0;
       for (int i = 1; i < f.vtx().size(); i++) {
         if (f.side(i).R() < f.side(idx).R())
           idx = i;
       }
-      return grid(f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), std::vector<double>(12, 1.), layers);
     } else if (id().subdetector == geoinfo::ecal_info::subdetector_t::ENDCAP_A
                || id().subdetector == geoinfo::ecal_info::subdetector_t::ENDCAP_B) {
       auto length = [&](size_t i) {
@@ -554,7 +530,7 @@ namespace sand {
         return l;
       };
 
-      size_t idx  = 0;
+      idx         = 0;
       double lmin = length(idx);
 
       for (int i = 1; i < f.vtx().size(); i++) {
@@ -564,29 +540,8 @@ namespace sand {
           lmin = lel;
         }
       }
-
-      int ncol = 0;
-      switch (id().subdetector) {
-      case 0:
-      case 1:
-      case 16:
-      case 17:
-        ncol = 6;
-        break;
-      case 12:
-      case 13:
-      case 14:
-      case 15:
-        ncol = 2;
-        break;
-      default:
-        ncol = 3;
-        break;
-      }
-      return grid(f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), std::vector<double>(ncol, 1.), layers);
     }
-    UFW_ERROR("Unknown subdetector: {}", id().subdetector);
-    return grid(orig, orig, orig, orig, {}, {});
+    return grid(f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), col_widths, row_widths);
   }
 
   cell module::construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const {
@@ -608,6 +563,7 @@ namespace sand {
   //////////////////////////////////////////////////////
 
   geoinfo::ecal_info::ecal_info(const geoinfo& gi) : subdetector_info(gi, "kloe_calo_volume_PV_0") {
+    UFW_INFO("Constructing ecal_info");
     find_modules(gi.root_path() / path());
   }
 
@@ -619,9 +575,23 @@ namespace sand {
     auto path = nav->GetPath();
     auto gid  = id(geo_path(path));
     for (auto c : m_cells_map.at(gid))
-      if (c->is_inside(p))
-        return *c;
+      if (c->second.is_inside(p))
+        return c->second;
     UFW_ERROR(fmt::format("Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid));
+  }
+
+  const cell& geoinfo::ecal_info::get_cell(cell_id cid) const {
+    module_id mid;
+    mid.module      = geoinfo::ecal_info::module_t(cid.module);
+    mid.subdetector = geoinfo::ecal_info::subdetector_t(cid.subdetector);
+    UFW_INFO("m_modules_cells_maps size: {}", m_modules_cells_maps.size());
+    if (!m_modules_cells_maps.count(mid)) {
+      UFW_ERROR(fmt::format("Module: {} not found in the map: m_modules_cells_maps", mid.raw));
+    }
+    if (!m_modules_cells_maps.at(mid).count(cid)) {
+      UFW_ERROR(fmt::format("Cell: {} not found in the map: m_modules_cells_maps.at({})", cid.raw, mid.raw));
+    }
+    return m_modules_cells_maps.at(mid).at(cid);
   }
 
   geo_id geoinfo::ecal_info::id(const geo_path& path) const {
@@ -725,14 +695,12 @@ namespace sand {
   void geoinfo::ecal_info::find_modules(const geo_path& path) {
     std::smatch m;
     if (regex_search(path, m, re_ecal_barrel_module)) {
-      std::map<cell_id, cell_ref> cells_map;
-      barrel_module_cells(path, cells_map);
-      find_active_volumes(path, re_ecal_barrel_sensible_volume, cells_map);
+      barrel_module_cells(path);
+      find_active_volumes(path, re_ecal_barrel_sensible_volume);
       return;
     } else if (regex_search(path, m, re_ecal_endcap_module)) {
-      std::map<cell_id, cell_ref> cells_map;
-      endcap_module_cells(path, cells_map);
-      find_active_volumes(path, re_ecal_endcap_sensible_volume, cells_map);
+      endcap_module_cells(path);
+      find_active_volumes(path, re_ecal_endcap_sensible_volume);
       return;
     } else {
       auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
@@ -741,34 +709,28 @@ namespace sand {
     }
   }
 
-  void geoinfo::ecal_info::find_active_volumes(const geo_path& path, const std::regex& re,
-                                               const std::map<cell_id, cell_ref>& cells_map) {
+  void geoinfo::ecal_info::find_active_volumes(const geo_path& path, const std::regex& re) {
     std::smatch m;
     if (regex_search(path, m, re)) {
       auto gid = id(path);
+      module_id mid;
+      mid.subdetector = geoinfo::ecal_info::subdetector_t(gid.ecal.subdetector);
+      mid.module      = geoinfo::ecal_info::module_t(gid.ecal.supermodule);
       cell_id cid;
       cid.subdetector = geoinfo::ecal_info::subdetector_t(gid.ecal.subdetector);
       cid.module      = geoinfo::ecal_info::module_t(gid.ecal.supermodule);
-      if (gid.ecal.plane < uint8_t(40))
-        cid.row = uint8_t(0);
-      else if (gid.ecal.plane < uint8_t(80))
-        cid.row = uint8_t(1);
-      else if (gid.ecal.plane < uint8_t(120))
-        cid.row = uint8_t(2);
-      else if (gid.ecal.plane < uint8_t(160))
-        cid.row = uint8_t(3);
-      else
-        cid.row = uint8_t(4);
-      cid.column = 0;
-      while (cells_map.count(cid)) {
-        m_cells_map[gid].push_back(cells_map.at(cid));
+      cid.row         = uint8_t(gid.ecal.plane / uint8_t(40));
+      cid.row         = (cid.row == 5) ? 4 : cid.row;
+      cid.column      = 0;
+      while (m_modules_cells_maps[mid].count(cid)) {
+        m_cells_map[gid].push_back(m_modules_cells_maps[mid].find(cid));
         cid.column += 1;
       }
       return;
     } else {
       auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
       nav->cd(path);
-      nav->for_each_node([&](auto node) { find_active_volumes(path / std::string(node->GetName()), re, cells_map); });
+      nav->for_each_node([&](auto node) { find_active_volumes(path / std::string(node->GetName()), re); });
     }
   }
 
@@ -788,7 +750,35 @@ namespace sand {
     return mid;
   }
 
-  void geoinfo::ecal_info::endcap_module_cells(const geo_path& path, std::map<cell_id, cell_ref>& cells_map) {
+  void geoinfo::ecal_info::construct_module_cells(const module& m, const grid& g) {
+    geoinfo::ecal_info::fiber* fib;
+
+    for (size_t irow = 0; irow < g.nrow(); irow++)
+      for (size_t icol = 0; icol < g.ncol(); icol++) {
+        switch (icol) {
+        case 0:
+        case 1:
+          fib = &geoinfo::ecal_info::kfiber_plane12;
+          break;
+        case 2:
+          fib = &geoinfo::ecal_info::kfiber_plane3;
+          break;
+        default:
+          fib = &geoinfo::ecal_info::kfiber_plane45;
+          break;
+        }
+        geoinfo::ecal_info::cell_id cid;
+        cid.subdetector = m.id().subdetector;
+        cid.module      = m.id().module;
+        cid.row         = irow;
+        cid.column      = icol;
+        auto f          = g.face(irow, icol);
+        m_modules_cells_maps[m.id()].emplace(cid, m.construct_cell(f, cid, *fib));
+        // m_modules_cells_maps[m.id()][cid] = m.construct_cell(f, cid, *fib);
+      }
+  }
+
+  void geoinfo::ecal_info::endcap_module_cells(const geo_path& path) {
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
     module m(to_module_id(path));
@@ -808,10 +798,37 @@ namespace sand {
         UFW_ERROR(fmt::format("Unexpected shape: {}", shape->GetName()));
       }
     });
-    m.construct_cells(m_cells, cells_map);
+
+    m.order_elements();
+    int ncol = 0;
+    switch (m.id().subdetector) {
+    case 0:
+    case 1:
+    case 16:
+    case 17:
+      ncol = 6;
+      break;
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 28:
+    case 29:
+    case 30:
+    case 31:
+      ncol = 2;
+      break;
+    default:
+      ncol = 3;
+      break;
+    }
+    static std::vector<double> row_widths{40., 40., 40., 40., 49.};
+    static std::vector<double> col_widths(ncol, 1.);
+    auto grid = m.construct_grid(col_widths, row_widths);
+    construct_module_cells(m, grid);
   }
 
-  void geoinfo::ecal_info::barrel_module_cells(const geo_path& path, std::map<cell_id, cell_ref>& cells_map) {
+  void geoinfo::ecal_info::barrel_module_cells(const geo_path& path) {
     module m(to_module_id(path));
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
@@ -821,6 +838,10 @@ namespace sand {
     auto el         = trd2_to_shape_element(static_cast<TGeoTrd2*>(shape));
     el->transform(transf);
     m.add(el);
-    m.construct_cells(m_cells, cells_map);
+    m.order_elements();
+    static std::vector<double> row_widths{40., 40., 40., 40., 49.};
+    static std::vector<double> col_widths(12, 1.);
+    auto grid = m.construct_grid(col_widths, row_widths);
+    construct_module_cells(m, grid);
   }
 } // namespace sand
