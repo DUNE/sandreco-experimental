@@ -1,10 +1,10 @@
 add_library(tree_streamer)
 
-target_sources(tree_streamer PRIVATE 
+target_sources(tree_streamer PRIVATE
     tree_streamer.hpp
     tree_streamer.cpp)
 
-target_include_directories(tree_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(tree_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_SOURCE_DIR})
 
 target_link_libraries(tree_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw)
 
@@ -34,7 +34,7 @@ set(USER_TYPES_LINKDEF "")
 foreach(USER_TYPE_PATH ${USER_TYPES})
   file(STRINGS "${CMAKE_SOURCE_DIR}/include/${USER_TYPE_PATH}" USER_FILE_LINES REGEX "UFW_DECLARE_MANAGED_DATA")
   foreach(LINE ${USER_FILE_LINES})
-    string(REGEX MATCH "\\(([^()]*)\\)" _ ${LINE}) 
+    string(REGEX MATCH "\\(([^()]*)\\)" _ ${LINE})
     list(APPEND USER_TYPES_LINKDEF ${CMAKE_MATCH_1})
   endforeach()
 endforeach()
@@ -58,6 +58,7 @@ file(APPEND tree_streamer_linkdef.h "#pragma link C++ class sand::channel_id+;\n
 file(APPEND tree_streamer_linkdef.h ${USER_TYPES_LINKDEF})
 file(APPEND tree_streamer_linkdef.h "#endif\n")
 
+include_directories(${duneanaobj_SOURCE_DIR})
 ROOT_GENERATE_DICTIONARY(tree_streamer_dictionaries tree_streamer_types.hpp MODULE tree_streamer LINKDEF tree_streamer_linkdef.h)
 
 install(TARGETS tree_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})

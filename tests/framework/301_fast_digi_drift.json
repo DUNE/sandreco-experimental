@@ -23,7 +23,7 @@
     },
     "run" : [
       {
-        "sand::drift::fast_digi" : {
+        "sand::drift::drift_fast_digi" : {
             "drift_velocity": 0.05,
             "wire_velocity": 200.0, 
             "sigma_tdc": 3.5 

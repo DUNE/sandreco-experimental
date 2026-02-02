@@ -1,0 +1,22 @@
+{
+  "ufw": {
+    "ufw-loglevel": "debug",
+    "ufw-basepath": "/usr/local/share/sandreco/data",
+    "ufw-ldpath": ["/usr/local/lib64"],
+    "ufw-env": {}
+  },
+  "globals": {},
+  "contexts": {
+    "keys": 5,
+    "locals": {
+      "sand::genie_reader": { "uri": "test/sand-spills.5.edep.root" }
+    }
+  },
+  "run": [
+    {
+      "sand::common::genie_reader_test": {},
+      "reqs": {},
+      "prods": {}
+    }
+  ]
+}
