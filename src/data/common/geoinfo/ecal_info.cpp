@@ -250,12 +250,16 @@ namespace sand {
 
   bool shape_element_base::is_inside(const pos_3d& p) const {
     constexpr size_t face_id = 1;
-    auto p_prj               = to_face(p, face_id);
+    auto p_prj_face          = to_face(p, face_id);
     for (size_t i = 0; i < face(face_id).vtx().size(); i++) {
-      if (segments_intersect(p_prj, face(face_id).centroid(), face(face_id).vtx(i), face(face_id).vtx(i + 1))) {
+      if (segments_intersect(p_prj_face, face(face_id).centroid(), face(face_id).vtx(i), face(face_id).vtx(i + 1))) {
         return false;
       }
     }
+    auto p_prj_axis = z_wrt_axis(p, axis_pos(), axis_dir());
+    if ((p_prj_axis - face1().centroid()).R() + (p_prj_axis - face2().centroid()).R()
+        > (face1().centroid() - face2().centroid()).R())
+      return false;
     return true;
   }
 
@@ -273,6 +277,7 @@ namespace sand {
     type_     = shape_element_type::straight;
     axis_pos_ = face1().centroid();
     axis_dir_ = face2().centroid() - face1().centroid();
+    axis_dir_ /= axis_dir_.R();
   }
 
   pos_3d shape_element_straight::to_face(const pos_3d& p, size_t face_id) const {
@@ -282,7 +287,7 @@ namespace sand {
 
   double shape_element_straight::pathlength(const pos_3d& p1, const pos_3d& p2) const {
     if (!is_zero_within_tolerance(axis_dir().Cross(p1 - p2).R())) {
-      UFW_ERROR(fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
+      UFW_EXCEPT(std::invalid_argument, fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
       return -1.;
     }
     return (p1 - p2).R();
@@ -290,7 +295,7 @@ namespace sand {
 
   pos_3d shape_element_straight::offset2position(double offset_from_center) const {
     auto center = face1().centroid() + 0.5 * (face2().centroid() - face1().centroid());
-    return center + offset_from_center * axis_dir();
+    return center + offset_from_center * (axis_dir() / axis_dir().R());
   }
 
   //////////////////////////////////////////////////////
@@ -313,7 +318,7 @@ namespace sand {
   pos_3d shape_element_curved::to_face(const pos_3d& p, size_t face_id) const {
     auto& f  = face(face_id);
     auto ang = ang_wrt_axis(p, f.centroid(), axis_pos(), axis_dir());
-    rot_ang rotation(axis_dir(), -ang);
+    rot_ang rotation(axis_dir(), ang);
     trl_3d toOrigin(axis_pos(), orig);
     trl_3d fromOrigin(orig, axis_pos());
     xform_3d fullTransform = fromOrigin * rotation * toOrigin;
@@ -326,7 +331,7 @@ namespace sand {
     auto z1 = z_wrt_axis(p1, axis_pos(), axis_dir());
     auto z2 = z_wrt_axis(p2, axis_pos(), axis_dir());
     if (!is_zero_within_tolerance(r1.R() - r2.R()) || !is_zero_within_tolerance((z1 - z2).R())) {
-      UFW_ERROR(fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
+      UFW_EXCEPT(std::invalid_argument, fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
       return -1.;
     }
     auto ang = ang_wrt_axis(p1, p2, axis_pos(), axis_dir());
@@ -399,7 +404,7 @@ namespace sand {
       }
 
       if (found == false) {
-        UFW_ERROR("Module disconnected: At least one shape element has not faces in common");
+        UFW_EXCEPT(std::invalid_argument, "Module disconnected: At least one shape element has not faces in common");
       }
     }
   }
@@ -411,16 +416,16 @@ namespace sand {
     return l;
   }
 
-  //////////////////////////////////////////////////////
-  // geoinfo::ecal_info::module::cell
-  //////////////////////////////////////////////////////
-
-  bool cell::is_inside(const pos_3d& p) const {
-    for (const auto& el : element_collection().elements())
+  bool shape_element_collection::is_inside(const pos_3d& p) const {
+    for (const auto& el : elements())
       if (el->is_inside(p))
         return true;
     return false;
   }
+
+  //////////////////////////////////////////////////////
+  // geoinfo::ecal_info::module::cell
+  //////////////////////////////////////////////////////
 
   double cell::pathlength(const pos_3d& p, size_t face_id) const {
     double l  = 0.;
@@ -428,10 +433,20 @@ namespace sand {
     pos_3d p2;
     for (auto it = element_collection().elements().begin(); it != element_collection().elements().end(); it++) {
       if ((*it)->is_inside(p)) {
-        for (auto itt = it; itt != element_collection().elements().end(); itt++) {
-          p2 = (*itt)->to_face(p1, face_id);
-          l += (*itt)->pathlength(p1, p2);
-          std::swap(p1, p2);
+        if (face_id == 1) {
+          for (auto itr = std::make_reverse_iterator(it + 1); itr != element_collection().elements().rend(); itr++) {
+            p2 = (*itr)->to_face(p1, face_id);
+            l += (*itr)->pathlength(p1, p2);
+            std::swap(p1, p2);
+          }
+        } else if (face_id == 2) {
+          for (auto itf = it; itf != element_collection().elements().end(); itf++) {
+            p2 = (*itf)->to_face(p1, face_id);
+            l += (*itf)->pathlength(p1, p2);
+            std::swap(p1, p2);
+          }
+        } else {
+          UFW_EXCEPT(std::invalid_argument, fmt::format("face_id can be either 1 or 2; Provided value: {}", face_id));
         }
       }
     }
@@ -452,16 +467,18 @@ namespace sand {
   }
 
   pos_3d cell::offset2position(double offset_from_center) const {
-    if (offset_from_center < 0.5 * total_pathlength())
+    if (offset_from_center < -0.5 * total_pathlength())
       return element_collection().elements().front()->face1().centroid();
     if (offset_from_center > 0.5 * total_pathlength())
       return element_collection().elements().back()->face2().centroid();
-    auto from_face1   = 0.5 * total_pathlength() + offset_from_center;
-    auto this_element = element_collection().elements().begin();
-    while (from_face1 > (*this_element)->total_pathlength() && this_element != element_collection().elements().end()) {
-      from_face1 -= (*this_element++)->total_pathlength();
+    auto from_face1 = 0.5 * total_pathlength() + offset_from_center;
+    auto el_iter    = element_collection().elements().begin();
+
+    while (from_face1 > (*el_iter)->total_pathlength() && el_iter != element_collection().elements().end()) {
+      auto& el = *(*el_iter);
+      from_face1 -= (*el_iter++)->total_pathlength();
     }
-    return (*this_element)->offset2position(from_face1 - 0.5 * (*this_element)->total_pathlength());
+    return (*el_iter)->offset2position(from_face1 - 0.5 * (*el_iter)->total_pathlength());
   }
 
   //////////////////////////////////////////////////////
@@ -474,14 +491,10 @@ namespace sand {
     nrow_          = div14.size();
     nodes_         = std::vector<pos_3d>((ncol_ + 1) * (nrow_ + 1));
     auto cumulnorm = [](const std::vector<double>& v) {
-      std::vector<double> r;
-      r.push_back(0.);
-      double sum   = std::accumulate(v.begin(), v.end(), 0.);
-      double cumul = 0.;
-      for (const auto& val : v) {
-        r.push_back(cumul + val / sum);
-        cumul += r.back();
-      }
+      std::vector<double> r{0.};
+      double sum = std::accumulate(v.begin(), v.end(), 0.);
+      for (const auto& val : v)
+        r.push_back(r.back() + val / sum);
       return r;
     };
 
@@ -494,13 +507,14 @@ namespace sand {
       node(i12, i14) = pt1 + scale14[i14] * (pt2 - pt1);
     };
 
-    for (size_t i12 = 0; i12 <= nrow_; i12++)
-      for (size_t i14 = 0; i14 <= ncol_; i14++)
+    for (size_t i12 = 0; i12 <= ncol_; i12++)
+      for (size_t i14 = 0; i14 <= nrow_; i14++)
         create_node(i12, i14);
   }
 
   shape_element_face grid::face(size_t icol, size_t irow) const {
-    return shape_element_face(node(icol, irow), node(icol + 1, irow), node(icol + 1, irow + 1), node(icol, irow + 1));
+    return shape_element_face(get_node(icol, irow), get_node(icol + 1, irow), get_node(icol + 1, irow + 1),
+                              get_node(icol, irow + 1));
   }
 
   //////////////////////////////////////////////////////
@@ -512,9 +526,18 @@ namespace sand {
     size_t idx = 0;
     if (id().subdetector == geoinfo::ecal_info::subdetector_t::BARREL) {
       idx = 0;
-      for (int i = 1; i < f.vtx().size(); i++) {
-        if (f.side(i).R() < f.side(idx).R())
-          idx = i;
+      if (is_zero_within_tolerance(f.side(0).R() - f.side(2).R())) {
+        if (f.side(1).R() < f.side(3).R())
+          idx = 1;
+        else
+          idx = 3;
+      } else if (is_zero_within_tolerance(f.side(1).R() - f.side(3).R())) {
+        if (f.side(0).R() < f.side(2).R())
+          idx = 0;
+        else
+          idx = 2;
+      } else {
+        UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected shape for barrel module!!"));
       }
     } else if (id().subdetector == geoinfo::ecal_info::subdetector_t::ENDCAP_A
                || id().subdetector == geoinfo::ecal_info::subdetector_t::ENDCAP_B) {
@@ -531,17 +554,17 @@ namespace sand {
       };
 
       idx         = 0;
-      double lmin = length(idx);
+      double lmax = length(idx);
 
       for (int i = 1; i < f.vtx().size(); i++) {
         auto lel = length(i);
-        if (lel < lmin) {
+        if (lel > lmax) {
           idx  = i;
-          lmin = lel;
+          lmax = lel;
         }
       }
     }
-    return grid(f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), f.vtx(idx++), col_widths, row_widths);
+    return grid(f.vtx(idx), f.vtx(idx + 1), f.vtx(idx + 2), f.vtx(idx + 3), col_widths, row_widths);
   }
 
   cell module::construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const {
@@ -563,33 +586,35 @@ namespace sand {
   //////////////////////////////////////////////////////
 
   geoinfo::ecal_info::ecal_info(const geoinfo& gi) : subdetector_info(gi, "kloe_calo_volume_PV_0") {
-    UFW_INFO("Constructing ecal_info");
     find_modules(gi.root_path() / path());
   }
 
   geoinfo::ecal_info::~ecal_info() = default;
 
   const cell& geoinfo::ecal_info::at(const pos_3d& p) const {
-    auto nav  = ufw::context::current()->instance<root_tgeomanager>().navigator();
-    auto n    = nav->node_at(p);
+    auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
+    nav->FindNode(p.X(), p.Y(), p.Z());
     auto path = nav->GetPath();
     auto gid  = id(geo_path(path));
     for (auto c : m_cells_map.at(gid))
       if (c->second.is_inside(p))
         return c->second;
-    UFW_ERROR(fmt::format("Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid));
+    UFW_EXCEPT(std::invalid_argument,
+               fmt::format("Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid));
   }
 
   const cell& geoinfo::ecal_info::get_cell(cell_id cid) const {
     module_id mid;
     mid.module      = geoinfo::ecal_info::module_t(cid.module);
     mid.subdetector = geoinfo::ecal_info::subdetector_t(cid.subdetector);
-    UFW_INFO("m_modules_cells_maps size: {}", m_modules_cells_maps.size());
     if (!m_modules_cells_maps.count(mid)) {
-      UFW_ERROR(fmt::format("Module: {} not found in the map: m_modules_cells_maps", mid.raw));
+      UFW_EXCEPT(std::invalid_argument, fmt::format("Module: {} not found in the map: m_modules_cells_maps", mid.raw));
     }
     if (!m_modules_cells_maps.at(mid).count(cid)) {
-      UFW_ERROR(fmt::format("Cell: {} not found in the map: m_modules_cells_maps.at({})", cid.raw, mid.raw));
+      UFW_EXCEPT(std::invalid_argument,
+                 fmt::format("Cell: {} not found in the map: m_modules_cells_maps.at({})  -> Cell: {}, Sub: {}, Mod: "
+                             "{}, Cel: {}, Row: {}",
+                             cid.raw, mid.raw, cid.raw, cid.subdetector, cid.module, cid.column, cid.row));
     }
     return m_modules_cells_maps.at(mid).at(cid);
   }
@@ -609,24 +634,25 @@ namespace sand {
       gi.ecal.supermodule = static_cast<sand::geo_id::supermodule_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
       if (m[4] == "vert") {
         gi.ecal.element = sand::geo_id::element_t::ENDCAP_VERTICAL;
-        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[11]));
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[13]));
       } else if (m[4] == "curv" && std::stoi(m[6]) == 0) {
-        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[10]));
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[11]));
         gi.ecal.element = sand::geo_id::element_t::ENDCAP_CURVE_TOP;
       } else if (m[4] == "curv" && std::stoi(m[6]) == 1) {
-        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[10]));
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[11]));
         gi.ecal.element = sand::geo_id::element_t::ENDCAP_CURVE_BOT;
       } else if (m[4] == "hor" && std::stoi(m[6]) == 0) {
-        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[11]));
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[13]));
         gi.ecal.element = sand::geo_id::element_t::ENDCAP_HOR_TOP;
       } else if (m[4] == "hor" && std::stoi(m[6]) == 1) {
-        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[11]));
+        gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[13]));
         gi.ecal.element = sand::geo_id::element_t::ENDCAP_HOR_BOT;
       } else {
-        UFW_ERROR(fmt::format("Unknown ECAL endcap element type: {}", m[4].str()));
+        UFW_EXCEPT(std::invalid_argument, fmt::format("Unknown ECAL endcap element type: {}", m[4].str()));
       }
     } else {
-      UFW_ERROR(fmt::format("Provided geo_path {} does not match ECAL sensible volume pattern", path));
+      UFW_EXCEPT(std::invalid_argument,
+                 fmt::format("Provided geo_path {} does not match ECAL sensible volume pattern", path));
     }
     return gi;
   }
@@ -680,14 +706,14 @@ namespace sand {
         index3 = id.ecal.plane;
         break;
       default:
-        UFW_ERROR("Invalid ECAL endcap element type");
+        UFW_EXCEPT(std::invalid_argument, "Invalid ECAL endcap element type");
       }
       gp /= fmt::format(
           "ECAL_endcap_lv_PV_{}/ECAL_ec_mod_{}_lv_PV_{}/ECAL_ec_mod_{}_{}_lv_PV_{}/endvolECAL{}ActiveSlab_{}_PV_{}",
           index1, id.ecal.supermodule % 16, id.ecal.supermodule / 16, str1, id.ecal.supermodule, index2, str2,
           id.ecal.supermodule, str3, index3);
     } else {
-      UFW_ERROR("Invalid ECAL region type");
+      UFW_EXCEPT(std::invalid_argument, "Invalid ECAL region type");
     }
     return gp;
   }
@@ -714,16 +740,16 @@ namespace sand {
     if (regex_search(path, m, re)) {
       auto gid = id(path);
       module_id mid;
-      mid.subdetector = geoinfo::ecal_info::subdetector_t(gid.ecal.subdetector);
+      mid.subdetector = geoinfo::ecal_info::subdetector_t(gid.ecal.region);
       mid.module      = geoinfo::ecal_info::module_t(gid.ecal.supermodule);
       cell_id cid;
-      cid.subdetector = geoinfo::ecal_info::subdetector_t(gid.ecal.subdetector);
+      cid.subdetector = geoinfo::ecal_info::subdetector_t(gid.ecal.region);
       cid.module      = geoinfo::ecal_info::module_t(gid.ecal.supermodule);
       cid.row         = uint8_t(gid.ecal.plane / uint8_t(40));
       cid.row         = (cid.row == 5) ? 4 : cid.row;
       cid.column      = 0;
-      while (m_modules_cells_maps[mid].count(cid)) {
-        m_cells_map[gid].push_back(m_modules_cells_maps[mid].find(cid));
+      while (m_modules_cells_maps.at(mid).count(cid)) {
+        m_cells_map[gid].push_back(m_modules_cells_maps.at(mid).find(cid));
         cid.column += 1;
       }
       return;
@@ -745,7 +771,7 @@ namespace sand {
                                              : geoinfo::ecal_info::subdetector_t::ENDCAP_B;
       mid.module      = static_cast<ecal_info::module_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
     } else {
-      UFW_ERROR("Path doesn't match any ECAL regex!!");
+      UFW_EXCEPT(std::invalid_argument, "Path doesn't match any ECAL regex!!");
     }
     return mid;
   }
@@ -755,7 +781,7 @@ namespace sand {
 
     for (size_t irow = 0; irow < g.nrow(); irow++)
       for (size_t icol = 0; icol < g.ncol(); icol++) {
-        switch (icol) {
+        switch (irow) {
         case 0:
         case 1:
           fib = &geoinfo::ecal_info::kfiber_plane12;
@@ -772,9 +798,8 @@ namespace sand {
         cid.module      = m.id().module;
         cid.row         = irow;
         cid.column      = icol;
-        auto f          = g.face(irow, icol);
+        auto f          = g.face(icol, irow);
         m_modules_cells_maps[m.id()].emplace(cid, m.construct_cell(f, cid, *fib));
-        // m_modules_cells_maps[m.id()][cid] = m.construct_cell(f, cid, *fib);
       }
   }
 
@@ -795,13 +820,13 @@ namespace sand {
         el->transform(transf);
         m.add(el);
       } else {
-        UFW_ERROR(fmt::format("Unexpected shape: {}", shape->GetName()));
+        UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected shape: {}", shape->GetName()));
       }
     });
 
     m.order_elements();
     int ncol = 0;
-    switch (m.id().subdetector) {
+    switch (m.id().module) {
     case 0:
     case 1:
     case 16:
@@ -823,7 +848,7 @@ namespace sand {
       break;
     }
     static std::vector<double> row_widths{40., 40., 40., 40., 49.};
-    static std::vector<double> col_widths(ncol, 1.);
+    std::vector<double> col_widths(ncol, 1.);
     auto grid = m.construct_grid(col_widths, row_widths);
     construct_module_cells(m, grid);
   }

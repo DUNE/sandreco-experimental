@@ -136,6 +136,58 @@ namespace sand::common {
       }
     }
 
+    sand::geoinfo::ecal_info::cell_id cid;
+    cid.subdetector = sand::geoinfo::ecal_info::subdetector_t::BARREL;
+    cid.module      = 13;
+    cid.row         = 4;
+    cid.column      = 7;
+    auto& cb        = gi.ecal().get_cell(cid);
+    auto c1         = cb.element_collection().elements().front()->face1().centroid();
+    auto c2         = cb.element_collection().elements().back()->face2().centroid();
+    auto p          = c1 + 0.3 * (c2 - c1);
+    auto obt_cid    = gi.ecal().at(p + dir_3d(0., 0.4, 0.0)).id();
+    auto l1exp      = (c1 - p).R();
+    auto l2exp      = (c2 - p).R();
+    auto lexp       = l1exp + l2exp;
+    auto l1obt      = cb.pathlength(p, 1);
+    auto l2obt      = cb.pathlength(p, 2);
+    auto lobt       = cb.total_pathlength();
+    auto off        = -(0.5 * lexp - l1exp);
+    auto pobt       = cb.offset2position(off);
+
+    UFW_ASSERT(lexp == lobt,
+               fmt::format("[ECAL BARREL] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt));
+    UFW_ASSERT(l1exp == l1obt,
+               fmt::format("[ECAL BARREL] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt));
+    UFW_ASSERT(p == pobt,
+               fmt::format("[ECAL BARREL] Points don't match!!! Expected point: {} - Obtained point: {}", p, pobt));
+    UFW_ASSERT(cb.is_inside(p), fmt::format("[ECAL BARREL] Point: {} is expected to be inside!!", p));
+    UFW_ASSERT(cid.raw == obt_cid.raw,
+               fmt::format("[ECAL BARREL] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw));
+
+    cid.subdetector = sand::geoinfo::ecal_info::subdetector_t::ENDCAP_A;
+    cid.module      = 0;
+    cid.row         = 4;
+    cid.column      = 2;
+    auto& ce        = gi.ecal().get_cell(cid);
+    off             = -0.7 * 0.5 * ce.total_pathlength();
+    p               = ce.offset2position(off);
+    obt_cid         = gi.ecal().at(p + dir_3d(0.4, 0.0, 0.0)).id();
+    l1obt           = ce.pathlength(p, 1);
+    l2obt           = ce.pathlength(p, 2);
+    l1exp           = 0.5 * ce.total_pathlength() + off;
+    l2exp           = 0.5 * ce.total_pathlength() - off;
+    lobt            = ce.total_pathlength();
+    lexp            = l1exp + l2exp;
+
+    UFW_ASSERT(lexp == lobt,
+               fmt::format("[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt));
+    UFW_ASSERT(2. * (l1exp - l1obt)/(l1exp + l1obt) < 1.E-9,
+               fmt::format("[ECAL ENDCAP] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt));
+    UFW_ASSERT(ce.is_inside(p), fmt::format("[ECAL ENDCAP] Point: {} is expected to be inside!!", p));
+    UFW_ASSERT(cid.raw == obt_cid.raw,
+               fmt::format("[ECAL ENDCAP] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw));
+
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
 
     bool isSTT = (gi.tracker().path().find("STT") != std::string::npos);

@@ -43,7 +43,7 @@ namespace sand {
       bool operator== (const shape_element_face& other) const;
       const shape_element_face& transform(const xform_3d& transf);
 
-      inline dir_3d side(size_t idx) const { return vtx(idx) - vtx(idx + 1); };
+      inline dir_3d side(size_t idx) const { return vtx(idx + 1) - vtx(idx); };
       inline const std::vector<pos_3d>& vtx() const { return v_; };
       inline const pos_3d& vtx(std::size_t i) const { return v_[i % 4]; };
       inline const dir_3d& normal() const { return normal_; };
@@ -122,6 +122,7 @@ namespace sand {
       inline size_t size() const { return elements_.size(); };
       void order_elements();
       double total_pathlength() const;
+      bool is_inside(const pos_3d& p) const;
     };
 
     enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
@@ -164,10 +165,10 @@ namespace sand {
       shape_element_face face(size_t irow, size_t icol) const;
       inline size_t nrow() const { return nrow_; };
       inline size_t ncol() const { return ncol_; };
-      inline const pos_3d& node(size_t irow, size_t icol) const { return nodes_.at(irow + nrow_ * icol); };
+      inline const pos_3d& get_node(size_t icol, size_t irow) const { return nodes_.at(irow + (nrow_ + 1) * icol); };
 
      private:
-      inline pos_3d& node(size_t irow, size_t icol) { return nodes_[irow + nrow_ * icol]; };
+      inline pos_3d& node(size_t icol, size_t irow) { return nodes_[irow + (nrow_ + 1) * icol]; };
     };
 
     struct cell {
@@ -178,7 +179,7 @@ namespace sand {
       inline const shape_element_collection& element_collection() const { return el_collection_; };
       inline const fiber& get_fiber() const { return fib_; };
       inline cell_id id() const { return id_; };
-      bool is_inside(const pos_3d& p) const;
+      inline bool is_inside(const pos_3d& p) const { return element_collection().is_inside(p); }
       double pathlength(const pos_3d& p, size_t face_id) const;
       double attenuation(double d) const;
       pos_3d offset2position(double offset_from_center) const;
@@ -227,7 +228,7 @@ namespace sand {
     static inline const std::regex re_ecal_barrel_sensible_volume{"/ECAL_lv_PV_(\\d+)/volECALActiveSlab_(\\d+)_PV_0$"};
     static inline const std::regex re_ecal_endcap_sensible_volume{
         "/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)/ECAL_ec_mod_(curv|vert|hor)_(\\d+)_lv_PV_(\\d+)/"
-        "endvolECAL(curv|straight|)ActiveSlab_(\\d+)(_|)(\\d+)_PV_(\\d+)$"};
+        "endvolECAL(curv|straight|)ActiveSlab_(((\\d+)_(\\d+))|(\\d+))_PV_(\\d+)$"};
 
    private:
     static module_id to_module_id(const geo_path& path);
