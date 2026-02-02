@@ -9,15 +9,15 @@ FetchContent_Declare(
 set(SKIP_CET ON CACHE BOOL "Skip CET build system for duneanaobj")
 FetchContent_MakeAvailable(duneanaobj)
 
-add_library(caf_streamer)
+add_library(sand_caf_caf_streamer)
 
-target_sources(caf_streamer PRIVATE
+target_sources(sand_caf_caf_streamer PRIVATE
     caf_streamer.hpp
     caf_streamer.cpp)
 
-target_include_directories(caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_SOURCE_DIR})
+target_include_directories(sand_caf_caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_SOURCE_DIR})
 
-target_link_libraries(caf_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw StandardRecord)
+target_link_libraries(sand_caf_caf_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw StandardRecord)
 
 include(GNUInstallDirs)
 set(DUNEANAOBJ_HEADERS "${duneanaobj_SOURCE_DIR}/duneanaobj/StandardRecord")
@@ -63,8 +63,8 @@ file(APPEND caf_streamer_linkdef.h "#endif\n")
 
 
 include_directories(${duneanaobj_SOURCE_DIR})
-ROOT_GENERATE_DICTIONARY(caf_streamer_dictionaries caf_streamer_types.hpp MODULE caf_streamer LINKDEF caf_streamer_linkdef.h)
+ROOT_GENERATE_DICTIONARY(sand_caf_caf_streamer_dictionaries caf_streamer_types.hpp MODULE sand_caf_caf_streamer LINKDEF caf_streamer_linkdef.h)
 
-install(TARGETS caf_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libcaf_streamer_rdict.pcm
-        ${CMAKE_CURRENT_BINARY_DIR}/libcaf_streamer.rootmap DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS sand_caf_caf_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer_rdict.pcm
+        ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer.rootmap DESTINATION ${CMAKE_INSTALL_LIBDIR})

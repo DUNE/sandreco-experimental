@@ -11,6 +11,7 @@
 #include <geoinfo/tracker_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
+
 namespace sand::stt {
 
   class stt_fast_digi : public ufw::process {

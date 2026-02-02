@@ -1,12 +1,13 @@
-add_library(tree_streamer)
+add_library(sand_root_tree_streamer)
 
-target_sources(tree_streamer PRIVATE
+
+target_sources(sand_root_tree_streamer PRIVATE
     tree_streamer.hpp
     tree_streamer.cpp)
 
-target_include_directories(tree_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_SOURCE_DIR})
+target_include_directories(sand_root_tree_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_SOURCE_DIR})
 
-target_link_libraries(tree_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw)
+target_link_libraries(sand_root_tree_streamer PUBLIC ufw::ufw PRIVATE ROOT::RIO ROOT::Tree)
 
 #The streamer relies on dictionary generation and its own definitions for
 #correct representation of any user type. This requires all said types to be known.
@@ -59,8 +60,9 @@ file(APPEND tree_streamer_linkdef.h ${USER_TYPES_LINKDEF})
 file(APPEND tree_streamer_linkdef.h "#endif\n")
 
 include_directories(${duneanaobj_SOURCE_DIR})
-ROOT_GENERATE_DICTIONARY(tree_streamer_dictionaries tree_streamer_types.hpp MODULE tree_streamer LINKDEF tree_streamer_linkdef.h)
 
-install(TARGETS tree_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libtree_streamer_rdict.pcm
-        ${CMAKE_CURRENT_BINARY_DIR}/libtree_streamer.rootmap DESTINATION ${CMAKE_INSTALL_LIBDIR})
+ROOT_GENERATE_DICTIONARY(sand_root_tree_streamer_dictionaries tree_streamer_types.hpp MODULE sand_root_tree_streamer LINKDEF tree_streamer_linkdef.h)
+
+install(TARGETS sand_root_tree_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer_rdict.pcm
+        ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer.rootmap DESTINATION ${CMAKE_INSTALL_LIBDIR})
