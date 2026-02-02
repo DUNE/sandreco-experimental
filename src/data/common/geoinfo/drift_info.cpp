@@ -106,6 +106,7 @@ namespace sand {
   geoinfo::drift_info::~drift_info() = default;
 
   geo_id geoinfo::drift_info::id(const geo_path& gp) const {
+    UFW_INFO("Searching for path {}.", gp);
     geo_id gi;
     auto path      = gp;
     gi.subdetector = DRIFT;
@@ -153,6 +154,12 @@ namespace sand {
       size_t pos = modpath.find("PV_");
       auto a     = std::stoi(modpath.substr(pos + 3));
       mod_ct += a; // C3H6
+    } else if (modpath.find("Frame") != std::string::npos) {
+      //ignore this
+      UFW_WARN("Path '{}' corresponds to a frame. This is not a sensitive detector", modpath);
+      gi.drift.supermodule = 255; // invalid plane
+      gi.drift.plane = 255; // invalid plane
+      return gi;
     } else {
       UFW_ERROR("Drift module path '{}' is not recognized.", modpath);
     }
@@ -161,7 +168,7 @@ namespace sand {
     std::string plane_path(is_trk ? path.token(2) : path.token(3));
     // UFW_INFO("Wire path: '{}'", plane_path);
     if(plane_path.find("Mylar_") != std::string::npos ) {
-      UFW_DEBUG("Plane path '{}' corresponds to a mylar foil. This is not a sensitive detector", plane_path);
+      UFW_WARN("Plane path '{}' corresponds to a mylar foil. This is not a sensitive detector", plane_path);
       gi.drift.plane = 255; // invalid plane
       return gi;
     } else {
