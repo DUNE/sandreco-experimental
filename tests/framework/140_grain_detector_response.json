@@ -5,7 +5,7 @@
       "ufw-ldpath" : ["/usr/local/lib64"]
     },
     "globals" : {
-      "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
+      "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
     "sand::geoinfo" : { "grain_geometry" : "gdml-masks", 
                          "drift_view_angle" : [0.0, -0.087266463, 0.087266463],
                          "drift_view_offset" : [10.0, 10.0, 10.0],

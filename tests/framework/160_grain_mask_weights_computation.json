@@ -7,7 +7,7 @@
     },
     "globals" : {
     "sand::cl::platform" : {},
-    "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
     "sand::geoinfo" : { "grain_geometry" : "gdml-masks" },
     "sand::grain::geant_gdml_parser" : {
       "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" }

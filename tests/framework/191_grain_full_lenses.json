@@ -18,7 +18,7 @@
     }
   },
   "globals" : {
-    "sand::root_tgeomanager" : { "geometry" : "test/grain.edepsim.root" },
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
     "sand::geoinfo" : { "grain_geometry" : "gdml-lenses", 
                          "drift_view_angle" : [0.0, -0.087266463, 0.087266463],
                          "drift_view_offset" : [10.0, 10.0, 10.0],
@@ -32,7 +32,7 @@
   "contexts" : {
     "keys" : 2,
     "locals" : {
-      "sand::edep_reader" : {"uri" : "test/grain.edepsim.root"}
+      "sand::edep_reader" : {"uri" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"}
     },
     "seed": 1111
   },
