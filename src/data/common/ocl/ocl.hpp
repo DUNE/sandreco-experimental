@@ -10,6 +10,9 @@
 
 #define CL_FUNCTION(f) #f "\n"
 
+#define CL_STRUCT_BASE(s) #s "\n"
+#define CL_STRUCT(s)      CL_STRUCT_BASE(s)
+
 #define CL_KERNEL(k) "__kernel " #k
 
 namespace sand::cl {
@@ -37,6 +40,8 @@ namespace sand::cl {
     cl::Context& context() { return m_context; };
 
     std::vector<cl::CommandQueue>& queues() { return m_queues; }
+
+    void build_program(cl::Program& program, const char* kernel_src);
 
    private:
     cl::Platform m_platform;
@@ -98,7 +103,7 @@ namespace sand::cl {
         return map_ptr;
       };
 
-      operator void*() { return get(); };
+      operator void* () { return get(); };
 
       cl::Event& event() { return map_evt; }
 

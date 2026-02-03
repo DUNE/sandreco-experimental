@@ -188,4 +188,24 @@ namespace sand {
     return {closest_wire, closest_wire_index};
   }
 
+  const geoinfo::tracker_info::wire& geoinfo::tracker_info::wire_at(channel_id chid) {
+    const wire* retw = nullptr;
+    for_each_station( [chid, &retw](const station& stat){
+      if (stat.daq_link != chid.link) {
+        return;
+      }
+      for (const auto& w: stat.wires) {
+        if (w->daq_channel == chid) {
+          retw = w.get();
+          break;
+        }
+      }
+    } );
+    if (retw) {
+      return *retw;
+    } else {
+      UFW_ERROR("There is no wire corresponding to channel {}.", chid);
+    }
+  }
+
 } // namespace sand

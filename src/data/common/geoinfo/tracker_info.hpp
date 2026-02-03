@@ -18,6 +18,8 @@ namespace sand {
    * Wire deflection is a separate catenary between each fixed point, up to s_max_wire_spacers + 1.
    * Fixed arrays are used instead of vectors because the number is small and likely identical for all wires.
    * Should there be wires with fewer spacers, the excess entries are guaranteed to be nan.
+   *
+   * There is a one to one correspondance between a wire and a readout channel.
    */
   class geoinfo::tracker_info : public subdetector_info {
    public:
@@ -34,7 +36,7 @@ namespace sand {
       using spacer_array   = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X
                                                                      ///< coordinate, starting from north.
       const station* parent;                                         ///< The parent station
-      channel_id channel;                                            ///< The unique daq identifier
+      channel_id daq_channel;                                        ///< The unique daq identifier
       pos_3d head;                                                   ///< The readout end of the wire
       pos_3d tail;                                                   ///< The termination end of the wire
       double hv;                                                     ///< The bias voltage
@@ -72,6 +74,7 @@ namespace sand {
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
       tracker_info * parent;
+      channel_id::link_t daq_link; ///< the daq link number for this station (not 1-1)
       template <typename Func>
       wire_list select(Func&& f) const {
         wire_list wl;
@@ -105,6 +108,8 @@ namespace sand {
 
     const station* get_station_by_ID(std::size_t i) const { return m_stations.at(i).get(); }
 
+    virtual const wire& wire_at(channel_id);
+
     // std::pair<vec_4d,vec_4d> closest_points(const vec_4d&, const vec_4d&, double, const wire&) const; //TO-DO use pos_3d if time is not needed
     // vec_4d closest_point(const vec_4d&, double, const wire&) const;
     // double get_min_time(const vec_4d&, double, const wire&) const;
@@ -117,6 +122,12 @@ namespace sand {
 
     const station* at(std::size_t i) const { return m_stations.at(i).get(); }
 
+    template <typename Func>
+    void for_each_station(Func&& f) {
+      for (auto& sptr : m_stations) {
+        std::forward<Func>(f)(*sptr);
+      }
+    }
    private:
     std::vector<station_ptr> m_stations;
     std::map<geo_path, gas_volume> m_volumes;

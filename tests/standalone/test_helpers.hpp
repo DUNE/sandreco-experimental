@@ -3,7 +3,7 @@
 #include <cstdlib>
 
 namespace sand {
-  inline void test_exit() noexcept(true) {
+  [[noreturn]] inline void test_exit() noexcept(true) {
     // There is a stubborn heap corruption error that may actually be in the BOOST test iteslf.
     // It is triggered by the destruction of c++ statics after returning from main.
     // Some internal data from boost test (I think) is double freed...
@@ -16,3 +16,6 @@ namespace sand {
     _Exit(0);
   }
 } // namespace sand
+
+// Place this macro at the end of your cpp
+#define FIX_TEST_EXIT BOOST_AUTO_TEST_CASE(dummy) { sand::test_exit(); }

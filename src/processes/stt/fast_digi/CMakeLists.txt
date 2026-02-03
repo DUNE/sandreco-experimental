@@ -1,10 +1,9 @@
-add_library(fast_digi)
+add_library(sand_stt_stt_fast_digi)
 
-target_sources(fast_digi PRIVATE fast_digi.cpp)
+target_sources(sand_stt_stt_fast_digi PRIVATE stt_fast_digi.cpp)
 
-target_include_directories(fast_digi PRIVATE . ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/common)
+target_include_directories(sand_stt_stt_fast_digi PRIVATE . ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/common)
 
-target_link_libraries(fast_digi ufw::ufw edep_reader root_tgeomanager geoinfo)
+target_link_libraries(sand_stt_stt_fast_digi PUBLIC ufw::ufw PRIVATE sand_edep_reader sand_root_tgeomanager sand_geoinfo)
 
-
-install(TARGETS fast_digi EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS sand_stt_stt_fast_digi EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})

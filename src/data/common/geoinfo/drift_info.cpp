@@ -77,6 +77,7 @@ namespace sand {
             geo_path full_path = driftpath / smodname / modname / driftmodname;
             nav->cd(full_path);
             auto ID = id(partial_path(full_path, gi));
+            stat->daq_link = ID.drift.supermodule;
             stat->set_drift_view(full_path, ID);
           });
         } else {
@@ -92,6 +93,7 @@ namespace sand {
               geo_path full_path = driftpath / smodname / modname / driftchambername / driftmodname;
               nav->cd(full_path);
               auto ID = id(partial_path(full_path, gi));
+              stat->daq_link = ID.drift.supermodule;
               stat->set_drift_view(full_path, ID);
             });
           });
@@ -104,6 +106,7 @@ namespace sand {
   geoinfo::drift_info::~drift_info() = default;
 
   geo_id geoinfo::drift_info::id(const geo_path& gp) const {
+    UFW_INFO("Searching for path {}.", gp);
     geo_id gi;
     auto path      = gp;
     gi.subdetector = DRIFT;
@@ -151,6 +154,12 @@ namespace sand {
       size_t pos = modpath.find("PV_");
       auto a     = std::stoi(modpath.substr(pos + 3));
       mod_ct += a; // C3H6
+    } else if (modpath.find("Frame") != std::string::npos) {
+      //ignore this
+      UFW_WARN("Path '{}' corresponds to a frame. This is not a sensitive detector", modpath);
+      gi.drift.supermodule = 255; // invalid plane
+      gi.drift.plane = 255; // invalid plane
+      return gi;
     } else {
       UFW_ERROR("Drift module path '{}' is not recognized.", modpath);
     }
@@ -159,7 +168,7 @@ namespace sand {
     std::string plane_path(is_trk ? path.token(2) : path.token(3));
     // UFW_INFO("Wire path: '{}'", plane_path);
     if(plane_path.find("Mylar_") != std::string::npos ) {
-      UFW_DEBUG("Plane path '{}' corresponds to a mylar foil. This is not a sensitive detector", plane_path);
+      UFW_WARN("Plane path '{}' corresponds to a mylar foil. This is not a sensitive detector", plane_path);
       gi.drift.plane = 255; // invalid plane
       return gi;
     } else {
@@ -272,7 +281,6 @@ namespace sand {
     } else {
         UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane_ID);
     }
-
     set_wire_list(plane_ID);
 
   }
@@ -339,6 +347,9 @@ namespace sand {
         w->head               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[1] : intersections_global[0];
         w->tail               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[0] : intersections_global[1];
         w->max_radius         = drift->view_spacing()[view_ID] / 2.0;
+        w->daq_channel.subdetector = DRIFT;
+        w->daq_channel.link = daq_link;
+        w->daq_channel.channel = (view_ID << 16) | wires.size();
         wires.emplace_back(std::move(w));
       } else {
         UFW_DEBUG("Transverse position {} has {} intersections, skipping.", transverse_position, intersections_global.size());

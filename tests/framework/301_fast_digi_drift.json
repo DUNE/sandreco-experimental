@@ -5,7 +5,7 @@
       "ufw-ldpath" : ["/usr/local/lib64"]
     },
     "globals" : {
-        "sand::root_tgeomanager" : { "geometry" : "test/sand-drift-events.10.edep.root" },
+        "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
         "sand::geoinfo" : { "grain_geometry" : "gdml-masks", 
                             "drift_view_angle" : [0.0, -0.087266463, 0.087266463],
                             "drift_view_offset" : [10.0, 10.0, 10.0],
@@ -18,12 +18,12 @@
     "contexts" : {
         "keys" : 3,
         "locals" : {
-        "sand::edep_reader" : {"uri" : "test/sand-drift-events.10.edep.root"}
+        "sand::edep_reader" : {"uri" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"}
         }
     },
     "run" : [
       {
-        "sand::drift::fast_digi" : {
+        "sand::drift::drift_fast_digi" : {
             "drift_velocity": 0.05,
             "wire_velocity": 200.0, 
             "sigma_tdc": 3.5 

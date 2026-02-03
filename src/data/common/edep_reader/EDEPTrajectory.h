@@ -118,7 +118,7 @@ class EDEPTrajectory {
    * @brief Get the initial momentum of this trajectory.
    * @return The initial momentum of this trajectory.
    */
-  TLorentzVector GetInitialMomentum() const { return p0_; };
+  sand::vec_4d GetInitialMomentum() const { return p0_; };
 
   /**
    * @brief Get the children trajectories of this trajectory.
@@ -148,7 +148,7 @@ class EDEPTrajectory {
    * @brief Get the trajectory points associated with this trajectory.
    * @return All trajectory points associated with this trajectory ordered by increasing times.
    */
-  std::vector<EDEPTrajectoryPoint> GetTrajectoryPointsVect();
+  std::vector<EDEPTrajectoryPoint> GetTrajectoryPointsVect() const;
 
   // Setters
 
@@ -194,7 +194,7 @@ class EDEPTrajectory {
   bool HasHits() const { return !hit_map_.empty(); }
   bool HasHitWithId(int id) const;
   bool HasHitInDetector(component component_name) const;
-  double GetDepositedEnergy(component component_name);
+  double GetDepositedEnergy(component component_name) const;
   bool HasHitBeforeTime(double start_time) const;
   bool HasHitAfterTime(double stop_time) const;
   bool HasHitWithEnergySmallerThan(double energy) const;
@@ -208,9 +208,9 @@ class EDEPTrajectory {
   bool HasHitInTime(double start_time, double stop_time) const;
   bool HasHitWithIdInDetector(int id, component component_name) const;
 
-  bool HasHitNearPoint(TVector3 point, double distance) const;
-  bool HasHitNear4DPoint(TLorentzVector point, double distance, double time) const;
-  std::vector<EDEPHit>::const_iterator GetHitNear4DPoint(TLorentzVector point, double distance, double time);
+  bool HasHitNearPoint(sand::pos_3d point, double distance) const;
+  bool HasHitNear4DPoint(sand::vec_4d point, double distance, double time) const;
+  std::vector<EDEPHit>::const_iterator GetHitNear4DPoint(sand::vec_4d point, double distance, double time);
 
   std::string Print(std::string& full_out, int depth = 100, int current_depth = 0) const;
 
@@ -248,7 +248,7 @@ class EDEPTrajectory {
   friend class EDEPTree;
 
  private:
-  TLorentzVector p0_;                                 ///< Initial momentum of the trajectory.
+  sand::vec_4d p0_;                                 ///< Initial momentum of the trajectory.
   EDEPHitsMap hit_map_;                               ///< Map of hits associated with the trajectory.
   EDEPTrajectoryPoints trajectory_points_;            ///< Trajectory points.
   std::vector<EDEPTrajectory> children_trajectories_; ///< Children trajectories.
