@@ -1,21 +1,55 @@
+import sys
+import array
+import math
 import ROOT
 
-f = ROOT.TFile("/usr/local/share/sandreco/data/test/sand-drift-events.10.edep.root")
+def scan_path(root_path):
+    global f
+    global g
+    g.cd(root_path)
+    n = g.GetCurrentNode()
 
-g = f.Get("EDepSimGeometry")
+    local = array.array('d', [0.] * 3)
+    master = array.array('d', [0.] * 3)
 
-g.cd("/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0")
+    for i in range(n.GetNdaughters()):
+        for j in range(n.GetDaughter(i).GetNdaughters()):
+            path = f"{root_path}/{n.GetDaughter(i).GetName()}/{n.GetDaughter(i).GetDaughter(j).GetName()}"
+            g.cd(path)
+            local[0], local[1], local[2] = 0., 0., 0.
+            shape = n.GetDaughter(i).GetDaughter(j).GetVolume().GetShape()
+            if shape.TestShapeBit(ROOT.TGeoShape.EShapeType.kGeoTubeSeg) == True:
+                local[0], local[1], local[2] = 0.5 * (shape.GetRmin() + shape.GetRmax()) * math.cos(shape.GetPhi1()/180.*ROOT.TMath.Pi()), 0.5 * (shape.GetRmin() + shape.GetRmax()) * math.sin(shape.GetPhi1()/180.*ROOT.TMath.Pi()), 0
+                g.LocalToMaster(local,master)
+                print(f"  {local[0]}, {local[1]}, {local[2]}, {master[0]}, {master[1]}, {master[2]}, {path}")
+                local[0], local[1], local[2] = 0.5 * (shape.GetRmin() + shape.GetRmax()) * math.cos(shape.GetPhi2()/180.*ROOT.TMath.Pi()), 0.5 * (shape.GetRmin() + shape.GetRmax()) * math.sin(shape.GetPhi2()/180.*ROOT.TMath.Pi()), 0
+                g.LocalToMaster(local,master)
+                print(f"  {local[0]}, {local[1]}, {local[2]}, {master[0]}, {master[1]}, {master[2]}, {path}")
+            else:
+                local[0], local[1], local[2] = 0., -shape.GetDY(), 0.
+                g.LocalToMaster(local,master)
+                print(f"  {local[0]}, {local[1]}, {local[2]}, {master[0]}, {master[1]}, {master[2]}, {path}")
+                local[0], local[1], local[2] = 0., shape.GetDY(), 0.
+                g.LocalToMaster(local,master)
+                print(f"  {local[0]}, {local[1]}, {local[2]}, {master[0]}, {master[1]}, {master[2]}, {path}")
 
-n = g.GetCurrentNode()
+if __name__ == "__main__":
+    fname = sys.argv[1]
+    f = ROOT.TFile(fname)
+    g = f.Get("EDepSimGeometry")
+    root_path = "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_endcap_lv_PV_0"
+    scan_path(root_path)
+    root_path = "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_endcap_lv_PV_1"
+    scan_path(root_path)
 
-e1 = n.GetDaughter(24)
-e2 = n.GetDaughter(25)
+# e1 = n.GetDaughter(24)
+# e2 = n.GetDaughter(25)
 
-for i in range(e1.GetNdaughters()):
-    nn = e1.GetDaughter(i).GetDaughter(0)
-    name = nn.GetName()
-    sh = nn.GetVolume().GetShape()
-    print(f"{i} - [{int(sh.GetDX()*2/44.4)}] {sh.GetDX()}, {sh.GetDY()}, {sh.GetDZ()} -- {name} / {e1.GetDaughter(i).GetName()}")
+# for i in range(e1.GetNdaughters()):
+#     nn = e1.GetDaughter(i).GetDaughter(0)
+#     name = nn.GetName()
+#     sh = nn.GetVolume().GetShape()
+#     print(f"{i} - [{int(sh.GetDX()*2/44.4)}] {sh.GetDX()}, {sh.GetDY()}, {sh.GetDZ()} -- {name} / {e1.GetDaughter(i).GetName()}")
     
 # 0 - [6] 133.2, 510.0, 127.5 -- ECAL_ec_mod_vert_0_lv_PV_0 / ECAL_ec_mod_0_lv_PV_0
 # 1 - [6] 133.2, 510.0, 127.5 -- ECAL_ec_mod_vert_0_lv_PV_0 / ECAL_ec_mod_0_lv_PV_1
