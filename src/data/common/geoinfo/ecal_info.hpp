@@ -9,50 +9,81 @@ namespace sand {
    public:
     // fiber
     struct fiber {
+      ////////////////////////////////////////////////////////////////////////////
+      //      dE/dx attenuation                                                 //
+      ////////////////////////////////////////////////////////////////////////////
+      // dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)            //
+      // with:                                                                  //
+      //  - d              distance from photocatode - 2 PMTs/cell; d1 and d2   //
+      //  - atl1  50. cm                                                        //
+      //  - atl2  430 cm   planes 1-2  (innermost plane is 1)                   //
+      //          380 cm   plane 3                                              //
+      //          330 cm   planes 4-5                                           //
+      //  - p1   0.35                                                           //
+      ////////////////////////////////////////////////////////////////////////////
+
       // attenuation
-      double attenuation_length_1; // cm
-      double attenuation_length_2; // cm
+      double attenuation_length_1; // mm
+      double attenuation_length_2; // mm
       double fraction;
+
+      ////////////////////////////////////////////////////////////////////////////
+      //      Scintillation                                                     //
+      ////////////////////////////////////////////////////////////////////////////
+      //                                                                        //
+      // C  PHOTOELECTRON TIME :  Particle TIME in the cell                     //
+      // C                      + SCINTILLATION DECAY TIME +                    //
+      // C                      + signal propagation to the PMT                 //
+      // C                      + 1ns  uncertainty                              //
+      //                                                                        //
+      //                TPHE = Part_time+TSDEC+DPM1*VLFB+Gauss(1ns)             //
+      //                                                                        //
+      //       VLFB = 5.85 ns/m                                                 //
+      // !!!! Input-TDC Scintillation time -                                    //
+      //                TSDEC = TSCIN*(1./RNDMPH(1)-1)**TSCEX  (ns)             //
+      //                                                                        //
+      //       TSCIN  3.08  ns                                                  //
+      //       TSCEX  0.588                                                     //
+      ////////////////////////////////////////////////////////////////////////////
 
       // scintillation
       double scintillation_constant_1; // ns
       double scintillation_constant_2;
 
       // light velocity
-      double light_velocity; // m/ns
+      double light_velocity; // mm/ns
 
       constexpr fiber(double atl2)
-        : attenuation_length_1(50.0),
+        : attenuation_length_1(500.0),
           attenuation_length_2(atl2),
           fraction(0.35),
           scintillation_constant_1(3.8),
           scintillation_constant_2(0.588),
-          light_velocity(1. / 5.85) {}
+          light_velocity(1000. / 5.85) {}
     };
 
-    // inline static /*constexpr*/ fiber kfiber_undef{0.0};
-    inline static /*constexpr*/ fiber kfiber_plane12{430.0};
-    inline static /*constexpr*/ fiber kfiber_plane3{380.0};
-    inline static /*constexpr*/ fiber kfiber_plane45{330.0};
+    inline static /*constexpr*/ fiber kfiber_plane12{4300.0};
+    inline static /*constexpr*/ fiber kfiber_plane3{3800.0};
+    inline static /*constexpr*/ fiber kfiber_plane45{3300.0};
 
     // face
     struct shape_element_face {
      public:
       shape_element_face() = delete;
+      // (p1, p2, p3, p4) are consecutive points along the perimeter; start point and direction are arbitrary.
       shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4);
-      bool operator== (const shape_element_face& other) const;
       const shape_element_face& transform(const xform_3d& transf);
 
       inline dir_3d side(size_t idx) const { return vtx(idx + 1) - vtx(idx); };
-      inline const std::vector<pos_3d>& vtx() const { return v_; };
+      inline const std::array<pos_3d, 4>& vtx() const { return v_; };
       inline const pos_3d& vtx(std::size_t i) const { return v_[i % 4]; };
       inline const dir_3d& normal() const { return normal_; };
       inline const pos_3d& centroid() const { return centroid_; };
 
      private:
-      std::vector<pos_3d> v_;
-      dir_3d normal_;
-      pos_3d centroid_;
+      std::array<pos_3d, 4> v_; // four vertices of the face
+      dir_3d normal_;           // normal of the  face
+      pos_3d centroid_;         // centroid of the face
 
      private:
       bool are_points_coplanar() const;
@@ -60,35 +91,42 @@ namespace sand {
 
     // shape element
     enum class shape_element_type { straight, curved };
+    enum class face_location { begin, end };
 
     struct shape_element_base {
-      shape_element_face face1_;
-      shape_element_face face2_;
-      pos_3d axis_pos_;
-      dir_3d axis_dir_;
-      shape_element_type type_;
+      shape_element_face begin_face_; // face of the shape
+      shape_element_face end_face_;   // face of the shape
+      pos_3d axis_pos_;               // position of the shape axis
+      dir_3d axis_dir_;               // direction of the shape axis
+      shape_element_type type_;       // shape type
 
      public:
       shape_element_base() = delete;
-      shape_element_base(const shape_element_face& f1, const shape_element_face& f2) : face1_(f1), face2_(f2) {};
 
+     protected:
+      shape_element_base(const shape_element_face& f1, const shape_element_face& f2)
+        : begin_face_(f1), end_face_(f2) {};
+
+     public:
       void transform(const xform_3d& transf);
       inline const pos_3d& axis_pos() const { return axis_pos_; };
       inline const dir_3d& axis_dir() const { return axis_dir_; };
-      inline const shape_element_face& face1() const { return face1_; };
-      inline const shape_element_face& face2() const { return face2_; };
-      inline const shape_element_face& face(size_t face_id) const { return face_id % 2 == 0 ? face2() : face1(); };
+      inline const shape_element_face& begin_face() const { return begin_face_; };
+      inline const shape_element_face& end_face() const { return end_face_; };
+      inline const shape_element_face& face(face_location face_id) const {
+        return face_id == face_location::end ? end_face() : begin_face();
+      };
       inline const shape_element_type type() const { return type_; };
       double total_pathlength() const;
       bool is_inside(const pos_3d& p) const;
-      virtual double pathlength(const pos_3d& p1, const pos_3d& p2) const = 0;
-      virtual pos_3d to_face(const pos_3d& p, size_t face_id) const       = 0;
-      virtual pos_3d offset2position(double offset_from_center) const     = 0;
+      virtual double pathlength(const pos_3d& p1, const pos_3d& p2) const  = 0;
+      virtual pos_3d to_face(const pos_3d& p, face_location face_id) const = 0;
+      virtual pos_3d offset2position(double offset_from_center) const      = 0;
       void swap_faces() {
-        std::swap(face1_, face2_);
+        std::swap(begin_face_, end_face_);
         axis_dir_ *= -1;
       };
-      shape_element_face to_face(const shape_element_face& f, size_t face_id) const;
+      shape_element_face to_face(const shape_element_face& f, face_location face_id) const;
     };
 
     using p_shape_element_base = std::shared_ptr<shape_element_base>;
@@ -99,7 +137,7 @@ namespace sand {
      public:
       shape_element_straight(const shape_element_face& f1, const shape_element_face& f2);
       double pathlength(const pos_3d& p1, const pos_3d& p2) const override;
-      pos_3d to_face(const pos_3d& p, size_t face_id) const override;
+      pos_3d to_face(const pos_3d& p, face_location face_id) const override;
       pos_3d offset2position(double offset_from_center) const override;
     };
 
@@ -107,7 +145,7 @@ namespace sand {
      public:
       shape_element_curved(const shape_element_face& f1, const shape_element_face& f2);
       double pathlength(const pos_3d& p1, const pos_3d& p2) const override;
-      pos_3d to_face(const pos_3d& p, size_t face_id) const override;
+      pos_3d to_face(const pos_3d& p, face_location face_id) const override;
       pos_3d offset2position(double offset_from_center) const override;
     };
 
@@ -180,7 +218,7 @@ namespace sand {
       inline const fiber& get_fiber() const { return fib_; };
       inline cell_id id() const { return id_; };
       inline bool is_inside(const pos_3d& p) const { return element_collection().is_inside(p); }
-      double pathlength(const pos_3d& p, size_t face_id) const;
+      double pathlength(const pos_3d& p, face_location face_id) const;
       double attenuation(double d) const;
       pos_3d offset2position(double offset_from_center) const;
       inline double total_pathlength() const { return element_collection().total_pathlength(); };

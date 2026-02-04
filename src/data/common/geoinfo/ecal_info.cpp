@@ -29,7 +29,7 @@ namespace sand {
   using el_vec_it            = std::vector<p_shape_element_base>::iterator;
 
   //////////////////////////////////////////////////////
-  // stuff
+  // Cell ID
   //////////////////////////////////////////////////////
 
   // Equality operator
@@ -37,6 +37,10 @@ namespace sand {
 
   // Less-than operator for ordering
   inline bool operator< (cell_id lhs, cell_id rhs) { return lhs.raw < rhs.raw; }
+
+  //////////////////////////////////////////////////////
+  // Module ID
+  //////////////////////////////////////////////////////
 
   // Equality operator
   inline bool operator== (module_id lhs, module_id rhs) { return lhs.raw == rhs.raw; }
@@ -46,8 +50,38 @@ namespace sand {
 
   namespace {
     constexpr double ktolerance(1e-10);
-    constexpr pos_3d orig(0., 0., 0.);
+    const pos_3d orig(0., 0., 0.);
     inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
+
+    //////////////////////////////////////////////////////
+    // shape_element_face
+    //////////////////////////////////////////////////////
+
+    // Equality operator
+    bool operator== (const shape_element_face& lhs, const shape_element_face& rhs) {
+      auto& lhscopy    = lhs.vtx();
+      auto rhscopy_for = rhs.vtx();
+      auto rhscopy_rev = rhs.vtx();
+      std::reverse(rhscopy_rev.begin(), rhscopy_rev.end());
+
+      auto static same_elements = [](const std::array<pos_3d, 4>& lhs, const std::array<pos_3d, 4>& rhs) {
+        for (auto const& pair : boost::combine(lhs, rhs)) {
+          pos_3d p1, p2;
+          boost::tie(p1, p2) = pair;
+          if (!is_zero_within_tolerance((p1 - p2).R()))
+            return false;
+        }
+        return true;
+      };
+
+      for (int i = 0; i < lhs.vtx().size(); ++i) {
+        if (same_elements(lhscopy, rhscopy_for) || same_elements(lhscopy, rhscopy_rev))
+          return true;
+        std::rotate(rhscopy_for.begin(), rhscopy_for.begin() + 1, rhscopy_for.end());
+        std::rotate(rhscopy_rev.begin(), rhscopy_rev.begin() + 1, rhscopy_rev.end());
+      }
+      return false;
+    }
 
     inline const shape_element_face& operator* (const xform_3d& transf, const shape_element_face& f) {
       return *(new shape_element_face(transf * f.vtx(0), transf * f.vtx(1), transf * f.vtx(2), transf * f.vtx(3)));
@@ -204,30 +238,6 @@ namespace sand {
     normal_  = u.Cross(w).Unit();
   }
 
-  bool shape_element_face::operator== (const shape_element_face& other) const {
-    auto mycopy_for = other;
-    auto mycopy_rev = other;
-    std::reverse(mycopy_rev.v_.begin(), mycopy_rev.v_.end());
-
-    auto static same_elements = [](const shape_element_face& lhs, const shape_element_face& rhs) {
-      for (auto const& pair : boost::combine(lhs.vtx(), rhs.vtx())) {
-        pos_3d p1, p2;
-        boost::tie(p1, p2) = pair;
-        if (!is_zero_within_tolerance((p1 - p2).R()))
-          return false;
-      }
-      return true;
-    };
-
-    for (int i = 0; i < vtx().size(); ++i) {
-      if (same_elements(*this, mycopy_for) || same_elements(*this, mycopy_rev))
-        return true;
-      std::rotate(mycopy_for.v_.begin(), mycopy_for.v_.begin() + 1, mycopy_for.v_.end());
-      std::rotate(mycopy_rev.v_.begin(), mycopy_rev.v_.begin() + 1, mycopy_rev.v_.end());
-    }
-    return false;
-  }
-
   const shape_element_face& shape_element_face::transform(const xform_3d& transf) {
     std::for_each(v_.begin(), v_.end(), [&](pos_3d& p) { p = transf * p; });
     centroid_ = transf * centroid();
@@ -240,30 +250,32 @@ namespace sand {
   //////////////////////////////////////////////////////
 
   void shape_element_base::transform(const xform_3d& transf) {
-    face1_.transform(transf);
-    face2_.transform(transf);
+    begin_face_.transform(transf);
+    end_face_.transform(transf);
     axis_pos_ = transf * axis_pos();
     axis_dir_ = transf * axis_dir();
   }
 
-  double shape_element_base::total_pathlength() const { return pathlength(face1().centroid(), face2().centroid()); }
+  double shape_element_base::total_pathlength() const {
+    return pathlength(begin_face().centroid(), end_face().centroid());
+  }
 
   bool shape_element_base::is_inside(const pos_3d& p) const {
-    constexpr size_t face_id = 1;
-    auto p_prj_face          = to_face(p, face_id);
+    constexpr face_location face_id = face_location::begin;
+    auto p_prj_face                 = to_face(p, face_id);
     for (size_t i = 0; i < face(face_id).vtx().size(); i++) {
       if (segments_intersect(p_prj_face, face(face_id).centroid(), face(face_id).vtx(i), face(face_id).vtx(i + 1))) {
         return false;
       }
     }
     auto p_prj_axis = z_wrt_axis(p, axis_pos(), axis_dir());
-    if ((p_prj_axis - face1().centroid()).R() + (p_prj_axis - face2().centroid()).R()
-        > (face1().centroid() - face2().centroid()).R())
+    if ((p_prj_axis - begin_face().centroid()).R() + (p_prj_axis - end_face().centroid()).R()
+        > (begin_face().centroid() - end_face().centroid()).R())
       return false;
     return true;
   }
 
-  shape_element_face shape_element_base::to_face(const shape_element_face& f, size_t face_id) const {
+  shape_element_face shape_element_base::to_face(const shape_element_face& f, face_location face_id) const {
     return shape_element_face(to_face(f.vtx(0), face_id), to_face(f.vtx(1), face_id), to_face(f.vtx(2), face_id),
                               to_face(f.vtx(3), face_id));
   }
@@ -275,12 +287,12 @@ namespace sand {
   shape_element_straight::shape_element_straight(const shape_element_face& f1, const shape_element_face& f2)
     : shape_element_base(f1, f2) {
     type_     = shape_element_type::straight;
-    axis_pos_ = face1().centroid();
-    axis_dir_ = face2().centroid() - face1().centroid();
+    axis_pos_ = begin_face().centroid();
+    axis_dir_ = end_face().centroid() - begin_face().centroid();
     axis_dir_ /= axis_dir_.R();
   }
 
-  pos_3d shape_element_straight::to_face(const pos_3d& p, size_t face_id) const {
+  pos_3d shape_element_straight::to_face(const pos_3d& p, face_location face_id) const {
     auto& f = face(face_id);
     return project_to_plane(p, f.centroid(), f.normal(), axis_dir());
   }
@@ -294,7 +306,7 @@ namespace sand {
   }
 
   pos_3d shape_element_straight::offset2position(double offset_from_center) const {
-    auto center = face1().centroid() + 0.5 * (face2().centroid() - face1().centroid());
+    auto center = begin_face().centroid() + 0.5 * (end_face().centroid() - begin_face().centroid());
     return center + offset_from_center * (axis_dir() / axis_dir().R());
   }
 
@@ -304,18 +316,18 @@ namespace sand {
 
   shape_element_curved::shape_element_curved(const shape_element_face& f1, const shape_element_face& f2)
     : shape_element_base(f1, f2) {
-    auto h1   = face1().normal().Dot(face1().centroid());
-    auto h2   = face2().normal().Dot(face2().centroid());
-    auto dpr  = face1().normal().Dot(face2().normal());
+    auto h1   = begin_face().normal().Dot(begin_face().centroid());
+    auto h2   = end_face().normal().Dot(end_face().centroid());
+    auto dpr  = begin_face().normal().Dot(end_face().normal());
     auto det  = (1 - dpr * dpr);
     auto c1   = (h1 - h2 * dpr) / det;
     auto c2   = (h2 - h1 * dpr) / det;
-    axis_pos_ = c1 * face1().normal() + c2 * face2().normal();
-    axis_dir_ = face1().normal().Cross(face2().normal());
+    axis_pos_ = c1 * begin_face().normal() + c2 * end_face().normal();
+    axis_dir_ = begin_face().normal().Cross(end_face().normal());
     type_     = shape_element_type::curved;
   }
 
-  pos_3d shape_element_curved::to_face(const pos_3d& p, size_t face_id) const {
+  pos_3d shape_element_curved::to_face(const pos_3d& p, face_location face_id) const {
     auto& f  = face(face_id);
     auto ang = ang_wrt_axis(p, f.centroid(), axis_pos(), axis_dir());
     rot_ang rotation(axis_dir(), ang);
@@ -339,8 +351,8 @@ namespace sand {
   }
 
   pos_3d shape_element_curved::offset2position(double offset_from_center) const {
-    auto p1                     = face1().centroid();
-    auto p2                     = face2().centroid();
+    auto p1                     = begin_face().centroid();
+    auto p2                     = end_face().centroid();
     auto ang_center             = 0.5 * ang_wrt_axis(p1, p2, axis_pos(), axis_dir());
     auto ang_offset_from_center = offset_from_center / r_wrt_axis(p1, axis_pos(), axis_dir()).R();
     // the sign has to be checked!!
@@ -370,34 +382,34 @@ namespace sand {
     auto insert_back  = [&](const el_vec_it& it) { insert(elements_.end(), it); };
 
     auto first_el       = tmp.begin();
-    auto current_face_1 = (*first_el)->face1();
-    auto current_face_2 = (*first_el)->face2();
+    auto current_face_1 = (*first_el)->begin_face();
+    auto current_face_2 = (*first_el)->end_face();
 
     insert_front(first_el);
 
     while (tmp.size() != 0) {
       auto found = false;
       for (auto it = tmp.begin(); it != tmp.end(); it++) {
-        if (current_face_1 == (*it)->face2()) {
+        if (current_face_1 == (*it)->end_face()) {
           found          = true;
-          current_face_1 = (*it)->face1();
+          current_face_1 = (*it)->begin_face();
           insert_front(it);
           break;
-        } else if (current_face_1 == (*it)->face1()) {
+        } else if (current_face_1 == (*it)->begin_face()) {
           found = true;
           (*it)->swap_faces();
-          current_face_1 = (*it)->face1();
+          current_face_1 = (*it)->begin_face();
           insert_front(it);
           break;
-        } else if (current_face_2 == (*it)->face2()) {
+        } else if (current_face_2 == (*it)->end_face()) {
           found = true;
           (*it)->swap_faces();
-          current_face_2 = (*it)->face2();
+          current_face_2 = (*it)->end_face();
           insert_back(it);
           break;
-        } else if (current_face_2 == (*it)->face1()) {
+        } else if (current_face_2 == (*it)->begin_face()) {
           found          = true;
-          current_face_2 = (*it)->face2();
+          current_face_2 = (*it)->end_face();
           insert_back(it);
           break;
         }
@@ -427,26 +439,27 @@ namespace sand {
   // geoinfo::ecal_info::module::cell
   //////////////////////////////////////////////////////
 
-  double cell::pathlength(const pos_3d& p, size_t face_id) const {
+  double cell::pathlength(const pos_3d& p, face_location face_id) const {
     double l  = 0.;
     pos_3d p1 = p;
     pos_3d p2;
     for (auto it = element_collection().elements().begin(); it != element_collection().elements().end(); it++) {
       if ((*it)->is_inside(p)) {
-        if (face_id == 1) {
+        if (face_id == face_location::begin) {
           for (auto itr = std::make_reverse_iterator(it + 1); itr != element_collection().elements().rend(); itr++) {
             p2 = (*itr)->to_face(p1, face_id);
             l += (*itr)->pathlength(p1, p2);
             std::swap(p1, p2);
           }
-        } else if (face_id == 2) {
+        } else if (face_id == face_location::end) {
           for (auto itf = it; itf != element_collection().elements().end(); itf++) {
             p2 = (*itf)->to_face(p1, face_id);
             l += (*itf)->pathlength(p1, p2);
             std::swap(p1, p2);
           }
         } else {
-          UFW_EXCEPT(std::invalid_argument, fmt::format("face_id can be either 1 or 2; Provided value: {}", face_id));
+          UFW_EXCEPT(std::invalid_argument, fmt::format("face_id can be either 1 or 2; Provided value: {}",
+                                                        face_id == face_location::begin ? "begin_face" : "end_face"));
         }
       }
     }
@@ -468,9 +481,9 @@ namespace sand {
 
   pos_3d cell::offset2position(double offset_from_center) const {
     if (offset_from_center < -0.5 * total_pathlength())
-      return element_collection().elements().front()->face1().centroid();
+      return element_collection().elements().front()->begin_face().centroid();
     if (offset_from_center > 0.5 * total_pathlength())
-      return element_collection().elements().back()->face2().centroid();
+      return element_collection().elements().back()->end_face().centroid();
     auto from_face1 = 0.5 * total_pathlength() + offset_from_center;
     auto el_iter    = element_collection().elements().begin();
 
@@ -522,7 +535,7 @@ namespace sand {
   //////////////////////////////////////////////////////
 
   grid module::construct_grid(const std::vector<double> col_widths, const std::vector<double> row_widths) const {
-    auto& f    = element_collection().at(0).face1();
+    auto& f    = element_collection().at(0).begin_face();
     size_t idx = 0;
     if (id().subdetector == geoinfo::ecal_info::subdetector_t::BARREL) {
       idx = 0;
@@ -546,7 +559,7 @@ namespace sand {
         pos_3d p_end;
         double l = 0.;
         for (const auto& el : element_collection().elements()) {
-          auto p_end = el->to_face(p_start, 2);
+          auto p_end = el->to_face(p_start, face_location::end);
           l += el->pathlength(p_start, p_end);
           p_start = p_end;
         }
@@ -571,7 +584,7 @@ namespace sand {
     cell c(id, fib);
     auto f1 = f;
     for (const auto& el : element_collection().elements()) {
-      auto f2 = el->to_face(f1, 2);
+      auto f2 = el->to_face(f1, face_location::end);
       if (el->type() == geoinfo::ecal_info::shape_element_type::straight)
         c.add(std::make_shared<shape_element_straight>(f1, f2));
       else

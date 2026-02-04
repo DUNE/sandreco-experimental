@@ -34,7 +34,7 @@ namespace sand::common {
 
   void geoinfo_test::run() {
     const auto& gi = instance<geoinfo>();
-    UFW_INFO("Running a geoinfo_test process at {}.", fmt::ptr(this)); /*
+    UFW_INFO("Running a geoinfo_test process at {}.", fmt::ptr(this));
     UFW_INFO("GRAIN path: '{}'", gi.grain().path());
     UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
     UFW_INFO("GRAIN size (local bbox):\n - LAr {};\n - optics fiducial {};", gi.grain().LAr_bbox(),
@@ -101,7 +101,7 @@ namespace sand::common {
       }
       UFW_INFO("Last camera info: distance lens-sensor = {}", pix_spam.z_lens);
     }
-    */
+
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
 
@@ -129,8 +129,8 @@ namespace sand::common {
             auto& c         = gi.ecal().get_cell(cid);
             UFW_INFO("    cell: {}, row: {}, column: {}", cid.raw, ir, ic);
             UFW_INFO("    elements size: {}", c.element_collection().elements().size());
-            UFW_INFO("      face[1] centroid: {}", c.element_collection().elements().front()->face1().centroid());
-            UFW_INFO("      face[2] centroid: {}", c.element_collection().elements().back()->face2().centroid());
+            UFW_INFO("      face[1] centroid: {}", c.element_collection().elements().front()->begin_face().centroid());
+            UFW_INFO("      face[2] centroid: {}", c.element_collection().elements().back()->end_face().centroid());
           }
         }
       }
@@ -142,15 +142,15 @@ namespace sand::common {
     cid.row         = 4;
     cid.column      = 7;
     auto& cb        = gi.ecal().get_cell(cid);
-    auto c1         = cb.element_collection().elements().front()->face1().centroid();
-    auto c2         = cb.element_collection().elements().back()->face2().centroid();
+    auto c1         = cb.element_collection().elements().front()->begin_face().centroid();
+    auto c2         = cb.element_collection().elements().back()->end_face().centroid();
     auto p          = c1 + 0.3 * (c2 - c1);
     auto obt_cid    = gi.ecal().at(p + dir_3d(0., 0.4, 0.0)).id();
     auto l1exp      = (c1 - p).R();
     auto l2exp      = (c2 - p).R();
     auto lexp       = l1exp + l2exp;
-    auto l1obt      = cb.pathlength(p, 1);
-    auto l2obt      = cb.pathlength(p, 2);
+    auto l1obt      = cb.pathlength(p, sand::geoinfo::ecal_info::face_location::begin);
+    auto l2obt      = cb.pathlength(p, sand::geoinfo::ecal_info::face_location::end);
     auto lobt       = cb.total_pathlength();
     auto off        = -(0.5 * lexp - l1exp);
     auto pobt       = cb.offset2position(off);
@@ -173,8 +173,8 @@ namespace sand::common {
     off             = -0.7 * 0.5 * ce.total_pathlength();
     p               = ce.offset2position(off);
     obt_cid         = gi.ecal().at(p + dir_3d(0.4, 0.0, 0.0)).id();
-    l1obt           = ce.pathlength(p, 1);
-    l2obt           = ce.pathlength(p, 2);
+    l1obt           = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::begin);
+    l2obt           = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::end);
     l1exp           = 0.5 * ce.total_pathlength() + off;
     l2exp           = 0.5 * ce.total_pathlength() - off;
     lobt            = ce.total_pathlength();
@@ -182,7 +182,7 @@ namespace sand::common {
 
     UFW_ASSERT(lexp == lobt,
                fmt::format("[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt));
-    UFW_ASSERT(2. * (l1exp - l1obt)/(l1exp + l1obt) < 1.E-9,
+    UFW_ASSERT(2. * (l1exp - l1obt) / (l1exp + l1obt) < 1.E-9,
                fmt::format("[ECAL ENDCAP] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt));
     UFW_ASSERT(ce.is_inside(p), fmt::format("[ECAL ENDCAP] Point: {} is expected to be inside!!", p));
     UFW_ASSERT(cid.raw == obt_cid.raw,
