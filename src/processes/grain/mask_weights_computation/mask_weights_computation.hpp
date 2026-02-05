@@ -18,7 +18,7 @@ using float4 = cl_float4;
 using int3   = cl_int3;
 
 namespace sand::grain {
-#include "cl_src/common_structs.cl"
+#include "../cl_src/common_structs.cl"
 
   transform_t to_ocl_xform(const xform_3d& root_xform) {
     double elem[12];
