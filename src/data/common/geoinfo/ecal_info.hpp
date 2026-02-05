@@ -129,7 +129,7 @@ namespace sand {
       shape_element_face to_face(const shape_element_face& f, face_location face_id) const;
     };
 
-    using p_shape_element_base = std::shared_ptr<shape_element_base>;
+    using p_shape_element_base = std::unique_ptr<shape_element_base>;
     using el_vec               = std::vector<p_shape_element_base>;
     using el_vec_it            = std::vector<p_shape_element_base>::iterator;
 
@@ -155,7 +155,7 @@ namespace sand {
 
      public:
       inline const std::vector<p_shape_element_base>& elements() const { return elements_; };
-      void add(const p_shape_element_base& el) { elements_.push_back(el); };
+      void add(p_shape_element_base&& el) { elements_.emplace_back(std::move(el)); };
       inline const shape_element_base& at(size_t idx) const { return *(elements_.at(idx)); };
       inline size_t size() const { return elements_.size(); };
       void order_elements();
@@ -163,7 +163,6 @@ namespace sand {
       bool is_inside(const pos_3d& p) const;
     };
 
-    enum subdetector_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
     using module_t = uint8_t;
     using row_t    = uint8_t;
     using column_t = uint8_t;
@@ -171,8 +170,8 @@ namespace sand {
     struct module_id {
       union {
         struct {
-          subdetector_t subdetector;
-          module_t module;
+          geo_id::region_t region;
+          module_t module_number;
         };
         uint16_t raw = -1;
       };
@@ -181,8 +180,8 @@ namespace sand {
     struct cell_id {
       union {
         struct {
-          subdetector_t subdetector;
-          module_t module;
+          geo_id::region_t region;
+          module_t module_number;
           row_t row;
           column_t column;
         };
@@ -199,7 +198,7 @@ namespace sand {
      public:
       grid() = delete;
       grid(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4, const std::vector<double>& div12,
-           const std::vector<double>& div14);
+           const std::array<double, 5>& div14);
       shape_element_face face(size_t irow, size_t icol) const;
       inline size_t nrow() const { return nrow_; };
       inline size_t ncol() const { return ncol_; };
@@ -212,8 +211,8 @@ namespace sand {
     struct cell {
      public:
       cell() = delete;
-      cell(cell_id id, const fiber& f) : id_(id), fib_(f) {};
-      void add(const p_shape_element_base& el) { el_collection_.add(el); };
+      cell(cell_id id, fiber f) : id_(id), fib_(f) {};
+      void add(p_shape_element_base&& el) { el_collection_.add(std::move(el)); };
       inline const shape_element_collection& element_collection() const { return el_collection_; };
       inline const fiber& get_fiber() const { return fib_; };
       inline cell_id id() const { return id_; };
@@ -236,22 +235,23 @@ namespace sand {
       module() = delete;
       module(module_id id) :id_(id) {};
       inline module_id id() const { return id_; };
-      void add(const p_shape_element_base& el) { el_collection_.add(el); };
+      void add(p_shape_element_base&& el) { el_collection_.add(std::move(el)); };
       inline const shape_element_collection& element_collection() const { return el_collection_; };
       inline void order_elements() { el_collection_.order_elements(); };
-      grid construct_grid(const std::vector<double> col_widths, const std::vector<double> row_widths) const;
+      grid construct_grid(const std::vector<double>& col_widths) const;
       cell construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const;
 
      private:
       module_id id_;
       shape_element_collection el_collection_;
+      static constexpr std::array<double, 5> row_widths_{40., 40., 40., 40., 49.};
     };
 
    public:
     ecal_info(const geoinfo&);
     virtual ~ecal_info();
     const cell& at(const pos_3d& p) const;
-    const cell& get_cell(cell_id cid) const;
+    const cell& at(cell_id cid) const;
 
     using subdetector_info::path;
 
@@ -261,12 +261,6 @@ namespace sand {
    private:
     std::map<module_id, std::map<cell_id, cell>> m_modules_cells_maps;
     std::map<geo_id, std::vector<cell_ref>> m_cells_map;
-    static inline const std::regex re_ecal_barrel_module{"/ECAL_lv_PV_(\\d+)$"};
-    static inline const std::regex re_ecal_endcap_module{"/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)$"};
-    static inline const std::regex re_ecal_barrel_sensible_volume{"/ECAL_lv_PV_(\\d+)/volECALActiveSlab_(\\d+)_PV_0$"};
-    static inline const std::regex re_ecal_endcap_sensible_volume{
-        "/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)/ECAL_ec_mod_(curv|vert|hor)_(\\d+)_lv_PV_(\\d+)/"
-        "endvolECAL(curv|straight|)ActiveSlab_(((\\d+)_(\\d+))|(\\d+))_PV_(\\d+)$"};
 
    private:
     static module_id to_module_id(const geo_path& path);

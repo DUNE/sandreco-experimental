@@ -24,9 +24,20 @@ namespace sand {
   using cell_id                  = geoinfo::ecal_info::cell_id;
   using module_id                = geoinfo::ecal_info::module_id;
 
-  using p_shape_element_base = std::shared_ptr<shape_element_base>;
+  using p_shape_element_base = std::unique_ptr<shape_element_base>;
   using el_vec               = std::vector<p_shape_element_base>;
   using el_vec_it            = std::vector<p_shape_element_base>::iterator;
+
+  //////////////////////////////////////////////////////
+  // Regular expressions matching geo paths
+  //////////////////////////////////////////////////////
+
+  static inline const std::regex re_ecal_barrel_module{"/ECAL_lv_PV_(\\d+)$"};
+  static inline const std::regex re_ecal_endcap_module{"/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)$"};
+  static inline const std::regex re_ecal_barrel_sensible_volume{"/ECAL_lv_PV_(\\d+)/volECALActiveSlab_(\\d+)_PV_0$"};
+  static inline const std::regex re_ecal_endcap_sensible_volume{
+      "/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)/ECAL_ec_mod_(curv|vert|hor)_(\\d+)_lv_PV_(\\d+)/"
+      "endvolECAL(curv|straight|)ActiveSlab_(((\\d+)_(\\d+))|(\\d+))_PV_(\\d+)$"};
 
   //////////////////////////////////////////////////////
   // Cell ID
@@ -83,8 +94,8 @@ namespace sand {
       return false;
     }
 
-    inline const shape_element_face& operator* (const xform_3d& transf, const shape_element_face& f) {
-      return *(new shape_element_face(transf * f.vtx(0), transf * f.vtx(1), transf * f.vtx(2), transf * f.vtx(3)));
+    inline shape_element_face operator* (const xform_3d& transf, const shape_element_face& f) {
+      return shape_element_face(transf * f.vtx(0), transf * f.vtx(1), transf * f.vtx(2), transf * f.vtx(3));
     }
 
     xform_3d to_xform_3d(const TGeoHMatrix& mat) {
@@ -129,9 +140,9 @@ namespace sand {
 
     p_shape_element_base construct_shape_element(const shape_element_face& f1, const shape_element_face& f2) {
       if (is_straight(f1, f2)) {
-        return std::make_shared<shape_element_straight>(f1, f2);
+        return std::make_unique<shape_element_straight>(f1, f2);
       } else if (is_curved(f1, f2)) {
-        return std::make_shared<shape_element_curved>(f1, f2);
+        return std::make_unique<shape_element_curved>(f1, f2);
       } else {
         UFW_EXCEPT(std::invalid_argument, "cell_element: Neither a straight element nor a curved element!!");
       }
@@ -145,11 +156,11 @@ namespace sand {
       auto phi2 = tube->GetPhi2();
 
       auto to_shape_element_face = [&](double phi) {
-        return shape_element_face(
-            pos_3d(rmin * std::cos(phi * TMath::DegToRad()), rmin * std::sin(phi * TMath::DegToRad()), dz),
-            pos_3d(rmin * std::cos(phi * TMath::DegToRad()), rmin * std::sin(phi * TMath::DegToRad()), -dz),
-            pos_3d(rmax * std::cos(phi * TMath::DegToRad()), rmax * std::sin(phi * TMath::DegToRad()), -dz),
-            pos_3d(rmax * std::cos(phi * TMath::DegToRad()), rmax * std::sin(phi * TMath::DegToRad()), dz));
+        phi *= TMath::DegToRad();
+        return shape_element_face(pos_3d(rmin * std::cos(phi), rmin * std::sin(phi), dz),
+                                  pos_3d(rmin * std::cos(phi), rmin * std::sin(phi), -dz),
+                                  pos_3d(rmax * std::cos(phi), rmax * std::sin(phi), -dz),
+                                  pos_3d(rmax * std::cos(phi), rmax * std::sin(phi), dz));
       };
       return construct_shape_element(to_shape_element_face(phi1), to_shape_element_face(phi2));
     }
@@ -263,7 +274,7 @@ namespace sand {
   bool shape_element_base::is_inside(const pos_3d& p) const {
     constexpr face_location face_id = face_location::begin;
     auto p_prj_face                 = to_face(p, face_id);
-    for (size_t i = 0; i < face(face_id).vtx().size(); i++) {
+    for (size_t i = 0, nvtx = face(face_id).vtx().size(); i < nvtx; i++) {
       if (segments_intersect(p_prj_face, face(face_id).centroid(), face(face_id).vtx(i), face(face_id).vtx(i + 1))) {
         return false;
       }
@@ -300,7 +311,6 @@ namespace sand {
   double shape_element_straight::pathlength(const pos_3d& p1, const pos_3d& p2) const {
     if (!is_zero_within_tolerance(axis_dir().Cross(p1 - p2).R())) {
       UFW_EXCEPT(std::invalid_argument, fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
-      return -1.;
     }
     return (p1 - p2).R();
   }
@@ -344,7 +354,6 @@ namespace sand {
     auto z2 = z_wrt_axis(p2, axis_pos(), axis_dir());
     if (!is_zero_within_tolerance(r1.R() - r2.R()) || !is_zero_within_tolerance((z1 - z2).R())) {
       UFW_EXCEPT(std::invalid_argument, fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
-      return -1.;
     }
     auto ang = ang_wrt_axis(p1, p2, axis_pos(), axis_dir());
     return r1.R() * std::fabs(ang);
@@ -355,7 +364,6 @@ namespace sand {
     auto p2                     = end_face().centroid();
     auto ang_center             = 0.5 * ang_wrt_axis(p1, p2, axis_pos(), axis_dir());
     auto ang_offset_from_center = offset_from_center / r_wrt_axis(p1, axis_pos(), axis_dir()).R();
-    // the sign has to be checked!!
     rot_ang rotation(axis_dir(), ang_center + ang_offset_from_center);
     trl_3d toOrigin(axis_pos(), orig);
     trl_3d fromOrigin(orig, axis_pos());
@@ -368,14 +376,23 @@ namespace sand {
   //////////////////////////////////////////////////////
 
   void shape_element_collection::order_elements() {
-    if (elements_.size() == 1)
+    /**
+     * @brief Describes the ordering rules for shape element collection.
+     *
+     * Shape elements are arranged so that the end_face of each element
+     * matches the begin_face of the next one. There is no defined rule
+     * for which element will be the first or the last; the only guarantee
+     * is that all elements form a consecutive sequence.
+     */
+
+    if (elements_.size() <= 1)
       return;
 
     el_vec tmp;
     tmp.swap(elements_);
 
     auto insert = [&](const el_vec_it& it_insert, const el_vec_it& it_erase) {
-      elements_.insert(it_insert, *it_erase);
+      elements_.emplace(it_insert, std::move(*it_erase));
       tmp.erase(it_erase);
     };
     auto insert_front = [&](const el_vec_it& it) { insert(elements_.begin(), it); };
@@ -440,6 +457,15 @@ namespace sand {
   //////////////////////////////////////////////////////
 
   double cell::pathlength(const pos_3d& p, face_location face_id) const {
+    /**
+     * @brief Computes the path length from a given point to a target face.
+     *
+     * Loops over the shape elements to find the one that contains the point.
+     * Once found, it computes the path length from the given point to the
+     * specified face, then adds the total path length of the remaining shape
+     * elements between the element containing the point and the target face.
+     */
+
     double l  = 0.;
     pos_3d p1 = p;
     pos_3d p2;
@@ -475,8 +501,8 @@ namespace sand {
     //       330 cm planes 4-5
     //  p1   0.35
     auto& f = get_fiber();
-    return f.fraction * TMath::Exp(-d / f.attenuation_length_1)
-         + (1. - f.fraction) * TMath::Exp(-d / f.attenuation_length_2);
+    return f.fraction * std::exp(-d / f.attenuation_length_1)
+         + (1. - f.fraction) * std::exp(-d / f.attenuation_length_2);
   }
 
   pos_3d cell::offset2position(double offset_from_center) const {
@@ -499,11 +525,11 @@ namespace sand {
   //////////////////////////////////////////////////////
 
   grid::grid(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4, const std::vector<double>& div12,
-             const std::vector<double>& div14) {
+             const std::array<double, 5>& div14) {
     ncol_          = div12.size();
     nrow_          = div14.size();
     nodes_         = std::vector<pos_3d>((ncol_ + 1) * (nrow_ + 1));
-    auto cumulnorm = [](const std::vector<double>& v) {
+    auto cumulnorm = [](const auto& v) {
       std::vector<double> r{0.};
       double sum = std::accumulate(v.begin(), v.end(), 0.);
       for (const auto& val : v)
@@ -534,10 +560,10 @@ namespace sand {
   // geoinfo::ecal_info::module
   //////////////////////////////////////////////////////
 
-  grid module::construct_grid(const std::vector<double> col_widths, const std::vector<double> row_widths) const {
+  grid module::construct_grid(const std::vector<double>& col_widths) const {
     auto& f    = element_collection().at(0).begin_face();
     size_t idx = 0;
-    if (id().subdetector == geoinfo::ecal_info::subdetector_t::BARREL) {
+    if (id().region == geo_id::region_t::BARREL) {
       idx = 0;
       if (is_zero_within_tolerance(f.side(0).R() - f.side(2).R())) {
         if (f.side(1).R() < f.side(3).R())
@@ -552,8 +578,7 @@ namespace sand {
       } else {
         UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected shape for barrel module!!"));
       }
-    } else if (id().subdetector == geoinfo::ecal_info::subdetector_t::ENDCAP_A
-               || id().subdetector == geoinfo::ecal_info::subdetector_t::ENDCAP_B) {
+    } else if (id().region == geo_id::region_t::ENDCAP_A || id().region == geo_id::region_t::ENDCAP_B) {
       auto length = [&](size_t i) {
         pos_3d p_start = f.vtx(i) + 0.5 * f.side(i);
         pos_3d p_end;
@@ -577,7 +602,7 @@ namespace sand {
         }
       }
     }
-    return grid(f.vtx(idx), f.vtx(idx + 1), f.vtx(idx + 2), f.vtx(idx + 3), col_widths, row_widths);
+    return grid(f.vtx(idx), f.vtx(idx + 1), f.vtx(idx + 2), f.vtx(idx + 3), col_widths, row_widths_);
   }
 
   cell module::construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const {
@@ -586,9 +611,9 @@ namespace sand {
     for (const auto& el : element_collection().elements()) {
       auto f2 = el->to_face(f1, face_location::end);
       if (el->type() == geoinfo::ecal_info::shape_element_type::straight)
-        c.add(std::make_shared<shape_element_straight>(f1, f2));
+        c.add(std::make_unique<shape_element_straight>(f1, f2));
       else
-        c.add(std::make_shared<shape_element_curved>(f1, f2));
+        c.add(std::make_unique<shape_element_curved>(f1, f2));
       std::swap(f1, f2);
     }
     return c;
@@ -606,7 +631,7 @@ namespace sand {
 
   const cell& geoinfo::ecal_info::at(const pos_3d& p) const {
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
-    nav->FindNode(p.X(), p.Y(), p.Z());
+    nav->find_node(p);
     auto path = nav->GetPath();
     auto gid  = id(geo_path(path));
     for (auto c : m_cells_map.at(gid))
@@ -616,10 +641,10 @@ namespace sand {
                fmt::format("Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid));
   }
 
-  const cell& geoinfo::ecal_info::get_cell(cell_id cid) const {
+  const cell& geoinfo::ecal_info::at(cell_id cid) const {
     module_id mid;
-    mid.module      = geoinfo::ecal_info::module_t(cid.module);
-    mid.subdetector = geoinfo::ecal_info::subdetector_t(cid.subdetector);
+    mid.module_number = geoinfo::ecal_info::module_t(cid.module_number);
+    mid.region        = geo_id::region_t(cid.region);
     if (!m_modules_cells_maps.count(mid)) {
       UFW_EXCEPT(std::invalid_argument, fmt::format("Module: {} not found in the map: m_modules_cells_maps", mid.raw));
     }
@@ -627,7 +652,7 @@ namespace sand {
       UFW_EXCEPT(std::invalid_argument,
                  fmt::format("Cell: {} not found in the map: m_modules_cells_maps.at({})  -> Cell: {}, Sub: {}, Mod: "
                              "{}, Cel: {}, Row: {}",
-                             cid.raw, mid.raw, cid.raw, cid.subdetector, cid.module, cid.column, cid.row));
+                             cid.raw, mid.raw, cid.raw, cid.region, cid.module_number, cid.column, cid.row));
     }
     return m_modules_cells_maps.at(mid).at(cid);
   }
@@ -753,14 +778,14 @@ namespace sand {
     if (regex_search(path, m, re)) {
       auto gid = id(path);
       module_id mid;
-      mid.subdetector = geoinfo::ecal_info::subdetector_t(gid.ecal.region);
-      mid.module      = geoinfo::ecal_info::module_t(gid.ecal.supermodule);
+      mid.region        = geo_id::region_t(gid.ecal.region);
+      mid.module_number = geoinfo::ecal_info::module_t(gid.ecal.supermodule);
       cell_id cid;
-      cid.subdetector = geoinfo::ecal_info::subdetector_t(gid.ecal.region);
-      cid.module      = geoinfo::ecal_info::module_t(gid.ecal.supermodule);
-      cid.row         = uint8_t(gid.ecal.plane / uint8_t(40));
-      cid.row         = (cid.row == 5) ? 4 : cid.row;
-      cid.column      = 0;
+      cid.region        = geo_id::region_t(gid.ecal.region);
+      cid.module_number = geoinfo::ecal_info::module_t(gid.ecal.supermodule);
+      cid.row           = uint8_t(gid.ecal.plane / uint8_t(40));
+      cid.row           = (cid.row == 5) ? 4 : cid.row;
+      cid.column        = 0;
       while (m_modules_cells_maps.at(mid).count(cid)) {
         m_cells_map[gid].push_back(m_modules_cells_maps.at(mid).find(cid));
         cid.column += 1;
@@ -777,12 +802,11 @@ namespace sand {
     geoinfo::ecal_info::module_id mid;
     std::smatch m;
     if (regex_search(path, m, re_ecal_barrel_module)) {
-      mid.module      = static_cast<geoinfo::ecal_info::module_t>(std::stoi(m[1]));
-      mid.subdetector = geoinfo::ecal_info::subdetector_t::BARREL;
+      mid.module_number = static_cast<geoinfo::ecal_info::module_t>(std::stoi(m[1]));
+      mid.region        = geo_id::region_t::BARREL;
     } else if (regex_search(path, m, re_ecal_endcap_module)) {
-      mid.subdetector = std::stoi(m[1]) == 0 ? geoinfo::ecal_info::subdetector_t::ENDCAP_A
-                                             : geoinfo::ecal_info::subdetector_t::ENDCAP_B;
-      mid.module      = static_cast<ecal_info::module_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
+      mid.region        = std::stoi(m[1]) == 0 ? geo_id::region_t::ENDCAP_A : geo_id::region_t::ENDCAP_B;
+      mid.module_number = static_cast<ecal_info::module_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
     } else {
       UFW_EXCEPT(std::invalid_argument, "Path doesn't match any ECAL regex!!");
     }
@@ -790,7 +814,7 @@ namespace sand {
   }
 
   void geoinfo::ecal_info::construct_module_cells(const module& m, const grid& g) {
-    geoinfo::ecal_info::fiber* fib;
+    geoinfo::ecal_info::fiber* fib = nullptr;
 
     for (size_t irow = 0; irow < g.nrow(); irow++)
       for (size_t icol = 0; icol < g.ncol(); icol++) {
@@ -802,16 +826,19 @@ namespace sand {
         case 2:
           fib = &geoinfo::ecal_info::kfiber_plane3;
           break;
-        default:
+        case 3:
+        case 4:
           fib = &geoinfo::ecal_info::kfiber_plane45;
           break;
+        default:
+          UFW_EXCEPT(std::invalid_argument, "Unexpected row id!!");
         }
         geoinfo::ecal_info::cell_id cid;
-        cid.subdetector = m.id().subdetector;
-        cid.module      = m.id().module;
-        cid.row         = irow;
-        cid.column      = icol;
-        auto f          = g.face(icol, irow);
+        cid.region        = m.id().region;
+        cid.module_number = m.id().module_number;
+        cid.row           = irow;
+        cid.column        = icol;
+        auto f            = g.face(icol, irow);
         m_modules_cells_maps[m.id()].emplace(cid, m.construct_cell(f, cid, *fib));
       }
   }
@@ -827,25 +854,63 @@ namespace sand {
       if (shape->TestShapeBit(TGeoShape::kGeoTubeSeg)) {
         auto el = tube_to_shape_element(static_cast<TGeoTubeSeg*>(shape));
         el->transform(transf);
-        m.add(el);
+        m.add(std::move(el));
       } else if (shape->TestShapeBit(TGeoShape::kGeoBox)) {
         auto el = box_to_shape_element(static_cast<TGeoBBox*>(shape));
         el->transform(transf);
-        m.add(el);
+        m.add(std::move(el));
       } else {
         UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected shape: {}", shape->GetName()));
       }
     });
 
+    /////////////////////////////////////////////////////////////////////////////////
+    //
+    //                                  ECAL ENDCAP
+    //
+    /////////////////////////////////////////////////////////////////////////////////
+    //
+    //                         ***************************
+    //                    ******            *            ******
+    //                *****    *            *            *    *****
+    //             ****   *    *            *            *    *    ***
+    //          ***   *   *    *            *            *    *    *  ***
+    //        **  *   *   *    *            *            *    *    *  *  **
+    //      **    *   *   *    *     1      *     0      *    *    *  *    **
+    //     **     *   *   *    *            *            *    *    *  *     **
+    //    **      *   *   *    *            *            *    *    *  *      **
+    //   **       *   *   *    *            *            *    *    *  *       **
+    //  **        *   *   *    *            *            *    *    *  *        **
+    //  **        *   *   *    *            *            *    *    *  *        **
+    // **---------* ---------  *            *            * ---------  *---------**
+    // **|12 - 15|* | 2 - 11|  ************** ************ |18 - 27|  *|28 - 31|**
+    // **---------* ---------  *            *            * ---------  *---------**
+    //  **        *   *   *    *            *            *    *    *  *        **
+    //  **        *   *   *    *            *            *    *    *  *        **
+    //   **       *   *   *    *            *            *    *    *  *       **
+    //    **      *   *   *    *            *            *    *    *  *      **
+    //     **     *   *   *    *     16     *     17     *    *    *  *     **
+    //      **    *   *   *    *            *            *    *    *  *    **
+    //        **  *   *   *    *            *            *    *    *  *  **
+    //          ***   *   *    *            *            *    *    *  ***
+    //             ****   *    *            *            *    *    ***
+    //                *****    *            *            *    *****
+    //                    ******            *            ******
+    //                         ***************************
+    //
+    /////////////////////////////////////////////////////////////////////////////////
     m.order_elements();
     int ncol = 0;
-    switch (m.id().module) {
+    switch (m.id().module_number) {
+      // upper central modules have six columns
     case 0:
     case 1:
+      // lower central modules have six columns
     case 16:
     case 17:
       ncol = 6;
       break;
+      // lateral modules have two columns
     case 12:
     case 13:
     case 14:
@@ -856,13 +921,13 @@ namespace sand {
     case 31:
       ncol = 2;
       break;
+      // Every other modules have three columns
     default:
       ncol = 3;
       break;
     }
-    static std::vector<double> row_widths{40., 40., 40., 40., 49.};
     std::vector<double> col_widths(ncol, 1.);
-    auto grid = m.construct_grid(col_widths, row_widths);
+    auto grid = m.construct_grid(col_widths);
     construct_module_cells(m, grid);
   }
 
@@ -875,11 +940,10 @@ namespace sand {
     auto transf     = to_xform_3d(geo_transf);
     auto el         = trd2_to_shape_element(static_cast<TGeoTrd2*>(shape));
     el->transform(transf);
-    m.add(el);
+    m.add(std::move(el));
     m.order_elements();
-    static std::vector<double> row_widths{40., 40., 40., 40., 49.};
     static std::vector<double> col_widths(12, 1.);
-    auto grid = m.construct_grid(col_widths, row_widths);
+    auto grid = m.construct_grid(col_widths);
     construct_module_cells(m, grid);
   }
 } // namespace sand

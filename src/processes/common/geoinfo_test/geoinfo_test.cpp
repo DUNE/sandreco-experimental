@@ -122,11 +122,11 @@ namespace sand::common {
           }
           for (uint8_t ic = 0; ic < nc; ic++) {
             sand::geoinfo::ecal_info::cell_id cid;
-            cid.subdetector = sand::geoinfo::ecal_info::subdetector_t(ism);
-            cid.module      = im;
-            cid.row         = ir;
-            cid.column      = ic;
-            auto& c         = gi.ecal().get_cell(cid);
+            cid.region        = sand::geo_id::region_t(ism);
+            cid.module_number = im;
+            cid.row           = ir;
+            cid.column        = ic;
+            auto& c           = gi.ecal().at(cid);
             UFW_INFO("    cell: {}, row: {}, column: {}", cid.raw, ir, ic);
             UFW_INFO("    elements size: {}", c.element_collection().elements().size());
             UFW_INFO("      face[1] centroid: {}", c.element_collection().elements().front()->begin_face().centroid());
@@ -137,23 +137,23 @@ namespace sand::common {
     }
 
     sand::geoinfo::ecal_info::cell_id cid;
-    cid.subdetector = sand::geoinfo::ecal_info::subdetector_t::BARREL;
-    cid.module      = 13;
-    cid.row         = 4;
-    cid.column      = 7;
-    auto& cb        = gi.ecal().get_cell(cid);
-    auto c1         = cb.element_collection().elements().front()->begin_face().centroid();
-    auto c2         = cb.element_collection().elements().back()->end_face().centroid();
-    auto p          = c1 + 0.3 * (c2 - c1);
-    auto obt_cid    = gi.ecal().at(p + dir_3d(0., 0.4, 0.0)).id();
-    auto l1exp      = (c1 - p).R();
-    auto l2exp      = (c2 - p).R();
-    auto lexp       = l1exp + l2exp;
-    auto l1obt      = cb.pathlength(p, sand::geoinfo::ecal_info::face_location::begin);
-    auto l2obt      = cb.pathlength(p, sand::geoinfo::ecal_info::face_location::end);
-    auto lobt       = cb.total_pathlength();
-    auto off        = -(0.5 * lexp - l1exp);
-    auto pobt       = cb.offset2position(off);
+    cid.region        = sand::geo_id::region_t::BARREL;
+    cid.module_number = 13;
+    cid.row           = 4;
+    cid.column        = 7;
+    auto& cb          = gi.ecal().at(cid);
+    auto c1           = cb.element_collection().elements().front()->begin_face().centroid();
+    auto c2           = cb.element_collection().elements().back()->end_face().centroid();
+    auto p            = c1 + 0.3 * (c2 - c1);
+    auto obt_cid      = gi.ecal().at(p + dir_3d(0., 0.4, 0.0)).id();
+    auto l1exp        = (c1 - p).R();
+    auto l2exp        = (c2 - p).R();
+    auto lexp         = l1exp + l2exp;
+    auto l1obt        = cb.pathlength(p, sand::geoinfo::ecal_info::face_location::begin);
+    auto l2obt        = cb.pathlength(p, sand::geoinfo::ecal_info::face_location::end);
+    auto lobt         = cb.total_pathlength();
+    auto off          = -(0.5 * lexp - l1exp);
+    auto pobt         = cb.offset2position(off);
 
     UFW_ASSERT(lexp == lobt,
                fmt::format("[ECAL BARREL] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt));
@@ -165,20 +165,20 @@ namespace sand::common {
     UFW_ASSERT(cid.raw == obt_cid.raw,
                fmt::format("[ECAL BARREL] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw));
 
-    cid.subdetector = sand::geoinfo::ecal_info::subdetector_t::ENDCAP_A;
-    cid.module      = 0;
-    cid.row         = 4;
-    cid.column      = 2;
-    auto& ce        = gi.ecal().get_cell(cid);
-    off             = -0.7 * 0.5 * ce.total_pathlength();
-    p               = ce.offset2position(off);
-    obt_cid         = gi.ecal().at(p + dir_3d(0.4, 0.0, 0.0)).id();
-    l1obt           = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::begin);
-    l2obt           = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::end);
-    l1exp           = 0.5 * ce.total_pathlength() + off;
-    l2exp           = 0.5 * ce.total_pathlength() - off;
-    lobt            = ce.total_pathlength();
-    lexp            = l1exp + l2exp;
+    cid.region        = sand::geo_id::region_t::ENDCAP_A;
+    cid.module_number = 0;
+    cid.row           = 4;
+    cid.column        = 2;
+    auto& ce          = gi.ecal().at(cid);
+    off               = -0.7 * 0.5 * ce.total_pathlength();
+    p                 = ce.offset2position(off);
+    obt_cid           = gi.ecal().at(p + dir_3d(0.4, 0.0, 0.0)).id();
+    l1obt             = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::begin);
+    l2obt             = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::end);
+    l1exp             = 0.5 * ce.total_pathlength() + off;
+    l2exp             = 0.5 * ce.total_pathlength() - off;
+    lobt              = ce.total_pathlength();
+    lexp              = l1exp + l2exp;
 
     UFW_ASSERT(lexp == lobt,
                fmt::format("[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt));
