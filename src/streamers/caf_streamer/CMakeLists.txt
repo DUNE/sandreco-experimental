@@ -1,10 +1,10 @@
 include(FetchContent)
 
-# Fetch duneanaobj from the 63-skip-cet-option branch
+# Fetch duneanaobj from the main branch
 FetchContent_Declare(
   duneanaobj
   GIT_REPOSITORY https://github.com/DUNE/duneanaobj.git
-  GIT_TAG        63-skip-cet-option
+  GIT_TAG        main
 )
 set(SKIP_CET ON CACHE BOOL "Skip CET build system for duneanaobj")
 FetchContent_MakeAvailable(duneanaobj)
