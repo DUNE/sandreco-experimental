@@ -144,7 +144,7 @@ namespace sand {
       } else if (is_curved(f1, f2)) {
         return std::make_unique<shape_element_curved>(f1, f2);
       } else {
-        UFW_EXCEPT(std::invalid_argument, "cell_element: Neither a straight element nor a curved element!!");
+        UFW_ERROR("cell_element: Neither a straight element nor a curved element!!");
       }
     }
 
@@ -310,7 +310,7 @@ namespace sand {
 
   double shape_element_straight::pathlength(const pos_3d& p1, const pos_3d& p2) const {
     if (!is_zero_within_tolerance(axis_dir().Cross(p1 - p2).R())) {
-      UFW_EXCEPT(std::invalid_argument, fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
+      UFW_ERROR("Points: {}, {} are not aligned along shape_element axis", p1, p2);
     }
     return (p1 - p2).R();
   }
@@ -353,7 +353,7 @@ namespace sand {
     auto z1 = z_wrt_axis(p1, axis_pos(), axis_dir());
     auto z2 = z_wrt_axis(p2, axis_pos(), axis_dir());
     if (!is_zero_within_tolerance(r1.R() - r2.R()) || !is_zero_within_tolerance((z1 - z2).R())) {
-      UFW_EXCEPT(std::invalid_argument, fmt::format("Points: {}, {} are not aligned along shape_element axis", p1, p2));
+      UFW_ERROR("Points: {}, {} are not aligned along shape_element axis", p1, p2);
     }
     auto ang = ang_wrt_axis(p1, p2, axis_pos(), axis_dir());
     return r1.R() * std::fabs(ang);
@@ -433,7 +433,7 @@ namespace sand {
       }
 
       if (found == false) {
-        UFW_EXCEPT(std::invalid_argument, "Module disconnected: At least one shape element has not faces in common");
+        UFW_ERROR("Module disconnected: At least one shape element has not faces in common");
       }
     }
   }
@@ -484,8 +484,8 @@ namespace sand {
             std::swap(p1, p2);
           }
         } else {
-          UFW_EXCEPT(std::invalid_argument, fmt::format("face_id can be either 1 or 2; Provided value: {}",
-                                                        face_id == face_location::begin ? "begin_face" : "end_face"));
+          UFW_ERROR("face_id can be either 1 or 2; Provided value: {}",
+                    face_id == face_location::begin ? "begin_face" : "end_face");
         }
       }
     }
@@ -576,7 +576,7 @@ namespace sand {
         else
           idx = 2;
       } else {
-        UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected shape for barrel module!!"));
+        UFW_ERROR("Unexpected shape for barrel module!!");
       }
     } else if (id().region == geo_id::region_t::ENDCAP_A || id().region == geo_id::region_t::ENDCAP_B) {
       auto length = [&](size_t i) {
@@ -646,7 +646,7 @@ namespace sand {
     mid.module_number = geoinfo::ecal_info::module_t(cid.module_number);
     mid.region        = geo_id::region_t(cid.region);
     if (!m_modules_cells_maps.count(mid)) {
-      UFW_EXCEPT(std::invalid_argument, fmt::format("Module: {} not found in the map: m_modules_cells_maps", mid.raw));
+      UFW_ERROR("Module: {} not found in the map: m_modules_cells_maps", mid.raw);
     }
     if (!m_modules_cells_maps.at(mid).count(cid)) {
       UFW_EXCEPT(std::invalid_argument,
@@ -686,7 +686,7 @@ namespace sand {
         gi.ecal.plane   = static_cast<sand::geo_id::plane_t>(std::stoi(m[13]));
         gi.ecal.element = sand::geo_id::element_t::ENDCAP_HOR_BOT;
       } else {
-        UFW_EXCEPT(std::invalid_argument, fmt::format("Unknown ECAL endcap element type: {}", m[4].str()));
+        UFW_ERROR("Unknown ECAL endcap element type: {}", m[4].str());
       }
     } else {
       UFW_EXCEPT(std::invalid_argument,
@@ -744,14 +744,14 @@ namespace sand {
         index3 = id.ecal.plane;
         break;
       default:
-        UFW_EXCEPT(std::invalid_argument, "Invalid ECAL endcap element type");
+        UFW_ERROR("Invalid ECAL endcap element type");
       }
       gp /= fmt::format(
           "ECAL_endcap_lv_PV_{}/ECAL_ec_mod_{}_lv_PV_{}/ECAL_ec_mod_{}_{}_lv_PV_{}/endvolECAL{}ActiveSlab_{}_PV_{}",
           index1, id.ecal.supermodule % 16, id.ecal.supermodule / 16, str1, id.ecal.supermodule, index2, str2,
           id.ecal.supermodule, str3, index3);
     } else {
-      UFW_EXCEPT(std::invalid_argument, "Invalid ECAL region type");
+      UFW_ERROR("Invalid ECAL region type");
     }
     return gp;
   }
@@ -808,7 +808,7 @@ namespace sand {
       mid.region        = std::stoi(m[1]) == 0 ? geo_id::region_t::ENDCAP_A : geo_id::region_t::ENDCAP_B;
       mid.module_number = static_cast<ecal_info::module_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
     } else {
-      UFW_EXCEPT(std::invalid_argument, "Path doesn't match any ECAL regex!!");
+      UFW_ERROR("Path doesn't match any ECAL regex!!");
     }
     return mid;
   }
@@ -831,7 +831,7 @@ namespace sand {
           fib = &geoinfo::ecal_info::kfiber_plane45;
           break;
         default:
-          UFW_EXCEPT(std::invalid_argument, "Unexpected row id!!");
+          UFW_ERROR("Unexpected row id!!");
         }
         geoinfo::ecal_info::cell_id cid;
         cid.region        = m.id().region;
@@ -860,7 +860,7 @@ namespace sand {
         el->transform(transf);
         m.add(std::move(el));
       } else {
-        UFW_EXCEPT(std::invalid_argument, fmt::format("Unexpected shape: {}", shape->GetName()));
+        UFW_ERROR("Unexpected shape: {}", shape->GetName());
       }
     });
 
