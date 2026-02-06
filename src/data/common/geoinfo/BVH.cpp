@@ -76,7 +76,7 @@ void BVH::createTree(std::unique_ptr<Node>& node,const std::vector<std::unique_p
         node->aabb_.expand(cellAABBs_[it->get()]);  
     }
 
-    // node->index_ = sand_geometry::tracker::CellID(std::nullopt);
+    node->wire_ = begin->get();
     
     // if(std::distance(begin, end) == 1){
     //     node->index_ = (*begin)->first;
