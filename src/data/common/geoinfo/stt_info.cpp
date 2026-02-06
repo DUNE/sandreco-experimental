@@ -78,9 +78,8 @@ namespace sand {
             w->daq_channel.subdetector = STT;
             w->daq_channel.link = w->geo.stt.supermodule;
             w->daq_channel.channel = (w->geo.stt.plane << 16) | w->geo.stt.tube;
-            wires_for_stat.emplace_back(std::move(w));
             stat->daq_link = w->geo.stt.supermodule;
-            stat->wires.emplace_back(std::move(w));
+            wires_for_stat.emplace_back(std::move(w));
           } else {
             UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
           }
