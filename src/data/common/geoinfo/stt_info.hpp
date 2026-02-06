@@ -30,7 +30,7 @@ namespace sand {
     const wire* get_wire_by_id(const geo_id& id) const;
 
    private:
-    void set_wire_adjecency(std::vector<std::unique_ptr<wire>> & w );
+    void set_wire_adjecency(std::vector<std::unique_ptr<tracker_info::wire>> & w );
   };
 
 } // namespace sand

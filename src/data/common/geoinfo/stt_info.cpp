@@ -5,6 +5,7 @@
 #include <TGeoBBox.h>
 #include <TGeoMatrix.h>
 #include <TGeoTube.h>
+#include <BVH.hpp>
 
 namespace sand {
 
@@ -96,7 +97,7 @@ namespace sand {
   geoinfo::stt_info::~stt_info() = default;
 
 
-  void geoinfo::stt_info::set_wire_adjecency(std::vector<std::unique_ptr<wire>> & ws){
+  void geoinfo::stt_info::set_wire_adjecency(std::vector<std::unique_ptr<tracker_info::wire>> & ws){
     double dz; 
     double dy;
     dy = ws[0]->length();
@@ -107,6 +108,12 @@ namespace sand {
 
     auto start = std::chrono::system_clock::now();
     //TO DO : implement BVH search algorithm
+    BVH bvh(
+      ws,
+      this,
+      max_distance,
+      0.01
+    );
     auto end_build = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
     std::cout << "Time to build, search, and fill adj_cells: " << elapsed.count() << " ms" << std::endl;
