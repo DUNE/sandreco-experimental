@@ -48,6 +48,7 @@ namespace sand {
       stat->top_south    = centre + boxcorner;
       stat->bottom_north = centre - boxcorner;
       stat->parent = this;
+      std::vector<std::unique_ptr<wire>> wires_for_stat;
       
       nav->for_each_node([&](auto plane) {
         // The plane does not carry useful information for us.
@@ -77,6 +78,7 @@ namespace sand {
             w->daq_channel.subdetector = STT;
             w->daq_channel.link = w->geo.stt.supermodule;
             w->daq_channel.channel = (w->geo.stt.plane << 16) | w->geo.stt.tube;
+            wires_for_stat.emplace_back(std::move(w));
             stat->daq_link = w->geo.stt.supermodule;
             stat->wires.emplace_back(std::move(w));
           } else {
@@ -84,11 +86,33 @@ namespace sand {
           }
         });
       });
+
+      for (auto &w : wires_for_stat) {
+          stat->wires.emplace_back(std::move(w));
+      }
       add_station(station_ptr(std::move(stat)));
     });
   }
 
   geoinfo::stt_info::~stt_info() = default;
+
+
+  void geoinfo::stt_info::set_wire_adjecency(std::vector<std::unique_ptr<wire>> & ws){
+    double dz; 
+    double dy;
+    dy = ws[0]->length();
+    dz = ws[0]->max_radius * sqrt(3) / 2.;
+
+    double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
+    std::cout << "max_distance " << dy << " " << dz << " " << max_distance << std::endl;
+
+    auto start = std::chrono::system_clock::now();
+    //TO DO : implement BVH search algorithm
+    auto end_build = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
+    std::cout << "Time to build, search, and fill adj_cells: " << elapsed.count() << " ms" << std::endl;
+
+  }
 
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;

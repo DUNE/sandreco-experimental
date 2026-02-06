@@ -28,6 +28,9 @@ namespace sand {
     geo_path path(geo_id) const override;
 
     const wire* get_wire_by_id(const geo_id& id) const;
+
+   private:
+    void set_wire_adjecency(std::vector<std::unique_ptr<wire>> & w );
   };
 
 } // namespace sand

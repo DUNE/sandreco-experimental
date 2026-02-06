@@ -14,7 +14,7 @@
 
 #include <clustering.hpp>
 
-namespace sand::stt {
+namespace sand::tracker {
 
   void clustering::configure(const ufw::config& cfg) {
     process::configure(cfg);
@@ -28,8 +28,22 @@ namespace sand::stt {
     UFW_DEBUG("Running clustering process at {}", fmt::ptr(this));
     const auto& tree = get<sand::edep_reader>();
     const auto& gi   = get<geoinfo>();
-    auto& digi       = set<sand::tracker::digi>("digi");
-    auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
+    const auto& digi = get<sand::tracker::digi>("digi");
+    const auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
+    auto & digi_out = set<sand::tracker::digi>("digi");
+
+
+    for (const auto& signal : digi.signals) {
+      tracker::digi::signal clustered_signal = signal; //TODO cluster signals
+      auto & hits = clustered_signal.true_hits();
+      UFW_DEBUG("Clustering signal with TDC {} and ADC {}.", static_cast<int>(signal.channel().channel), signal.tdc, signal.adc);
+      const auto & chsignal = clustered_signal.channel();
+      UFW_DEBUG("  Channel info: subdetector {}, link {}, channel {}.", 
+                static_cast<int>(chsignal.subdetector), static_cast<int>(chsignal.link), static_cast<int>(chsignal.channel));
+      const auto w = gi.tracker().wire_at(chsignal);
+      UFW_DEBUG("Corresponding to wire with info: head {}, tail {}", w.head, w.tail);
+      digi_out.signals.push_back(clustered_signal);
+    }
 
     UFW_DEBUG(" STT subdetector implementation");
 
@@ -37,4 +51,4 @@ namespace sand::stt {
 
  
 
-} // namespace sand::stt
+} // namespace sand::tracker

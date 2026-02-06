@@ -36,6 +36,7 @@ namespace sand {
       using spacer_array   = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X
                                                                      ///< coordinate, starting from north.
       const station* parent;                                         ///< The parent station
+      std::vector<const wire*>  adjecent_wires;                      ///< The list of adjecent wires                     
       channel_id daq_channel;                                        ///< The unique daq identifier
       pos_3d head;                                                   ///< The readout end of the wire
       pos_3d tail;                                                   ///< The termination end of the wire
@@ -108,11 +109,8 @@ namespace sand {
 
     const station* get_station_by_ID(std::size_t i) const { return m_stations.at(i).get(); }
 
-    virtual const wire& wire_at(channel_id);
+    virtual const wire& wire_at(channel_id) const;
 
-    // std::pair<vec_4d,vec_4d> closest_points(const vec_4d&, const vec_4d&, double, const wire&) const; //TO-DO use pos_3d if time is not needed
-    // vec_4d closest_point(const vec_4d&, double, const wire&) const;
-    // double get_min_time(const vec_4d&, double, const wire&) const;
     std::pair<const wire*, size_t> closest_wire_in_list(wire_list, pos_3d) const;
 
    protected:
@@ -123,7 +121,7 @@ namespace sand {
     const station* at(std::size_t i) const { return m_stations.at(i).get(); }
 
     template <typename Func>
-    void for_each_station(Func&& f) {
+    void for_each_station(Func&& f) const {
       for (auto& sptr : m_stations) {
         std::forward<Func>(f)(*sptr);
       }

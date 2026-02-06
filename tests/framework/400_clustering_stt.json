@@ -32,7 +32,7 @@
         "prods" : {"digi": "pippo"}
       },
       {
-        "sand::stt::clustering" : {},
+        "sand::tracker::clustering" : {},
         "reqs" : {"digi": "pippo"},
         "prods" : {"digi": "pluto"}
       },

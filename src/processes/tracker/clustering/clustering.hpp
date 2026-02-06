@@ -11,7 +11,7 @@
 #include <geoinfo/tracker_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
-namespace sand::stt {
+namespace sand::tracker {
 
   class clustering : public ufw::process {
    public:
@@ -22,7 +22,7 @@ namespace sand::stt {
 
   };
 
-} // namespace sand::stt
+} // namespace sand::tracker
 
-UFW_REGISTER_PROCESS(sand::stt::clustering)
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::stt::clustering)
+UFW_REGISTER_PROCESS(sand::tracker::clustering)
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::tracker::clustering)
