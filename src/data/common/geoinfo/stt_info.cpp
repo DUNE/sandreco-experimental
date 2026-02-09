@@ -87,6 +87,7 @@ namespace sand {
         });
       });
 
+      set_wire_adjecency(wires_for_stat);
       for (auto &w : wires_for_stat) {
           stat->wires.emplace_back(std::move(w));
       }
@@ -97,7 +98,7 @@ namespace sand {
   geoinfo::stt_info::~stt_info() = default;
 
 
-  void geoinfo::stt_info::set_wire_adjecency(std::vector<std::unique_ptr<tracker_info::wire>> & ws){
+  void geoinfo::stt_info::set_wire_adjecency(std::vector<std::unique_ptr<wire>> & ws){
     double dz; 
     double dy;
     dy = ws[0]->length();
@@ -108,9 +109,8 @@ namespace sand {
 
     auto start = std::chrono::system_clock::now();
     //TO DO : implement BVH search algorithm
-    BVH bvh(
+    BVH<wire> bvh(
       ws,
-      this,
       max_distance,
       0.01
     );

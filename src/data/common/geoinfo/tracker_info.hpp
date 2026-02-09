@@ -53,6 +53,7 @@ namespace sand {
       pos_3d actual(pos_3d) const;
       std::size_t segment(pos_3d x) const;
       std::pair<double,double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
+      double closest_approach_segment_distance(const pos_3d&, const pos_3d&) const;
       double closest_approach_point(const pos_3d&) const;
       xform_3d wire_plane_transform() const; /// transform from local wire plane to global coordinates
     };

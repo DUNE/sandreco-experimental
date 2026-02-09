@@ -77,6 +77,13 @@ namespace sand {
     }
   }
 
+  double geoinfo::tracker_info::wire::closest_approach_segment_distance(const pos_3d& seg_start, const pos_3d& seg_stop) const {
+    auto approach = closest_approach_segment(seg_start, seg_stop);
+    pos_3d closest_point_on_segment = seg_start + (seg_stop - seg_start) * approach.first;
+    pos_3d closest_point_on_wire = head + direction() * approach.second;
+    return sqrt((closest_point_on_segment - closest_point_on_wire).Mag2());
+  }
+
   double geoinfo::tracker_info::wire::closest_approach_point(const pos_3d& point) const {
     dir_3d d = point - head; // Vector from wire head to the point
     dir_3d r = direction();  // Wire direction vector (should be normalized or not depending on convention)
