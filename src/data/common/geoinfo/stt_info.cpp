@@ -6,6 +6,7 @@
 #include <TGeoMatrix.h>
 #include <TGeoTube.h>
 #include <BVH.hpp>
+#include <BVH_analyzer.hpp>
 
 namespace sand {
 
@@ -112,8 +113,13 @@ namespace sand {
     BVH<wire> bvh(
       ws,
       max_distance,
-      0.01
+      1
     );
+    sand::BVH_Analyzer<wire>::printTreeInfo(bvh);
+    // for (const auto& w : ws) {
+    //   auto n_adjecent = w->adjecent_wires.size();
+    //   UFW_DEBUG("Wire {} has {} adjecent wires.", w->geo.raw, n_adjecent);
+    // }
     auto end_build = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
     std::cout << "Time to build, search, and fill adj_cells: " << elapsed.count() << " ms" << std::endl;

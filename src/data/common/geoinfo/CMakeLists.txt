@@ -9,7 +9,8 @@ set(HDRS drift_info.hpp
          tracker_info.hpp
          subdetector_info.hpp
          geoinfo.hpp
-         BVH.hpp)
+         BVH.hpp
+         BVH_analyzer.hpp)
 
 target_sources(sand_geoinfo PRIVATE
                ${HDRS}
