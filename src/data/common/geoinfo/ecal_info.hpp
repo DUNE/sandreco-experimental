@@ -49,6 +49,8 @@ namespace sand {
       // scintillation
       double scintillation_constant_1; // ns
       double scintillation_constant_2;
+      double scintillation_rise_time; // ns
+      double scintillation_decay_time; // ns
 
       // light velocity
       double light_velocity; // mm/ns
@@ -59,6 +61,8 @@ namespace sand {
           fraction(0.35),
           scintillation_constant_1(3.8),
           scintillation_constant_2(0.588),
+          scintillation_rise_time(0.7),
+          scintillation_decay_time(3.0),
           light_velocity(1000. / 5.85) {}
     };
 
