@@ -7,6 +7,9 @@
     ]
   },
   "globals": {
+    "sand::root_tgeomanager": {
+      "geometry": "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"
+    },
     "sand::geoinfo": {
       "grain_geometry": "gdml-masks",
       "drift_view_angle": [
@@ -45,25 +48,17 @@
   "run": [
     {
       "sand::ecal::optical_simulation": {
-        "drift_velocity": 0.05,
-        "wire_velocity": 200.0,
-        "sigma_tdc": 3.5
+        "light_yield": 18.5
       },
       "reqs": {},
       "prods": {
-        "digi": "pippo"
+        "pes": "ecal_photo_electrons"
       }
     },
     {
-      "sand::ecal::fast_digi": {
-        "drift_velocity": 0.05,
-        "wire_velocity": 200.0,
-        "sigma_tdc": 3.5
-      },
+      "sand::ecal::fast_digi": {},
       "reqs": {},
-      "prods": {
-        "digi": "pippo"
-      }
+      "prods": {}
     }
   ]
 }
