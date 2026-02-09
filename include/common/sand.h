@@ -245,6 +245,12 @@ namespace sand {
   struct channel_id {
     using link_t    = uint8_t;
     using channel_t = uint32_t;
+    using module_t  = uint8_t;
+    using row_t     = uint8_t;
+    using column_t  = uint8_t;
+
+    enum region_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
+    enum side_t : uint8_t { X_PLUS = 0, X_MINUS = 1, Y_HIGH = 2, Y_LOW = 3 };
     // ROOT reports an internal error when generating a dictionary for this anonymous union.
     // Since we don't care too much, we can just pretend it is just an int.
 #ifndef __CLING__
@@ -256,6 +262,16 @@ namespace sand {
         uint8_t padding___1;
         channel_t channel;
       } /*any*/;
+      struct {
+        uint8_t reserved___0;
+        subdetector_t subdetector;
+        region_t region;
+        module_t module_number;
+        row_t row;
+        column_t column;
+        side_t side;
+        uint8_t padding___1;
+      } ecal_pmt;
       uint64_t raw = -1;
     };
 #else  //__CLING__
