@@ -10,7 +10,7 @@ namespace sand::ecal {
     void run() override;
 
    private:
-    inline double de_to_nphotons(double de, double attenuation) const { return m_light_yield * de * attenuation; };
+    int de_to_nphotons(double de, double attenuation) const;
     double scintillation_time(double rise_time, double decay_time) const;
     inline double propagation_time(double pathlentgh, double velocity) const { return pathlentgh / velocity; };
 
