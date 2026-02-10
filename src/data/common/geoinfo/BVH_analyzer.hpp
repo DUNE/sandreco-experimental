@@ -62,7 +62,7 @@ public:
         if (deepest && deepest->wire_) {
             std::cout << "\n--- Deepest Leaf Node ---\n";
             std::cout << "Depth: " << deepest_depth << "\n";
-            std::cout << "Wire channel: " << deepest->wire_->daq_channel.raw << "\n";
+            std::cout << "Wire channel: (" << int(deepest->wire_->daq_channel.subdetector) << ", " << int(deepest->wire_->daq_channel.link) << ", " << int(deepest->wire_->daq_channel.channel) << ")\n";
         }
         
         std::cout << "=====================================\n\n";
@@ -152,6 +152,46 @@ public:
         std::cout << "Height-balanced: " << (balanced ? "Yes" : "No") << "\n";
         
         std::cout << "============================================\n\n";
+    }
+    
+    // Print daq_channel info for all leaf nodes
+    static void printLeafChannelInfo(const BVH<WireT>& bvh) {
+        if (!bvh.root_) {
+            std::cout << "Tree is empty!\n";
+            return;
+        }
+        
+        std::cout << "\n========== LEAF NODE DAQ CHANNELS ==========\n";
+        size_t leaf_count = 0;
+        
+        std::function<void(const std::unique_ptr<Node<WireT>>&)> traverse = 
+            [&](const std::unique_ptr<Node<WireT>>& node) {
+            if (!node) return;
+            
+            // Check if this is a leaf node
+            if (!node->left_ && !node->right_) {
+                leaf_count++;
+                uint8_t plane = static_cast<uint8_t>(node->daq_channel_.channel >> 16);
+                uint16_t tube =static_cast<uint16_t>(node->daq_channel_.channel & 0xFFFF);
+                std::cout << "Leaf " << leaf_count << ": ";
+                std::cout << "subdetector=" << int(node->daq_channel_.subdetector) 
+                         << ", link=" << int(node->daq_channel_.link);
+                std::cout << " (plane=" << int(plane) << ", tube=" << int(tube) << ")";
+                std::cout << " z = " << node->wire_->head.z() << " x = " << node->wire_->head.x() << " y = " << node->wire_->head.y() << "\n";
+                
+                std::cout << " (raw=0x" << std::hex << node->daq_channel_.raw << std::dec << ")\n";
+                return;
+            }
+            
+            // Traverse subtrees
+            traverse(node->left_);
+            traverse(node->right_);
+        };
+        
+        traverse(bvh.root_);
+        
+        std::cout << "==========================================\n";
+        std::cout << "Total leaf nodes: " << leaf_count << "\n\n";
     }
     
 private:

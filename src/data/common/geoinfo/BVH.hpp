@@ -21,7 +21,6 @@ namespace sand {
   template <typename WireT>
   struct Node{
     WireT* wire_ = nullptr;
-    // std::map<const WireT*, AABB>::iterator wire_iterator_;
     std::unique_ptr<Node<WireT>> left_;
     std::unique_ptr<Node<WireT>> right_;
     AABB<WireT> aabb_;
@@ -59,7 +58,7 @@ namespace sand {
           double overlap_tolerance) {
           fillCellAABBMap(wires); 
           createTree(root_, wires.begin(), wires.end()); 
-          //searchAdjacentCells(root_, root_, max_distance, overlap_tolerance);
+          searchAdjacentCells(root_, root_, max_distance, overlap_tolerance);
       };
 
   template <typename WireT>
@@ -139,29 +138,24 @@ namespace sand {
       for (auto it = begin + 1; it != end; ++it) {
           node->aabb_.expand(cellAABBs_[it->get()]);  
       }
-
-      //node->wire_ = begin->get();
       
       if(std::distance(begin, end) == 1){
           node->wire_ = begin->get();
-          // node->cell_iterator_ = (*begin);
-          // UFW_DEBUG("Created leaf node with wire {} and AABB: min ({}, {}, {}), max ({}, {}, {})", node->wire_->daq_channel.raw, node->aabb_.min_.X(), node->aabb_.min_.Y(), node->aabb_.min_.Z(), node->aabb_.max_.X(), node->aabb_.max_.Y(), node->aabb_.max_.Z());
           return;
       }
-      
-      // auto sorting_by_z = [](const typename std::vector<std::unique_ptr<WireT>>::iterator c1, const typename std::vector<std::unique_ptr<WireT>>::iterator c2){
-      //     const auto& center_1 = (c1->get()->head + dir_3d(c1->get()->tail)) * 0.5;
-      //     const auto& center_2 = (c2->get()->head + dir_3d(c2->get()->tail)) * 0.5;
-          
-      //     return center_1.Z() < center_2.Z();
-      // };
 
-      auto sorting_by_z = [](const std::unique_ptr<WireT>& a,
-                    const std::unique_ptr<WireT>& b) {
-          const auto& center_a = (a->head + dir_3d(a->tail)) * 0.5;
-          const auto& center_b = (b->head + dir_3d(b->tail)) * 0.5;
-          return center_a.Z() < center_b.Z();
-      };
+      auto sorting_by_z_then_id =
+            [](const std::unique_ptr<WireT>& a,
+            const std::unique_ptr<WireT>& b)
+        {
+            const double za = a->head.Z();
+            const double zb = b->head.Z();
+
+            if (za < zb) return true;
+            if (za > zb) return false;
+
+            return a->daq_channel.channel < b->daq_channel.channel;
+        };
       
       auto sorting_by_id = [](const std::unique_ptr<WireT>& a,
                     const std::unique_ptr<WireT>& b){
@@ -175,14 +169,11 @@ namespace sand {
       int middle_point= std::distance(begin, end) / 2;
       const double w = begin->get()->max_radius;
       if (w != deltaZ) {
-        std::nth_element(begin, begin + middle_point, end, sorting_by_z);
+        std::nth_element(begin, begin + middle_point, end, sorting_by_z_then_id);
       } else {
         std::nth_element(begin, begin + middle_point, end, sorting_by_id);
     }
-      // // } else {
-      // //     // std::sort(begin, end, sorting_by_id);
-      // //     std::nth_element(begin, begin + middle_point, end, sorting_by_id);
-      // // }
+
       node->left_ = std::make_unique<Node<WireT>>();
       createTree(node->left_, begin, begin + middle_point);
 
@@ -195,26 +186,22 @@ namespace sand {
   template <typename WireT>
   void BVH<WireT>::searchAdjacentCells(std::unique_ptr<Node<WireT>>& node, std::unique_ptr<Node<WireT>>& other_node, double max_distance, double overlap_tolerance){
       if(!node || !other_node) return;
-      // UFW_DEBUG("Check 0");
       
       if(!node->aabb_.isOverlapping(other_node->aabb_, overlap_tolerance)) return;
-      // UFW_DEBUG("Check 1");
 
       if(other_node->wire_ && node->wire_) {
-        // UFW_DEBUG("Check 2");
           if(other_node->wire_ == node->wire_) {
               return;
           }
-          // UFW_DEBUG("Check 3");
-          if (node->wire_ < other_node->wire_) {
+          if (node->wire_->daq_channel.channel < other_node->wire_->daq_channel.channel) {
               return;
           }
           const auto& wire = node->wire_;
           const auto& other_wire = other_node->wire_;
-          // UFW_DEBUG("Check 4: wire {} and wire {}", wire->daq_channel.raw, other_wire->daq_channel.raw);
+
           double distance = wire->closest_approach_segment_distance(other_wire->head, other_wire->tail);
+          
           if(distance < max_distance){
-              // UFW_DEBUG("Wire {} and wire {} are adjacent with distance {}", wire->daq_channel.raw, other_wire->daq_channel.raw, distance);
               node->wire_->adjecent_wires.emplace_back(other_node->wire_); 
               other_node->wire_->adjecent_wires.emplace_back(node->wire_);
           }

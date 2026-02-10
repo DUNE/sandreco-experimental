@@ -175,7 +175,7 @@ namespace sand {
   struct geo_id {
     using supermodule_t = uint8_t;
     using plane_t       = uint8_t;
-    using tube_t        = uint8_t;
+    using tube_t        = uint16_t;
     // ROOT reports an internal error when generating a dictionary for this anonymous union.
     // Since we don't care too much, we can just pretend it is just an int.
 #ifndef __CLING__

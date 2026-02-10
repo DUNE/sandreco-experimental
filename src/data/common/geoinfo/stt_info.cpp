@@ -79,7 +79,7 @@ namespace sand {
             // FIXME temporary implementation of w->channel
             w->daq_channel.subdetector = STT;
             w->daq_channel.link = w->geo.stt.supermodule;
-            w->daq_channel.channel = (w->geo.stt.plane << 16) | w->geo.stt.tube;
+            w->daq_channel.channel = (uint32_t(w->geo.stt.plane) << 16) | uint32_t(w->geo.stt.tube);
             stat->daq_link = w->geo.stt.supermodule;
             wires_for_stat.emplace_back(std::move(w));
           } else {
@@ -102,27 +102,31 @@ namespace sand {
   void geoinfo::stt_info::set_wire_adjecency(std::vector<std::unique_ptr<wire>> & ws){
     double dz; 
     double dy;
-    dy = ws[0]->length();
+    dy = ws[0]->max_radius * sqrt(3) / 2.;
     dz = ws[0]->max_radius * sqrt(3) / 2.;
 
     double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
-    std::cout << "max_distance " << dy << " " << dz << " " << max_distance << std::endl;
 
     auto start = std::chrono::system_clock::now();
-    //TO DO : implement BVH search algorithm
     BVH<wire> bvh(
       ws,
-      max_distance,
-      1
+      2 * max_distance,
+      2 * max_distance
     );
-    sand::BVH_Analyzer<wire>::printTreeInfo(bvh);
+
+    //BVH_Analyzer<wire>::printTreeInfo(bvh);
+    //BVH_Analyzer<wire>::printLeafChannelInfo(bvh);
+
     // for (const auto& w : ws) {
+    //   uint8_t plane = static_cast<uint8_t>(w->daq_channel.channel >> 16);
+    //   uint16_t tube =static_cast<uint16_t>(w->daq_channel.channel & 0xFFFF);     
     //   auto n_adjecent = w->adjecent_wires.size();
-    //   UFW_DEBUG("Wire {} has {} adjecent wires.", w->geo.raw, n_adjecent);
+    //   UFW_DEBUG("Wire channel ({},{},{},{}) z={} has {} adjacent wires", w->daq_channel.subdetector, w->daq_channel.link, plane, tube, w->head.z(), n_adjecent);
     // }
+
     auto end_build = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
-    std::cout << "Time to build, search, and fill adj_cells: " << elapsed.count() << " ms" << std::endl;
+    UFW_INFO("BVH for station corresponding to link {} built in {} ms", ws[0]->parent->daq_link, elapsed.count());
 
   }
 
