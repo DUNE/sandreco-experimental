@@ -45,7 +45,7 @@ namespace sand::ecal {
         for (int i = 0; i < nph1; i++) {
           pes::pe pe_;
           pe_.arrival_time = h_t + scintillation_time(fiber.scintillation_rise_time, fiber.scintillation_decay_time)
-                          + propagation_time(l1, fiber.light_velocity);
+                           + propagation_time(l1, fiber.light_velocity);
           channel_id cid;
           cid.ecal_pmt.subdetector   = sand::subdetector_t::ECAL;
           cid.ecal_pmt.region        = static_cast<sand::channel_id::region_t>(cell.id().region);
@@ -58,7 +58,7 @@ namespace sand::ecal {
         for (int i = 0; i < nph2; i++) {
           pes::pe pe_;
           pe_.arrival_time = h_t + scintillation_time(fiber.scintillation_rise_time, fiber.scintillation_decay_time)
-                          + propagation_time(l2, fiber.light_velocity);
+                           + propagation_time(l2, fiber.light_velocity);
           channel_id cid;
           cid.ecal_pmt.subdetector   = sand::subdetector_t::ECAL;
           cid.ecal_pmt.region        = static_cast<sand::channel_id::region_t>(cell.id().region);

@@ -49,7 +49,7 @@ namespace sand {
       // scintillation
       double scintillation_constant_1; // ns
       double scintillation_constant_2;
-      double scintillation_rise_time; // ns
+      double scintillation_rise_time;  // ns
       double scintillation_decay_time; // ns
 
       // light velocity
@@ -242,7 +242,7 @@ namespace sand {
       void add(p_shape_element_base&& el) { el_collection_.add(std::move(el)); };
       inline const shape_element_collection& element_collection() const { return el_collection_; };
       inline void order_elements() { el_collection_.order_elements(); };
-      grid construct_grid(const std::vector<double>& col_widths) const;
+      grid construct_grid(const std::vector<double>& col_widths, double al_plate_thickness) const;
       cell construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const;
 
      private:
@@ -256,6 +256,7 @@ namespace sand {
     virtual ~ecal_info();
     const cell& at(const pos_3d& p) const;
     const cell& at(cell_id cid) const;
+    const std::vector<cell_ref>& cells(geo_id gid) const;
 
     using subdetector_info::path;
 

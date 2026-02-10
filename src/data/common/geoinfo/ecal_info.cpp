@@ -27,6 +27,7 @@ namespace sand {
   using p_shape_element_base = std::unique_ptr<shape_element_base>;
   using el_vec               = std::vector<p_shape_element_base>;
   using el_vec_it            = std::vector<p_shape_element_base>::iterator;
+  using cell_ref             = std::map<cell_id, cell>::const_iterator;
 
   //////////////////////////////////////////////////////
   // Regular expressions matching geo paths
@@ -560,7 +561,7 @@ namespace sand {
   // geoinfo::ecal_info::module
   //////////////////////////////////////////////////////
 
-  grid module::construct_grid(const std::vector<double>& col_widths) const {
+  grid module::construct_grid(const std::vector<double>& col_widths, double al_plate_thickness) const {
     auto& f    = element_collection().at(0).begin_face();
     size_t idx = 0;
     if (id().region == geo_id::region_t::BARREL) {
@@ -602,7 +603,21 @@ namespace sand {
         }
       }
     }
-    return grid(f.vtx(idx), f.vtx(idx + 1), f.vtx(idx + 2), f.vtx(idx + 3), col_widths, row_widths_);
+
+    ////////////////////////////////////////////////
+    // Here the aluminum plate is accounted.
+    // Grid is constructed on the remaining are only
+    ////////////////////////////////////////////////
+
+    auto perp   = f.normal().Cross(f.side(idx)).Unit();
+    auto proj1  = perp.Dot(f.side(idx + 3));
+    auto scale1 = al_plate_thickness / proj1;
+
+    auto proj2  = perp.Dot(f.side(idx + 1));
+    auto scale2 = al_plate_thickness / proj2;
+
+    return grid(f.vtx(idx) + scale1 * f.side(idx + 3), f.vtx(idx + 1) + scale2 * f.side(idx + 1), f.vtx(idx + 2),
+                f.vtx(idx + 3), col_widths, row_widths_);
   }
 
   cell module::construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const {
@@ -634,6 +649,9 @@ namespace sand {
     nav->find_node(p);
     auto path = nav->GetPath();
     auto gid  = id(geo_path(path));
+    if (gid.ecal.supermodule == 6 && gid.ecal.plane == 0) {
+      int i = 0;
+    }
     for (auto c : m_cells_map.at(gid))
       if (c->second.is_inside(p))
         return c->second;
@@ -656,6 +674,13 @@ namespace sand {
     }
     return m_modules_cells_maps.at(mid).at(cid);
   }
+
+  const std::vector<cell_ref>& geoinfo::ecal_info::cells(geo_id gid) const {
+    if (!m_cells_map.count(gid)) {
+      UFW_ERROR("geo_id: {} not found in the map: m_cells_map", gid);
+    }
+    return m_cells_map.at(gid);
+  };
 
   geo_id geoinfo::ecal_info::id(const geo_path& path) const {
     geo_id gi;
@@ -846,6 +871,23 @@ namespace sand {
   void geoinfo::ecal_info::endcap_module_cells(const geo_path& path) {
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
+    ///////////////////////////////////////////////////////
+    // Each module has an internal aluminum plate.
+    // Here we get the thickness.
+    // Grid is evaluated in the remaining area
+    ///////////////////////////////////////////////////////
+    auto nd = nav->get_node();
+    if (!nd) {
+      UFW_ERROR("Unexpected geometry!! Here there should be an endcap module node!!");
+    } else if (nd->GetNdaughters() == 0) {
+      UFW_ERROR("Unexpected geometry!! Here there should be the vertical element of an endcap module node!!");
+    } else if (nd->GetDaughter(0)->GetNdaughters() == 0) {
+      UFW_ERROR("Unexpected geometry!! Here there should be the aluminum plate of the vertical element of an endcap "
+                "module node!!");
+    }
+    auto al_plate_thickness =
+        2. * static_cast<TGeoBBox*>(nd->GetDaughter(0)->GetDaughter(0)->GetVolume()->GetShape())->GetDZ();
+    ///////////////////////////////////////////////////////
     module m(to_module_id(path));
     nav->for_each_node([&](auto node) {
       auto shape = node->GetVolume()->GetShape();
@@ -926,8 +968,12 @@ namespace sand {
       ncol = 3;
       break;
     }
+    if (m.id().module_number == 15) {
+      int a = 0;
+    }
+
     std::vector<double> col_widths(ncol, 1.);
-    auto grid = m.construct_grid(col_widths);
+    auto grid = m.construct_grid(col_widths, al_plate_thickness);
     construct_module_cells(m, grid);
   }
 
@@ -935,15 +981,29 @@ namespace sand {
     module m(to_module_id(path));
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
-    auto shape      = nav->get_node()->GetVolume()->GetShape();
+    auto node = nav->get_node();
+    ///////////////////////////////////////////////////////
+    // Each module has an internal aluminum plate.
+    // Here we get the thickness.
+    // Grid is evaluated in the remaining area
+    ///////////////////////////////////////////////////////
+    if (!node) {
+      UFW_ERROR("Unexpected geometry!! Here there should be a barrel module node!!");
+    } else if (node->GetNdaughters() == 0) {
+      UFW_ERROR("Unexpected geometry!! Here there should the aluminum plate of a barrel module node!!");
+    }
+    auto al_plate_thickness = 2. * static_cast<TGeoBBox*>(node->GetDaughter(0)->GetVolume()->GetShape())->GetDZ();
+    ///////////////////////////////////////////////////////
+    auto shape      = node->GetVolume()->GetShape();
     auto geo_transf = nav->get_hmatrix();
     auto transf     = to_xform_3d(geo_transf);
     auto el         = trd2_to_shape_element(static_cast<TGeoTrd2*>(shape));
     el->transform(transf);
     m.add(std::move(el));
     m.order_elements();
+
     static std::vector<double> col_widths(12, 1.);
-    auto grid = m.construct_grid(col_widths);
+    auto grid = m.construct_grid(col_widths, al_plate_thickness);
     construct_module_cells(m, grid);
   }
 } // namespace sand
