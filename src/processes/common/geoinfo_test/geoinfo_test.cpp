@@ -105,10 +105,22 @@ namespace sand::common {
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
 
-    for (uint8_t ism = 0; ism < 3; ism++) {
-      UFW_INFO("SM: {}", ism == 0 ? "BARREL" : (ism == 1 ? "ENDCAP_A" : "ENDCAP_B"));
+    constexpr std::array<sand::geo_id::region_t, 3> vsm = {
+        sand::geo_id::region_t::BARREL, sand::geo_id::region_t::ENDCAP_A, sand::geo_id::region_t::ENDCAP_B};
+
+    constexpr std::array<sand::geo_id::element_t, 1> ve_b = {sand::geo_id::element_t::NONE};
+
+    constexpr std::array<sand::geo_id::element_t, 5> ve_ec = {
+        sand::geo_id::element_t::ENDCAP_VERTICAL, sand::geo_id::element_t::ENDCAP_CURVE_TOP,
+        sand::geo_id::element_t::ENDCAP_CURVE_BOT, sand::geo_id::element_t::ENDCAP_HOR_TOP,
+        sand::geo_id::element_t::ENDCAP_HOR_BOT};
+
+    constexpr std::array<sand::geo_id::element_t, 4> ve_ec_c = {
+        sand::geo_id::element_t::ENDCAP_VERTICAL, sand::geo_id::element_t::ENDCAP_CURVE_TOP,
+        sand::geo_id::element_t::ENDCAP_CURVE_BOT, sand::geo_id::element_t::ENDCAP_HOR_TOP};
+
+    for (auto ism : vsm) {
       for (uint8_t im = 0; im < (ism == 0 ? 24 : 32); im++) {
-        UFW_INFO("  MODULE: {}", im);
         for (uint8_t ir = 0; ir < 5; ir++) {
           uint8_t nc = 12;
           if (ism != 0) {
@@ -122,15 +134,56 @@ namespace sand::common {
           }
           for (uint8_t ic = 0; ic < nc; ic++) {
             sand::geoinfo::ecal_info::cell_id cid;
-            cid.region        = sand::geo_id::region_t(ism);
+            cid.region        = ism;
             cid.module_number = im;
             cid.row           = ir;
             cid.column        = ic;
             auto& c           = gi.ecal().at(cid);
-            UFW_INFO("    cell: {}, row: {}, column: {}", cid.raw, ir, ic);
-            UFW_INFO("    elements size: {}", c.element_collection().elements().size());
-            UFW_INFO("      face[1] centroid: {}", c.element_collection().elements().front()->begin_face().centroid());
-            UFW_INFO("      face[2] centroid: {}", c.element_collection().elements().back()->end_face().centroid());
+            UFW_INFO("SM: {}, MODULE: {}, cell: {}, row: {}, column: {}, elements size: {}, begin_face centroid: {}, "
+                     "end_face centroid: {}",
+                     ism == sand::geo_id::region_t::BARREL
+                         ? "BARREL"
+                         : (ism == sand::geo_id::region_t::ENDCAP_A ? "ENDCAP_A" : "ENDCAP_B"),
+                     im, cid.raw, ir, ic, c.element_collection().elements().size(),
+                     c.element_collection().elements().front()->begin_face().centroid(),
+                     c.element_collection().elements().back()->end_face().centroid());
+          }
+        }
+
+        auto loop_module_active_planes = [&gi, ism, im](auto& ve) {
+          for (auto ie : ve)
+            for (uint8_t ip = 0; ip < 209; ip++) {
+              sand::geo_id gid;
+              gid.ecal.subdetector = sand::subdetector_t::ECAL;
+              gid.ecal.region      = ism;
+              gid.ecal.supermodule = im;
+              gid.ecal.element     = ie;
+              gid.ecal.plane       = ip;
+              auto& cc             = gi.ecal().cells(gid);
+              UFW_INFO("geo_id: {} -> vector size: {}", gid, cc.size());
+              for (auto& c_ref : cc) {
+                auto& c = (*c_ref).second;
+                UFW_INFO("geo_id: {} -> SM: {}, MODULE: {}, cell: {}, row: {}, column: {}, elements size: {}, "
+                         "begin_face centroid: {}, "
+                         "end_face centroid: {}",
+                         gid,
+                         ism == sand::geo_id::region_t::BARREL
+                             ? "BARREL"
+                             : (ism == sand::geo_id::region_t::ENDCAP_A ? "ENDCAP_A" : "ENDCAP_B"),
+                         im, c.id().raw, c.id().row, c.id().column, c.element_collection().elements().size(),
+                         c.element_collection().elements().front()->begin_face().centroid(),
+                         c.element_collection().elements().back()->end_face().centroid());
+              }
+            }
+        };
+
+        if (ism == sand::geo_id::region_t::BARREL) {
+          loop_module_active_planes(ve_b);
+        } else if (ism == sand::geo_id::region_t::ENDCAP_A || ism == sand::geo_id::region_t::ENDCAP_B) {
+          if (im % 16 == 0 || im % 16 == 1) {
+            loop_module_active_planes(ve_ec_c);
+          } else {
+            loop_module_active_planes(ve_ec);
           }
         }
       }
