@@ -29,21 +29,14 @@
           "uri" : "test/images.root",
           "tree" : "cameras"
         },
-        "read" : ["detector_response"]
+        "read" : ["images"]
       },
       {
         "sand::grain::volumereco" : {
           "voxel_size" : 150.0
         },
-        "reqs" : {"digi": "detector_response"},
-        "prods" : {"voxels": "volumereco"}
-      },
-      {
-          "sand::root::tree_streamer" : { 
-          "uri" : "test/voxels.root",
-          "tree" : "voxels"
-        },
-        "write" : ["volumereco"]
+        "reqs" : {"images": "images"},
+        "prods" : {}
       }
     ]
   }
