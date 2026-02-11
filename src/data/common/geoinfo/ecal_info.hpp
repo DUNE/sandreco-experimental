@@ -233,7 +233,7 @@ namespace sand {
     struct module {
      public:
       module() = delete;
-      module(module_id id) :id_(id) {};
+      module(const geo_path& path);
       inline module_id id() const { return id_; };
       void add(p_shape_element_base&& el) { el_collection_.add(std::move(el)); };
       inline const shape_element_collection& element_collection() const { return el_collection_; };
@@ -244,7 +244,10 @@ namespace sand {
      private:
       module_id id_;
       shape_element_collection el_collection_;
+      shape_element_collection al_plate_;
       static constexpr std::array<double, 5> row_widths_{40., 40., 40., 40., 49.};
+      void construct_al_plate(const geo_path& path);
+      static module_id to_module_id(const geo_path& path);
     };
 
    public:
@@ -263,7 +266,6 @@ namespace sand {
     std::map<geo_id, std::vector<cell_ref>> m_cells_map;
 
    private:
-    static module_id to_module_id(const geo_path& path);
     void find_modules(const geo_path& path);
     void find_active_volumes(const geo_path& path, const std::regex& re);
     void endcap_module_cells(const geo_path& path);

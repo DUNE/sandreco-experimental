@@ -38,6 +38,7 @@ namespace sand {
   static inline const std::regex re_ecal_endcap_sensible_volume{
       "/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)/ECAL_ec_mod_(curv|vert|hor)_(\\d+)_lv_PV_(\\d+)/"
       "endvolECAL(curv|straight|)ActiveSlab_(((\\d+)_(\\d+))|(\\d+))_PV_(\\d+)$"};
+  static inline const std::regex re_ecal_al_plate("(endvol|)ECAL(_ec_mod_(hor|curv)_|_|)Alplate_((\\d+)_|)(lv_|)PV_0$");
 
   //////////////////////////////////////////////////////
   // Cell ID
@@ -560,6 +561,12 @@ namespace sand {
   // geoinfo::ecal_info::module
   //////////////////////////////////////////////////////
 
+  module::module(const geo_path& path) {
+    id_ = to_module_id(path);
+    construct_al_plate(path);
+    al_plate_.order_elements();
+  }
+
   grid module::construct_grid(const std::vector<double>& col_widths) const {
     auto& f    = element_collection().at(0).begin_face();
     size_t idx = 0;
@@ -617,6 +624,48 @@ namespace sand {
       std::swap(f1, f2);
     }
     return c;
+  }
+
+  void module::construct_al_plate(const geo_path& path) {
+    std::smatch m;
+    if (regex_search(path, m, re_ecal_al_plate)) {
+      auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
+      nav->cd(path);
+      auto shape      = nav->get_node()->GetVolume()->GetShape();
+      auto geo_transf = nav->get_hmatrix();
+      auto transf     = to_xform_3d(geo_transf);
+      sand::p_shape_element_base el;
+      if (shape->TestShapeBit(TGeoShape::kGeoTubeSeg))
+        el = tube_to_shape_element(static_cast<TGeoTubeSeg*>(shape));
+      else if (shape->TestShapeBit(TGeoShape::kGeoTrd2))
+        el = trd2_to_shape_element(static_cast<TGeoTrd2*>(shape));
+      else if (shape->TestShapeBit(TGeoShape::kGeoBox))
+        el = box_to_shape_element(static_cast<TGeoBBox*>(shape));
+      else {
+        UFW_ERROR("Unexpected shape while constructing Al plate!!!");
+      }
+      el->transform(transf);
+      al_plate_.add(std::move(el));
+    } else {
+      auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
+      nav->cd(path);
+      nav->for_each_node([&](auto node) { construct_al_plate(path / std::string(node->GetName())); });
+    }
+  }
+
+  geoinfo::ecal_info::module_id module::to_module_id(const geo_path& path) {
+    geoinfo::ecal_info::module_id mid;
+    std::smatch m;
+    if (regex_search(path, m, re_ecal_barrel_module)) {
+      mid.module_number = static_cast<geoinfo::ecal_info::module_t>(std::stoi(m[1]));
+      mid.region        = geo_id::region_t::BARREL;
+    } else if (regex_search(path, m, re_ecal_endcap_module)) {
+      mid.region        = std::stoi(m[1]) == 0 ? geo_id::region_t::ENDCAP_A : geo_id::region_t::ENDCAP_B;
+      mid.module_number = static_cast<ecal_info::module_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
+    } else {
+      UFW_ERROR("Path doesn't match any ECAL regex!!");
+    }
+    return mid;
   }
 
   //////////////////////////////////////////////////////
@@ -798,21 +847,6 @@ namespace sand {
     }
   }
 
-  geoinfo::ecal_info::module_id geoinfo::ecal_info::to_module_id(const geo_path& path) {
-    geoinfo::ecal_info::module_id mid;
-    std::smatch m;
-    if (regex_search(path, m, re_ecal_barrel_module)) {
-      mid.module_number = static_cast<geoinfo::ecal_info::module_t>(std::stoi(m[1]));
-      mid.region        = geo_id::region_t::BARREL;
-    } else if (regex_search(path, m, re_ecal_endcap_module)) {
-      mid.region        = std::stoi(m[1]) == 0 ? geo_id::region_t::ENDCAP_A : geo_id::region_t::ENDCAP_B;
-      mid.module_number = static_cast<ecal_info::module_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
-    } else {
-      UFW_ERROR("Path doesn't match any ECAL regex!!");
-    }
-    return mid;
-  }
-
   void geoinfo::ecal_info::construct_module_cells(const module& m, const grid& g) {
     geoinfo::ecal_info::fiber* fib = nullptr;
 
@@ -844,9 +878,9 @@ namespace sand {
   }
 
   void geoinfo::ecal_info::endcap_module_cells(const geo_path& path) {
+    module m(path);
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
-    module m(to_module_id(path));
     nav->for_each_node([&](auto node) {
       auto shape = node->GetVolume()->GetShape();
       nav->cd(path / std::string(node->GetName()));
@@ -932,7 +966,7 @@ namespace sand {
   }
 
   void geoinfo::ecal_info::barrel_module_cells(const geo_path& path) {
-    module m(to_module_id(path));
+    module m(path);
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
     auto shape      = nav->get_node()->GetVolume()->GetShape();
