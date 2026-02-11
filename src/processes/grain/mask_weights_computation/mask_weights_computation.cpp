@@ -173,9 +173,10 @@ namespace sand::grain {
 
       // Write to hdf5
       array.write(camera.name, range, h_solidangle_array.get());
+      array.set_attribute(camera.name, "camera_id", std::to_string(camera.id));
       auto t_stop = std::chrono::high_resolution_clock::now();
       double elapsed_time = std::chrono::duration<double>(t_stop - t_start).count();
-      UFW_INFO("{} completed, time taken: {} s", camera.name, elapsed_time);
+      UFW_INFO("{} completed, id: {}, time taken: {} s", camera.name, std::to_string(camera.id), elapsed_time);
     }
   }
 } // namespace sand::grain

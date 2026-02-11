@@ -11,6 +11,8 @@
 #include <string>
 #include <algorithm>
 #include <functional>
+#include <unordered_map>
+#include <vector>
 
 #include <geoinfo/grain_info.hpp>
 #include <hdf5/hdf5.hpp>
@@ -38,7 +40,7 @@ namespace sand::grain {
     cl::Program m_maximization_program;
     cl::Kernel m_maximization_kernel;
     std::vector<cl::buffer> m_sensitivity_matrix_buffers; // One per GPU
-    std::map<std::string, cl::buffer> m_system_matrix_buffers; // One per camera
+    std::unordered_map<channel_id::link_t, cl::buffer> m_system_matrix_buffers; // One per camera
     std::vector<cl::buffer> m_image_buffers; // One per GPU
     std::vector<cl::buffer> m_expectation_buffers; // One per GPU
     std::vector<cl::buffer> m_maximization_buffers; // One per GPU
@@ -50,7 +52,7 @@ namespace sand::grain {
   {
       assert(system_matrix.size() == dimensions.flat_size());
       std::vector<T> sensitivity_matrix(dimensions[0]*dimensions[1]*dimensions[2], T{});
-
+      // sum over the sensor axis
       for (std::size_t d0 = 0; d0 < dimensions[0]; ++d0) {
           for (std::size_t d1 = 0; d1 < dimensions[1]; ++d1) {
               for (std::size_t d2 = 0; d2 < dimensions[2]; ++d2) {
@@ -97,17 +99,21 @@ namespace sand::grain {
     std::vector<float> temp_system(angle_size, 0.f);
     std::vector<float> temp_sensitivity(sensitivity_size, 0.f);
     for (const auto& camera : array.datasets()) {
-      UFW_DEBUG("Loading camera {}", camera);
+      // Tricky conversion from std::string to channel_id::link_t (uint8_t)
+      const auto camera_id = static_cast<channel_id::link_t>(std::stoi(array.attribute(camera, "camera_id")));
+      UFW_DEBUG("Loading camera {} with id {}", camera, camera_id);
       array.read(camera, temp_system);
-      auto& system_buf = m_system_matrix_buffers[camera];
+      auto& system_buf = m_system_matrix_buffers[camera_id];
       system_buf.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
           platform.context(), angle_size * sizeof(float), temp_system.data());
+      // sensitivity matrix is system matrix summed over the sensors
       std::transform(temp_sensitivity.begin(), temp_sensitivity.end(),
                    get_sensitivity_from_system_matrix<float>(temp_system, angle_dimensions).begin(),
                    temp_sensitivity.begin(),
                    std::plus<float>());
     }
 
+    // Create buffers across all GPUs
     const size_t n_devices = platform.devices().size();
     UFW_DEBUG("n_devices: {}", n_devices);
     m_sensitivity_matrix_buffers = std::vector<sand::cl::buffer>(n_devices);
@@ -145,10 +151,17 @@ namespace sand::grain {
     const auto& images_in = get<images>("images");
     //auto& voxel_out = set<voxel_array<float>>("voxels");
 
-    const auto& gi = instance<geoinfo>();
+    for (const auto& image : images_in.images) {
+      UFW_DEBUG("Image id: {}", image.camera_id);
+      if (m_system_matrix_buffers.count(image.camera_id) == 0) {
+        UFW_ERROR("Camera id {} not found in buffers", image.camera_id);
+      }
+    }
 
-    dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
-    auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
+    // const auto& gi = instance<geoinfo>();
+
+    // dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
+    // auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
   }
 } // namespace sand::grain
 
