@@ -76,9 +76,10 @@ namespace sand {
 
       inline dir_3d side(size_t idx) const { return vtx(idx + 1) - vtx(idx); };
       inline const std::array<pos_3d, 4>& vtx() const { return v_; };
-      inline const pos_3d& vtx(std::size_t i) const { return v_[i % 4]; };
+      inline const pos_3d& vtx(std::size_t i) const { return v_[((i % 4) + 4) % 4]; };
       inline const dir_3d& normal() const { return normal_; };
       inline const pos_3d& centroid() const { return centroid_; };
+      size_t narrowest_trapezoid_basis() const;
 
      private:
       std::array<pos_3d, 4> v_; // four vertices of the face
@@ -86,7 +87,7 @@ namespace sand {
       pos_3d centroid_;         // centroid of the face
 
      private:
-      bool are_points_coplanar() const;
+      bool are_vtx_coplanar() const;
     };
 
     // shape element
@@ -161,6 +162,7 @@ namespace sand {
       void order_elements();
       double total_pathlength() const;
       bool is_inside(const pos_3d& p) const;
+      size_t longest_side() const;
     };
 
     using module_t = uint8_t;
