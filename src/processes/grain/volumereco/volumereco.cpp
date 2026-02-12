@@ -36,6 +36,7 @@ namespace sand::grain {
     template <typename T>
     std::vector<T> get_sensitivity_from_system_matrix(const std::vector<T>& system_matrix, sand::hdf5::ndarray::ndrange dimensions);
     static constexpr size_t s_max_platforms = 4;
+    size_t m_n_devices;
     float m_voxel_size;
     cl::Program m_expectation_program;
     cl::Kernel m_expectation_kernel;
@@ -57,7 +58,7 @@ namespace sand::grain {
   template <typename T>
   std::vector<T> volumereco::get_sensitivity_from_system_matrix(const std::vector<T>& system_matrix, sand::hdf5::ndarray::ndrange dimensions)
   {
-      assert(system_matrix.size() == dimensions.flat_size());
+      UFW_ASSERT(system_matrix.size() == dimensions.flat_size(), "System and sensitivity matrices dimensions do not match");
       std::vector<T> sensitivity_matrix(dimensions[0]*dimensions[1]*dimensions[2], T{});
       // sum over the sensor axis
       for (std::size_t d0 = 0; d0 < dimensions[0]; ++d0) {
@@ -111,6 +112,7 @@ namespace sand::grain {
     process::configure(cfg);
     m_voxel_size = cfg.at("voxel_size");
     auto& platform   = instance<cl::platform>();
+    m_n_devices = platform.devices().size();
     configure_expectation(platform);
     configure_maximization(platform);
     configure_invert_matrix(platform);
@@ -120,6 +122,14 @@ namespace sand::grain {
     const auto angle_dimensions = array.range(array.datasets().front());
     const size_t angle_size = angle_dimensions.flat_size();
     const size_t sensitivity_size = angle_dimensions[0]*angle_dimensions[1]*angle_dimensions[2];
+
+    // Check that voxel shape matches between geometry and weights
+    const auto& gi = instance<geoinfo>();
+    dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
+    auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
+    UFW_ASSERT(angle_dimensions[0]==voxels.size().x() && angle_dimensions[1]==voxels.size().y() && angle_dimensions[2]==voxels.size().z(), 
+          "hdf5 voxels shape: {}, {}, {}. Geometry voxels shape: {}, {}, {}.", 
+          angle_dimensions[0], angle_dimensions[1], angle_dimensions[2], voxels.size().x(), voxels.size().y(), voxels.size().z());
 
     std::vector<float> temp_system(angle_size, 0.f);
     std::vector<float> temp_sensitivity(sensitivity_size, 0.f);
@@ -143,18 +153,18 @@ namespace sand::grain {
           platform.context(), sensitivity_size * sizeof(float), temp_sensitivity.data());
 
     // Create buffers across all GPUs
-    const size_t n_devices = platform.devices().size();
-    UFW_DEBUG("n_devices: {}", n_devices);
-    m_inverted_sensitivity_matrix_buffers = std::vector<sand::cl::buffer>(n_devices);
-    m_image_buffers = std::vector<sand::cl::buffer>(n_devices);
-    m_expectation_buffers = std::vector<sand::cl::buffer>(n_devices);
-    m_maximization_buffers = std::vector<sand::cl::buffer>(n_devices);
-    m_previous_amplitude_buffers = std::vector<sand::cl::buffer>(n_devices);
+    UFW_DEBUG("n_devices: {}", m_n_devices);
+    m_inverted_sensitivity_matrix_buffers = std::vector<sand::cl::buffer>(m_n_devices);
+    m_image_buffers = std::vector<sand::cl::buffer>(m_n_devices);
+    m_expectation_buffers = std::vector<sand::cl::buffer>(m_n_devices);
+    m_maximization_buffers = std::vector<sand::cl::buffer>(m_n_devices);
+    m_previous_amplitude_buffers = std::vector<sand::cl::buffer>(m_n_devices);
 
-    for (size_t i_device; i_device < n_devices; ++i_device) {
+    for (size_t i_device = 0; i_device < m_n_devices; ++i_device) {
       UFW_DEBUG("Creating buffers on device {}", i_device);
       // Invert sensitivity matrix for faster computations later
       auto& inverted_sensitivity_buf = m_inverted_sensitivity_matrix_buffers[i_device];
+      inverted_sensitivity_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), sensitivity_size * sizeof(float));
       try {
         m_invert_matrix_kernel.setArg(0, m_sensitivity_matrix_buffer);
         m_invert_matrix_kernel.setArg(1, inverted_sensitivity_buf);
@@ -168,16 +178,16 @@ namespace sand::grain {
                                                      cl::NullRange, nullptr, &ev_invert_matrix_kernel_execution);
 
       auto& image_buf = m_image_buffers[i_device];
-      image_buf.allocate<CL_MEM_READ_ONLY>(platform.context(), camera_height * camera_width * sizeof(float));
+      image_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), camera_height * camera_width * sizeof(float));
 
       auto& expectation_buf = m_expectation_buffers[i_device];
-      expectation_buf.allocate<CL_MEM_READ_ONLY>(platform.context(), sensitivity_size * sizeof(float));
+      expectation_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), sensitivity_size * sizeof(float));
 
       auto& maximization_buf = m_maximization_buffers[i_device];
-      maximization_buf.allocate<CL_MEM_READ_ONLY>(platform.context(), sensitivity_size * sizeof(float));
+      maximization_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), sensitivity_size * sizeof(float));
 
       auto& previous_amplitude_buf = m_previous_amplitude_buffers[i_device];
-      previous_amplitude_buf.allocate<CL_MEM_READ_ONLY>(platform.context(), sensitivity_size * sizeof(float));
+      previous_amplitude_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), sensitivity_size * sizeof(float));
     }
 
     // Be sure that all GPU computations are completed
@@ -194,18 +204,28 @@ namespace sand::grain {
     UFW_DEBUG("Running a volumereco process at {}.", fmt::ptr(this));
     const auto& images_in = get<images>("images");
     //auto& voxel_out = set<voxel_array<float>>("voxels");
+    auto& platform = instance<cl::platform>();
+    const auto& gi = instance<geoinfo>();
+
+    dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
+    auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
 
     for (const auto& image : images_in.images) {
       UFW_DEBUG("Image id: {}", image.camera_id);
       if (m_system_matrix_buffers.count(image.camera_id) == 0) {
         UFW_ERROR("Camera id {} not found in buffers", image.camera_id);
       }
+      // Sharing load evenly among GPUs, assuming camera ids are uniform
+      const size_t device_index = image.camera_id % m_n_devices; 
+      UFW_DEBUG("Processing on device {}", device_index);
+      // Copy data to device buffer
+      cl::Event ev_copy_image_to_buffer = m_image_buffers[image.camera_id % m_n_devices].write(image.amplitude_array<float>().Array() , platform.queues()[image.camera_id % m_n_devices], 0, -1);
+      // Start with uniform voxel score distribution
+      // std::vector<float> starting_score(n, 1.f);
+      // cl::Event ev_fill_previous_amplitude_buffer = m_previous_amplitude_buffers[image.camera_id % m_n_devices].write()
     }
 
-    // const auto& gi = instance<geoinfo>();
 
-    // dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
-    // auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
   }
 } // namespace sand::grain
 

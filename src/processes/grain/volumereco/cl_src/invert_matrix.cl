@@ -9,7 +9,7 @@ CL_KERNEL(void invert_matrix(__global const float* matrix,  __global float* inve
   
   const int v_idx = (i * jsize + j) * ksize + k;  //voxel idx
   if (matrix[v_idx] != 0) {
-    inverted_matrix[v_idx] = 1 / matrix[v_idx];
+    inverted_matrix[v_idx] = 1.f / matrix[v_idx];
   }
   else {
     inverted_matrix[v_idx] = 0.f;
