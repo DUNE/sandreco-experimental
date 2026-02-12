@@ -39,6 +39,7 @@ namespace sand {
   static inline const std::regex re_ecal_endcap_sensible_volume{
       "/ECAL_endcap_lv_PV_(\\d+)/ECAL_ec_mod_(\\d+)_lv_PV_(\\d+)/ECAL_ec_mod_(curv|vert|hor)_(\\d+)_lv_PV_(\\d+)/"
       "endvolECAL(curv|straight|)ActiveSlab_(((\\d+)_(\\d+))|(\\d+))_PV_(\\d+)$"};
+  static inline const std::regex re_ecal_al_plate("(endvol|)ECAL(_ec_mod_(hor|curv)_|_|)Alplate_((\\d+)_|)(lv_|)PV_0$");
 
   //////////////////////////////////////////////////////
   // Cell ID
@@ -61,7 +62,7 @@ namespace sand {
   inline bool operator< (module_id lhs, module_id rhs) { return lhs.raw < rhs.raw; }
 
   namespace {
-    constexpr double ktolerance(1e-10);
+    constexpr double ktolerance(1e-8);
     const pos_3d orig(0., 0., 0.);
     inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
 
@@ -223,25 +224,51 @@ namespace sand {
         return false;
     }
 
+    bool are_points_coplanar(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4) {
+      // Check coplanarity: four points are coplanar if the scalar triple product is zero
+      // (p2-p1) · ((p3-p1) × (p4-p1)) = 0
+      dir_3d u              = (p2 - p1).Unit();
+      dir_3d w              = (p3 - p1).Unit();
+      dir_3d z              = (p4 - p1).Unit();
+      double triple_product = u.Dot(w.Cross(z));
+      return is_zero_within_tolerance(triple_product);
+    }
+
+    bool point_belongs_to_segment(const pos_3d& p, const pos_3d& s1, const pos_3d& s2) {
+      auto w = p - s1;
+      auto v = s2 - s1;
+      if (!is_zero_within_tolerance(w.Cross(v).R()))
+        return false;
+      auto t = w.Dot(v) / v.Mag2();
+      return t >= 0. && t <= 1.;
+    }
+
+    bool lines_intercept(pos_3d& p_intercept, const pos_3d& pos1, const dir_3d& dir1, const pos_3d& pos2,
+                         const dir_3d& dir2) {
+      auto cr = dir1.Cross(dir2);
+      auto dp = pos2 - pos1;
+      if (is_zero_within_tolerance(cr.R()))
+        return false;
+
+      if (!is_zero_within_tolerance(dp.Dot(cr)))
+        return false;
+
+      auto s      = dp.Cross(dir2).Dot(cr) / cr.Mag2();
+      p_intercept = pos1 + s * dir1;
+      return true;
+    }
+
   } // namespace
 
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::shape_element_face
   //////////////////////////////////////////////////////
 
-  bool shape_element_face::are_points_coplanar() const {
-    // Check coplanarity: four points are coplanar if the scalar triple product is zero
-    // (p2-p1) · ((p3-p1) × (p4-p1)) = 0
-    dir_3d u              = (vtx(1) - vtx(0)).Unit();
-    dir_3d w              = (vtx(2) - vtx(0)).Unit();
-    dir_3d z              = (vtx(3) - vtx(0)).Unit();
-    double triple_product = u.Dot(w.Cross(z));
-    return is_zero_within_tolerance(triple_product);
-  }
+  bool shape_element_face::are_vtx_coplanar() const { return are_points_coplanar(vtx(0), vtx(1), vtx(2), vtx(3)); }
 
   shape_element_face::shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4)
     : v_{p1, p2, p3, p4} {
-    UFW_ASSERT(are_points_coplanar(), std::string("cell_face: four points are not coplanar"));
+    UFW_ASSERT(are_vtx_coplanar(), std::string("cell_face: four points are not coplanar"));
 
     centroid_ = vtx(0) + 0.25 * ((vtx(1) - vtx(0)) + (vtx(2) - vtx(0)) + (vtx(3) - vtx(0)));
 
@@ -255,6 +282,23 @@ namespace sand {
     centroid_ = transf * centroid();
     normal_   = transf * normal();
     return *this;
+  }
+
+  size_t shape_element_face::narrowest_trapezoid_basis() const {
+    if (is_zero_within_tolerance(side(0).R() - side(2).R())) {
+      if (side(1).R() < side(3).R())
+        return 1;
+      else
+        return 3;
+    } else if (is_zero_within_tolerance(side(1).R() - side(3).R())) {
+      if (side(0).R() < side(2).R())
+        return 0;
+      else
+        return 2;
+    } else {
+      UFW_WARN("Not a trapeziod!!!");
+      return 0;
+    }
   }
 
   //////////////////////////////////////////////////////
@@ -453,6 +497,33 @@ namespace sand {
     return false;
   }
 
+  size_t shape_element_collection::longest_side() const {
+    auto& f     = elements_.front()->begin_face();
+    auto length = [&](size_t i) {
+      pos_3d p_start = f.vtx(i) + 0.5 * f.side(i);
+      pos_3d p_end;
+      double l = 0.;
+      for (const auto& el : elements_) {
+        auto p_end = el->to_face(p_start, face_location::end);
+        l += el->pathlength(p_start, p_end);
+        p_start = p_end;
+      }
+      return l;
+    };
+
+    size_t idx  = 0;
+    double lmax = length(idx);
+
+    for (size_t i = 1; i < f.vtx().size(); i++) {
+      auto lel = length(i);
+      if (lel > lmax) {
+        idx  = i;
+        lmax = lel;
+      }
+    }
+    return idx;
+  }
+
   //////////////////////////////////////////////////////
   // geoinfo::ecal_info::module::cell
   //////////////////////////////////////////////////////
@@ -561,63 +632,59 @@ namespace sand {
   // geoinfo::ecal_info::module
   //////////////////////////////////////////////////////
 
-  grid module::construct_grid(const std::vector<double>& col_widths, double al_plate_thickness) const {
-    auto& f    = element_collection().at(0).begin_face();
-    size_t idx = 0;
-    if (id().region == geo_id::region_t::BARREL) {
-      idx = 0;
-      if (is_zero_within_tolerance(f.side(0).R() - f.side(2).R())) {
-        if (f.side(1).R() < f.side(3).R())
-          idx = 1;
-        else
-          idx = 3;
-      } else if (is_zero_within_tolerance(f.side(1).R() - f.side(3).R())) {
-        if (f.side(0).R() < f.side(2).R())
-          idx = 0;
-        else
-          idx = 2;
-      } else {
-        UFW_ERROR("Unexpected shape for barrel module!!");
-      }
-    } else if (id().region == geo_id::region_t::ENDCAP_A || id().region == geo_id::region_t::ENDCAP_B) {
-      auto length = [&](size_t i) {
-        pos_3d p_start = f.vtx(i) + 0.5 * f.side(i);
-        pos_3d p_end;
-        double l = 0.;
-        for (const auto& el : element_collection().elements()) {
-          auto p_end = el->to_face(p_start, face_location::end);
-          l += el->pathlength(p_start, p_end);
-          p_start = p_end;
-        }
-        return l;
-      };
+  module::module(const geo_path& path) {
+    id_ = to_module_id(path);
+    construct_al_plate(path);
+    al_plate_.order_elements();
+  }
 
-      idx         = 0;
-      double lmax = length(idx);
-
-      for (int i = 1; i < f.vtx().size(); i++) {
-        auto lel = length(i);
-        if (lel > lmax) {
-          idx  = i;
-          lmax = lel;
-        }
+  grid module::construct_grid(const std::vector<double>& col_widths) const {
+    auto& f   = element_collection().elements().front()->begin_face();
+    auto f_al = al_plate_.elements().front()->begin_face();
+    if (!are_points_coplanar(f.vtx(0), f.vtx(1), f.vtx(2), f_al.centroid())) {
+      f_al = al_plate_.elements().back()->end_face();
+      if (!are_points_coplanar(f.vtx(0), f.vtx(1), f.vtx(2), f_al.centroid())) {
+        UFW_ERROR("Al plate doesn't have any face in common with its module!!");
       }
     }
-
-    ////////////////////////////////////////////////
-    // Here the aluminum plate is accounted.
-    // Grid is constructed on the remaining are only
-    ////////////////////////////////////////////////
-
-    auto perp   = f.normal().Cross(f.side(idx)).Unit();
-    auto proj1  = perp.Dot(f.side(idx + 3));
-    auto scale1 = al_plate_thickness / proj1;
-
-    auto proj2  = perp.Dot(f.side(idx + 1));
-    auto scale2 = al_plate_thickness / proj2;
-
-    return grid(f.vtx(idx) + scale1 * f.side(idx + 3), f.vtx(idx + 1) + scale2 * f.side(idx + 1), f.vtx(idx + 2),
-                f.vtx(idx + 3), col_widths, row_widths_);
+    size_t idx    = 0;
+    size_t idx_al = 0;
+    if (id().region == geo_id::region_t::BARREL) {
+      idx = f.narrowest_trapezoid_basis();
+      ////////////////////////////////////////////////////////////
+      // idx_al = f_al.narrowest_trapezoid_basis();
+      ////////////////////////////////////////////////////////////
+      // Barrel module Al plate is not a trapezoid as expected
+      // -> Need for a workaround while waiting for it
+      // to be fixed: https://github.com/DUNE/dunendggd/issues/82
+      // Idea: exploit the fact that the two faces have a common side
+      ////////////////////////////////////////////////////////////
+    } else if (id().region == geo_id::region_t::ENDCAP_A || id().region == geo_id::region_t::ENDCAP_B) {
+      idx = element_collection().longest_side();
+      // idx_al = al_plate_.longest_side();
+    }
+    ////////////////////////////////////////////////////////////
+    // Idea:
+    // 1- find the side that Al plate has in common with the module
+    // 2- find the intercepts of the opposite side with the oblique
+    //    sides of the trapezoid
+    ////////////////////////////////////////////////////////////
+    for (; idx_al < 4; idx_al++) {
+      if (point_belongs_to_segment(f_al.vtx(idx_al), f.vtx(idx + 2), f.vtx(idx + 3))
+          && point_belongs_to_segment(f_al.vtx(idx_al + 1), f.vtx(idx + 2), f.vtx(idx + 3))) {
+        pos_3d p1, p2;
+        if (!lines_intercept(p1, f_al.vtx(idx_al + 2), f_al.side(idx_al + 2), f.vtx(idx + 1), f.side(idx + 1))) {
+          UFW_ERROR("Al plate side doesn't intercept the oblique side of the module!!");
+        }
+        if (!lines_intercept(p2, f_al.vtx(idx_al + 2), f_al.side(idx_al + 2), f.vtx(idx - 1), f.side(idx - 1))) {
+          UFW_ERROR("Al plate side doesn't intercept the oblique side of the module!!");
+        }
+        return grid(f.vtx(idx), f.vtx(idx + 1), p1, p2, col_widths, row_widths_);
+      }
+    }
+    UFW_ERROR("Module and its Al plate don't have any side in common!!");
+    ////////////////////////////////////////////////////////////
+    // return grid(f_al.vtx(idx_al + 2), f_al.vtx(idx_al + 3), f.vtx(idx + 2), f.vtx(idx + 3), col_widths, row_widths_);
   }
 
   cell module::construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const {
@@ -632,6 +699,48 @@ namespace sand {
       std::swap(f1, f2);
     }
     return c;
+  }
+
+  void module::construct_al_plate(const geo_path& path) {
+    std::smatch m;
+    if (regex_search(path, m, re_ecal_al_plate)) {
+      auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
+      nav->cd(path);
+      auto shape      = nav->get_node()->GetVolume()->GetShape();
+      auto geo_transf = nav->get_hmatrix();
+      auto transf     = to_xform_3d(geo_transf);
+      sand::p_shape_element_base el;
+      if (shape->TestShapeBit(TGeoShape::kGeoTubeSeg))
+        el = tube_to_shape_element(static_cast<TGeoTubeSeg*>(shape));
+      else if (shape->TestShapeBit(TGeoShape::kGeoTrd2))
+        el = trd2_to_shape_element(static_cast<TGeoTrd2*>(shape));
+      else if (shape->TestShapeBit(TGeoShape::kGeoBox))
+        el = box_to_shape_element(static_cast<TGeoBBox*>(shape));
+      else {
+        UFW_ERROR("Unexpected shape while constructing Al plate!!!");
+      }
+      el->transform(transf);
+      al_plate_.add(std::move(el));
+    } else {
+      auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
+      nav->cd(path);
+      nav->for_each_node([&](auto node) { construct_al_plate(path / std::string(node->GetName())); });
+    }
+  }
+
+  geoinfo::ecal_info::module_id module::to_module_id(const geo_path& path) {
+    geoinfo::ecal_info::module_id mid;
+    std::smatch m;
+    if (regex_search(path, m, re_ecal_barrel_module)) {
+      mid.module_number = static_cast<geoinfo::ecal_info::module_t>(std::stoi(m[1]));
+      mid.region        = geo_id::region_t::BARREL;
+    } else if (regex_search(path, m, re_ecal_endcap_module)) {
+      mid.region        = std::stoi(m[1]) == 0 ? geo_id::region_t::ENDCAP_A : geo_id::region_t::ENDCAP_B;
+      mid.module_number = static_cast<ecal_info::module_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
+    } else {
+      UFW_ERROR("Path doesn't match any ECAL regex!!");
+    }
+    return mid;
   }
 
   //////////////////////////////////////////////////////
@@ -823,21 +932,6 @@ namespace sand {
     }
   }
 
-  geoinfo::ecal_info::module_id geoinfo::ecal_info::to_module_id(const geo_path& path) {
-    geoinfo::ecal_info::module_id mid;
-    std::smatch m;
-    if (regex_search(path, m, re_ecal_barrel_module)) {
-      mid.module_number = static_cast<geoinfo::ecal_info::module_t>(std::stoi(m[1]));
-      mid.region        = geo_id::region_t::BARREL;
-    } else if (regex_search(path, m, re_ecal_endcap_module)) {
-      mid.region        = std::stoi(m[1]) == 0 ? geo_id::region_t::ENDCAP_A : geo_id::region_t::ENDCAP_B;
-      mid.module_number = static_cast<ecal_info::module_t>(std::stoi(m[2]) + std::stoi(m[3]) * 16);
-    } else {
-      UFW_ERROR("Path doesn't match any ECAL regex!!");
-    }
-    return mid;
-  }
-
   void geoinfo::ecal_info::construct_module_cells(const module& m, const grid& g) {
     geoinfo::ecal_info::fiber* fib = nullptr;
 
@@ -869,26 +963,9 @@ namespace sand {
   }
 
   void geoinfo::ecal_info::endcap_module_cells(const geo_path& path) {
+    module m(path);
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
-    ///////////////////////////////////////////////////////
-    // Each module has an internal aluminum plate.
-    // Here we get the thickness.
-    // Grid is evaluated in the remaining area
-    ///////////////////////////////////////////////////////
-    auto nd = nav->get_node();
-    if (!nd) {
-      UFW_ERROR("Unexpected geometry!! Here there should be an endcap module node!!");
-    } else if (nd->GetNdaughters() == 0) {
-      UFW_ERROR("Unexpected geometry!! Here there should be the vertical element of an endcap module node!!");
-    } else if (nd->GetDaughter(0)->GetNdaughters() == 0) {
-      UFW_ERROR("Unexpected geometry!! Here there should be the aluminum plate of the vertical element of an endcap "
-                "module node!!");
-    }
-    auto al_plate_thickness =
-        2. * static_cast<TGeoBBox*>(nd->GetDaughter(0)->GetDaughter(0)->GetVolume()->GetShape())->GetDZ();
-    ///////////////////////////////////////////////////////
-    module m(to_module_id(path));
     nav->for_each_node([&](auto node) {
       auto shape = node->GetVolume()->GetShape();
       nav->cd(path / std::string(node->GetName()));
@@ -978,7 +1055,7 @@ namespace sand {
   }
 
   void geoinfo::ecal_info::barrel_module_cells(const geo_path& path) {
-    module m(to_module_id(path));
+    module m(path);
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
     auto node = nav->get_node();
