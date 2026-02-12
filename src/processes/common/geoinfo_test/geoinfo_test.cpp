@@ -145,7 +145,7 @@ namespace sand::common {
     auto c1           = cb.element_collection().elements().front()->begin_face().centroid();
     auto c2           = cb.element_collection().elements().back()->end_face().centroid();
     auto p            = c1 + 0.3 * (c2 - c1);
-    auto obt_cid      = gi.ecal().at(p + dir_3d(0., 0.4, 0.0)).id();
+    auto obt_cid      = gi.ecal().at(p).id();
     auto l1exp        = (c1 - p).R();
     auto l2exp        = (c2 - p).R();
     auto lexp         = l1exp + l2exp;
@@ -172,7 +172,7 @@ namespace sand::common {
     auto& ce          = gi.ecal().at(cid);
     off               = -0.7 * 0.5 * ce.total_pathlength();
     p                 = ce.offset2position(off);
-    obt_cid           = gi.ecal().at(p + dir_3d(0.4, 0.0, 0.0)).id();
+    obt_cid           = gi.ecal().at(p).id();
     l1obt             = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::begin);
     l2obt             = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::end);
     l1exp             = 0.5 * ce.total_pathlength() + off;
