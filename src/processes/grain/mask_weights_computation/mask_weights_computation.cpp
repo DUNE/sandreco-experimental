@@ -131,7 +131,7 @@ namespace sand::grain {
       cl::NDRange global_size(mask_rects_size, sensor_rects_size);
       UFW_DEBUG("Frustum global work size: ({},{})", global_size[0], global_size[1]);
       cl::Event ev_frustum_kernel_execution;
-      platform.queues().front().enqueueNDRangeKernel(m_frustum_kernel, cl::NullRange, cl::NDRange(global_size),
+      platform.queues().front().enqueueNDRangeKernel(m_frustum_kernel, cl::NullRange, global_size,
                                                      cl::NullRange, nullptr, &ev_frustum_kernel_execution);
       void* frustum_p = h_frustum_array.get();
       cl::Event ev_copy_frustum_from_device =

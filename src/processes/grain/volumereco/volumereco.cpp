@@ -31,6 +31,8 @@ namespace sand::grain {
    private:
     void configure_expectation(cl::platform& platform);
     void configure_maximization(cl::platform& platform);
+    void configure_invert_matrix(cl::platform& platform);
+    void configure_multiply_matrices(cl::platform& platform);
     template <typename T>
     std::vector<T> get_sensitivity_from_system_matrix(const std::vector<T>& system_matrix, sand::hdf5::ndarray::ndrange dimensions);
     static constexpr size_t s_max_platforms = 4;
@@ -39,7 +41,12 @@ namespace sand::grain {
     cl::Kernel m_expectation_kernel;
     cl::Program m_maximization_program;
     cl::Kernel m_maximization_kernel;
-    std::vector<cl::buffer> m_sensitivity_matrix_buffers; // One per GPU
+    cl::Program m_invert_matrix_program;
+    cl::Kernel m_invert_matrix_kernel;
+    cl::Program m_multiply_matrices_program;
+    cl::Kernel m_multiply_matrices_kernel;
+    cl::buffer m_sensitivity_matrix_buffer; // One
+    std::vector<cl::buffer> m_inverted_sensitivity_matrix_buffers; // One per GPU
     std::unordered_map<channel_id::link_t, cl::buffer> m_system_matrix_buffers; // One per camera
     std::vector<cl::buffer> m_image_buffers; // One per GPU
     std::vector<cl::buffer> m_expectation_buffers; // One per GPU
@@ -84,12 +91,30 @@ namespace sand::grain {
     m_maximization_kernel = cl::Kernel(m_maximization_program, "maximization");
   }
 
+  void volumereco::configure_invert_matrix(cl::platform& platform) {
+    const char* invert_matrix_kernel_src =
+  #include "cl_src/invert_matrix.cl"
+        ;
+    platform.build_program(m_invert_matrix_program, invert_matrix_kernel_src);
+    m_invert_matrix_kernel = cl::Kernel(m_invert_matrix_program, "invert_matrix");
+  }
+
+  void volumereco::configure_multiply_matrices(cl::platform& platform) {
+    const char* multiply_matrices_kernel_src =
+  #include "cl_src/multiply_matrices.cl"
+        ;
+    platform.build_program(m_multiply_matrices_program, multiply_matrices_kernel_src);
+    m_multiply_matrices_kernel = cl::Kernel(m_multiply_matrices_program, "multiply_matrices");
+  }
+
   void volumereco::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_voxel_size = cfg.at("voxel_size");
     auto& platform   = instance<cl::platform>();
     configure_expectation(platform);
     configure_maximization(platform);
+    configure_invert_matrix(platform);
+    configure_multiply_matrices(platform);
 
     auto& array = instance<sand::hdf5::ndarray>("angle_reader");
     const auto angle_dimensions = array.range(array.datasets().front());
@@ -106,17 +131,21 @@ namespace sand::grain {
       auto& system_buf = m_system_matrix_buffers[camera_id];
       system_buf.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
           platform.context(), angle_size * sizeof(float), temp_system.data());
-      // sensitivity matrix is system matrix summed over the sensors
+      // Sensitivity matrix is system matrix summed over the sensors
       std::transform(temp_sensitivity.begin(), temp_sensitivity.end(),
                    get_sensitivity_from_system_matrix<float>(temp_system, angle_dimensions).begin(),
                    temp_sensitivity.begin(),
                    std::plus<float>());
     }
 
+    // Only one sensitivity matrix is needed
+    m_sensitivity_matrix_buffer.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
+          platform.context(), sensitivity_size * sizeof(float), temp_sensitivity.data());
+
     // Create buffers across all GPUs
     const size_t n_devices = platform.devices().size();
     UFW_DEBUG("n_devices: {}", n_devices);
-    m_sensitivity_matrix_buffers = std::vector<sand::cl::buffer>(n_devices);
+    m_inverted_sensitivity_matrix_buffers = std::vector<sand::cl::buffer>(n_devices);
     m_image_buffers = std::vector<sand::cl::buffer>(n_devices);
     m_expectation_buffers = std::vector<sand::cl::buffer>(n_devices);
     m_maximization_buffers = std::vector<sand::cl::buffer>(n_devices);
@@ -124,9 +153,19 @@ namespace sand::grain {
 
     for (size_t i_device; i_device < n_devices; ++i_device) {
       UFW_DEBUG("Creating buffers on device {}", i_device);
-      auto& sensitivity_buf = m_sensitivity_matrix_buffers[i_device];
-      sensitivity_buf.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
-          platform.context(), sensitivity_size * sizeof(float), temp_sensitivity.data());
+      // Invert sensitivity matrix for faster computations later
+      auto& inverted_sensitivity_buf = m_inverted_sensitivity_matrix_buffers[i_device];
+      try {
+        m_invert_matrix_kernel.setArg(0, m_sensitivity_matrix_buffer);
+        m_invert_matrix_kernel.setArg(1, inverted_sensitivity_buf);
+      } catch (const cl::Error& e) {
+        UFW_WARN("OpenCL invert_matrix Program Kernel setArg: {} ({})", e.what(), e.err());
+        throw;
+      }
+      cl::NDRange global_size(angle_dimensions[0], angle_dimensions[1], angle_dimensions[2]);
+      cl::Event ev_invert_matrix_kernel_execution;
+      platform.queues()[i_device].enqueueNDRangeKernel(m_invert_matrix_kernel, cl::NullRange, global_size,
+                                                     cl::NullRange, nullptr, &ev_invert_matrix_kernel_execution);
 
       auto& image_buf = m_image_buffers[i_device];
       image_buf.allocate<CL_MEM_READ_ONLY>(platform.context(), camera_height * camera_width * sizeof(float));
@@ -139,6 +178,11 @@ namespace sand::grain {
 
       auto& previous_amplitude_buf = m_previous_amplitude_buffers[i_device];
       previous_amplitude_buf.allocate<CL_MEM_READ_ONLY>(platform.context(), sensitivity_size * sizeof(float));
+    }
+
+    // Be sure that all GPU computations are completed
+    for (const auto& queue : platform.queues()) {
+      queue.finish();
     }
   }
 
