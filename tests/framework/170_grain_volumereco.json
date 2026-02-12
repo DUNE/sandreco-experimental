@@ -33,7 +33,9 @@
       },
       {
         "sand::grain::volumereco" : {
-          "voxel_size" : 150.0
+          "voxel_size" : 150.0,
+          "max_iterations" : 3,
+          "pde" : 1.0
         },
         "reqs" : {"images": "images"},
         "prods" : {}

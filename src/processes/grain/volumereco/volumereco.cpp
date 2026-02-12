@@ -37,7 +37,9 @@ namespace sand::grain {
     std::vector<T> get_sensitivity_from_system_matrix(const std::vector<T>& system_matrix, sand::hdf5::ndarray::ndrange dimensions);
     static constexpr size_t s_max_platforms = 4;
     size_t m_n_devices;
+    size_t m_max_iterations;
     float m_voxel_size;
+    float m_pde;
     cl::Program m_expectation_program;
     cl::Kernel m_expectation_kernel;
     cl::Program m_maximization_program;
@@ -111,6 +113,8 @@ namespace sand::grain {
   void volumereco::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_voxel_size = cfg.at("voxel_size");
+    m_max_iterations = cfg.at("max_iterations");
+    m_pde = cfg.at("pde");
     auto& platform   = instance<cl::platform>();
     m_n_devices = platform.devices().size();
     configure_expectation(platform);
@@ -209,6 +213,9 @@ namespace sand::grain {
 
     dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
     auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
+    const cl::NDRange voxel_shape(voxels.size().x(), voxels.size().y(), voxels.size().z());
+    const size_t n_voxels = voxels.size().x() * voxels.size().y() * voxels.size().z();
+    std::vector<float> starting_score(n_voxels, 1.f);
 
     for (const auto& image : images_in.images) {
       UFW_DEBUG("Image id: {}", image.camera_id);
@@ -221,11 +228,35 @@ namespace sand::grain {
       // Copy data to device buffer
       cl::Event ev_copy_image_to_buffer = m_image_buffers[image.camera_id % m_n_devices].write(image.amplitude_array<float>().Array() , platform.queues()[image.camera_id % m_n_devices], 0, -1);
       // Start with uniform voxel score distribution
-      // std::vector<float> starting_score(n, 1.f);
-      // cl::Event ev_fill_previous_amplitude_buffer = m_previous_amplitude_buffers[image.camera_id % m_n_devices].write()
+      cl::Event ev_fill_previous_amplitude_buffer = m_previous_amplitude_buffers[image.camera_id % m_n_devices].write(starting_score.data(), platform.queues()[image.camera_id % m_n_devices], 0, -1);
+
+      for (int iteration = 0; iteration < m_max_iterations; ++iteration) {
+        UFW_DEBUG("Iteration: {}", iteration);
+        // Expectation step
+        try {
+          m_expectation_kernel.setArg(0, m_system_matrix_buffers[image.camera_id]);
+          m_expectation_kernel.setArg(1, m_inverted_sensitivity_matrix_buffers[device_index]);
+          m_expectation_kernel.setArg(2, static_cast<int>(n_voxels));
+          m_expectation_kernel.setArg(3, m_pde);
+          m_expectation_kernel.setArg(4, m_previous_amplitude_buffers[device_index]);
+          m_expectation_kernel.setArg(5, m_expectation_buffers[device_index]);
+        } catch (const cl::Error& e) {
+          UFW_WARN("OpenCL expectation Program Kernel setArg: {} ({})", e.what(), e.err());
+          throw;
+        }
+        cl::Event ev_expectation_kernel_execution;
+        platform.queues()[device_index].enqueueNDRangeKernel(m_expectation_kernel, cl::NullRange, voxel_shape,
+                                                     cl::NullRange, nullptr, &ev_expectation_kernel_execution);
+        
+        // Maximization step
+
+      }
+
     }
-
-
+    // Be sure that all GPU computations are completed
+    for (const auto& queue : platform.queues()) {
+      queue.finish();
+    }
   }
 } // namespace sand::grain
 
