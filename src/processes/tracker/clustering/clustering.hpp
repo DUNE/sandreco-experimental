@@ -14,10 +14,15 @@
 namespace sand::tracker {
 
   class clustering : public ufw::process {
-   public:
-    clustering();
-    void configure(const ufw::config& cfg) override;
-    void run() override;
+    public:
+      clustering();
+      void configure(const ufw::config& cfg) override;
+      void run() override;
+  
+    private:
+      std::map<const geoinfo::tracker_info::station *, std::vector<digi::signal>> group_signals_by_station();
+      std::map<const geoinfo::tracker_info::station *, std::vector<std::vector<digi::signal>>> clusterize_signals_by_stations(const std::map<const geoinfo::tracker_info::station *, std::vector<digi::signal>> & signals_by_station);
+      void clusterize_signals(std::vector<digi::signal> & current_cluster, const std::vector<digi::signal> & signals, std::vector<std::vector<digi::signal>> & clusters);
 
 
   };

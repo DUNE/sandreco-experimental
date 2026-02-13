@@ -25,6 +25,31 @@ namespace sand::tracker {
        * @unit ADC counts (arbitrary units)
        */
       double adc;
+
+        // Add equality operator
+        // Equality operator
+        bool operator==(const signal& other) const {
+            // Compare base class (reco::digi) members
+            if (channel() != other.channel()) return false;
+            
+            // Compare timerange objects - need to compare start/end or use a timerange equality operator
+            // Assuming timerange has a way to compare (if not, you'll need to add it)
+            const auto& t1 = t();
+            const auto& t2 = other.t();
+            
+            // This assumes timerange has start()/end() methods or comparable members
+            // You might need to adjust based on actual timerange interface
+            if (t1.earliest() != t2.earliest() || t1.latest() != t2.latest()) return false;
+            
+            // Compare derived class members
+            return tdc == other.tdc && 
+                   adc == other.adc;
+        }
+        
+        // Inequality operator
+        bool operator!=(const signal& other) const {
+            return !(*this == other);
+        }
     };
 
     using signal_collection = std::vector<signal>;

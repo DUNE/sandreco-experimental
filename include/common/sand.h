@@ -263,6 +263,9 @@ namespace sand {
   // Equality operator
   inline bool operator== (channel_id lhs, channel_id rhs) { return lhs.raw == rhs.raw; }
 
+  // Equality operator
+  inline bool operator!= (channel_id lhs, channel_id rhs) { return lhs.raw != rhs.raw; }
+
   // Less-than operator for ordering
   inline bool operator< (channel_id lhs, channel_id rhs) { return lhs.raw < rhs.raw; }
 
