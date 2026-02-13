@@ -32,7 +32,8 @@ namespace sand::grain {
     void configure_expectation(cl::platform& platform);
     void configure_maximization(cl::platform& platform);
     void configure_invert_matrix(cl::platform& platform);
-    void configure_multiply_matrices(cl::platform& platform);
+    void configure_multiply_matrices_in_place(cl::platform& platform);
+    void configure_add_matrices_in_place(cl::platform& platform);
     template <typename T>
     std::vector<T> get_sensitivity_from_system_matrix(const std::vector<T>& system_matrix, sand::hdf5::ndarray::ndrange dimensions);
     static constexpr size_t s_max_platforms = 4;
@@ -46,8 +47,10 @@ namespace sand::grain {
     cl::Kernel m_maximization_kernel;
     cl::Program m_invert_matrix_program;
     cl::Kernel m_invert_matrix_kernel;
-    cl::Program m_multiply_matrices_program;
-    cl::Kernel m_multiply_matrices_kernel;
+    cl::Program m_multiply_matrices_in_place_program;
+    cl::Kernel m_multiply_matrices_in_place_kernel;
+    cl::Program m_add_matrices_in_place_program;
+    cl::Kernel m_add_matrices_in_place_kernel;
     cl::buffer m_sensitivity_matrix_buffer; // One
     std::vector<cl::buffer> m_inverted_sensitivity_matrix_buffers; // One per GPU
     std::unordered_map<channel_id::link_t, cl::buffer> m_system_matrix_buffers; // One per camera
@@ -102,12 +105,20 @@ namespace sand::grain {
     m_invert_matrix_kernel = cl::Kernel(m_invert_matrix_program, "invert_matrix");
   }
 
-  void volumereco::configure_multiply_matrices(cl::platform& platform) {
-    const char* multiply_matrices_kernel_src =
-  #include "cl_src/multiply_matrices.cl"
+  void volumereco::configure_multiply_matrices_in_place(cl::platform& platform) {
+    const char* multiply_matrices_in_place_kernel_src =
+  #include "cl_src/multiply_matrices_in_place.cl"
         ;
-    platform.build_program(m_multiply_matrices_program, multiply_matrices_kernel_src);
-    m_multiply_matrices_kernel = cl::Kernel(m_multiply_matrices_program, "multiply_matrices");
+    platform.build_program(m_multiply_matrices_in_place_program, multiply_matrices_in_place_kernel_src);
+    m_multiply_matrices_in_place_kernel = cl::Kernel(m_multiply_matrices_in_place_program, "multiply_matrices_in_place");
+  }
+
+  void volumereco::configure_add_matrices_in_place(cl::platform& platform) {
+    const char* add_matrices_in_place_kernel_src =
+  #include "cl_src/add_matrices_in_place.cl"
+        ;
+    platform.build_program(m_add_matrices_in_place_program, add_matrices_in_place_kernel_src);
+    m_add_matrices_in_place_kernel = cl::Kernel(m_add_matrices_in_place_program, "add_matrices_in_place");
   }
 
   void volumereco::configure(const ufw::config& cfg) {
@@ -120,7 +131,8 @@ namespace sand::grain {
     configure_expectation(platform);
     configure_maximization(platform);
     configure_invert_matrix(platform);
-    configure_multiply_matrices(platform);
+    configure_multiply_matrices_in_place(platform);
+    configure_add_matrices_in_place(platform);
 
     auto& array = instance<sand::hdf5::ndarray>("angle_reader");
     const auto angle_dimensions = array.range(array.datasets().front());
@@ -161,7 +173,7 @@ namespace sand::grain {
     m_image_buffers = std::vector<sand::cl::buffer>(array.datasets().size());
     for (auto& image_buffer : m_image_buffers) {
       UFW_DEBUG("{}", counter++);
-      image_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), camera_height * camera_width * sizeof(float));
+      image_buffer.allocate<CL_MEM_READ_WRITE>(platform.context(), camera_height * camera_width * sizeof(float));
     }
 
     // Create buffers across all GPUs
@@ -243,8 +255,12 @@ namespace sand::grain {
     for (int iteration = 0; iteration < m_max_iterations; ++iteration) {
       UFW_DEBUG("Iteration: {}", iteration);
       // Fill maximization buffers with 0
-      for (size_t i_device = 0; i_device < n_devices; ++i_device) {
+      for (size_t i_device = 0; i_device < m_n_devices; ++i_device) {
         cl::Event ev_fill_maximization_buffer = m_maximization_buffers[i_device].write(starting_maximization.data(), platform.queues()[i_device], 0, -1);
+      }
+      // Be sure that all GPU computations are completed
+      for (const auto& queue : platform.queues()) {
+        queue.finish();
       }
       for (const auto& image : images_in.images) {
         const size_t device_index = image.camera_id % m_n_devices;
@@ -284,7 +300,53 @@ namespace sand::grain {
 
         // platform.queues()[device_index].finish();
       }
+      // Be sure that all GPU computations are completed
+      for (const auto& queue : platform.queues()) {
+        queue.finish();
+      }
+      // Now we have n_devices results from maximization step that need to be summed together
+      for (size_t i_device = 0; i_device < m_n_devices; ++i_device){
+        try {
+          m_add_matrices_in_place_kernel.setArg(0, m_maximization_buffers[0]);
+          m_add_matrices_in_place_kernel.setArg(1, m_maximization_buffers[i_device]);
+        } catch (const cl::Error& e) {
+          UFW_WARN("OpenCL add matrices in place Program Kernel setArg: {} ({})", e.what(), e.err());
+          throw;
+        }
+        cl::Event ev_add_matrices_in_place;
+        platform.queues()[0].enqueueNDRangeKernel(m_add_matrices_in_place_kernel, cl::NullRange, voxel_shape,
+                                                      cl::NullRange, nullptr, &ev_add_matrices_in_place);
+        platform.queues()[0].finish();
+      }
+      // Update amplitudes
+      for (size_t i_device = 0; i_device < m_n_devices; ++i_device){
+        try {
+          m_multiply_matrices_in_place_kernel.setArg(0, m_previous_amplitude_buffers[i_device]);
+          m_multiply_matrices_in_place_kernel.setArg(1, m_maximization_buffers[0]);
+        } catch (const cl::Error& e) {
+          UFW_WARN("OpenCL multiply matrices in place Program Kernel setArg: {} ({})", e.what(), e.err());
+          throw;
+        }
+        cl::Event ev_multiply_matrices_in_place;
+        platform.queues()[i_device].enqueueNDRangeKernel(m_multiply_matrices_in_place_kernel, cl::NullRange, voxel_shape,
+                                                      cl::NullRange, nullptr, &ev_multiply_matrices_in_place);
+      }
+      // Be sure that all GPU computations are completed
+      for (const auto& queue : platform.queues()) {
+        queue.finish();
+      }
     }
+    // Before saving the output, the amplitudes must be multiplied by inverted_sensitivity_matrix
+    try {
+      m_multiply_matrices_in_place_kernel.setArg(0, m_previous_amplitude_buffers[0]);
+      m_multiply_matrices_in_place_kernel.setArg(1, m_inverted_sensitivity_matrix_buffers[0]);
+    } catch (const cl::Error& e) {
+      UFW_WARN("OpenCL multiply matrices in place Program Kernel setArg: {} ({})", e.what(), e.err());
+      throw;
+    }
+    cl::Event ev_multiply_matrices_in_place;
+    platform.queues()[0].enqueueNDRangeKernel(m_multiply_matrices_in_place_kernel, cl::NullRange, voxel_shape,
+                                                  cl::NullRange, nullptr, &ev_multiply_matrices_in_place);
     // Be sure that all GPU computations are completed
     for (const auto& queue : platform.queues()) {
       queue.finish();
