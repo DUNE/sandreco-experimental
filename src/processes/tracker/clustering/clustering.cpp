@@ -35,9 +35,9 @@ namespace sand::tracker {
     auto signals_by_station = group_signals_by_station();
     auto clusters_by_station = clusterize_signals_by_stations(signals_by_station);
     for(const auto & [station, clusters] : clusters_by_station) {
-      UFW_INFO("Found {} clusters for station {}.", clusters.size(), station->daq_link);
+      UFW_DEBUG("Found {} clusters for station {}.", clusters.size(), station->daq_link);
       for (const auto & cluster : clusters) {
-        UFW_INFO("Found cluster with {} signals.", cluster.size());
+        UFW_DEBUG("Found cluster with {} signals.", cluster.size());
       }     
     }
 
@@ -90,10 +90,20 @@ namespace sand::tracker {
   }
 
   void clustering::clusterize_signals(std::vector<digi::signal> & current_cluster, const std::vector<digi::signal> & signals, std::vector<std::vector<digi::signal>> & clusters) {
+    const auto& tracker_info   = get<geoinfo>().tracker();
+    
     for (const auto& signal : signals) {
       if (std::find(current_cluster.begin(), current_cluster.end(), signal) != current_cluster.end()) {
         continue;
       }
+      // const auto & ws = tracker_info.wire_at(signal.channel());
+      // for(const auto & cluster_signal : current_cluster) {
+      //   const auto & cluster_ws = tracker_info.wire_at(cluster_signal.channel());
+      //   if (ws.is_adjecent(cluster_ws)) {
+      //     current_cluster.push_back(signal); 
+      //     return;
+      //   }
+      // }
       current_cluster.push_back(signal); ///TODO cluster signals
     }
 

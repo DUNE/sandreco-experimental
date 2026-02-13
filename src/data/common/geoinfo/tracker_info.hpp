@@ -36,7 +36,8 @@ namespace sand {
       using spacer_array   = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X
                                                                      ///< coordinate, starting from north.
       const station* parent;                                         ///< The parent station
-      std::vector<const wire*>  adjecent_wires;                      ///< The list of adjecent wires                     
+      std::vector<const wire*>  adjecent_wires;                      ///< The list of adjecent wires  
+      bool is_adjecent(const wire& w) const;                         ///< Check if the wire is adjecent                   
       channel_id daq_channel;                                        ///< The unique daq identifier
       pos_3d head;                                                   ///< The readout end of the wire
       pos_3d tail;                                                   ///< The termination end of the wire

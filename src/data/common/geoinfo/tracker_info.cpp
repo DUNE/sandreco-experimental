@@ -154,4 +154,13 @@ namespace sand {
     }
   }
 
+  bool geoinfo::tracker_info::wire::is_adjecent(const geoinfo::tracker_info::wire& w) const {
+    for (const auto& adj : w.adjecent_wires) {
+      if (adj->daq_channel == w.daq_channel) {
+        return true;
+      }
+    }
+    return false;
+  };
+
 } // namespace sand
