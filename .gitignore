@@ -9,3 +9,4 @@ compile_commands.json
 .vscode/
 src/streamers/**/*_linkdef.h
 src/streamers/**/*_types.hpp
+.vs/
