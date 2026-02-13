@@ -185,7 +185,7 @@ namespace sand::grain {
       image_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), camera_height * camera_width * sizeof(float));
 
       auto& expectation_buf = m_expectation_buffers[i_device];
-      expectation_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), sensitivity_size * sizeof(float));
+      expectation_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), camera_height * camera_width * sizeof(float));
 
       auto& maximization_buf = m_maximization_buffers[i_device];
       maximization_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), sensitivity_size * sizeof(float));
@@ -214,6 +214,7 @@ namespace sand::grain {
     dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
     auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
     const cl::NDRange voxel_shape(voxels.size().x(), voxels.size().y(), voxels.size().z());
+    const cl::NDRange sensors_shape(camera_height * camera_width);
     const size_t n_voxels = voxels.size().x() * voxels.size().y() * voxels.size().z();
     std::vector<float> starting_score(n_voxels, 1.f);
 
@@ -245,10 +246,12 @@ namespace sand::grain {
           throw;
         }
         cl::Event ev_expectation_kernel_execution;
-        platform.queues()[device_index].enqueueNDRangeKernel(m_expectation_kernel, cl::NullRange, voxel_shape,
+        platform.queues()[device_index].enqueueNDRangeKernel(m_expectation_kernel, cl::NullRange, sensors_shape,
                                                      cl::NullRange, nullptr, &ev_expectation_kernel_execution);
         
         // Maximization step
+
+        // platform.queues()[device_index].finish();
 
       }
 
