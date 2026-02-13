@@ -1,5 +1,5 @@
-CL_KERNEL(void maximization(__global const float* expectation_step_res, __global const float* hits, __global const float* sys_mat, 
-                                __global const float* sensitivity_inv, const int sensor_pixels, __global const char* mask, __global float* voxel_score)
+CL_KERNEL(void maximization(__global const float* system_matrix, __global const float* inverted_sensitivity_matrix, const int n_sensors, const float pde,
+                            __global const float* expectation_input, __global const float* image, __global float* maximization_result)
  {
   const int i = get_global_id(0);
   const int j = get_global_id(1);
@@ -8,23 +8,17 @@ CL_KERNEL(void maximization(__global const float* expectation_step_res, __global
   const int jsize = get_global_size(1);
   const int ksize = get_global_size(2);
   
-  const int v_idx = (i * jsize + j) * ksize + k;  //voxel idx
-  const float pde = 1.f;
-
-  //if (!mask[v_idx])
-  //  return;
+  // const int v_idx = (i * jsize + j) * ksize + k;  //voxel idx
     
-  double vscore = 0.0;
+  // double vscore = 0.0;
   
-  for (int s_idx = 0; s_idx != sensor_pixels; ++s_idx) {  //sensor loop
-    float npe = hits[s_idx];
-    float estep = expectation_step_res[s_idx];
-    int sm_idx = i * jsize * ksize * sensor_pixels + j * ksize * sensor_pixels + k * sensor_pixels + s_idx; //sysmat idx
-    float w = pde * sys_mat[sm_idx] * sensitivity_inv[v_idx];    
-    vscore += (npe * w * estep);    
+  // for (int s_idx = 0; s_idx != n_sensors; ++s_idx) {  //sensor loop
+  //   const float npe = image[s_idx];
+  //   const float estep = expectation_input[s_idx];
+  //   const int sm_idx = i * jsize * ksize * n_sensors + j * ksize * n_sensors + k * n_sensors + s_idx; //sysmat idx
+  //   const float w = pde * system_matrix[sm_idx] * inverted_sensitivity_matrix[v_idx];    
+  //   vscore += (npe * w * estep);    
+  //  }   
 
-   }   
-
-  voxel_score[v_idx] = (float)vscore ;
-
+  // maximization_result[v_idx] = (float)vscore ;
  })

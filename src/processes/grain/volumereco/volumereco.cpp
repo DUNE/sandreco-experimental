@@ -213,9 +213,11 @@ namespace sand::grain {
 
     dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
     auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
-    const cl::NDRange voxel_shape(voxels.size().x(), voxels.size().y(), voxels.size().z());
-    const cl::NDRange sensors_shape(camera_height * camera_width);
     const size_t n_voxels = voxels.size().x() * voxels.size().y() * voxels.size().z();
+    const size_t n_sensors = camera_height * camera_width;
+    const cl::NDRange voxel_shape(voxels.size().x(), voxels.size().y(), voxels.size().z());
+    const cl::NDRange sensors_shape(n_sensors);
+    
     std::vector<float> starting_score(n_voxels, 1.f);
 
     for (const auto& image : images_in.images) {
@@ -250,6 +252,22 @@ namespace sand::grain {
                                                      cl::NullRange, nullptr, &ev_expectation_kernel_execution);
         
         // Maximization step
+        try {
+          m_maximization_kernel.setArg(0, m_system_matrix_buffers[image.camera_id]);
+          m_maximization_kernel.setArg(1, m_inverted_sensitivity_matrix_buffers[device_index]);
+          m_maximization_kernel.setArg(2, static_cast<int>(n_sensors));
+          m_maximization_kernel.setArg(3, m_pde);
+          m_maximization_kernel.setArg(4, m_expectation_buffers[device_index]);
+          m_maximization_kernel.setArg(5, m_image_buffers[device_index]);
+          m_maximization_kernel.setArg(6, m_maximization_buffers[device_index]);
+        } catch (const cl::Error& e) {
+          UFW_WARN("OpenCL maximization Program Kernel setArg: {} ({})", e.what(), e.err());
+          throw;
+        }
+        cl::Event ev_maximization_kernel_execution;
+        cl::Events maximization_wait_for{ev_expectation_kernel_execution};
+        platform.queues()[device_index].enqueueNDRangeKernel(m_maximization_kernel, cl::NullRange, voxel_shape,
+                                                     cl::NullRange, &maximization_wait_for, &ev_maximization_kernel_execution);
 
         // platform.queues()[device_index].finish();
 
