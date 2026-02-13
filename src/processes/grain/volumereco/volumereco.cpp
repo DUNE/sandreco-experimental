@@ -51,7 +51,7 @@ namespace sand::grain {
     cl::buffer m_sensitivity_matrix_buffer; // One
     std::vector<cl::buffer> m_inverted_sensitivity_matrix_buffers; // One per GPU
     std::unordered_map<channel_id::link_t, cl::buffer> m_system_matrix_buffers; // One per camera
-    std::vector<cl::buffer> m_image_buffers; // One per GPU
+    std::vector<cl::buffer> m_image_buffers; // One per camera
     std::vector<cl::buffer> m_expectation_buffers; // One per GPU
     std::vector<cl::buffer> m_maximization_buffers; // One per GPU
     std::vector<cl::buffer> m_previous_amplitude_buffers; // One per GPU
@@ -156,10 +156,17 @@ namespace sand::grain {
     m_sensitivity_matrix_buffer.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
           platform.context(), sensitivity_size * sizeof(float), temp_sensitivity.data());
 
+    // Buffers for images
+    int counter = 0;
+    m_image_buffers = std::vector<sand::cl::buffer>(array.datasets().size());
+    for (auto& image_buffer : m_image_buffers) {
+      UFW_DEBUG("{}", counter++);
+      image_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), camera_height * camera_width * sizeof(float));
+    }
+
     // Create buffers across all GPUs
     UFW_DEBUG("n_devices: {}", m_n_devices);
     m_inverted_sensitivity_matrix_buffers = std::vector<sand::cl::buffer>(m_n_devices);
-    m_image_buffers = std::vector<sand::cl::buffer>(m_n_devices);
     m_expectation_buffers = std::vector<sand::cl::buffer>(m_n_devices);
     m_maximization_buffers = std::vector<sand::cl::buffer>(m_n_devices);
     m_previous_amplitude_buffers = std::vector<sand::cl::buffer>(m_n_devices);
@@ -180,9 +187,6 @@ namespace sand::grain {
       cl::Event ev_invert_matrix_kernel_execution;
       platform.queues()[i_device].enqueueNDRangeKernel(m_invert_matrix_kernel, cl::NullRange, global_size,
                                                      cl::NullRange, nullptr, &ev_invert_matrix_kernel_execution);
-
-      auto& image_buf = m_image_buffers[i_device];
-      image_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), camera_height * camera_width * sizeof(float));
 
       auto& expectation_buf = m_expectation_buffers[i_device];
       expectation_buf.allocate<CL_MEM_READ_WRITE>(platform.context(), camera_height * camera_width * sizeof(float));
@@ -219,22 +223,31 @@ namespace sand::grain {
     const cl::NDRange sensors_shape(n_sensors);
     
     std::vector<float> starting_score(n_voxels, 1.f);
+    std::vector<float> starting_maximization(n_voxels, 0.f);
 
+    // Prepare before iterations
     for (const auto& image : images_in.images) {
       UFW_DEBUG("Image id: {}", image.camera_id);
       if (m_system_matrix_buffers.count(image.camera_id) == 0) {
         UFW_ERROR("Camera id {} not found in buffers", image.camera_id);
       }
-      // Sharing load evenly among GPUs, assuming camera ids are uniform
+      // Sharing load evenly among GPUs, assuming camera ids range [0, n_cameras -1]
       const size_t device_index = image.camera_id % m_n_devices; 
       UFW_DEBUG("Processing on device {}", device_index);
       // Copy data to device buffer
-      cl::Event ev_copy_image_to_buffer = m_image_buffers[image.camera_id % m_n_devices].write(image.amplitude_array<float>().Array() , platform.queues()[image.camera_id % m_n_devices], 0, -1);
+      cl::Event ev_copy_image_to_buffer = m_image_buffers[image.camera_id].write(image.amplitude_array<float>().Array() , platform.queues()[image.camera_id % m_n_devices], 0, -1);
       // Start with uniform voxel score distribution
       cl::Event ev_fill_previous_amplitude_buffer = m_previous_amplitude_buffers[image.camera_id % m_n_devices].write(starting_score.data(), platform.queues()[image.camera_id % m_n_devices], 0, -1);
-
-      for (int iteration = 0; iteration < m_max_iterations; ++iteration) {
-        UFW_DEBUG("Iteration: {}", iteration);
+    }
+      
+    for (int iteration = 0; iteration < m_max_iterations; ++iteration) {
+      UFW_DEBUG("Iteration: {}", iteration);
+      // Fill maximization buffers with 0
+      for (size_t i_device = 0; i_device < n_devices; ++i_device) {
+        cl::Event ev_fill_maximization_buffer = m_maximization_buffers[i_device].write(starting_maximization.data(), platform.queues()[i_device], 0, -1);
+      }
+      for (const auto& image : images_in.images) {
+        const size_t device_index = image.camera_id % m_n_devices;
         // Expectation step
         try {
           m_expectation_kernel.setArg(0, m_system_matrix_buffers[image.camera_id]);
@@ -249,7 +262,7 @@ namespace sand::grain {
         }
         cl::Event ev_expectation_kernel_execution;
         platform.queues()[device_index].enqueueNDRangeKernel(m_expectation_kernel, cl::NullRange, sensors_shape,
-                                                     cl::NullRange, nullptr, &ev_expectation_kernel_execution);
+                                                      cl::NullRange, nullptr, &ev_expectation_kernel_execution);
         
         // Maximization step
         try {
@@ -258,7 +271,7 @@ namespace sand::grain {
           m_maximization_kernel.setArg(2, static_cast<int>(n_sensors));
           m_maximization_kernel.setArg(3, m_pde);
           m_maximization_kernel.setArg(4, m_expectation_buffers[device_index]);
-          m_maximization_kernel.setArg(5, m_image_buffers[device_index]);
+          m_maximization_kernel.setArg(5, m_image_buffers[image.camera_id]);
           m_maximization_kernel.setArg(6, m_maximization_buffers[device_index]);
         } catch (const cl::Error& e) {
           UFW_WARN("OpenCL maximization Program Kernel setArg: {} ({})", e.what(), e.err());
@@ -267,12 +280,10 @@ namespace sand::grain {
         cl::Event ev_maximization_kernel_execution;
         cl::Events maximization_wait_for{ev_expectation_kernel_execution};
         platform.queues()[device_index].enqueueNDRangeKernel(m_maximization_kernel, cl::NullRange, voxel_shape,
-                                                     cl::NullRange, &maximization_wait_for, &ev_maximization_kernel_execution);
+                                                      cl::NullRange, &maximization_wait_for, &ev_maximization_kernel_execution);
 
         // platform.queues()[device_index].finish();
-
       }
-
     }
     // Be sure that all GPU computations are completed
     for (const auto& queue : platform.queues()) {
