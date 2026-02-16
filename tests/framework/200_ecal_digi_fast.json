@@ -57,8 +57,12 @@
     },
     {
       "sand::ecal::fast_digi": {},
-      "reqs": {},
-      "prods": {}
+      "reqs": {
+        "pes": "ecal_photo_electrons"
+      },
+      "prods": {
+        "digi": "ecal_digits"
+      }
     }
   ]
 }

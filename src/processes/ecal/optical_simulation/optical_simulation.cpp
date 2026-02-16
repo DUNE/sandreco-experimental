@@ -21,7 +21,7 @@ namespace sand::ecal {
     UFW_DEBUG("Running ECAL optical simulation process at {}", fmt::ptr(this));
     const auto& tree  = get<sand::edep_reader>();
     const auto& gecal = get<geoinfo>().ecal();
-    auto& digi        = set<sand::ecal::pes>("pes");
+    auto& pes         = set<sand::ecal::pes>("pes");
 
     for (const auto& trj : tree) {
       const auto& hit_map = trj.GetHitMap();
@@ -61,7 +61,7 @@ namespace sand::ecal {
           chid.ecal_pmt.row           = sand::channel_id::row_t(cid.row);
           chid.ecal_pmt.column        = sand::channel_id::column_t(cid.column);
           chid.ecal_pmt.side          = sand::channel_id::side_t::X_PLUS;
-          digi.collection[chid].emplace_back(std::move(pe_));
+          pes.collection[chid].emplace_back(std::move(pe_));
         }
         for (int i = 0; i < nph2; i++) {
           pes::pe pe_;
@@ -74,7 +74,7 @@ namespace sand::ecal {
           chid.ecal_pmt.row           = sand::channel_id::row_t(cid.row);
           chid.ecal_pmt.column        = sand::channel_id::column_t(cid.column);
           chid.ecal_pmt.side          = sand::channel_id::side_t::X_MINUS;
-          digi.collection[chid].emplace_back(std::move(pe_));
+          pes.collection[chid].emplace_back(std::move(pe_));
         }
       }
     }
