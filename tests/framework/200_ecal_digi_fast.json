@@ -56,13 +56,27 @@
       }
     },
     {
-      "sand::ecal::fast_digi": {},
+      "sand::ecal::fast_digi": {
+        "int_time_window": 30.0,
+        "dead_time_window": 0.0,
+        "pe_threshold": 2.5,
+        "costant_fraction": 0.15
+      },
       "reqs": {
         "pes": "ecal_photo_electrons"
       },
       "prods": {
         "digi": "ecal_digits"
       }
+    },
+    {
+      "sand::root::tree_streamer": {
+        "uri": "test/ecal_fast_digi.root",
+        "tree": "ecal_fast_digi"
+      },
+      "write": [
+        "ecal_digits"
+      ]
     }
   ]
 }

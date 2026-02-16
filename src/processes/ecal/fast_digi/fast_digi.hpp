@@ -10,6 +10,17 @@ namespace sand::ecal {
     void run() override;
 
    private:
+    /// @brief Integration time window for signal accumulation
+    double m_int_time_window;
+
+    /// @brief Dead time window preventing pulse pile-up detection
+    double m_dead_time_window;
+
+    /// @brief Threshold for photo-electron detection
+    double m_pe_threshold;
+
+    /// @brief Constant fraction for timing discrimination
+    double m_costant_fraction;
   };
 } // namespace sand::ecal
 
