@@ -65,6 +65,8 @@ namespace sand {
     constexpr double ktolerance(1e-8);
     const pos_3d orig(0., 0., 0.);
     inline bool is_zero_within_tolerance(double value) { return std::abs(value) < ktolerance; };
+    inline bool is_greater_than_zero_within_tolerance(double value) { return value > ktolerance; };
+    inline bool is_less_than_zero_within_tolerance(double value) { return value < -ktolerance; };
 
     //////////////////////////////////////////////////////
     // shape_element_face
@@ -110,6 +112,38 @@ namespace sand {
       return xform_3d(rotation, translation);
     }
 
+    inline dir_3d r_wrt_axis(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
+      return (p - l_pos) - (p - l_pos).Dot(l_dir) / l_dir.R() * l_dir;
+    }
+
+    inline pos_3d z_wrt_axis(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
+      return p - r_wrt_axis(p, l_pos, l_dir);
+    }
+
+    double ang_wrt_axis(const pos_3d& p1, const pos_3d& p2, const pos_3d& l_pos, const dir_3d& l_dir) {
+      auto r1    = r_wrt_axis(p1, l_pos, l_dir).Unit();
+      auto r2    = r_wrt_axis(p2, l_pos, l_dir).Unit();
+      auto angle = TMath::ACos(r1.Dot(r2));
+      return r1.Cross(r2).Dot(l_dir) < 0 ? -angle : angle;
+    }
+
+    xform_3d rot_wrt_axis(double angle, const dir_3d& rot_pos, const dir_3d& rot_dir) {
+      rot_ang rotation(rot_dir, angle);
+      trl_3d toOrigin(rot_pos);
+      trl_3d fromOrigin(-rot_pos);
+      return fromOrigin * rotation * toOrigin;
+    }
+
+    pos_3d rot_wrt_axis(const pos_3d& p, double angle, const dir_3d& rot_pos, const dir_3d& rot_dir) {
+      return rot_wrt_axis(angle, rot_pos, rot_dir) * p;
+    }
+
+    pos_3d project_to_plane(const pos_3d& p, const pos_3d& plane_pos, const dir_3d& plane_norm,
+                            const dir_3d& proj_dir) {
+      trl_3d fullTransform(plane_norm.Dot(plane_pos - p) / plane_norm.Dot(proj_dir) * proj_dir);
+      return fullTransform * p;
+    }
+
     bool is_straight(const shape_element_face& f1, const shape_element_face& f2) {
       return f1 == xform_3d(f1.centroid() - f2.centroid()) * f2;
     }
@@ -132,10 +166,7 @@ namespace sand {
       if (!is_zero_within_tolerance(std::fabs(angle) - 0.5 * TMath::Pi()))
         return false;
 
-      rot_ang rotation(axis_dir, -angle);
-      trl_3d toOrigin(-axis_pos);
-      trl_3d fromOrigin(axis_pos);
-      xform_3d fullTransform = fromOrigin * rotation * toOrigin;
+      auto fullTransform = rot_wrt_axis(-angle, axis_pos, axis_dir);
 
       return f1 == fullTransform * f2;
     }
@@ -188,26 +219,6 @@ namespace sand {
                                                         pos_3d(dx2, -dy1, dz), pos_3d(-dx2, -dy1, dz)),
                                      shape_element_face(pos_3d(-dx1, dy1, -dz), pos_3d(dx1, dy1, -dz),
                                                         pos_3d(dx2, dy1, dz), pos_3d(-dx2, dy1, dz)));
-    }
-
-    inline dir_3d r_wrt_axis(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
-      return (p - l_pos) - (p - l_pos).Dot(l_dir) / l_dir.R() * l_dir;
-    }
-
-    inline pos_3d z_wrt_axis(const pos_3d& p, const pos_3d& l_pos, const dir_3d& l_dir) {
-      return p - r_wrt_axis(p, l_pos, l_dir);
-    }
-
-    double ang_wrt_axis(const pos_3d& p1, const pos_3d& p2, const pos_3d& l_pos, const dir_3d& l_dir) {
-      auto r1 = r_wrt_axis(p1, l_pos, l_dir);
-      auto r2 = r_wrt_axis(p2, l_pos, l_dir);
-      return TMath::ACos(r1.Dot(r2) / (r1.R() * r2.R()));
-    }
-
-    pos_3d project_to_plane(const pos_3d& p, const pos_3d& plane_pos, const dir_3d& plane_norm,
-                            const dir_3d& proj_dir) {
-      trl_3d fullTransform(plane_norm.Dot(plane_pos - p) / plane_norm.Dot(proj_dir) * proj_dir);
-      return fullTransform * p;
     }
 
     bool segments_intersect(const pos_3d& p11, const pos_3d& p12, const pos_3d& p21, const pos_3d& p22) {
@@ -317,16 +328,16 @@ namespace sand {
   }
 
   bool shape_element_base::is_inside(const pos_3d& p) const {
-    constexpr face_location face_id = face_location::begin;
-    auto p_prj_face                 = to_face(p, face_id);
-    for (size_t i = 0, nvtx = face(face_id).vtx().size(); i < nvtx; i++) {
-      if (segments_intersect(p_prj_face, face(face_id).centroid(), face(face_id).vtx(i), face(face_id).vtx(i + 1))) {
+    auto p_prj_bgn_face = to_face(p, face_location::begin);
+    auto p_prj_end_face = to_face(p, face_location::end);
+    auto begin_face     = face(face_location::begin);
+    for (size_t i = 0, nvtx = begin_face.vtx().size(); i < nvtx; i++) {
+      if (segments_intersect(p_prj_bgn_face, begin_face.centroid(), begin_face.vtx(i), begin_face.vtx(i + 1))) {
         return false;
       }
     }
-    auto p_prj_axis = z_wrt_axis(p, axis_pos(), axis_dir());
-    if ((p_prj_axis - begin_face().centroid()).R() + (p_prj_axis - end_face().centroid()).R()
-        > (begin_face().centroid() - end_face().centroid()).R())
+    if (is_greater_than_zero_within_tolerance(pathlength(p, p_prj_bgn_face) + pathlength(p, p_prj_end_face)
+                                              - pathlength(p_prj_bgn_face, p_prj_end_face)))
       return false;
     return true;
   }
@@ -385,11 +396,7 @@ namespace sand {
   pos_3d shape_element_curved::to_face(const pos_3d& p, face_location face_id) const {
     auto& f  = face(face_id);
     auto ang = ang_wrt_axis(p, f.centroid(), axis_pos(), axis_dir());
-    rot_ang rotation(axis_dir(), ang);
-    trl_3d toOrigin(axis_pos(), orig);
-    trl_3d fromOrigin(orig, axis_pos());
-    xform_3d fullTransform = fromOrigin * rotation * toOrigin;
-    return fullTransform * p;
+    return rot_wrt_axis(p, ang, orig - axis_pos(), axis_dir());
   }
 
   double shape_element_curved::pathlength(const pos_3d& p1, const pos_3d& p2) const {
@@ -409,11 +416,8 @@ namespace sand {
     auto p2                     = end_face().centroid();
     auto ang_center             = 0.5 * ang_wrt_axis(p1, p2, axis_pos(), axis_dir());
     auto ang_offset_from_center = offset_from_center / r_wrt_axis(p1, axis_pos(), axis_dir()).R();
-    rot_ang rotation(axis_dir(), ang_center + ang_offset_from_center);
-    trl_3d toOrigin(axis_pos(), orig);
-    trl_3d fromOrigin(orig, axis_pos());
-    xform_3d fullTransform = fromOrigin * rotation * toOrigin;
-    return fullTransform * p1;
+    auto angle                  = ang_center + ang_offset_from_center;
+    return rot_wrt_axis(p1, angle, orig - axis_pos(), axis_dir());
   }
 
   //////////////////////////////////////////////////////
@@ -758,9 +762,6 @@ namespace sand {
     nav->find_node(p);
     auto path = nav->GetPath();
     auto gid  = id(geo_path(path));
-    if (gid.ecal.supermodule == 6 && gid.ecal.plane == 0) {
-      int i = 0;
-    }
     for (auto c : m_cells_map.at(gid))
       if (c->second.is_inside(p))
         return c->second;
@@ -1050,7 +1051,7 @@ namespace sand {
     }
 
     std::vector<double> col_widths(ncol, 1.);
-    auto grid = m.construct_grid(col_widths, al_plate_thickness);
+    auto grid = m.construct_grid(col_widths);
     construct_module_cells(m, grid);
   }
 
@@ -1058,19 +1059,7 @@ namespace sand {
     module m(path);
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->cd(path);
-    auto node = nav->get_node();
-    ///////////////////////////////////////////////////////
-    // Each module has an internal aluminum plate.
-    // Here we get the thickness.
-    // Grid is evaluated in the remaining area
-    ///////////////////////////////////////////////////////
-    if (!node) {
-      UFW_ERROR("Unexpected geometry!! Here there should be a barrel module node!!");
-    } else if (node->GetNdaughters() == 0) {
-      UFW_ERROR("Unexpected geometry!! Here there should the aluminum plate of a barrel module node!!");
-    }
-    auto al_plate_thickness = 2. * static_cast<TGeoBBox*>(node->GetDaughter(0)->GetVolume()->GetShape())->GetDZ();
-    ///////////////////////////////////////////////////////
+    auto node       = nav->get_node();
     auto shape      = node->GetVolume()->GetShape();
     auto geo_transf = nav->get_hmatrix();
     auto transf     = to_xform_3d(geo_transf);
@@ -1080,7 +1069,7 @@ namespace sand {
     m.order_elements();
 
     static std::vector<double> col_widths(12, 1.);
-    auto grid = m.construct_grid(col_widths, al_plate_thickness);
+    auto grid = m.construct_grid(col_widths);
     construct_module_cells(m, grid);
   }
 } // namespace sand

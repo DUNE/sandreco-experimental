@@ -244,7 +244,7 @@ namespace sand {
       void add(p_shape_element_base&& el) { el_collection_.add(std::move(el)); };
       inline const shape_element_collection& element_collection() const { return el_collection_; };
       inline void order_elements() { el_collection_.order_elements(); };
-      grid construct_grid(const std::vector<double>& col_widths, double al_plate_thickness) const;
+      grid construct_grid(const std::vector<double>& col_widths) const;
       cell construct_cell(const shape_element_face& f, cell_id id, const fiber& fib) const;
 
      private:

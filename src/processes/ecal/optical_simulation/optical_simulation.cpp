@@ -28,45 +28,53 @@ namespace sand::ecal {
       if (!trj.HasHitInDetector(component::ECAL))
         continue;
 
+      sand::geoinfo::ecal_info::cell const* pcell = nullptr;
+
       for (const auto& hit : hit_map.at(component::ECAL)) {
         auto phit = 0.5 * (hit.GetStart() + hit.GetStop());
         pos_3d h_pos(phit.X(), phit.Y(), phit.Z());
-        auto h_t    = phit.T();
-        auto h_de   = hit.GetEnergyDeposit();
-        auto& cell  = gecal.at(h_pos);
-        auto& fiber = cell.get_fiber();
+        auto h_t  = phit.T();
+        auto h_de = hit.GetEnergyDeposit();
+        try {
+          auto& cell = gecal.at(h_pos);
+          pcell      = &cell;
+        } catch (const std::invalid_argument& e) {
+          continue;
+        }
+        auto& fiber = pcell->get_fiber();
         // how to map sand::geoinfo::ecal_info::face_location to channel_id::side_t?
-        auto l1   = cell.pathlength(h_pos, sand::geoinfo::ecal_info::face_location::begin);
-        auto l2   = cell.pathlength(h_pos, sand::geoinfo::ecal_info::face_location::end);
-        auto at1  = cell.attenuation(l1);
-        auto at2  = cell.attenuation(l2);
+        auto l1   = pcell->pathlength(h_pos, sand::geoinfo::ecal_info::face_location::begin);
+        auto l2   = pcell->pathlength(h_pos, sand::geoinfo::ecal_info::face_location::end);
+        auto at1  = pcell->attenuation(l1);
+        auto at2  = pcell->attenuation(l2);
+        auto cid  = pcell->id();
         auto nph1 = de_to_nphotons(h_de, at1);
         auto nph2 = de_to_nphotons(h_de, at2);
         for (int i = 0; i < nph1; i++) {
           pes::pe pe_;
           pe_.arrival_time = h_t + scintillation_time(fiber.scintillation_rise_time, fiber.scintillation_decay_time)
                            + propagation_time(l1, fiber.light_velocity);
-          channel_id cid;
-          cid.ecal_pmt.subdetector   = sand::subdetector_t::ECAL;
-          cid.ecal_pmt.region        = static_cast<sand::channel_id::region_t>(cell.id().region);
-          cid.ecal_pmt.module_number = sand::channel_id::module_t(cell.id().module_number);
-          cid.ecal_pmt.row           = sand::channel_id::row_t(cell.id().row);
-          cid.ecal_pmt.column        = sand::channel_id::column_t(cell.id().column);
-          cid.ecal_pmt.side          = sand::channel_id::side_t::X_PLUS;
-          digi.collection[cid].emplace_back(std::move(pe_));
+          channel_id chid;
+          chid.ecal_pmt.subdetector   = sand::subdetector_t::ECAL;
+          chid.ecal_pmt.region        = static_cast<sand::channel_id::region_t>(cid.region);
+          chid.ecal_pmt.module_number = sand::channel_id::module_t(cid.module_number);
+          chid.ecal_pmt.row           = sand::channel_id::row_t(cid.row);
+          chid.ecal_pmt.column        = sand::channel_id::column_t(cid.column);
+          chid.ecal_pmt.side          = sand::channel_id::side_t::X_PLUS;
+          digi.collection[chid].emplace_back(std::move(pe_));
         }
         for (int i = 0; i < nph2; i++) {
           pes::pe pe_;
           pe_.arrival_time = h_t + scintillation_time(fiber.scintillation_rise_time, fiber.scintillation_decay_time)
                            + propagation_time(l2, fiber.light_velocity);
-          channel_id cid;
-          cid.ecal_pmt.subdetector   = sand::subdetector_t::ECAL;
-          cid.ecal_pmt.region        = static_cast<sand::channel_id::region_t>(cell.id().region);
-          cid.ecal_pmt.module_number = sand::channel_id::module_t(cell.id().module_number);
-          cid.ecal_pmt.row           = sand::channel_id::row_t(cell.id().row);
-          cid.ecal_pmt.column        = sand::channel_id::column_t(cell.id().column);
-          cid.ecal_pmt.side          = sand::channel_id::side_t::X_MINUS;
-          digi.collection[cid].emplace_back(std::move(pe_));
+          channel_id chid;
+          chid.ecal_pmt.subdetector   = sand::subdetector_t::ECAL;
+          chid.ecal_pmt.region        = static_cast<sand::channel_id::region_t>(cid.region);
+          chid.ecal_pmt.module_number = sand::channel_id::module_t(cid.module_number);
+          chid.ecal_pmt.row           = sand::channel_id::row_t(cid.row);
+          chid.ecal_pmt.column        = sand::channel_id::column_t(cid.column);
+          chid.ecal_pmt.side          = sand::channel_id::side_t::X_MINUS;
+          digi.collection[chid].emplace_back(std::move(pe_));
         }
       }
     }
