@@ -114,7 +114,7 @@ namespace sand {
       2 * max_distance
     );
 
-    //BVH_Analyzer<wire>::printTreeInfo(bvh);
+    BVH_Analyzer<wire>::printTreeInfo(bvh);
     //BVH_Analyzer<wire>::printLeafChannelInfo(bvh);
 
     // for (const auto& w : ws) {

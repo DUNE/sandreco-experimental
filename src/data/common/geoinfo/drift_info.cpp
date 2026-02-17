@@ -5,6 +5,8 @@
 #include <TGeoBBox.h>
 #include <TGeoMatrix.h>
 #include <TGeoTube.h>
+#include <BVH.hpp>
+#include <BVH_analyzer.hpp>
 
 namespace sand {
 
@@ -70,7 +72,7 @@ namespace sand {
         stat->bottom_north = centre - boxcorner;
         stat->parent = this;
 
-
+        std::vector<std::unique_ptr<wire>> wires_for_stat;
         if (tgt == TRKONLY) {
           nav->for_each_node([&](auto driftmod) {
             std::string driftmodname = driftmod->GetName();
@@ -78,7 +80,7 @@ namespace sand {
             nav->cd(full_path);
             auto ID = id(partial_path(full_path, gi));
             stat->daq_link = ID.drift.supermodule;
-            stat->set_drift_view(full_path, ID);
+            stat->set_drift_view(full_path, ID, wires_for_stat);
           });
         } else {
           nav->for_each_node([&](auto driftchamber) {
@@ -94,9 +96,13 @@ namespace sand {
               nav->cd(full_path);
               auto ID = id(partial_path(full_path, gi));
               stat->daq_link = ID.drift.supermodule;
-              stat->set_drift_view(full_path, ID);
+              stat->set_drift_view(full_path, ID, wires_for_stat);
             });
           });
+        }
+        set_wire_adjecency(wires_for_stat);
+        for (auto &w : wires_for_stat) {
+            stat->wires.emplace_back(std::move(w));
         }
         add_station(station_ptr(std::move(stat)));
       });
@@ -256,8 +262,39 @@ namespace sand {
     return gp;
   }
 
+  void geoinfo::drift_info::set_wire_adjecency(std::vector<std::unique_ptr<wire>> & ws){
+    double dz; 
+    double dy;
+    dy = ws[0]->max_radius * sqrt(3) / 2.;
+    dz = ws[0]->max_radius * sqrt(3) / 2.;
 
-  void geoinfo::drift_info::station::set_drift_view(const geo_path & driftmod_path, const geo_id& id) {
+    double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
+
+    auto start = std::chrono::system_clock::now();
+    BVH<wire> bvh(
+      ws,
+      2 * max_distance,
+      2 * max_distance
+    );
+
+    BVH_Analyzer<wire>::printTreeInfo(bvh);
+    //BVH_Analyzer<wire>::printLeafChannelInfo(bvh);
+
+    // for (const auto& w : ws) {
+    //   uint8_t plane = static_cast<uint8_t>(w->daq_channel.channel >> 16);
+    //   uint16_t tube =static_cast<uint16_t>(w->daq_channel.channel & 0xFFFF);     
+    //   auto n_adjecent = w->adjecent_wires.size();
+    //   UFW_DEBUG("Wire channel ({},{},{},{}) z={} has {} adjacent wires", w->daq_channel.subdetector, w->daq_channel.link, plane, tube, w->head.z(), n_adjecent);
+    // }
+
+    auto end_build = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
+    UFW_INFO("BVH for station corresponding to link {} built in {} ms", ws[0]->parent->daq_link, elapsed.count());
+
+  }
+
+
+  void geoinfo::drift_info::station::set_drift_view(const geo_path & driftmod_path, const geo_id& id, std::vector<std::unique_ptr<wire>> & ws) {
 
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
@@ -281,11 +318,11 @@ namespace sand {
     } else {
         UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane_ID);
     }
-    set_wire_list(plane_ID);
+    set_wire_list(plane_ID, ws);
 
   }
 
-  void geoinfo::drift_info::station::set_wire_list(const size_t & view_ID) {
+  void geoinfo::drift_info::station::set_wire_list(const size_t & view_ID, std::vector<std::unique_ptr<wire>> & ws) {
 
     /////Get gas volume properties
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
@@ -326,6 +363,7 @@ namespace sand {
 
     /// Find intersections of wires with frame
     double transverse_position = max_wire_plane_y - drift->view_offset()[view_ID];
+    size_t wire_index = 0;
     while (transverse_position > -max_wire_plane_y) {
       pos_3d wire_centre_rot(0., transverse_position, 0.); // origin of the vector in rotated frame
 
@@ -349,8 +387,9 @@ namespace sand {
         w->max_radius         = drift->view_spacing()[view_ID] / 2.0;
         w->daq_channel.subdetector = DRIFT;
         w->daq_channel.link = daq_link;
-        w->daq_channel.channel = (view_ID << 16) | wires.size();
-        wires.emplace_back(std::move(w));
+        w->daq_channel.channel = (uint32_t(view_ID) << 16) | uint32_t(wire_index);
+        ws.emplace_back(std::move(w));
+        ++wire_index;
       } else {
         UFW_DEBUG("Transverse position {} has {} intersections, skipping.", transverse_position, intersections_global.size());
       }

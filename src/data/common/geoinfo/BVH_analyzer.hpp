@@ -31,7 +31,7 @@ namespace sand {
     // Print basic tree info
     static void printTreeInfo(const BVH<WireT>& bvh) {
       if (!bvh.root_) {
-        std::cout << "Tree is empty!\n";
+        UFW_ERROR("Tree is empty!");
         return;
       }
 
@@ -39,21 +39,23 @@ namespace sand {
       size_t leaves = countLeaves(bvh.root_);
       size_t total  = countNodes(bvh.root_);
 
-      std::cout << "\n========== BVH TREE ANALYSIS ==========\n";
-      std::cout << "Depth: " << depth << " levels\n";
-      std::cout << "Total nodes: " << total << "\n";
-      std::cout << "Leaf nodes: " << leaves << "\n";
-      std::cout << "Internal nodes: " << (total - leaves) << "\n";
-      std::cout << "Balance: " << (isBalanced(bvh.root_) ? "Balanced" : "Unbalanced") << "\n";
+      UFW_DEBUG("========== BVH TREE ANALYSIS ==========");
+      UFW_DEBUG("Depth: {} levels", depth);
+      UFW_DEBUG("Total nodes: {}",  total);
+      UFW_DEBUG("Leaf nodes: {}", leaves);
+      UFW_DEBUG("Internal nodes: {}", (total - leaves));
+      UFW_DEBUG("Balance: {}", (isBalanced(bvh.root_) ? "Balanced" : "Unbalanced"));
+
+      if(!isBalanced(bvh.root_)) UFW_ERROR("Tree is not balanced!");
 
       // Print depth distribution
-      std::cout << "\n--- Depth Distribution ---\n";
+      UFW_DEBUG("--- Depth Distribution ---");
       std::vector<size_t> depth_counts(depth + 1, 0);
       countNodesAtDepth(bvh.root_, 0, depth_counts);
 
       for (size_t i = 0; i <= depth; ++i) {
         if (depth_counts[i] > 0) {
-          std::cout << "Depth " << i << ": " << depth_counts[i] << " nodes\n";
+          UFW_DEBUG("Depth {} : {} nodes",i , depth_counts[i]);
         }
       }
 
@@ -61,109 +63,23 @@ namespace sand {
       size_t deepest_depth       = 0;
       const Node<WireT>* deepest = findDeepestLeaf(bvh.root_, 0, deepest_depth);
       if (deepest && deepest->wire_) {
-        std::cout << "\n--- Deepest Leaf Node ---\n";
-        std::cout << "Depth: " << deepest_depth << "\n";
-        std::cout << "Wire channel: (" << int(deepest->wire_->daq_channel.subdetector) << ", "
-                  << int(deepest->wire_->daq_channel.link) << ", " << int(deepest->wire_->daq_channel.channel) << ")\n";
+        UFW_DEBUG("--- Deepest Leaf Node ---");
+        UFW_DEBUG("Depth: {}", deepest_depth);
+        UFW_DEBUG("Wire channel: ({},{},{})", int(deepest->wire_->daq_channel.subdetector), 
+                  int(deepest->wire_->daq_channel.link), int(deepest->wire_->daq_channel.channel));
       }
 
-      std::cout << "=====================================\n\n";
-    }
-
-    // Detailed analysis
-    static void analyzeTree(const BVH<WireT>& bvh) {
-      if (!bvh.root_) {
-        std::cout << "Tree is empty!\n";
-        return;
-      }
-
-      struct Stats {
-        size_t depth            = 0;
-        size_t nodes            = 0;
-        size_t leaves           = 0;
-        size_t max_leaf_depth   = 0;
-        size_t min_leaf_depth   = std::numeric_limits<size_t>::max();
-        size_t total_leaf_depth = 0;
-      };
-
-      std::function<Stats(const std::unique_ptr<Node<WireT>>&, size_t)> traverse =
-          [&](const std::unique_ptr<Node<WireT>>& node, size_t current_depth) -> Stats {
-        if (!node)
-          return {0, 0, 0, 0, std::numeric_limits<size_t>::max(), 0};
-
-        if (!node->left_ && !node->right_) {
-          // Leaf node
-          return {
-              current_depth, // depth
-              1,             // nodes
-              1,             // leaves
-              current_depth, // max_leaf_depth
-              current_depth, // min_leaf_depth
-              current_depth  // total_leaf_depth
-          };
-        }
-
-        Stats left  = traverse(node->left_, current_depth + 1);
-        Stats right = traverse(node->right_, current_depth + 1);
-
-        return {std::max({current_depth, left.depth, right.depth}),
-                1 + left.nodes + right.nodes,
-                left.leaves + right.leaves,
-                std::max(left.max_leaf_depth, right.max_leaf_depth),
-                std::min(left.min_leaf_depth, right.min_leaf_depth),
-                left.total_leaf_depth + right.total_leaf_depth};
-      };
-
-      Stats stats = traverse(bvh.root_, 0);
-
-      std::cout << "\n========== BVH DETAILED ANALYSIS ==========\n";
-      std::cout << "Max depth: " << stats.depth << " levels\n";
-      std::cout << "Total nodes: " << stats.nodes << "\n";
-      std::cout << "Leaf nodes: " << stats.leaves << "\n";
-      std::cout << "Internal nodes: " << (stats.nodes - stats.leaves) << "\n";
-      std::cout << "Max leaf depth: " << stats.max_leaf_depth << "\n";
-      std::cout << "Min leaf depth: " << stats.min_leaf_depth << "\n";
-
-      if (stats.leaves > 0) {
-        double avg_depth = static_cast<double>(stats.total_leaf_depth) / stats.leaves;
-        std::cout << "Average leaf depth: " << std::fixed << std::setprecision(2) << avg_depth << "\n";
-      }
-
-      // Check balance
-      std::function<bool(const std::unique_ptr<Node<WireT>>&, int&)> checkBalance =
-          [&](const std::unique_ptr<Node<WireT>>& node, int& height) -> bool {
-        if (!node) {
-          height = 0;
-          return true;
-        }
-
-        int left_height = 0, right_height = 0;
-        bool left_balanced  = checkBalance(node->left_, left_height);
-        bool right_balanced = checkBalance(node->right_, right_height);
-
-        height = 1 + std::max(left_height, right_height);
-
-        if (std::abs(left_height - right_height) > 1)
-          return false;
-
-        return left_balanced && right_balanced;
-      };
-
-      int height    = 0;
-      bool balanced = checkBalance(bvh.root_, height);
-      std::cout << "Height-balanced: " << (balanced ? "Yes" : "No") << "\n";
-
-      std::cout << "============================================\n\n";
+      UFW_DEBUG("=====================================");
     }
 
     // Print daq_channel info for all leaf nodes
     static void printLeafChannelInfo(const BVH<WireT>& bvh) {
       if (!bvh.root_) {
-        std::cout << "Tree is empty!\n";
+        UFW_ERROR("Tree is empty!");
         return;
       }
 
-      std::cout << "\n========== LEAF NODE DAQ CHANNELS ==========\n";
+      UFW_DEBUG("========== LEAF NODE DAQ CHANNELS ==========");
       size_t leaf_count = 0;
 
       std::function<void(const std::unique_ptr<Node<WireT>>&)> traverse =
@@ -176,14 +92,9 @@ namespace sand {
               leaf_count++;
               uint8_t plane = static_cast<uint8_t>(node->daq_channel_.channel >> 16);
               uint16_t tube = static_cast<uint16_t>(node->daq_channel_.channel & 0xFFFF);
-              std::cout << "Leaf " << leaf_count << ": ";
-              std::cout << "subdetector=" << int(node->daq_channel_.subdetector)
-                        << ", link=" << int(node->daq_channel_.link);
-              std::cout << " (plane=" << int(plane) << ", tube=" << int(tube) << ")";
-              std::cout << " z = " << node->wire_->head.z() << " x = " << node->wire_->head.x()
-                        << " y = " << node->wire_->head.y() << "\n";
-
-              std::cout << " (raw=0x" << std::hex << node->daq_channel_.raw << std::dec << ")\n";
+              UFW_DEBUG("Leaf {}: subdetector= {}, link= {}, plane= {}, tube= {}, z= {}, x= {}, y= {} ", 
+                          leaf_count, int(node->daq_channel_.subdetector), int(node->daq_channel_.link), 
+                          int(plane), int(tube), node->wire_->head.z(), node->wire_->head.x(), node->wire_->head.y());
               return;
             }
 
@@ -194,8 +105,8 @@ namespace sand {
 
       traverse(bvh.root_);
 
-      std::cout << "==========================================\n";
-      std::cout << "Total leaf nodes: " << leaf_count << "\n\n";
+      UFW_DEBUG("==========================================");
+      UFW_DEBUG("Total leaf nodes: {}", leaf_count);
     }
 
    private:
