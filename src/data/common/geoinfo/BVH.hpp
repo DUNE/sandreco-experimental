@@ -1,3 +1,10 @@
+/**
+ * @file BVH.hpp
+ * @author Federico Battisti
+ * @brief Contains the classes needed to implement the bounding volume hierarchy method.
+ *
+ */
+
 #pragma once
 #include "tracker_info.hpp"
 #include <map>
@@ -5,8 +12,29 @@
 
 namespace sand {
 
+  // Forward declaration
   template <typename WireT>
   class BVH_Analyzer;
+  
+  /**
+   * @struct AABB
+   * @brief Defines the AABB structure for axis-aligned bounding box.
+   *
+   * This structure represents an axis-aligned bounding box (AABB) and 
+   * provides methods for expanding the AABB and checking for overlap.
+   *
+   * @template WireT The type of wire objects used in the BVH tree.
+   */
+
+  /**
+   * @struct Node
+   * @brief Defines the Node structure for the BVH tree.
+   *
+   * This structure represents a node in the BVH tree and stores information 
+   * about the wire object, left child, right child, and the AABB.
+   *
+   * @template WireT The type of wire objects used in the BVH tree.
+   */
   template <typename WireT>
   struct AABB {
     AABB() {};
@@ -17,6 +45,15 @@ namespace sand {
     pos_3d max_;
   };
 
+  /**
+   * @brief Node structure for the BVH tree.
+   *
+   * This structure represents a node in the BVH tree and stores 
+   * information about the wire object, left child, right child, 
+   * and the AABB.
+   *
+   * @template WireT The type of wire objects used in the BVH tree.
+   */
   template <typename WireT>
   struct Node {
     WireT* wire_ = nullptr;
@@ -24,6 +61,16 @@ namespace sand {
     std::unique_ptr<Node<WireT>> right_;
     AABB<WireT> aabb_;
   };
+
+  /**
+   * @class BVH
+   * @brief Defines the BVH class for bounding volume hierarchy.
+   *
+   * This class provides methods for creating a bounding volume hierarchy (BVH) for a set of wires.
+   * It uses the Node and AABB structures to construct the BVH tree.
+   *
+   * @template WireT The type of wire objects used in the BVH tree.
+   */
   template <typename WireT>
   class BVH {
     public:
@@ -49,6 +96,14 @@ namespace sand {
   };
 
   // Template implementations
+
+  /**
+   * @brief Constructor for the BVH class.
+   *
+   * @param wires The vector of unique pointers to WireT objects.
+   * @param max_distance The maximum distance between wires to be considered adjacent.
+   * @param overlap_tolerance The tolerance for overlap between wires.
+   */
   template <typename WireT>
   BVH<WireT>::BVH(std::vector<std::unique_ptr<WireT>>& wires, double max_distance, double overlap_tolerance) {
     fillCellAABBMap(wires);
@@ -56,6 +111,11 @@ namespace sand {
     searchAdjacentCells(root_, root_, max_distance, overlap_tolerance);
   };
 
+  /**
+   * @brief Constructor for the AABB class.
+   *
+   * @param wire The unique pointer to the WireT object.
+   */
   template <typename WireT>
   AABB<WireT>::AABB(const std::unique_ptr<WireT>& wire) {
     min_ = pos_3d(1E9, 1E9, 1E9);
@@ -109,6 +169,13 @@ namespace sand {
     max_.SetZ(std::max(max_.Z(), second_aabb.max_.Z()));
   }
 
+ /**
+  * @brief Checks if two AABBs are overlapping.
+  *
+  * @param second_aabb The second AABB to check for overlap.
+  * @param epsilon The epsilon value for the overlap check.
+  * @return True if the AABBs are overlapping, false otherwise.
+  */
   template <typename WireT>
   bool AABB<WireT>::isOverlapping(const AABB& second_aabb, double epsilon) const {
     if (max_.X() + epsilon >= second_aabb.min_.X() && min_.X() - epsilon <= second_aabb.max_.X()
@@ -119,6 +186,11 @@ namespace sand {
     return false;
   }
 
+ /**
+  * @brief Fills the cellAABBs_ map with AABBs for each WireT object.
+  *
+  * @param wires The vector of unique pointers to WireT objects.
+  */
   template <typename WireT>
   void BVH<WireT>::fillCellAABBMap(const std::vector<std::unique_ptr<WireT>>& wires) {
     for (const auto& wire : wires) {
@@ -128,6 +200,13 @@ namespace sand {
     }
   }
 
+ /**
+  * @brief Creates a bounding volume hierarchy (BVH) for a set of wires.
+  *
+  * @param node The root node of the BVH tree.
+  * @param begin Iterator to the beginning of the range of wires.
+  * @param end Iterator to the end of the range of wires.
+  */
   template <typename WireT>
   void BVH<WireT>::createTree(std::unique_ptr<Node<WireT>>& node,
                               typename std::vector<std::unique_ptr<WireT>>::iterator begin,
@@ -179,6 +258,14 @@ namespace sand {
     return;
   }
 
+  /**
+   * @brief Searches recursively for adjacent cells in the BVH tree.
+   *
+   * @param node The current node in the BVH tree.
+   * @param other_node The other node in the BVH tree to check for adjacency.
+   * @param max_distance The maximum distance for adjacency.
+   * @param overlap_tolerance The overlap tolerance for adjacency.
+   */
   template <typename WireT>
   void BVH<WireT>::searchAdjacentCells(std::unique_ptr<Node<WireT>>& node, std::unique_ptr<Node<WireT>>& other_node,
                                       double max_distance, double overlap_tolerance) {

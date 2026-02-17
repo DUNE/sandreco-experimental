@@ -1,4 +1,8 @@
-// BVH_Analyzer.hpp
+/**
+ * @file BVH_analyzer.hpp
+ * @author Federico Battisti
+ * @brief Utility functions for BVH tree analysis.
+ */
 #ifndef BVH_ANALYZER_HPP
 #define BVH_ANALYZER_HPP
 
@@ -18,6 +22,9 @@ namespace sand {
   template <typename WireT>
   class BVH;
 
+  /** 
+   * @brief Class containing utility functions for BVH tree analysis.
+   */
   template <typename WireT>
   class BVH_Analyzer {
    public:
@@ -28,7 +35,11 @@ namespace sand {
       return getNodeDepth(bvh.root_);
     }
 
-    // Print basic tree info
+    /**
+     * @brief Print information about the BVH tree.
+     * 
+     * @param bvh The BVH tree to analyze.
+     */
     static void printTreeInfo(const BVH<WireT>& bvh) {
       if (!bvh.root_) {
         UFW_ERROR("Tree is empty!");
@@ -72,7 +83,11 @@ namespace sand {
       UFW_DEBUG("=====================================");
     }
 
-    // Print daq_channel info for all leaf nodes
+    /**
+     * @brief Print information about the leaf nodes of the BVH tree.
+     * 
+     * @param bvh The BVH tree to analyze.
+     */
     static void printLeafChannelInfo(const BVH<WireT>& bvh) {
       if (!bvh.root_) {
         UFW_ERROR("Tree is empty!");
@@ -110,7 +125,11 @@ namespace sand {
     }
 
    private:
-    // Helper functions that need access to Node (friend class has access)
+    /**
+     * @brief Get the depth of a node in the BVH tree.
+     * 
+     * @param node The node to get the depth of.
+     */
     static size_t getNodeDepth(const std::unique_ptr<Node<WireT>>& node) {
       if (!node)
         return 0;
@@ -126,6 +145,11 @@ namespace sand {
       return 1 + std::max(left_depth, right_depth);
     }
 
+    /**
+     * @brief Count the number of leaf nodes in the BVH tree.
+     * 
+     * @param node The node to start counting from.
+     */
     static size_t countLeaves(const std::unique_ptr<Node<WireT>>& node) {
       if (!node)
         return 0;
@@ -134,12 +158,20 @@ namespace sand {
       return countLeaves(node->left_) + countLeaves(node->right_);
     }
 
+    /** @brief Count the number of nodes in the BVH tree
+     * 
+     * @param node The node to start counting from
+     */
     static size_t countNodes(const std::unique_ptr<Node<WireT>>& node) {
       if (!node)
         return 0;
       return 1 + countNodes(node->left_) + countNodes(node->right_);
     }
 
+    /** @brief Check if the tree is balanced
+     * 
+     * @param node The node to start checking from
+     */
     static bool isBalanced(const std::unique_ptr<Node<WireT>>& node) {
       if (!node)
         return true;
@@ -152,6 +184,13 @@ namespace sand {
       return diff <= 1 && isBalanced(node->left_) && isBalanced(node->right_);
     }
 
+    /**
+     * @brief Count the number of nodes at each depth in the BVH tree.
+     * 
+     * @param node The node to start counting from.
+     * @param current_depth The current depth of the node.
+     * @param depth_counts The vector to store the counts of nodes at each depth.
+     */
     static void countNodesAtDepth(const std::unique_ptr<Node<WireT>>& node, size_t current_depth,
                                   std::vector<size_t>& depth_counts) {
       if (!node)
@@ -166,6 +205,13 @@ namespace sand {
       countNodesAtDepth(node->right_, current_depth + 1, depth_counts);
     }
 
+    /**
+     * @brief Find the deepest leaf node in the BVH tree.
+     * 
+     * @param node The node to start searching from.
+     * @param current_depth The current depth of the node.
+     * @param max_depth The maximum depth found so far.
+     */
     static const Node<WireT>* findDeepestLeaf(const std::unique_ptr<Node<WireT>>& node, size_t current_depth,
                                               size_t& max_depth) {
       if (!node)
