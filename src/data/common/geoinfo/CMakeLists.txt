@@ -24,7 +24,7 @@ target_sources(sand_geoinfo PRIVATE
 
 target_include_directories(sand_geoinfo PRIVATE . .. ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/grain)
 
-target_link_libraries(sand_geoinfo PUBLIC ROOT::Geom ROOT::MathCore ROOT::Matrix ufw::ufw PRIVATE sand_grain_geant_gdml_parser sand_root_tgeomanager)
+target_link_libraries(sand_geoinfo PUBLIC ROOT::GenVector ROOT::Geom ROOT::MathCore ROOT::Matrix ufw::ufw PRIVATE sand_grain_geant_gdml_parser sand_root_tgeomanager)
 
 install(TARGETS sand_geoinfo EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
