@@ -14,6 +14,7 @@ namespace sand {
     struct station : public tracker_info::station {
       wire_list x_view() const;
       wire_list y_view() const;
+      void set_wire_list(std::vector<std::unique_ptr<wire>> &);
     };
 
    public:

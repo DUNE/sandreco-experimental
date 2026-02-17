@@ -12,8 +12,9 @@ namespace sand {
       wire_list x_view() const;
       wire_list u_view() const;
       wire_list v_view() const;
-      void set_drift_view(const geo_path &, const geo_id &, std::vector<std::unique_ptr<wire>> &);
-      void set_wire_list(const size_t &, std::vector<std::unique_ptr<wire>> &);
+      void generate_drift_view(const geo_path &, const geo_id &, std::vector<std::unique_ptr<wire>> &);
+      void generate_wire_list(const size_t &, std::vector<std::unique_ptr<wire>> &);
+      void set_wire_list(std::vector<std::unique_ptr<wire>> &);
     };
 
     drift_info(const geoinfo&, const std::array<double, 3>&, const std::array<double, 3>&, const std::array<double, 3>&);

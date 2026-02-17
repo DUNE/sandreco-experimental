@@ -80,7 +80,7 @@ namespace sand {
             nav->cd(full_path);
             auto ID = id(partial_path(full_path, gi));
             stat->daq_link = ID.drift.supermodule;
-            stat->set_drift_view(full_path, ID, wires_for_stat);
+            stat->generate_drift_view(full_path, ID, wires_for_stat);
           });
         } else {
           nav->for_each_node([&](auto driftchamber) {
@@ -96,20 +96,24 @@ namespace sand {
               nav->cd(full_path);
               auto ID = id(partial_path(full_path, gi));
               stat->daq_link = ID.drift.supermodule;
-              stat->set_drift_view(full_path, ID, wires_for_stat);
+              stat->generate_drift_view(full_path, ID, wires_for_stat);
             });
           });
         }
         set_wire_adjecency(wires_for_stat);
-        for (auto &w : wires_for_stat) {
-            stat->wires.emplace_back(std::move(w));
-        }
+        stat->set_wire_list(wires_for_stat);
         add_station(station_ptr(std::move(stat)));
       });
     });
   }
 
   geoinfo::drift_info::~drift_info() = default;
+
+  void geoinfo::drift_info::station::set_wire_list(std::vector<std::unique_ptr<wire>> &wl) {
+    for (auto &w : wl) {
+      wires.emplace_back(std::move(w));
+    }
+  }
 
   geo_id geoinfo::drift_info::id(const geo_path& gp) const {
     UFW_INFO("Searching for path {}.", gp);
@@ -294,7 +298,7 @@ namespace sand {
   }
 
 
-  void geoinfo::drift_info::station::set_drift_view(const geo_path & driftmod_path, const geo_id& id, std::vector<std::unique_ptr<wire>> & ws) {
+  void geoinfo::drift_info::station::generate_drift_view(const geo_path & driftmod_path, const geo_id& id, std::vector<std::unique_ptr<wire>> & ws) {
 
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
@@ -318,11 +322,11 @@ namespace sand {
     } else {
         UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane_ID);
     }
-    set_wire_list(plane_ID, ws);
+    generate_wire_list(plane_ID, ws);
 
   }
 
-  void geoinfo::drift_info::station::set_wire_list(const size_t & view_ID, std::vector<std::unique_ptr<wire>> & ws) {
+  void geoinfo::drift_info::station::generate_wire_list(const size_t & view_ID, std::vector<std::unique_ptr<wire>> & ws) {
 
     /////Get gas volume properties
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();

@@ -89,15 +89,18 @@ namespace sand {
       });
 
       set_wire_adjecency(wires_for_stat);
-      for (auto &w : wires_for_stat) {
-          stat->wires.emplace_back(std::move(w));
-      }
+      stat->set_wire_list(wires_for_stat);
       add_station(station_ptr(std::move(stat)));
     });
   }
 
   geoinfo::stt_info::~stt_info() = default;
 
+  void geoinfo::stt_info::station::set_wire_list(std::vector<std::unique_ptr<wire>> &wl) {
+    for (auto &w : wl) {
+      wires.emplace_back(std::move(w));
+    }
+  }
 
   void geoinfo::stt_info::set_wire_adjecency(std::vector<std::unique_ptr<wire>> & ws){
     double dz; 
