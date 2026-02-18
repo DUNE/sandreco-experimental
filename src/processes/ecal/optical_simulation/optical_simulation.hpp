@@ -14,14 +14,14 @@ namespace sand::ecal {
     /// @param de Deposited energy
     /// @param attenuation Attenuation factor for the medium
     /// @return Number of photons produced
-    int de_to_nphotons(double de, double attenuation) const;
-    
+    int de_to_nphotons(double de, double attenuation);
+
     /// @brief Calculate scintillation photon emission time
     /// @param rise_time Scintillation rise time constant
     /// @param decay_time Scintillation decay time constant
     /// @return Emission time of the photon
-    double scintillation_time(double rise_time, double decay_time) const;
-    
+    double scintillation_time(double rise_time, double decay_time);
+
     /// @brief Calculate light propagation time through medium
     /// @param pathlentgh Path length traveled by photon
     /// @param velocity Velocity of light in the medium

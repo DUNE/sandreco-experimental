@@ -195,6 +195,11 @@ namespace sand {
       };
     };
 
+    struct pmt_id {
+      cell_id cell_;
+      face_location face_;
+    };
+
     struct grid {
      private:
       std::vector<pos_3d> nodes_;
@@ -262,6 +267,23 @@ namespace sand {
     const cell& at(const pos_3d& p) const;
     const cell& at(cell_id cid) const;
     const std::vector<cell_ref>& cells(geo_id gid) const;
+    inline pmt_id pmt(channel_id cid) const {
+      pmt_id pid;
+      pid.cell_.region        = static_cast<geo_id::region_t>(cid.link);
+      pid.cell_.module_number = (cid.channel >> 16) & 0xFF;
+      pid.cell_.row           = (cid.channel >> 8) & 0xFF;
+      pid.cell_.column        = cid.channel & 0xFF;
+      pid.face_               = static_cast<face_location>((cid.channel >> 24) & 0xFF);
+      return pid;
+    };
+    inline channel_id channel(pmt_id pid) const {
+      channel_id c;
+      c.subdetector = subdetector_t::ECAL;
+      c.channel     = (static_cast<uint32_t>(pid.face_) << 24) | (pid.cell_.module_number << 16) | (pid.cell_.row << 8)
+                | pid.cell_.column;
+      c.link = pid.cell_.region;
+      return c;
+    };
 
     using subdetector_info::path;
 
