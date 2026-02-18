@@ -1044,9 +1044,6 @@ namespace sand {
       ncol = 3;
       break;
     }
-    if (m.id().module_number == 15) {
-      int a = 0;
-    }
 
     std::vector<double> col_widths(ncol, 1.);
     auto grid = m.construct_grid(col_widths);
