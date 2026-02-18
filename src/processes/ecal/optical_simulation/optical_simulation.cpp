@@ -50,6 +50,7 @@ namespace sand::ecal {
           auto& cell = gecal.at(h_pos);
           pcell      = &cell;
         } catch (const geoinfo::ecal_info::invalid_path& e) {
+          UFW_WARN("Unable to get ECAL cell for hit at position: {}. Skipping this hit. Error: {}", h_pos, e.what());
           // Skip hits outside the ECAL geometry
           continue;
         }
