@@ -49,7 +49,7 @@ namespace sand::ecal {
         try {
           auto& cell = gecal.at(h_pos);
           pcell      = &cell;
-        } catch (const std::invalid_argument& e) {
+        } catch (const geoinfo::ecal_info::invalid_path& e) {
           // Skip hits outside the ECAL geometry
           continue;
         }

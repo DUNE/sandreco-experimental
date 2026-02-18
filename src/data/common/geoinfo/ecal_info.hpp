@@ -7,6 +7,14 @@ namespace sand {
 
   class geoinfo::ecal_info : public subdetector_info {
    public:
+    class invalid_path : public std::exception {
+     public:
+      invalid_path(const std::string& msg) : message(msg) {}
+      const char* what() const noexcept override { return message.c_str(); }
+
+     private:
+      std::string message;
+    };
     // fiber
     struct fiber {
       ////////////////////////////////////////////////////////////////////////////

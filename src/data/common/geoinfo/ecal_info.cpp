@@ -765,7 +765,7 @@ namespace sand {
     for (auto c : m_cells_map.at(gid))
       if (c->second.is_inside(p))
         return c->second;
-    UFW_EXCEPT(std::invalid_argument,
+    UFW_EXCEPT(invalid_path,
                fmt::format("Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid));
   }
 
@@ -777,10 +777,9 @@ namespace sand {
       UFW_ERROR("Module: {} not found in the map: m_modules_cells_maps", mid.raw);
     }
     if (!m_modules_cells_maps.at(mid).count(cid)) {
-      UFW_EXCEPT(std::invalid_argument,
-                 fmt::format("Cell: {} not found in the map: m_modules_cells_maps.at({})  -> Cell: {}, Sub: {}, Mod: "
-                             "{}, Cel: {}, Row: {}",
-                             cid.raw, mid.raw, cid.raw, cid.region, cid.module_number, cid.column, cid.row));
+      UFW_ERROR("Cell: {} not found in the map: m_modules_cells_maps.at({})  -> Cell: {}, Sub: {}, Mod: "
+                "{}, Cel: {}, Row: {}",
+                cid.raw, mid.raw, cid.raw, cid.region, cid.module_number, cid.column, cid.row);
     }
     return m_modules_cells_maps.at(mid).at(cid);
   }
@@ -824,8 +823,7 @@ namespace sand {
         UFW_ERROR("Unknown ECAL endcap element type: {}", m[4].str());
       }
     } else {
-      UFW_EXCEPT(std::invalid_argument,
-                 fmt::format("Provided geo_path {} does not match ECAL sensible volume pattern", path));
+      UFW_EXCEPT(invalid_path, fmt::format("Provided geo_path {} does not match ECAL sensible volume pattern", path));
     }
     return gi;
   }
