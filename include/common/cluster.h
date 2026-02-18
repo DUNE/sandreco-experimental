@@ -17,6 +17,8 @@ class cluster : public sand::truth {
     cluster() = default;
     explicit cluster(std::vector<std::shared_ptr<digi>> digits) 
         : m_digits(std::move(digits)) {}
+
+    explicit cluster(const std::shared_ptr<digi>& d) : m_digits({d}) {}
     
     cluster(const cluster&) = default;
     cluster(cluster&&) = default;
@@ -27,14 +29,18 @@ class cluster : public sand::truth {
     // Accessors
     const std::vector<std::shared_ptr<digi>>& digits() const { return m_digits; }
     std::vector<std::shared_ptr<digi>>& digits_mut() { return m_digits; }
+
+    bool contains(const std::shared_ptr<digi>& d) const {
+        return std::find(m_digits.begin(), m_digits.end(), d) != m_digits.end();
+    }
     
     // Modifiers
     void add_digit(std::shared_ptr<digi> d) {
         m_digits.push_back(std::move(d));
     }
 
-    void move_digit(std::shared_ptr<digi>&& d) {
-        m_digits.push_back(std::move(d));  // Move - transfers ownership
+    void add_digit(std::shared_ptr<digi>&& d) {
+        m_digits.push_back(std::move(d));  // Overloaded option to transfer ownership
     }
 
   private:

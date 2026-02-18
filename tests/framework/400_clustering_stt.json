@@ -34,7 +34,7 @@
       {
         "sand::tracker::clustering" : {},
         "reqs" : {"digi": "pippo"},
-        "prods" : {"digi": "pluto"}
+        "prods" : {"clu": "pluto"}
       },
       {
         "sand::root::tree_streamer" : { 

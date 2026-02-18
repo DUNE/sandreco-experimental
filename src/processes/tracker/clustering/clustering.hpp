@@ -11,6 +11,7 @@
 #include <geoinfo/tracker_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
+#include <tracker/cluster_container.h>
 namespace sand::tracker {
 
   class clustering : public ufw::process {
@@ -21,8 +22,8 @@ namespace sand::tracker {
   
     private:
       std::map<const geoinfo::tracker_info::station *, std::vector<digi::signal>> group_signals_by_station();
-      std::map<const geoinfo::tracker_info::station *, std::vector<std::vector<digi::signal>>> clusterize_signals_by_stations(const std::map<const geoinfo::tracker_info::station *, std::vector<digi::signal>> & signals_by_station);
-      void clusterize_signals(std::vector<digi::signal> & current_cluster, const std::vector<digi::signal> & signals, std::vector<std::vector<digi::signal>> & clusters);
+      void clusterize_signals(const std::vector<digi::signal> & signals);
+      void build_cluster(cluster_container::cluster & cluster, const std::vector<digi::signal> & signals);
 
 
   };
