@@ -51,7 +51,7 @@ namespace sand::ecal {
           this_pe++;
         }
         // Count photo-electrons in current window
-        auto pe_count = std::distance(start_pe, this_pe);
+        auto pe_count = std::distance(start_pe, this_pe) + 1; // +1 to include the boundary PE
 
         // Check if pulse meets minimum threshold for digitization
         if (pe_count >= m_pe_threshold) {
@@ -59,13 +59,16 @@ namespace sand::ecal {
           auto adc = double(pe_count); // for now, we just use the number of PEs as the ADC value. This can be improved
                                        // by using a more realistic response function.
           // Calculate timing using constant fraction discriminator method
-          auto tdc = std::next(start_pe + int(m_costant_fraction * pe_count))->arrival_time;
+          auto tdc = std::next(start_pe, int(m_costant_fraction * pe_count))->arrival_time;
           // Time-over-threshold (TOT) calculation placeholder
           auto tot = 0.; // we don't have a good way to estimate the TOT value, so we set it to 0 for now. This can
                          // be improved by using a more realistic response function that includes the pulse shape.
 
           // Create digitized signal with PMT channel, timing window, and measurements
-          digi::signal signal{reco::digi{pmt, reco::digi::time{tdc - 15., tdc, tdc + 15.}}, adc, tdc, tot};
+          // timing window for particle crossing is conservatively estimated taking into
+          // account a maximal path length for scintillation photons of 5 m, a velocity of
+          // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
+          digi::signal signal{reco::digi{pmt, reco::digi::time{tdc - 35., tdc, tdc + 5.}}, adc, tdc, tot};
           // Collect all truth hits from photo-electrons in this pulse
           std::vector<pes::pe>::iterator it = start_pe;
 
