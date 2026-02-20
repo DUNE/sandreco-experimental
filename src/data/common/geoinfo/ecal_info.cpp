@@ -267,7 +267,7 @@ namespace sand {
 
   shape_element_face::shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4)
     : v_{p1, p2, p3, p4} {
-    UFW_ASSERT(are_vtx_coplanar(), "cell_face: four points are not coplanar");
+    UFW_ASSERT(are_vtx_coplanar(), fmt::format("cell_face: four points are not coplanar").c_str());
 
     centroid_ = vtx(0) + 0.25 * ((vtx(1) - vtx(0)) + (vtx(2) - vtx(0)) + (vtx(3) - vtx(0)));
 

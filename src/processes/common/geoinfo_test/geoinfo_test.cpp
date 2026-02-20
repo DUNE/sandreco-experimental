@@ -156,14 +156,14 @@ namespace sand::common {
     auto pobt         = cb.offset2position(off);
 
     UFW_ASSERT(lexp == lobt,
-               fmt::format("[ECAL BARREL] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt));
+               fmt::format("[ECAL BARREL] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt).c_str());
     UFW_ASSERT(l1exp == l1obt,
-               fmt::format("[ECAL BARREL] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt));
+               fmt::format("[ECAL BARREL] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt).c_str());
     UFW_ASSERT(p == pobt,
-               fmt::format("[ECAL BARREL] Points don't match!!! Expected point: {} - Obtained point: {}", p, pobt));
-    UFW_ASSERT(cb.is_inside(p), fmt::format("[ECAL BARREL] Point: {} is expected to be inside!!", p));
+               fmt::format("[ECAL BARREL] Points don't match!!! Expected point: {} - Obtained point: {}", p, pobt).c_str());
+    UFW_ASSERT(cb.is_inside(p), fmt::format("[ECAL BARREL] Point: {} is expected to be inside!!", p).c_str());
     UFW_ASSERT(cid.raw == obt_cid.raw,
-               fmt::format("[ECAL BARREL] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw));
+               fmt::format("[ECAL BARREL] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw).c_str());
 
     cid.region        = sand::geo_id::region_t::ENDCAP_A;
     cid.module_number = 0;
@@ -181,12 +181,12 @@ namespace sand::common {
     lexp              = l1exp + l2exp;
 
     UFW_ASSERT(lexp == lobt,
-               fmt::format("[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt));
+               fmt::format("[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt).c_str());
     UFW_ASSERT(2. * (l1exp - l1obt) / (l1exp + l1obt) < 1.E-9,
-               fmt::format("[ECAL ENDCAP] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt));
-    UFW_ASSERT(ce.is_inside(p), fmt::format("[ECAL ENDCAP] Point: {} is expected to be inside!!", p));
+               fmt::format("[ECAL ENDCAP] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt).c_str());
+    UFW_ASSERT(ce.is_inside(p), fmt::format("[ECAL ENDCAP] Point: {} is expected to be inside!!", p).c_str());
     UFW_ASSERT(cid.raw == obt_cid.raw,
-               fmt::format("[ECAL ENDCAP] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw));
+               fmt::format("[ECAL ENDCAP] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw).c_str());
 
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
 
