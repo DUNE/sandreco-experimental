@@ -761,7 +761,7 @@ namespace sand {
       if (c->second.is_inside(p))
         return c->second;
     UFW_EXCEPT(std::invalid_argument,
-               "Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid);
+               fmt::format("Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid));
   }
 
   const cell& geoinfo::ecal_info::at(cell_id cid) const {
@@ -773,9 +773,9 @@ namespace sand {
     }
     if (!m_modules_cells_maps.at(mid).count(cid)) {
       UFW_EXCEPT(std::invalid_argument,
-                 "Cell: {} not found in the map: m_modules_cells_maps.at({})  -> Cell: {}, Sub: {}, Mod: "
+                 fmt::format("Cell: {} not found in the map: m_modules_cells_maps.at({})  -> Cell: {}, Sub: {}, Mod: "
                              "{}, Cel: {}, Row: {}",
-                             cid.raw, mid.raw, cid.raw, cid.region, cid.module_number, cid.column, cid.row);
+                             cid.raw, mid.raw, cid.raw, cid.region, cid.module_number, cid.column, cid.row));
     }
     return m_modules_cells_maps.at(mid).at(cid);
   }
@@ -813,7 +813,7 @@ namespace sand {
       }
     } else {
       UFW_EXCEPT(std::invalid_argument,
-                 "Provided geo_path {} does not match ECAL sensible volume pattern", path);
+                 fmt::format("Provided geo_path {} does not match ECAL sensible volume pattern", path));
     }
     return gi;
   }
