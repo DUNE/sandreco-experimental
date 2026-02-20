@@ -120,18 +120,18 @@ namespace sand::common {
         sand::geo_id::element_t::ENDCAP_CURVE_BOT, sand::geo_id::element_t::ENDCAP_HOR_TOP};
 
     for (auto ism : vsm) {
-      for (uint8_t im = 0; im < (ism == 0 ? 24 : 32); im++) {
+      for (uint8_t im = 0, nm = ism == 0 ? 24 : 32; im < nm; im++) {
+        uint8_t nc = 12;
+        if (ism != 0) {
+          auto iim = uint8_t(im % 16);
+          if (iim < 2)
+            nc = 6;
+          else if (iim > 11)
+            nc = 2;
+          else
+            nc = 3;
+        }
         for (uint8_t ir = 0; ir < 5; ir++) {
-          uint8_t nc = 12;
-          if (ism != 0) {
-            auto iim = uint8_t(im % 16);
-            if (iim < 2)
-              nc = 6;
-            else if (iim > 11)
-              nc = 2;
-            else
-              nc = 3;
-          }
           for (uint8_t ic = 0; ic < nc; ic++) {
             sand::geoinfo::ecal_info::cell_id cid;
             cid.region        = ism;
