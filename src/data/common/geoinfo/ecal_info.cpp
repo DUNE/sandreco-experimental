@@ -267,7 +267,7 @@ namespace sand {
 
   shape_element_face::shape_element_face(const pos_3d& p1, const pos_3d& p2, const pos_3d& p3, const pos_3d& p4)
     : v_{p1, p2, p3, p4} {
-    UFW_ASSERT(are_vtx_coplanar(), fmt::format("cell_face: four points are not coplanar").c_str());
+    UFW_ASSERT(are_vtx_coplanar(), "cell_face: four points are not coplanar");
 
     centroid_ = vtx(0) + 0.25 * ((vtx(1) - vtx(0)) + (vtx(2) - vtx(0)) + (vtx(3) - vtx(0)));
 
@@ -761,7 +761,7 @@ namespace sand {
       if (c->second.is_inside(p))
         return c->second;
     UFW_EXCEPT(std::invalid_argument,
-               fmt::format("Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid));
+               "Point: {} in path: {} is not in any cell related to geo_id: {}", p, path, gid);
   }
 
   const cell& geoinfo::ecal_info::at(cell_id cid) const {
@@ -773,9 +773,9 @@ namespace sand {
     }
     if (!m_modules_cells_maps.at(mid).count(cid)) {
       UFW_EXCEPT(std::invalid_argument,
-                 fmt::format("Cell: {} not found in the map: m_modules_cells_maps.at({})  -> Cell: {}, Sub: {}, Mod: "
+                 "Cell: {} not found in the map: m_modules_cells_maps.at({})  -> Cell: {}, Sub: {}, Mod: "
                              "{}, Cel: {}, Row: {}",
-                             cid.raw, mid.raw, cid.raw, cid.region, cid.module_number, cid.column, cid.row));
+                             cid.raw, mid.raw, cid.raw, cid.region, cid.module_number, cid.column, cid.row);
     }
     return m_modules_cells_maps.at(mid).at(cid);
   }
@@ -813,7 +813,7 @@ namespace sand {
       }
     } else {
       UFW_EXCEPT(std::invalid_argument,
-                 fmt::format("Provided geo_path {} does not match ECAL sensible volume pattern", path));
+                 "Provided geo_path {} does not match ECAL sensible volume pattern", path);
     }
     return gi;
   }
