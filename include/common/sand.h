@@ -301,8 +301,8 @@ struct fmt::formatter<sand::geo_id> : formatter<string_view> {
       return fmt::format_to(ctx.out(), "[{}: module {}, plane {}]", gid.subdetector, gid.drift.supermodule,
                             gid.drift.plane);
     case sand::ECAL:
-      return fmt::format_to(ctx.out(), "[{}: module {}, region {}, plane {}]", gid.subdetector, gid.ecal.supermodule,
-                            gid.ecal.region, gid.ecal.plane);
+      return fmt::format_to(ctx.out(), "[{}: region {}, module {}, element {}, plane {}]", gid.subdetector,
+                            gid.ecal.region, gid.ecal.supermodule, gid.ecal.element, gid.ecal.plane);
     case sand::GRAIN:
       return fmt::format_to(ctx.out(), "[{}: inner vessel]", gid.subdetector); // grain has no substructure to report
     case sand::STT:
