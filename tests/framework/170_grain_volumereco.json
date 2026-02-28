@@ -16,6 +16,10 @@
       "angle_reader" : {
         "uri" : "test/voxel_weights.h5",
         "io" : "read"
+      },
+      "score_writer" : {
+        "uri" : "test/volumereco.h5",
+        "io" : "overwrite"
       }
     }
     },
