@@ -166,7 +166,6 @@ namespace sand {
    * Subdetector type enumeration
    */
   enum subdetector_t : uint8_t { DRIFT = 0, ECAL = 1, GRAIN = 2, STT = 3, TRACKER = STT, MUON = 4, NONE = 255 };
-
   /**
    * Unique identifier for elements of the detector geometry as known by Geant.
    * There is a 1-1 correspondence between the geo_path of a sensitive detector and a geo_id.
@@ -176,6 +175,16 @@ namespace sand {
     using supermodule_t = uint8_t;
     using plane_t       = uint8_t;
     using tube_t        = uint8_t;
+
+    enum region_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
+    enum element_t : uint8_t {
+      ENDCAP_VERTICAL  = 1,
+      ENDCAP_CURVE_TOP = 2,
+      ENDCAP_CURVE_BOT = 3,
+      ENDCAP_HOR_TOP   = 4,
+      ENDCAP_HOR_BOT   = 5,
+      NONE             = 255
+    };
     // ROOT reports an internal error when generating a dictionary for this anonymous union.
     // Since we don't care too much, we can just pretend it is just an int.
 #ifndef __CLING__
@@ -183,7 +192,7 @@ namespace sand {
       struct {
         uint8_t reserved___0;
         subdetector_t subdetector;
-        uint8_t padding___[6];
+        uint8_t padding___1[6];
       } /*any*/;
       struct {
         uint8_t reserved___0;
@@ -193,21 +202,13 @@ namespace sand {
         uint8_t padding___1[4];
       } drift;
       struct {
-        enum region_t : uint8_t {
-          BARREL           = 0,
-          ENDCAP_VERTICAL  = 1,
-          ENDCAP_CURVE_TOP = 2,
-          ENDCAP_CURVE_BOT = 3,
-          ENDCAP_HOR_TOP   = 4,
-          ENDCAP_HOR_BOT   = 5,
-          NONE             = 255
-        };
         uint8_t reserved___0;
         subdetector_t subdetector;
-        supermodule_t supermodule;
         region_t region;
+        supermodule_t supermodule;
+        element_t element;
         plane_t plane;
-        uint8_t padding___1[3];
+        uint8_t padding___1[2];
       } ecal;
       struct {
         uint8_t reserved___0;
@@ -228,6 +229,8 @@ namespace sand {
     uint64_t raw = -1;
 #endif //__CLING__
   };
+
+  static_assert(sizeof(geo_id) == sizeof(uint64_t), "geo_id size is not 8 bytes");
 
   // Equality operator
   inline bool operator== (geo_id lhs, geo_id rhs) { return lhs.raw == rhs.raw; }
@@ -298,8 +301,8 @@ struct fmt::formatter<sand::geo_id> : formatter<string_view> {
       return fmt::format_to(ctx.out(), "[{}: module {}, plane {}]", gid.subdetector, gid.drift.supermodule,
                             gid.drift.plane);
     case sand::ECAL:
-      return fmt::format_to(ctx.out(), "[{}: module {}, region {}, plane {}]", gid.subdetector, gid.ecal.supermodule,
-                            gid.ecal.region, gid.ecal.plane);
+      return fmt::format_to(ctx.out(), "[{}: region {}, module {}, element {}, plane {}]", gid.subdetector,
+                            gid.ecal.region, gid.ecal.supermodule, gid.ecal.element, gid.ecal.plane);
     case sand::GRAIN:
       return fmt::format_to(ctx.out(), "[{}: inner vessel]", gid.subdetector); // grain has no substructure to report
     case sand::STT:

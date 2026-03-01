@@ -171,17 +171,15 @@ EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
 
     if (in_grain || in_ecal || in_mag || in_world) {
       trajectory_points_[comp].push_back(*it);
-    }
-
-    if (in_stt && in_drift) {
+    } else if (in_stt && in_drift) {
       trajectory_points_[component::STRAW].push_back(*it);
       trajectory_points_[component::DRIFT].push_back(*it);
-    }
-    if (!in_stt && in_drift) {
+    } else if (!in_stt && in_drift) {
       trajectory_points_[component::DRIFT].push_back(*it);
-    }
-    if (in_stt && !in_drift) {
+    } else if (in_stt && !in_drift) {
       trajectory_points_[component::STRAW].push_back(*it);
+    } else {
+      trajectory_points_[component::OTHER].push_back(*it);
     }
 
     if(it == trajectory.Points.begin()){

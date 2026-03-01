@@ -19,8 +19,9 @@ std::map<std::string, component> string_to_component = {
 /**
  * @brief List of components in an array.
  */
-component components[6] = {component::GRAIN, component::STRAW,  component::DRIFT,
-                           component::ECAL,  component::MAGNET, component::WORLD};
+component components[7] = {component::GRAIN, component::STRAW,  component::DRIFT,
+                           component::ECAL,  component::MAGNET, component::WORLD,
+			   component::OTHER};
 
 /**
  * @brief List of string names associated with the GRAIN component.
