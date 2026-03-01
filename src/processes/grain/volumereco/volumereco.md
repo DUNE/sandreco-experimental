@@ -21,3 +21,15 @@ Each iteration of the algorithm goes through two steps:
 ## Computing resources
 
 Thanks to the OpenCL framework, this process can run both on CPU(s) or GPU(s), nevertheless a GPU is mandatory for a full-scale reconstruction.
+If multiple GPUs are available, the computations are distributed evenly. 
+
+The following table summarize the (total) VRAM required for this process, considering the full GRAIN geometry, as a function of the voxel size.
+
+| voxel size (mm) | VRAM required (GB) |
+| ------ | ------ |
+|   10     |    107    |
+|   12     |    97    |
+|   14     |    55    |
+|   16     |    40    |
+|   18     |    29    |
+|   20     |    20    |
