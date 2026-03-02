@@ -42,7 +42,6 @@ namespace sand::grain {
     float m_voxel_size;
     float m_pde;
     int m_event_number;
-    std::unique_ptr<float[]> m_tmp_scores;
     cl::Program m_expectation_program;
     cl::Kernel m_expectation_kernel;
     cl::Program m_maximization_program;
@@ -143,8 +142,6 @@ namespace sand::grain {
     const size_t angle_size = sensitivity_size*angle_dimensions.T();
 
     m_event_number = -1;
-    m_tmp_scores = std::unique_ptr<float[]>(new float(sensitivity_size));
-
     // Check that voxel shape matches between geometry and weights
     const auto& gi = instance<geoinfo>();
     dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
@@ -357,7 +354,8 @@ namespace sand::grain {
                                                   cl::NullRange, nullptr, &ev_multiply_matrices_in_place);
 
     // Retrieve voxel score
-    void* scores_p = m_tmp_scores.get();
+    std::vector<float> tmp_scores(n_voxels);
+    void* scores_p = tmp_scores.data();
     cl::Event ev_copy_scores_from_device =
           m_previous_amplitude_buffers[0].read(scores_p, platform.queues()[0], 0, -1, {ev_multiply_matrices_in_place});
     
@@ -369,7 +367,7 @@ namespace sand::grain {
     auto& score_writer = instance<sand::hdf5::ndarray>("score_writer");
     sand::hdf5::ndarray::ndrange range({voxels.size().x(), voxels.size().y(), voxels.size().z()});
     range.set_type(H5::PredType::NATIVE_FLOAT);
-    score_writer.write(std::to_string(m_event_number), range, m_tmp_scores.get());
+    score_writer.write(std::to_string(m_event_number), range, tmp_scores.data());
   }
 } // namespace sand::grain
 
