@@ -5,7 +5,7 @@ target_sources(sand_root_tree_streamer PRIVATE
     tree_streamer.hpp
     tree_streamer.cpp)
 
-target_include_directories(sand_root_tree_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_SOURCE_DIR})
+target_include_directories(sand_root_tree_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_INCLUDE_DIR})
 
 target_link_libraries(sand_root_tree_streamer PUBLIC ufw::ufw PRIVATE ROOT::RIO ROOT::Tree)
 
@@ -59,9 +59,11 @@ file(APPEND tree_streamer_linkdef.h "#pragma link C++ class sand::channel_id+;\n
 file(APPEND tree_streamer_linkdef.h ${USER_TYPES_LINKDEF})
 file(APPEND tree_streamer_linkdef.h "#endif\n")
 
-include_directories(${duneanaobj_SOURCE_DIR})
+include_directories(${duneanaobj_INCLUDE_DIR})
+include_directories(${CMAKE_INSTALL_FULL_INCLUDEDIR}/sandreco/public)
 
-ROOT_GENERATE_DICTIONARY(sand_root_tree_streamer_dictionaries tree_streamer_types.hpp MODULE sand_root_tree_streamer LINKDEF tree_streamer_linkdef.h)
+ROOT_GENERATE_DICTIONARY(sand_root_tree_streamer_dictionaries tree_streamer_types.hpp MODULE sand_root_tree_streamer LINKDEF tree_streamer_linkdef.h
+    OPTIONS "-I${CMAKE_INSTALL_FULL_INCLUDEDIR}/sandreco/public")
 
 install(TARGETS sand_root_tree_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer_rdict.pcm
