@@ -28,6 +28,9 @@ find_package(ROOT COMPONENTS MathCore REQUIRED)
 
 find_package(ufw REQUIRED)
 
+find_package(duneanaobj REQUIRED)
+find_path(duneanaobj_INCLUDE_DIR NAMES duneanaobj/StandardRecord/StandardRecord.h REQUIRED)
+
 add_subdirectory(include)
 
 add_subdirectory(src)

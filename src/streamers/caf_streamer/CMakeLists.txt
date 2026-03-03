@@ -1,26 +1,15 @@
-include(FetchContent)
-
-# Fetch duneanaobj from the main branch
-FetchContent_Declare(
-  duneanaobj
-  GIT_REPOSITORY https://github.com/DUNE/duneanaobj.git
-  GIT_TAG        main
-)
-set(SKIP_CET ON CACHE BOOL "Skip CET build system for duneanaobj")
-FetchContent_MakeAvailable(duneanaobj)
-
 add_library(sand_caf_caf_streamer)
 
 target_sources(sand_caf_caf_streamer PRIVATE
     caf_streamer.hpp
     caf_streamer.cpp)
 
-target_include_directories(sand_caf_caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_SOURCE_DIR})
+target_include_directories(sand_caf_caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_INCLUDE_DIR})
 
-target_link_libraries(sand_caf_caf_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw StandardRecord)
+target_link_libraries(sand_caf_caf_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw duneanaobj::StandardRecord)
 
 include(GNUInstallDirs)
-set(DUNEANAOBJ_HEADERS "${duneanaobj_SOURCE_DIR}/duneanaobj/StandardRecord")
+set(DUNEANAOBJ_HEADERS "${duneanaobj_INCLUDE_DIR}/duneanaobj/StandardRecord")
 #The streamer relies on dictionary generation and its own definitions for
 #correct representation of any user type. This requires all said types to be known.
 #The code below attempts to grab all user types from include/
@@ -62,7 +51,7 @@ file(APPEND caf_streamer_linkdef.h ${USER_TYPES_LINKDEF})
 file(APPEND caf_streamer_linkdef.h "#endif\n")
 
 
-include_directories(${duneanaobj_SOURCE_DIR})
+include_directories(${duneanaobj_INCLUDE_DIR})
 ROOT_GENERATE_DICTIONARY(sand_caf_caf_streamer_dictionaries caf_streamer_types.hpp MODULE sand_caf_caf_streamer LINKDEF caf_streamer_linkdef.h)
 
 install(TARGETS sand_caf_caf_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
