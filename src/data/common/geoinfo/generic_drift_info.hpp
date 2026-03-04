@@ -9,11 +9,11 @@ namespace sand {
   public:
     struct station : public tracker_info::station {
       geo_id geo_x, geo_u, geo_v; ///< The unique geometry identifier
-      // wire_list x_view() const;
-      // wire_list u_view() const;
-      // wire_list v_view() const;
-      // void set_drift_view(const geo_path &, const geo_id &);
-      // void set_wire_list(const size_t &);
+      wire_list x_view() const;
+      wire_list u_view() const;
+      wire_list v_view() const;
+      void set_drift_view(const geo_path &, const geo_id &);
+      void set_wire_list(const size_t &);
     };
 
     generic_drift_info(const geoinfo&, const std::array<double, 3>&, const std::array<double, 3>&, const std::array<double, 3>&);

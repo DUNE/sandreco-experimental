@@ -39,7 +39,7 @@ namespace sand {
   static constexpr char s_drift_path[] = "sand_inner_volume_PV_0/SANDtracker_PV_0";
 
   /**
-   * @brief Construct a new geoinfo::drift info::drift info object
+   * @brief Construct a new geoinfo::generic_drift info::generic_drift info object
    *
    * @param gi
    */
@@ -101,28 +101,24 @@ namespace sand {
       stat->bottom_north = centre - boxcorner;
       stat->parent = this;
 
-      nav->for_each_node([&](auto subunits){
-        std::string subuname = subunits->GetName();
-
+      nav->cd(driftpath / stname); 
+      nav->for_each_node([&](auto subunit){
+        std::string subuname = subunit->GetName();
         if (subuname.find("ch") == std::string::npos){
-          return; //since they are subunits with only targets
+          return; // since they are subunits with only targets
         }
-
         geo_path chamber_path = driftpath / stname / subuname; 
         nav->cd(chamber_path);
-
         nav->for_each_node([&](auto plane){
           std::string planename = plane->GetName();
-
-          if (planename.find("m") == std::string::npos){
+          if (planename.find("m") != std::string::npos){
             return; // mylar plane
           }
-
           geo_path full_path = driftpath / stname / subuname / planename;
           nav->cd(full_path);
           auto ID = id(partial_path(full_path, gi));
           stat->daq_link = ID.drift.supermodule;
-          // stat->set_drift_view(full_path, ID);
+          stat->set_drift_view(full_path, ID);
         });
       });
 
@@ -138,7 +134,7 @@ namespace sand {
     geo_id gi;
     auto path      = gp;
     gi.subdetector = DRIFT;
-    // abuse the bad notation here, module/plane/straw
+
     std::string stationpath(path.token(0));
     UFW_INFO("station path: '{}'", stationpath);
 
@@ -164,7 +160,8 @@ namespace sand {
       gi.drift.plane = 255; // invalid plane
       return gi;
     } else {
-      auto i1        = plane_path.find('_');
+      auto v_index   = plane_path.find('v');
+      auto i1        = plane_path.find('_', v_index);
       auto i2        = plane_path.find('_', i1 + 1);
       auto plane     = std::stoi(plane_path.substr(i1 + 1, i2 - i1 - 1));
       gi.drift.plane = plane;
@@ -178,200 +175,161 @@ namespace sand {
     auto stat             = at(gi.drift.supermodule);
     std::string placement = "_PV";
 
-    int val     = gi.drift.supermodule;
-
+    int st_ct             = gi.drift.supermodule;
     int plane             = gi.drift.plane;
 
-    // std::string station_name;
-    // UFW_INFO("st_ct: {}, plane: {}", st_ct, plane);
-    // switch (st_ct) {
-    // case 0:
-    //   station_name = "SuperMod_X0" + placement + "_0";
-    //   break;
-    // case 1:
-    //   station_name = "SuperMod_X1" + placement + "_0";
-    //   break;
-    // case 2:
-    //   station_name = "SuperMod_C" + placement + "_0";
-    //   break;
-    // case 3:
-    //   if (is_trk)
-    //     supermod_name = "Trk" + placement + "_0";
-    //   else
-    //     supermod_name = "SuperMod_C" + placement + "_1";
-    //   break;
-    // case 4:
-    //   supermod_name = "SuperMod_B" + placement + "_0";
-    //   break;
-    // case 5:
-    //   supermod_name = "SuperMod_B" + placement + "_1";
-    //   break;
-    // case 6:
-    //   supermod_name = "SuperMod_A" + placement + "_0";
-    //   break;
-    // case 7:
-    //   supermod_name = "SuperMod_A" + placement + "_1";
-    //   break;
-    // default:
-    //   UFW_ERROR("Supermodule index '{}' is not recognized.", val);
-    // }
+    std::string station_basename;
+    std::string station_fullname;
+    UFW_INFO("st_ct: {}, plane: {}", st_ct, plane);
+    
+    station_basename = "s_" + std::to_string(st_ct);
+    station_fullname = station_basename + placement + "_0";
+    
+    gp /= station_fullname;
+    
+    std::string chamber_name;
+    chamber_name = station_basename + "_ch" + placement + "_0";
 
-    // gp /= supermod_name;
+    gp /= chamber_name;
 
-    // if (supermod_name.find("Trk") != std::string::npos) {
-    //   gp /= "TrkDrift" + placement + "_0";
-    //   gp /= "CDriftModule_" + std::to_string(plane) + placement + "_0";
-    // } else {
-    //   auto i1 = supermod_name.find('_');
-    //   auto i2 = supermod_name.find('_', i1 + 1);
-    //   std::string sm_ID(supermod_name.substr(i1 + 1, i2 - i1 - 1));
-    //   std::string module_name;
-    //   switch (stat->target) {
-    //   case C3H6:
-    //     module_name = "C3H6";
-    //     break;
-    //   case CARBON:
-    //     module_name = "C";
-    //     break;
-    //   default:
-    //     UFW_ERROR("Target material '{}' unsupported.", stat->target);
-    //   }
-    //   gp /= module_name + "Mod_" + sm_ID + placement + "_" + std::to_string(mod_ct - 1);
-    //   gp /= module_name + "DriftChamber_" + sm_ID + placement + "_0";
-    //   gp /= module_name + "DriftModule_" + std::to_string(plane) + "_" + sm_ID + placement + "_0";
-    // }
+    std::string view_name;
+    view_name = station_basename + "_v" + std::to_string(plane) + placement + "_0";
 
-    gp = "Placeholder string";
+    gp /= view_name;
+
     return gp;
   }
 
 
-  // void geoinfo::generic_drift_info::station::set_drift_view(const geo_path & ch_path, const geo_id& id) {
+  void geoinfo::generic_drift_info::station::set_drift_view(const geo_path & ch_path, const geo_id& id) {
 
-  //   auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-  //   auto nav = tgm.navigator();
-  //   std::string ch_name(nav->GetCurrentNode()->GetName());
+    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav = tgm.navigator();
+    std::string ch_name(nav->GetCurrentNode()->GetName());
     
-  //   if (ch_name.find("ch") == std::string::npos) {
-  //       return;  // not a drift module
-  //   }
+    // if (ch_name.find("ch") == std::string::npos) {
+    //     return;  // not a chamber subunit
+    // }
 
-  //   UFW_DEBUG("Setting drift view for path: {}", ch_path);
-  //   auto i1 = ch_name.find('_', );
-  //   auto i2 = ch_name.find('_', i1 + 1);
-  //   auto plane_ID = std::stoi(driftmod_name.substr(i1 + 1, i2 - i1 - 1));
+    UFW_DEBUG("Setting drift view for path: {}", ch_path);
+    auto v_index = ch_name.find('v');
+    auto i1      = ch_name.find('_', v_index);
+    auto i2      = ch_name.find('_', i1 + 1);
+    auto plane_ID = std::stoi(ch_name.substr(i1 + 1, i2 - i1 - 1));
 
-  //   if (plane_ID == 0) {
-  //       geo_x = id;        
-  //   } else if (plane_ID == 1) {
-  //       geo_u = id;
-  //   } else if (plane_ID == 2) {
-  //       geo_v = id;
-  //   } else {
-  //       UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane_ID);
-  //   }
-  //   set_wire_list(plane_ID);
+    if ((plane_ID % 3) == 0) {
+        geo_x = id;        
+    } else if ((plane_ID % 3) == 1) {
+        geo_u = id;
+    } else if ((plane_ID % 3) == 2) {
+        geo_v = id;
+    } else {
+        UFW_ERROR("DriftChamber '{}' has unrecognized plane '{}'.", ch_name, plane_ID);
+    }
+    set_wire_list(plane_ID % 3);
 
-  // }
+  }
 
-  // void geoinfo::generic_drift_info::station::set_wire_list(const size_t & view_ID) {
+  void geoinfo::generic_drift_info::station::set_wire_list(const size_t & view_ID) {
 
-  //   /////Get gas volume properties
-  //   auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-  //   auto nav = tgm.navigator();
+    UFW_DEBUG("Set wire list ");
 
-  //   dir_3d view_translation;
-  //   view_translation.SetCoordinates(nav->get_hmatrix().GetTranslation());
+    /////Get gas volume properties
+    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav = tgm.navigator();
 
-  //   /// Set global vs local view_corners
-  //   std::vector<pos_3d> view_corners_global(4);
-  //   view_corners_global[0] = pos_3d(top_north.x(), top_north.y(), view_translation.z()); // top_north
-  //   view_corners_global[1] = pos_3d(top_south.x(), top_south.y(), view_translation.z()); // top_south
-  //   view_corners_global[2] = pos_3d(bottom_south.x(), bottom_south.y(), view_translation.z()); // bottom_south
-  //   view_corners_global[3] = pos_3d(bottom_north.x(), bottom_north.y(), view_translation.z()); // bottom_north
+    dir_3d view_translation;
+    view_translation.SetCoordinates(nav->get_hmatrix().GetTranslation());
 
-  //   std::vector<pos_3d> view_corners_local(4);
-  //   for (size_t i = 0; i < view_corners_global.size(); ++i) {
-  //     view_corners_local[i] = view_corners_global[i] - view_translation;
-  //   }
+    /// Set global vs local view_corners
+    std::vector<pos_3d> view_corners_global(4);
+    view_corners_global[0] = pos_3d(top_north.x(), top_north.y(), view_translation.z()); // top_north
+    view_corners_global[1] = pos_3d(top_south.x(), top_south.y(), view_translation.z()); // top_south
+    view_corners_global[2] = pos_3d(bottom_south.x(), bottom_south.y(), view_translation.z()); // bottom_south
+    view_corners_global[3] = pos_3d(bottom_north.x(), bottom_north.y(), view_translation.z()); // bottom_north
 
-  //   // Setting up rotation matrix for wires
-  //   auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
-  //   double c = std::cos(drift->view_angle()[view_ID]);
-  //   double s = std::sin(drift->view_angle()[view_ID]);
-  //   xform_3d wire_rot(c, -s, 0., 0.,
-  //                     s,  c, 0., 0.,
-  //                     0., 0., 1, 0.);   
+    std::vector<pos_3d> view_corners_local(4);
+    for (size_t i = 0; i < view_corners_global.size(); ++i) {
+      view_corners_local[i] = view_corners_global[i] - view_translation;
+    }
+
+    // Setting up rotation matrix for wires
+    auto drift = dynamic_cast<const sand::geoinfo::generic_drift_info*>(this->parent);
+    double c = std::cos(drift->view_angle()[view_ID]);
+    double s = std::sin(drift->view_angle()[view_ID]);
+    xform_3d wire_rot(c, -s, 0., 0.,
+                      s,  c, 0., 0.,
+                      0., 0., 1, 0.);   
                
-  //   // Find max y in wire plane (rotated frame)
-  //   double max_wire_plane_y = 0.0;
-  //   for (auto v:view_corners_local) {
-  //     pos_3d v_rot = wire_rot.Inverse() * v;  //Local to rotated frame
-  //     if (v_rot.Y() > max_wire_plane_y) {
-  //       max_wire_plane_y = v_rot.Y();
-  //     }
-  //   }
+    // Find max y in wire plane (rotated frame)
+    double max_wire_plane_y = 0.0;
+    for (auto v:view_corners_local) {
+      pos_3d v_rot = wire_rot.Inverse() * v;  //Local to rotated frame
+      if (v_rot.Y() > max_wire_plane_y) {
+        max_wire_plane_y = v_rot.Y();
+      }
+    }
   
 
-  //   /// Find intersections of wires with frame
-  //   double transverse_position = max_wire_plane_y - drift->view_offset()[view_ID];
-  //   while (transverse_position > -max_wire_plane_y) {
-  //     pos_3d wire_centre_rot(0., transverse_position, 0.); // origin of the vector in rotated frame
+    /// Find intersections of wires with frame
+    double transverse_position = max_wire_plane_y - drift->view_offset()[view_ID];
+    while (transverse_position > -max_wire_plane_y) {
+      pos_3d wire_centre_rot(0., transverse_position, 0.); // origin of the vector in rotated frame
 
-  //     pos_3d wire_centre_local = wire_rot * wire_centre_rot; // origin of the vector in local frame from rotated frame
-  //     dir_3d local_x_axis = wire_rot * dir_3d(1., 0., 0.); // direction of the vector in local frame from rotated frame
+      pos_3d wire_centre_local = wire_rot * wire_centre_rot; // origin of the vector in local frame from rotated frame
+      dir_3d local_x_axis = wire_rot * dir_3d(1., 0., 0.); // direction of the vector in local frame from rotated frame
 
-  //     std::vector<pos_3d> intersections = getXYLinePolygonIntersections(
-  //       view_corners_local,
-  //       wire_centre_local,
-  //       local_x_axis);
+      std::vector<pos_3d> intersections = getXYLinePolygonIntersections(
+        view_corners_local,
+        wire_centre_local,
+        local_x_axis);
 
-  //     std::vector<pos_3d> intersections_global;
-  //     for (const auto &inter : intersections) intersections_global.push_back(inter + view_translation);
+      std::vector<pos_3d> intersections_global;
+      for (const auto &inter : intersections) intersections_global.push_back(inter + view_translation);
 
-  //     // Need exactly two intersections to define a wire
-  //     if (intersections_global.size() == 2) {
-  //       auto w                = std::make_unique<wire>();
-  //       w->parent             = this;
-  //       w->head               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[1] : intersections_global[0];
-  //       w->tail               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[0] : intersections_global[1];
-  //       w->max_radius         = drift->view_spacing()[view_ID] / 2.0;
-  //       w->daq_channel.subdetector = DRIFT;
-  //       w->daq_channel.link = daq_link;
-  //       w->daq_channel.channel = (view_ID << 16) | wires.size();
-  //       wires.emplace_back(std::move(w));
-  //     } else {
-  //       UFW_DEBUG("Transverse position {} has {} intersections, skipping.", transverse_position, intersections_global.size());
-  //     }
+      // Need exactly two intersections to define a wire
+      if (intersections_global.size() == 2) {
+        auto w                = std::make_unique<wire>();
+        w->parent             = this;
+        w->head               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[1] : intersections_global[0];
+        w->tail               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[0] : intersections_global[1];
+        w->max_radius         = drift->view_spacing()[view_ID] / 2.0;
+        w->daq_channel.subdetector = DRIFT;
+        w->daq_channel.link = daq_link;
+        w->daq_channel.channel = (view_ID << 16) | wires.size();
+        wires.emplace_back(std::move(w));
+      } else {
+        UFW_DEBUG("Transverse position {} has {} intersections, skipping.", transverse_position, intersections_global.size());
+      }
 
-  //     transverse_position -= drift->view_spacing()[view_ID];
+      transverse_position -= drift->view_spacing()[view_ID];
 
-  //   }
-  // }
+    }
+  }
 
-  // geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::x_view() const {
-  //   auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
-  //   wire_list wl = select([&](const wire& w) {
-  //     return std::abs(w.angle() - drift->view_angle()[geo_x.drift.plane]) < 1e-6;
-  //   });
-  //   return wl;
-  // }
+  geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::x_view() const {
+    auto drift = dynamic_cast<const sand::geoinfo::generic_drift_info*>(this->parent);
+    wire_list wl = select([&](const wire& w) {
+      return std::abs(w.angle() - drift->view_angle()[geo_x.drift.plane]) < 1e-6;
+    });
+    return wl;
+  }
 
-  // geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::u_view() const {
-  //   auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
-  //   wire_list wl = select([&](const wire& w) {
-  //     return std::abs(w.angle() - drift->view_angle()[geo_u.drift.plane]) < 1e-6;
-  //   });
-  //   return wl;
-  // }
+  geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::u_view() const {
+    auto drift = dynamic_cast<const sand::geoinfo::generic_drift_info*>(this->parent);
+    wire_list wl = select([&](const wire& w) {
+      return std::abs(w.angle() - drift->view_angle()[geo_u.drift.plane]) < 1e-6;
+    });
+    return wl;
+  }
 
-  // geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::v_view() const {
-  //   auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
-  //   wire_list wl = select([&](const wire& w) {
-  //     return std::abs(w.angle() - drift->view_angle()[geo_v.drift.plane]) < 1e-6;
-  //   });
-  //   return wl;
-  // }
+  geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::v_view() const {
+    auto drift = dynamic_cast<const sand::geoinfo::generic_drift_info*>(this->parent);
+    wire_list wl = select([&](const wire& w) {
+      return std::abs(w.angle() - drift->view_angle()[geo_v.drift.plane]) < 1e-6;
+    });
+    return wl;
+  }
     
 
 } // namespace sand
