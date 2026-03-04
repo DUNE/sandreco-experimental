@@ -3,6 +3,7 @@ add_library(sand_geoinfo)
 find_package(ROOT REQUIRED COMPONENTS Geom Physics Matrix MathCore RIO Tree)
 
 set(HDRS drift_info.hpp 
+         generic_drift_info.hpp
          ecal_info.hpp
          grain_info.hpp
          stt_info.hpp
@@ -13,6 +14,7 @@ set(HDRS drift_info.hpp
 target_sources(sand_geoinfo PRIVATE
                ${HDRS}
                drift_info.cpp
+               generic_drift_info.cpp
                ecal_info.cpp
                grain_info.cpp
                stt_info.cpp

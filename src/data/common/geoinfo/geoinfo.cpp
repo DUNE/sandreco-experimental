@@ -5,6 +5,7 @@
 #include <common/sand.h>
 
 #include <drift_info.hpp>
+#include <generic_drift_info.hpp>
 #include <ecal_info.hpp>
 #include <geoinfo.hpp>
 #include <grain_info.hpp>
@@ -54,9 +55,29 @@ namespace sand {
       }
     }
 
+    bool isGenericDrift = false;
+    for (int d = 0; d < nav->GetCurrentNode()->GetNdaughters(); ++d) {
+      std::string daughter_tmp = nav->GetCurrentNode()->GetDaughter(d)->GetName(); // SANDtracker_PV_0
+      if (daughter_tmp.find("SANDtracker") != std::string::npos) {
+        UFW_DEBUG("DAUGHTER vol '{}' ", daughter_tmp.c_str());
+        std::string daughter_path = subpath / daughter_tmp.c_str();
+        nav->cd(daughter_path.c_str());
+        std::string granddaughter_tmp = nav->GetCurrentNode()->GetDaughter(0)->GetName(); // s_...
+        UFW_DEBUG("GRANDDAUGHTER vol '{}' ", granddaughter_tmp.c_str());
+        if (granddaughter_tmp.find("s_") != std::string::npos){
+          isGenericDrift = true;
+        }
+        nav->CdUp();
+        break;
+      }
+    }
+
     if (isSTT) {
       UFW_INFO("STT subdetector implementation detected.");
       m_tracker.reset(new stt_info(*this));
+    } else if (isGenericDrift){
+      UFW_INFO("Generic Drift subdetector implementation detected.");
+      m_tracker.reset(new generic_drift_info(*this, drift_view_angle, drift_view_offset, drift_view_spacing));
     } else {
       UFW_INFO("Drift subdetector implementation detected.");
       m_tracker.reset(new drift_info(*this, drift_view_angle, drift_view_offset, drift_view_spacing));
