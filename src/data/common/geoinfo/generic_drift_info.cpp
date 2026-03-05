@@ -24,7 +24,7 @@ This is the structure:
 
 Generic geometry:
 No supermodules. The "modules" are called stations. Each station has a frame, a target (P or C) and a chamber. 
-The chamber is composed of mylar planes and views (so no wires), whose numbers depend of the user settings.
+The chamber is composed of mylar planes and views (no wires). Number of views (and mylar planes) depends on the geometry.
 This is the structure:
 • Station (s)
   • Frame (fr)
@@ -60,16 +60,16 @@ namespace sand {
     nav->for_each_node([&](auto station_node) {
       std::string stname = station_node->GetName();
       nav->cd(driftpath / stname);
-      UFW_DEBUG("Station name: {}", stname);
+      // UFW_DEBUG("Station name: {}", stname);
       auto stat = std::make_unique<station>();
       target_material tgt;
 
       nav->for_each_node([&](auto subunit) {
         std::string subuname = subunit->GetName();
-        UFW_DEBUG("Subunit name: {}", subuname);
+        // UFW_DEBUG("Subunit name: {}", subuname);
         nav->cd(driftpath / stname / subuname);
         if (subuname.find("fr") != std::string::npos) {
-          return; // skip the frame, it has no wires
+          return; // skip the frame
         } else if (subuname.find("t_P") != std::string::npos) {
           tgt = C3H6;
         } else if (subuname.find("t_C") != std::string::npos) {
@@ -122,7 +122,7 @@ namespace sand {
         });
       });
 
-      UFW_DEBUG("Adding station {} ", stname);
+      // UFW_DEBUG("Adding station {} ", stname);
       add_station(station_ptr(std::move(stat)));
     });
   }
@@ -136,7 +136,7 @@ namespace sand {
     gi.subdetector = DRIFT;
 
     std::string stationpath(path.token(0));
-    UFW_INFO("station path: '{}'", stationpath);
+    // UFW_INFO("Station path: '{}'", stationpath);
 
     auto st_ct = 0;
 
@@ -153,6 +153,8 @@ namespace sand {
     // but actually here we have no supermodules. The id is just the station id
     gi.drift.supermodule = st_ct; 
 
+    // I ignore the chamber path since there is 1-1 correspondence 
+    // between station and its chamber
     std::string plane_path(path.token(2));
     UFW_INFO("Plane path: '{}'", plane_path);
     if(plane_path.find("m") != std::string::npos ) {
@@ -180,21 +182,18 @@ namespace sand {
 
     std::string station_basename;
     std::string station_fullname;
-    UFW_INFO("st_ct: {}, plane: {}", st_ct, plane);
+    UFW_INFO("station: {}, plane: {}", st_ct, plane);
     
     station_basename = "s_" + std::to_string(st_ct);
     station_fullname = station_basename + placement + "_0";
-    
     gp /= station_fullname;
     
     std::string chamber_name;
     chamber_name = station_basename + "_ch" + placement + "_0";
-
     gp /= chamber_name;
 
     std::string view_name;
     view_name = station_basename + "_v" + std::to_string(plane) + placement + "_0";
-
     gp /= view_name;
 
     return gp;
@@ -206,10 +205,6 @@ namespace sand {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
     std::string ch_name(nav->GetCurrentNode()->GetName());
-    
-    // if (ch_name.find("ch") == std::string::npos) {
-    //     return;  // not a chamber subunit
-    // }
 
     UFW_DEBUG("Setting drift view for path: {}", ch_path);
     auto v_index = ch_name.find('v');
