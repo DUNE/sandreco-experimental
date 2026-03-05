@@ -4,7 +4,7 @@ include(FetchContent)
 FetchContent_Declare(
   duneanaobj
   GIT_REPOSITORY https://github.com/DUNE/duneanaobj.git
-  GIT_TAG        main
+  GIT_TAG        9b507f43f9cedf0ca864099ac2dff6d1cb95e1d1
 )
 set(SKIP_CET ON CACHE BOOL "Skip CET build system for duneanaobj")
 FetchContent_MakeAvailable(duneanaobj)
