@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/CMakeFiles/duneanaobj-populate"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/CMakeFiles/duneanaobj-populate.rule"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/CMakeFiles/duneanaobj-populate-complete.rule"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/duneanaobj-populate-prefix/src/duneanaobj-populate-stamp/duneanaobj-populate-build.rule"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/duneanaobj-populate-prefix/src/duneanaobj-populate-stamp/duneanaobj-populate-configure.rule"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/duneanaobj-populate-prefix/src/duneanaobj-populate-stamp/duneanaobj-populate-download.rule"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/duneanaobj-populate-prefix/src/duneanaobj-populate-stamp/duneanaobj-populate-install.rule"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/duneanaobj-populate-prefix/src/duneanaobj-populate-stamp/duneanaobj-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/duneanaobj-populate-prefix/src/duneanaobj-populate-stamp/duneanaobj-populate-patch.rule"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/duneanaobj-populate-prefix/src/duneanaobj-populate-stamp/duneanaobj-populate-test.rule"
+		},
+		{
+			"file" : "/home/sand/sandreco-experimental/_deps/duneanaobj-subbuild/duneanaobj-populate-prefix/src/duneanaobj-populate-stamp/duneanaobj-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"duneanaobj-populate"
+		],
+		"name" : "duneanaobj-populate"
+	}
+}

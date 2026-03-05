@@ -23,8 +23,7 @@ namespace sand::tracker {
     private:
       std::map<const geoinfo::tracker_info::station *, std::vector<digi::signal>> group_signals_by_station();
       void clusterize_signals(const std::vector<digi::signal> & signals);
-      void build_cluster(cluster_container::cluster & cluster, const std::vector<digi::signal> & signals);
-
+      void build_cluster(cluster_container::cluster & cluster, const std::vector<digi::signal> & signals,std::vector<bool>& clustered, size_t i);
 
   };
 

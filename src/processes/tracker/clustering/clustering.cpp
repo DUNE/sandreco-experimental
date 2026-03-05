@@ -34,12 +34,29 @@ namespace sand::tracker {
     auto & clu_out = set<sand::tracker::cluster_container>("clu");
 
     auto signals_by_station = group_signals_by_station();
+    UFW_INFO("Stations with signals : {}", signals_by_station.size());
     for (const auto &[station, signals] : signals_by_station) {
       UFW_DEBUG("Clusterizing {} signals for station corresponding to daq_link {}.", signals.size(), station->daq_link);
       clusterize_signals(signals);
+      total_clusters += clu_out.clusters.size();
+    }
+    //Clustering process debug info
+    const size_t nSignals = digi.signals.size();
+    const size_t nClusters = clu_out.clusters.size();
+    UFW_INFO("=========CLUSTER ANALYSIS=========");
+    UFW_INFO("Total signals collected : {}", nSignals);
+    UFW_INFO("Total clusters found : {}", nClusters);
+
+    if(nClusters > 0 ){
+      std::vector<size_t> cluster_size;
+      cluster_size.reserve(nClusters);
+      for(const auto& c : clu_out.clusters){
+        cluster_size.push_back(c.digits().size());
+      }
+
     }
 
-    UFW_DEBUG(" Completed clustering process at {}", fmt::ptr(this));
+   UFW_DEBUG(" Completed clustering process at {}", fmt::ptr(this));
 
   }
 
@@ -62,18 +79,41 @@ namespace sand::tracker {
   }
 
   void clustering::clusterize_signals(const std::vector<digi::signal> & signals) {
-
     if(signals.empty()) return;
-    auto & clu_out = set<sand::tracker::cluster_container>("clu");
-    for (const auto & signal : signals) {
-      cluster_container::cluster current_cluster(std::make_shared<digi::signal>(signal));
-      build_cluster(current_cluster, signals);
+    auto & clu_out = set<sand::tracker::cluster_container>("clu"); //output clusters
+    const auto& gi = get<geoinfo>();
+
+    const size_t n = signals.size();
+    std::vector<bool> clustered(n, false);
+
+    for (size_t i = 0; i < n; ++i) {
+      if (clustered[i]) continue;
+      
+      cluster_container::cluster current_cluster;
+      build_cluster(current_cluster, signals, clustered, i);
+      if(!current_cluster.digits().empty()){
+      clu_out.clusters.push_back(std::move(current_cluster));
+      }
     }
   } 
 
-  void clustering::build_cluster(cluster_container::cluster & cluster, const std::vector<digi::signal> & signals) {
-    /// TODO: implement clustering
-    return;
-  }
+    void clustering::build_cluster(cluster_container::cluster& cluster,const std::vector<digi::signal>& signals, std::vector<bool>& visited, size_t index)
+    {
+        const auto& gi = get<geoinfo>();
+        visited[index] = true;
+       cluster.add_digit(index);
+
+        const auto& wire_i = gi.tracker().wire_at(signals[index].channel());
+
+        for (size_t j = 0; j < signals.size(); ++j)
+        {
+            if (visited[j]) continue;
+            const auto& wire_j = gi.tracker().wire_at(signals[j].channel());
+            if (wire_i.is_adjecent(wire_j))
+            {
+                build_cluster(cluster, signals, visited, j);
+            }
+        }
+    }
 
 } // namespace sand::tracker

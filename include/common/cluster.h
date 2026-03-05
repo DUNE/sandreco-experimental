@@ -15,10 +15,8 @@ namespace sand::reco {
 class cluster : public sand::truth {
   public:
     cluster() = default;
-    explicit cluster(std::vector<std::shared_ptr<digi>> digits) 
-        : m_digits(std::move(digits)) {}
-
-    explicit cluster(const std::shared_ptr<digi>& d) : m_digits({d}) {}
+    explicit cluster(std::vector<size_t> indices) : m_digit_indices(std::move(indices)) {}
+    explicit cluster(size_t index) : m_digit_indices({index}) {}
     
     cluster(const cluster&) = default;
     cluster(cluster&&) = default;
@@ -26,26 +24,25 @@ class cluster : public sand::truth {
     cluster& operator=(cluster&&) = default;
     ~cluster() = default;
     
-    // Accessors
-    const std::vector<std::shared_ptr<digi>>& digits() const { return m_digits; }
-    std::vector<std::shared_ptr<digi>>& digits_mut() { return m_digits; }
 
-    bool contains(const std::shared_ptr<digi>& d) const {
-        return std::find(m_digits.begin(), m_digits.end(), d) != m_digits.end();
+    const std::vector<size_t>& digits () const {return m_digit_indices;}
+    std::vector<size_t>& digits_mut() { return m_digit_indices; }
+
+    bool contains(size_t idx) const {
+        return std::find(m_digit_indices.begin(),
+                         m_digit_indices.end(),
+                         idx) != m_digit_indices.end();
+    }
+
+    // Modifiers
+    void add_digit(size_t idx) {
+        m_digit_indices.push_back(idx);
     }
     
-    // Modifiers
-    void add_digit(std::shared_ptr<digi> d) {
-        m_digits.push_back(std::move(d));
-    }
-
-    void add_digit(std::shared_ptr<digi>&& d) {
-        m_digits.push_back(std::move(d));  // Overloaded option to transfer ownership
-    }
 
   private:
     /// Using shared ptrs to avoid copying, but allow digits to belong to multiple clusters
-    std::vector<std::shared_ptr<digi>> m_digits;
+    std::vector<size_t> m_digit_indices;
   };
 
 
