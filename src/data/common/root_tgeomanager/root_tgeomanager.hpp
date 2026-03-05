@@ -68,7 +68,9 @@ namespace sand {
 
     ~root_tgeomanager();
 
-    std::unique_ptr<tgeonav, geonav_deleter> navigator();
+    using navigator_ptr = std::unique_ptr<tgeonav, geonav_deleter>;
+
+    navigator_ptr navigator();
 
    private:
     TGeoManager* m_geomanager;

@@ -101,28 +101,168 @@ namespace sand::common {
       }
       UFW_INFO("Last camera info: distance lens-sensor = {}", pix_spam.z_lens);
     }
+
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
+
+    constexpr std::array<sand::geo_id::region_t, 3> vsm = {
+        sand::geo_id::region_t::BARREL, sand::geo_id::region_t::ENDCAP_A, sand::geo_id::region_t::ENDCAP_B};
+
+    constexpr std::array<sand::geo_id::element_t, 1> ve_b = {sand::geo_id::element_t::NONE};
+
+    constexpr std::array<sand::geo_id::element_t, 5> ve_ec = {
+        sand::geo_id::element_t::ENDCAP_VERTICAL, sand::geo_id::element_t::ENDCAP_CURVE_TOP,
+        sand::geo_id::element_t::ENDCAP_CURVE_BOT, sand::geo_id::element_t::ENDCAP_HOR_TOP,
+        sand::geo_id::element_t::ENDCAP_HOR_BOT};
+
+    constexpr std::array<sand::geo_id::element_t, 4> ve_ec_c = {
+        sand::geo_id::element_t::ENDCAP_VERTICAL, sand::geo_id::element_t::ENDCAP_CURVE_TOP,
+        sand::geo_id::element_t::ENDCAP_CURVE_BOT, sand::geo_id::element_t::ENDCAP_HOR_TOP};
+
+    for (auto ism : vsm) {
+      for (uint8_t im = 0, nm = ism == 0 ? 24 : 32; im < nm; im++) {
+        uint8_t nc = 12;
+        if (ism != 0) {
+          auto iim = uint8_t(im % 16);
+          if (iim < 2)
+            nc = 6;
+          else if (iim > 11)
+            nc = 2;
+          else
+            nc = 3;
+        }
+        for (uint8_t ir = 0; ir < 5; ir++) {
+          for (uint8_t ic = 0; ic < nc; ic++) {
+            sand::geoinfo::ecal_info::cell_id cid;
+            cid.region        = ism;
+            cid.module_number = im;
+            cid.row           = ir;
+            cid.column        = ic;
+            auto& c           = gi.ecal().at(cid);
+            UFW_INFO("SM: {}, MODULE: {}, cell: {}, row: {}, column: {}, elements size: {}, begin_face centroid: {}, "
+                     "end_face centroid: {}",
+                     ism == sand::geo_id::region_t::BARREL
+                         ? "BARREL"
+                         : (ism == sand::geo_id::region_t::ENDCAP_A ? "ENDCAP_A" : "ENDCAP_B"),
+                     im, cid.raw, ir, ic, c.element_collection().elements().size(),
+                     c.element_collection().elements().front()->begin_face().centroid(),
+                     c.element_collection().elements().back()->end_face().centroid());
+          }
+        }
+
+        auto loop_module_active_planes = [&gi, ism, im](auto& ve) {
+          for (auto ie : ve)
+            for (uint8_t ip = 0; ip < 209; ip++) {
+              sand::geo_id gid;
+              gid.ecal.subdetector = sand::subdetector_t::ECAL;
+              gid.ecal.region      = ism;
+              gid.ecal.supermodule = im;
+              gid.ecal.element     = ie;
+              gid.ecal.plane       = ip;
+              auto& cc             = gi.ecal().cells(gid);
+              UFW_INFO("geo_id: {} -> vector size: {}", gid, cc.size());
+              for (auto& c_ref : cc) {
+                auto& c = (*c_ref).second;
+                UFW_INFO("geo_id: {} -> SM: {}, MODULE: {}, cell: {}, row: {}, column: {}, elements size: {}, "
+                         "begin_face centroid: {}, "
+                         "end_face centroid: {}",
+                         gid,
+                         ism == sand::geo_id::region_t::BARREL
+                             ? "BARREL"
+                             : (ism == sand::geo_id::region_t::ENDCAP_A ? "ENDCAP_A" : "ENDCAP_B"),
+                         im, c.id().raw, c.id().row, c.id().column, c.element_collection().elements().size(),
+                         c.element_collection().elements().front()->begin_face().centroid(),
+                         c.element_collection().elements().back()->end_face().centroid());
+              }
+            }
+        };
+
+        if (ism == sand::geo_id::region_t::BARREL) {
+          loop_module_active_planes(ve_b);
+        } else if (ism == sand::geo_id::region_t::ENDCAP_A || ism == sand::geo_id::region_t::ENDCAP_B) {
+          if (im % 16 == 0 || im % 16 == 1) {
+            loop_module_active_planes(ve_ec_c);
+          } else {
+            loop_module_active_planes(ve_ec);
+          }
+        }
+      }
+    }
+
+    sand::geoinfo::ecal_info::cell_id cid;
+    cid.region        = sand::geo_id::region_t::BARREL;
+    cid.module_number = 13;
+    cid.row           = 4;
+    cid.column        = 7;
+    auto& cb          = gi.ecal().at(cid);
+    auto c1           = cb.element_collection().elements().front()->begin_face().centroid();
+    auto c2           = cb.element_collection().elements().back()->end_face().centroid();
+    auto p            = c1 + 0.3 * (c2 - c1);
+    auto obt_cid      = gi.ecal().at(p).id();
+    auto l1exp        = (c1 - p).R();
+    auto l2exp        = (c2 - p).R();
+    auto lexp         = l1exp + l2exp;
+    auto l1obt        = cb.pathlength(p, sand::geoinfo::ecal_info::face_location::begin);
+    auto l2obt        = cb.pathlength(p, sand::geoinfo::ecal_info::face_location::end);
+    auto lobt         = cb.total_pathlength();
+    auto off          = -(0.5 * lexp - l1exp);
+    auto pobt         = cb.offset2position(off);
+
+    UFW_ASSERT(lexp == lobt,
+               "[ECAL BARREL] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt);
+    UFW_ASSERT(l1exp == l1obt,
+               "[ECAL BARREL] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt);
+    UFW_ASSERT(p == pobt,
+               "[ECAL BARREL] Points don't match!!! Expected point: {} - Obtained point: {}", p, pobt);
+    UFW_ASSERT(cb.is_inside(p), "[ECAL BARREL] Point: {} is expected to be inside!!", p);
+    UFW_ASSERT(cid.raw == obt_cid.raw,
+               "[ECAL BARREL] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw);
+
+    cid.region        = sand::geo_id::region_t::ENDCAP_A;
+    cid.module_number = 0;
+    cid.row           = 4;
+    cid.column        = 2;
+    auto& ce          = gi.ecal().at(cid);
+    off               = -0.7 * 0.5 * ce.total_pathlength();
+    p                 = ce.offset2position(off);
+    obt_cid           = gi.ecal().at(p).id();
+    l1obt             = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::begin);
+    l2obt             = ce.pathlength(p, sand::geoinfo::ecal_info::face_location::end);
+    l1exp             = 0.5 * ce.total_pathlength() + off;
+    l2exp             = 0.5 * ce.total_pathlength() - off;
+    lobt              = ce.total_pathlength();
+    lexp              = l1exp + l2exp;
+
+    UFW_ASSERT(lexp == lobt,
+               "[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt);
+    UFW_ASSERT(2. * (l1exp - l1obt) / (l1exp + l1obt) < 1.E-9,
+               "[ECAL ENDCAP] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt);
+    UFW_ASSERT(ce.is_inside(p), "[ECAL ENDCAP] Point: {} is expected to be inside!!", p);
+    UFW_ASSERT(cid.raw == obt_cid.raw,
+               "[ECAL ENDCAP] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw);
+
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
 
     bool isSTT = (gi.tracker().path().find("STT") != std::string::npos);
-    if (isSTT) UFW_INFO("TRACKER is STT");
-    else UFW_INFO("TRACKER is DRIFT");
+    if (isSTT)
+      UFW_INFO("TRACKER is STT");
+    else
+      UFW_INFO("TRACKER is DRIFT");
 
     if (!m_test_path.empty()) {
-        UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
-        auto ID = gi.tracker().id(gi.tracker().partial_path(m_test_path, gi));
-        if (isSTT) {
-          UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector,
-                  ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
-        } else {
-          UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {})", ID.subdetector,
-                  ID.drift.supermodule, ID.drift.plane);
-        }
-        UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
+      UFW_INFO("Testing Tracker path->ID and ID->path functions using as input: '{}'", m_test_path);
+      auto ID = gi.tracker().id(gi.tracker().partial_path(m_test_path, gi));
+      if (isSTT) {
+        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {}; TubeID: {})", ID.subdetector,
+                 ID.stt.supermodule, ID.stt.plane, ID.stt.tube);
       } else {
-        UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
+        UFW_INFO("ID function test (SubdetectorID: {}; SupermoduleID: {}; PlaneID: {})", ID.subdetector,
+                 ID.drift.supermodule, ID.drift.plane);
       }
+      UFW_INFO("ID path: '{}'", gi.tracker().path(ID));
+    } else {
+      UFW_INFO("No test path provided, skipping path->ID and ID->path tests.");
+    }
 
     UFW_INFO("TRACKER position: '{}'", gi.tracker().transform());
 
@@ -133,25 +273,16 @@ namespace sand::common {
         auto nver = s->select([](auto& w) {
                        return !std::fmod(w.angle(), M_PI) < 1e-3 && std::fmod(w.angle(), M_PI_2) < 1e-3;
                      }).size();
-        UFW_INFO(
-            "Station {}:\n - corners: [{}, {}, {}, {}];\n - {} h and {} v wires;\n - target material {}",
-            i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
-        } else {   
-        auto nx = s->select([&](const auto& w) {
-          return std::abs(w.angle() - 0.0) < 1e-6;
-        }).size();
-        auto nu = s->select([&](const auto& w) {
-          return std::abs(w.angle() - (M_PI / 36.0)) < 1e-6;
-        }).size(); 
-        auto nv = s->select([&](const auto& w) {
-          return std::abs(w.angle() + (M_PI / 36.0)) < 1e-6;
-        }).size();
-        UFW_INFO(
-            "Station {}:\n - corners: [{}, {}, {}, {}];\n - {} x, {} u, and {} v wires;\n - target material {}",
-            i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nx, nu, nv, s->target);
-        }
+        UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} h and {} v wires;\n - target material {}", i++,
+                 s->top_north, s->top_south, s->bottom_north, s->bottom_south, nhor, nver, s->target);
+      } else {
+        auto nx = s->select([&](const auto& w) { return std::abs(w.angle() - 0.0) < 1e-6; }).size();
+        auto nu = s->select([&](const auto& w) { return std::abs(w.angle() - (M_PI / 36.0)) < 1e-6; }).size();
+        auto nv = s->select([&](const auto& w) { return std::abs(w.angle() + (M_PI / 36.0)) < 1e-6; }).size();
+        UFW_INFO("Station {}:\n - corners: [{}, {}, {}, {}];\n - {} x, {} u, and {} v wires;\n - target material {}",
+                 i++, s->top_north, s->top_south, s->bottom_north, s->bottom_south, nx, nu, nv, s->target);
+      }
     }
-
   }
 } // namespace sand::common
 
