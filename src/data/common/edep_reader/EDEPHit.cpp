@@ -35,6 +35,11 @@ std::initializer_list<std::string> stt_names = {"horizontalST", "STT", "TrkMod",
                                                 "C3H6Mod",      "Trk", "SuperMod", "Drift"};
 
 /**
+ * @brief List of string names associated with the generic DRIFT component.
+ */
+std::initializer_list<std::string> generic_drift_names = {"SANDtracker", "ch", "t_P",  "t_C", "m", "fr"};
+
+/**
  * @brief List of string names associated with the DRIFT component.
  */
 std::initializer_list<std::string> drift_names = {"SANDtracker", "Trk",     "CMod",      "C3H6Mod", "SuperMod", "Drift",

@@ -153,11 +153,12 @@ EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
     bool in_world   = Match(current_volume, world_names);
     if(in_world) comp = component::WORLD;
 
-    bool in_stt     = Match(current_volume, stt_names);
-    bool in_drift   = Match(current_volume, drift_names);
+    bool in_stt             = Match(current_volume, stt_names);
+    bool in_drift           = Match(current_volume, drift_names);
+    bool in_generic_drift   = Match(current_volume, generic_drift_names);
 
     if(in_stt )   comp = component::STRAW;
-    if(in_drift)  comp = component::DRIFT;
+    if(in_drift || in_generic_drift)  comp = component::DRIFT;
 
     // Notice: This is useful to debug unincluded volume names
     // if (!(in_grain || in_stt || in_drift || in_ecal || in_mag || in_world)) {
@@ -198,15 +199,16 @@ EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
       next_volume = "";
     }
 
-    bool next_grain = Match(next_volume,    grain_names);
-    bool next_stt   = Match(next_volume,    stt_names);
-    bool next_drift = Match(next_volume,    drift_names);
-    bool next_ecal  = Match(next_volume,    ecal_names);
-    bool next_mag   = Match(next_volume,    magnet_names);
-    bool next_world = Match(next_volume,    world_names);
+    bool next_grain         = Match(next_volume,    grain_names);
+    bool next_stt           = Match(next_volume,    stt_names);
+    bool next_drift         = Match(next_volume,    drift_names);
+    bool next_generic_drift = Match(next_volume,    generic_drift_names);
+    bool next_ecal          = Match(next_volume,    ecal_names);
+    bool next_mag           = Match(next_volume,    magnet_names);
+    bool next_world         = Match(next_volume,    world_names);
 
-    bool      in[6]   = {in_grain,   in_stt,   in_drift,   in_ecal,   in_mag,   in_world};
-    bool      next[6] = {next_grain, next_stt, next_drift, next_ecal, next_mag, next_world};
+    bool      in[7]   = {in_grain,   in_stt,   in_drift,   in_ecal,   in_mag,   in_world, in_generic_drift};
+    bool      next[7] = {next_grain, next_stt, next_drift, next_ecal, next_mag, next_world, in_generic_drift};
     CheckInNext(in, next, *it, *next_it);
 
   }
