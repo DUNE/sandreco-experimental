@@ -11,7 +11,6 @@ foreach(testSrc ${TEST_SRCS})
         ${CMAKE_SOURCE_DIR}/src/processes/fake_reco
         ${CMAKE_SOURCE_DIR}/src/data/common
         ${CMAKE_SOURCE_DIR}/include
-        ${duneanaobj_INCLUDE_DIR}
     )
     add_test_with_libs(${testName} sand_fake_reco ufw::ufw ROOT::Core ROOT::EG duneanaobj::StandardRecord sand_edep_reader sand_genie_reader EDepSim::edepsim_io)
 endforeach(testSrc)

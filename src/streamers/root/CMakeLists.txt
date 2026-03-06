@@ -5,6 +5,7 @@ target_sources(sand_root_tree_streamer PRIVATE
     tree_streamer.hpp
     tree_streamer.cpp)
 
+get_target_property(duneanaobj_INCLUDE_DIR duneanaobj::StandardRecord INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(sand_root_tree_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_INCLUDE_DIR})
 
 target_link_libraries(sand_root_tree_streamer PUBLIC ufw::ufw PRIVATE ROOT::RIO ROOT::Tree)

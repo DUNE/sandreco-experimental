@@ -4,11 +4,24 @@ target_sources(sand_caf_caf_streamer PRIVATE
     caf_streamer.hpp
     caf_streamer.cpp)
 
-target_include_directories(sand_caf_caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_INCLUDE_DIR})
+target_include_directories(sand_caf_caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include)
 
 target_link_libraries(sand_caf_caf_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw duneanaobj::StandardRecord)
 
 include(GNUInstallDirs)
+
+# duneanaobj's CMake config does not export INTERFACE_INCLUDE_DIRECTORIES,
+# so derive the include path from the imported library location and patch the target.
+get_target_property(_duneanaobj_lib duneanaobj::StandardRecord IMPORTED_LOCATION_NOCONFIG)
+if(NOT _duneanaobj_lib)
+  get_target_property(_duneanaobj_lib duneanaobj::StandardRecord IMPORTED_LOCATION_RELEASE)
+endif()
+cmake_path(GET _duneanaobj_lib PARENT_PATH _duneanaobj_libdir)
+cmake_path(GET _duneanaobj_libdir PARENT_PATH _duneanaobj_prefix)
+set(duneanaobj_INCLUDE_DIR "${_duneanaobj_prefix}/include")
+set_target_properties(duneanaobj::StandardRecord PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${duneanaobj_INCLUDE_DIR}")
+
 set(DUNEANAOBJ_HEADERS "${duneanaobj_INCLUDE_DIR}/duneanaobj/StandardRecord")
 #The streamer relies on dictionary generation and its own definitions for
 #correct representation of any user type. This requires all said types to be known.
