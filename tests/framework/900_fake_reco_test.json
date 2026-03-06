@@ -32,7 +32,7 @@
     {
       "sand::caf::caf_streamer": {
         "uri": "test/output.caf.root",
-        "tree": "SR"
+        "tree": "cafTree"
       },
       "write": ["produced_caf"]
     }
