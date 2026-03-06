@@ -2,7 +2,7 @@
 #include <geoinfo/ecal_info.hpp>
 #include <optical_simulation.hpp>
 #include <ufw/process.hpp>
-#include <ecal/pes.h>
+#include <ecal/photo_electron.h>
 
 namespace sand::ecal {
 
