@@ -13,7 +13,7 @@ namespace sand::ecal {
   }
 
   /// Constructor: Initialize the optical simulation process with output PES data
-  optical_simulation::optical_simulation() : process({}, {{"pes", "sand::ecal::pes"}}) {
+  optical_simulation::optical_simulation() : process({}, {{"pes", "sand::ecal::pes_container"}}) {
     UFW_DEBUG("Creating ECAL optical simulation process at {}", fmt::ptr(this));
   }
 

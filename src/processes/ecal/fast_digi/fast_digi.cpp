@@ -19,7 +19,7 @@ namespace sand::ecal {
   }
 
   /// Constructor: Initialize digitization process with PES input and DIGI output
-  fast_digi::fast_digi() : process({{"pes", "sand::ecal::pes"}}, {{"digi", "sand::ecal::digi"}}) {
+  fast_digi::fast_digi() : process({{"pes", "sand::ecal::pes_container"}}, {{"digi", "sand::ecal::digits_container"}}) {
     UFW_DEBUG("Creating a ecal fast digitization process at {}", fmt::ptr(this));
   }
 
