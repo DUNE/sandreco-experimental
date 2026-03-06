@@ -28,10 +28,10 @@ namespace sand::ecal {
     };
 
     /// @brief Vector container for digitized signals
-    using signal_collection = std::vector<digit>;
+    using digits_collection = std::vector<digit>;
 
     /// @brief Collection of digitized signals from the calorimeter
-    signal_collection digits;
+    digits_collection digits;
   };
 } // namespace sand::ecal
 

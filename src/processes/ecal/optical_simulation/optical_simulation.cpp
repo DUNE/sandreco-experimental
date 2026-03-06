@@ -24,7 +24,7 @@ namespace sand::ecal {
     const auto& tree  = get<sand::edep_reader>();
     const auto& gecal = get<geoinfo>().ecal();
     // Get output photo-electron collection
-    auto& pes = set<sand::ecal::pes>("pes");
+    auto& pes = set<sand::ecal::pes_container>("pes");
 
     // Process each trajectory from the energy deposit record
     for (const auto& trj : tree) {
@@ -74,7 +74,7 @@ namespace sand::ecal {
             auto arrival_time = h_t + scintillation_time(fiber.scintillation_rise_time, fiber.scintillation_decay_time)
                               + propagation_time(l, fiber.light_velocity);
             // Create photo-electron with truth hit ID and calculated arrival time
-            pes::pe pe_(hit.GetId(), arrival_time);
+            pes_container::photo_electron pe_(hit.GetId(), arrival_time);
             // Build complete channel ID from cell geometry
             channel_id chid = gecal.channel({cid, fl});
             // Store photo-electron in output collection

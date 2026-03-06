@@ -30,7 +30,7 @@ namespace sand::ecal {
     // Get ECAL geometry information
     const auto& gecal = get<geoinfo>().ecal();
     // Get input photo-electron collection
-    auto& pes = get<sand::ecal::pes>("pes");
+    auto& pes = get<sand::ecal::pes_container>("pes");
     // Get output digitized signal collection
     auto& digi = set<sand::ecal::digits_container>("digi");
 
@@ -70,7 +70,7 @@ namespace sand::ecal {
           // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
           digits_container::digit signal{reco::digi{pmt, reco::digi::time{tdc - 35., tdc, tdc + 5.}}, adc, tdc, tot};
           // Collect all truth hits from photo-electrons in this pulse
-          std::vector<pes::pe>::iterator it = start_pe;
+          std::vector<pes_container::photo_electron>::iterator it = start_pe;
 
           // Add truth hit information from all contributing photo-electrons
           while (it != this_pe) {
