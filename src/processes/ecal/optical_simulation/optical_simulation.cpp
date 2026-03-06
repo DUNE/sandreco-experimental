@@ -1,6 +1,6 @@
+#include <optical_simulation.hpp>
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/ecal_info.hpp>
-#include <optical_simulation.hpp>
 #include <ecal/photo_electron.h>
 
 namespace sand::ecal {
