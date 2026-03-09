@@ -5,6 +5,7 @@
 /// @brief Utilities for CAF fillers: PDG classification, vector math, truth matching
 
 #include <ufw/utils.hpp>
+#include <ufw/context.hpp>
 
 #include <duneanaobj/StandardRecord/SREnums.h>
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>

@@ -97,16 +97,29 @@ namespace sand {
     Ideally, vertical (enough) planes should be excluded */
     const int n_pts = std::count_if(hit_vec.begin(), hit_vec.end(), [](const EDEPHit& hit){return hit.GetEnergyDeposit() > 250e-6;});
 
-    // constant pars, TODO: define a better placement
-    const double single_hit_sigma = 200e-3; //[mm]
+    // constant pars, TODO: find a better placement
+    const double single_hit_sigma = 200e-3; // [mm]
     const double B_mag = 0.6; //[T]
     // lever-arm from truth values
     const double delta_Y = (true_part.end_pos-true_part.start_pos).Y();
     const double delta_Z = (true_part.end_pos-true_part.start_pos).Z();
     const double lever_arm = std::sqrt(delta_Y*delta_Y+delta_Z*delta_Z);
     const double Pt = std::sqrt(true_part.p.Y()*true_part.p.Y()+true_part.p.Z()*true_part.p.Z());
-
+    
+    // measurement Gluckstern smearing factor
     const double measure_Pt_res = (single_hit_sigma*Pt)/(0.3*B_mag*lever_arm)*std::sqrt(720.0/(n_pts+4));
+
+    // random extraction of the smearing factor (force a positive Pt)
+    std::normal_distribution<double> relative_Pt_error(1.0, measure_Pt_res);
+    double ran = relative_Pt_error(random_engine());
+    while(ran<=0){
+      ran = relative_Pt_error(random_engine());
+    }
+    const double Pt_smear = Pt * ran;
+    // reset the magnitude of the reco Pt
+    auto true_unit_vec = true_part.p.Vect().Unit();
+    reco.p.SetY(true_unit_vec.Y()*Pt_smear);
+    reco.p.SetZ(true_unit_vec.Z()*Pt_smear);
 
   }
 

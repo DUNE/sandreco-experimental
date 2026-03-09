@@ -66,6 +66,9 @@ namespace sand {
   /// @brief Fills SRRecoParticle from truth (fake reconstruction)
   template <>
   struct CAFFiller<::caf::SRRecoParticle> {
+
+    static ufw::context::random_engine& random_engine() { return ufw::context::current()->engine(); };
+
     CAFFiller() = delete;
 
     [[nodiscard]] static ::caf::SRRecoParticle from_true(const ::caf::SRTrueParticle& true_part,
