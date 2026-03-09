@@ -39,12 +39,6 @@ namespace sand {
     /// @brief Verify all size counters match vector sizes
     void assert_sizes() const;
 
-    /// @brief Wrapper for filling caf::SRRecoParticle according to the particle type (muon vs. all else, for now)
-    sand::caf::SRRecoParticle fill_reco_particle(const sand::caf::SRTrueParticle &true_prim, const sand::caf::TrueParticleID &prim_id) const;
-
-    /// @brief Apply bending-plane momentum smearing to muon tracks only (for the moment)
-    void smear_muon_momentum(caf::SRRecoParticle &reco_mu, const sand::caf::TrueParticleID &mu_id) const;
-
    public:
     smeared_fake_reco();
 
