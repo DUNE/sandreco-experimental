@@ -162,7 +162,8 @@ namespace sand {
       const auto& prim_id   = true_prim.ancestor_id;
 
       // Create SRRecoParticle from truth
-      auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, m_edep->GetTrajectory(true_prim.G4ID)); // so, the relevant call seems to be here (add a member function to manage this)
+      const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
+      auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj); // so, the relevant call seems to be here (add a member function to manage this)
       // auto reco_part = fill_reco_particle(true_prim, prim_id); // new addition
 
       reco_ixn.part.sandreco.push_back(std::move(reco_part));
