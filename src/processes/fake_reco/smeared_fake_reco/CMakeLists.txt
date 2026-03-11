@@ -3,6 +3,7 @@ add_library(sand_smeared_fake_reco
     GlucksternSmearing.cpp
     ../caf_handlers/caf_filler_true.cpp
     ../caf_handlers/caf_filler_reco.cpp
+    ../caf_handlers/smeared_caf_filler_reco.cpp
     ../genie_helpers/EvtCode_parser.cpp
 )
 
