@@ -35,7 +35,7 @@ namespace smearing{
             static ufw::context::random_engine& m_random_engine() { return ufw::context::current()->engine(); };
 
             double compute_measurement_smearing(const double p_transverse) const {
-                return (k_single_hit_sigma*p_transverse)/(0.3*k_b_field_magnitude*m_lever_arm)*std::sqrt(720.0/(m_n_pts+4));
+                return (k_single_hit_sigma*p_transverse)/(0.3*k_b_field_magnitude*m_lever_arm*m_lever_arm)*std::sqrt(720.0/(m_n_pts+4));
             }
 
         };
