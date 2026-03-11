@@ -17,12 +17,14 @@ namespace smearing{
                 }
             }
             
-            m_n_pts = hit_pts_above_thr.size(); // set the number of points for Gluckstern smearing
-
-            if(hit_pts_above_thr.empty()) {
-                UFW_ERROR("Trajectory has no hits above energy threshold.");
+            if (hit_pts_above_thr.empty()) {
+              UFW_ERROR("Trajectory has no hits above energy threshold.");
             } else {
-                m_lever_arm = (hit_pts_above_thr.back()-hit_pts_above_thr.front()).P();
+              m_n_pts = hit_pts_above_thr.size(); // set the number of points for Gluckstern smearing
+              // lever arm in the bending plane (YZ) for Gluckstern formula
+              const auto hits_delta = hit_pts_above_thr.back() - hit_pts_above_thr.front();
+              m_lever_arm = std::sqrt(hits_delta.Y() * hits_delta.Y() +
+                                      hits_delta.Z() * hits_delta.Z());
             }
             
             // then compute path_len/X0
