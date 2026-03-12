@@ -105,32 +105,85 @@ namespace sand::common {
     UFW_INFO("ECAL path: '{}'", gi.ecal().path());
     UFW_INFO("ECAL position: '{}'", gi.ecal().transform());
 
-    for (uint8_t ism = 0; ism < 3; ism++) {
-      UFW_INFO("SM: {}", ism == 0 ? "BARREL" : (ism == 1 ? "ENDCAP_A" : "ENDCAP_B"));
-      for (uint8_t im = 0; im < (ism == 0 ? 24 : 32); im++) {
-        UFW_INFO("  MODULE: {}", im);
+    constexpr std::array<sand::geo_id::region_t, 3> vsm = {
+        sand::geo_id::region_t::BARREL, sand::geo_id::region_t::ENDCAP_A, sand::geo_id::region_t::ENDCAP_B};
+
+    constexpr std::array<sand::geo_id::element_t, 1> ve_b = {sand::geo_id::element_t::NONE};
+
+    constexpr std::array<sand::geo_id::element_t, 5> ve_ec = {
+        sand::geo_id::element_t::ENDCAP_VERTICAL, sand::geo_id::element_t::ENDCAP_CURVE_TOP,
+        sand::geo_id::element_t::ENDCAP_CURVE_BOT, sand::geo_id::element_t::ENDCAP_HOR_TOP,
+        sand::geo_id::element_t::ENDCAP_HOR_BOT};
+
+    constexpr std::array<sand::geo_id::element_t, 4> ve_ec_c = {
+        sand::geo_id::element_t::ENDCAP_VERTICAL, sand::geo_id::element_t::ENDCAP_CURVE_TOP,
+        sand::geo_id::element_t::ENDCAP_CURVE_BOT, sand::geo_id::element_t::ENDCAP_HOR_TOP};
+
+    for (auto ism : vsm) {
+      for (uint8_t im = 0, nm = ism == 0 ? 24 : 32; im < nm; im++) {
+        uint8_t nc = 12;
+        if (ism != 0) {
+          auto iim = uint8_t(im % 16);
+          if (iim < 2)
+            nc = 6;
+          else if (iim > 11)
+            nc = 2;
+          else
+            nc = 3;
+        }
         for (uint8_t ir = 0; ir < 5; ir++) {
-          uint8_t nc = 12;
-          if (ism != 0) {
-            auto iim = uint8_t(im % 16);
-            if (iim < 2)
-              nc = 6;
-            else if (iim > 11)
-              nc = 2;
-            else
-              nc = 3;
-          }
           for (uint8_t ic = 0; ic < nc; ic++) {
             sand::geoinfo::ecal_info::cell_id cid;
-            cid.region        = sand::geo_id::region_t(ism);
+            cid.region        = ism;
             cid.module_number = im;
             cid.row           = ir;
             cid.column        = ic;
             auto& c           = gi.ecal().at(cid);
-            UFW_INFO("    cell: {}, row: {}, column: {}", cid.raw, ir, ic);
-            UFW_INFO("    elements size: {}", c.element_collection().elements().size());
-            UFW_INFO("      face[1] centroid: {}", c.element_collection().elements().front()->begin_face().centroid());
-            UFW_INFO("      face[2] centroid: {}", c.element_collection().elements().back()->end_face().centroid());
+            UFW_INFO("SM: {}, MODULE: {}, cell: {}, row: {}, column: {}, elements size: {}, begin_face centroid: {}, "
+                     "end_face centroid: {}",
+                     ism == sand::geo_id::region_t::BARREL
+                         ? "BARREL"
+                         : (ism == sand::geo_id::region_t::ENDCAP_A ? "ENDCAP_A" : "ENDCAP_B"),
+                     im, cid.raw, ir, ic, c.element_collection().elements().size(),
+                     c.element_collection().elements().front()->begin_face().centroid(),
+                     c.element_collection().elements().back()->end_face().centroid());
+          }
+        }
+
+        auto loop_module_active_planes = [&gi, ism, im](auto& ve) {
+          for (auto ie : ve)
+            for (uint8_t ip = 0; ip < 209; ip++) {
+              sand::geo_id gid;
+              gid.ecal.subdetector = sand::subdetector_t::ECAL;
+              gid.ecal.region      = ism;
+              gid.ecal.supermodule = im;
+              gid.ecal.element     = ie;
+              gid.ecal.plane       = ip;
+              auto& cc             = gi.ecal().cells(gid);
+              UFW_INFO("geo_id: {} -> vector size: {}", gid, cc.size());
+              for (auto& c_ref : cc) {
+                auto& c = (*c_ref).second;
+                UFW_INFO("geo_id: {} -> SM: {}, MODULE: {}, cell: {}, row: {}, column: {}, elements size: {}, "
+                         "begin_face centroid: {}, "
+                         "end_face centroid: {}",
+                         gid,
+                         ism == sand::geo_id::region_t::BARREL
+                             ? "BARREL"
+                             : (ism == sand::geo_id::region_t::ENDCAP_A ? "ENDCAP_A" : "ENDCAP_B"),
+                         im, c.id().raw, c.id().row, c.id().column, c.element_collection().elements().size(),
+                         c.element_collection().elements().front()->begin_face().centroid(),
+                         c.element_collection().elements().back()->end_face().centroid());
+              }
+            }
+        };
+
+        if (ism == sand::geo_id::region_t::BARREL) {
+          loop_module_active_planes(ve_b);
+        } else if (ism == sand::geo_id::region_t::ENDCAP_A || ism == sand::geo_id::region_t::ENDCAP_B) {
+          if (im % 16 == 0 || im % 16 == 1) {
+            loop_module_active_planes(ve_ec_c);
+          } else {
+            loop_module_active_planes(ve_ec);
           }
         }
       }
@@ -156,14 +209,14 @@ namespace sand::common {
     auto pobt         = cb.offset2position(off);
 
     UFW_ASSERT(lexp == lobt,
-               fmt::format("[ECAL BARREL] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt));
+               "[ECAL BARREL] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt);
     UFW_ASSERT(l1exp == l1obt,
-               fmt::format("[ECAL BARREL] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt));
+               "[ECAL BARREL] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt);
     UFW_ASSERT(p == pobt,
-               fmt::format("[ECAL BARREL] Points don't match!!! Expected point: {} - Obtained point: {}", p, pobt));
-    UFW_ASSERT(cb.is_inside(p), fmt::format("[ECAL BARREL] Point: {} is expected to be inside!!", p));
+               "[ECAL BARREL] Points don't match!!! Expected point: {} - Obtained point: {}", p, pobt);
+    UFW_ASSERT(cb.is_inside(p), "[ECAL BARREL] Point: {} is expected to be inside!!", p);
     UFW_ASSERT(cid.raw == obt_cid.raw,
-               fmt::format("[ECAL BARREL] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw));
+               "[ECAL BARREL] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw);
 
     cid.region        = sand::geo_id::region_t::ENDCAP_A;
     cid.module_number = 0;
@@ -181,12 +234,12 @@ namespace sand::common {
     lexp              = l1exp + l2exp;
 
     UFW_ASSERT(lexp == lobt,
-               fmt::format("[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt));
+               "[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt);
     UFW_ASSERT(2. * (l1exp - l1obt) / (l1exp + l1obt) < 1.E-9,
-               fmt::format("[ECAL ENDCAP] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt));
-    UFW_ASSERT(ce.is_inside(p), fmt::format("[ECAL ENDCAP] Point: {} is expected to be inside!!", p));
+               "[ECAL ENDCAP] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt);
+    UFW_ASSERT(ce.is_inside(p), "[ECAL ENDCAP] Point: {} is expected to be inside!!", p);
     UFW_ASSERT(cid.raw == obt_cid.raw,
-               fmt::format("[ECAL ENDCAP] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw));
+               "[ECAL ENDCAP] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw);
 
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
 

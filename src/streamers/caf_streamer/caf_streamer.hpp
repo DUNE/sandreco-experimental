@@ -16,12 +16,15 @@ namespace sand::caf {
    * Manages reading/writing caf_wrapper data to/from TTree branches.
    */
   class caf_streamer : public ufw::streamer {
-    std::unique_ptr<TFile> file_;
-    TTree* tree_                                      = nullptr; // owned by file_ (ROOT ownership)
-    caf_wrapper* data_ptr_                            = nullptr; // non-owning, points to external data
-    ufw::context_id context_id_                       = {};
-    long last_entry_                                  = 0;
-    static constexpr const char* kContextIdBranchName = "context_id";
+    std::unique_ptr<TFile> m_file;
+    TTree* m_tree                                    = nullptr; // owned by m_file (ROOT ownership)
+    caf_wrapper* m_data                              = nullptr; // non-owning, points to external data
+    ::caf::StandardRecord* m_caf_ptr                 = nullptr; // upcast pointer passed to ROOT branch
+    ufw::context_id m_context_id                     = {};
+    long m_last_entry                                = 0;
+    bool m_has_context_id                            = false;
+    static constexpr const char* s_context_id_branch = "context_id";
+    static constexpr const char* s_data_branch       = "rec";
 
    public:
     caf_streamer() = default;
