@@ -64,8 +64,8 @@ namespace smearing{
                 }
             }
             
-            if (hit_pts_above_thr.empty()) {
-              UFW_ERROR("Trajectory has no hits above energy threshold.");
+            if (hit_pts_above_thr.size()<2) { // require at least 2 points
+              UFW_ERROR("Trajectory has <2 hits above energy threshold.");
             } else {
               m_n_pts = hit_pts_above_thr.size(); // set the number of points for Gluckstern smearing
               // lever arm in the bending plane (YZ) for Gluckstern formula
