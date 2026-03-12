@@ -15,6 +15,6 @@ target_include_directories(sand_smeared_fake_reco PRIVATE
     ${duneanaobj_SOURCE_DIR}
 )
 
-target_link_libraries(sand_smeared_fake_reco PUBLIC ufw::ufw PRIVATE ROOT::Core ROOT::EG sand_edep_reader sand_genie_reader sand_caf_caf_streamer StandardRecord)
+target_link_libraries(sand_smeared_fake_reco PUBLIC ufw::ufw PRIVATE ROOT::Core ROOT::EG sand_edep_reader sand_genie_reader sand_caf_caf_streamer duneanaobj::StandardRecord)
 
 install(TARGETS sand_smeared_fake_reco EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
