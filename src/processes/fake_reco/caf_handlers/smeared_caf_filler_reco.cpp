@@ -51,6 +51,7 @@ namespace sand {
     // auto true_unit_vec = true_part.p.Vect().Unit();
     // reco.p.SetY(true_unit_vec.Y()*smeared_p_transverse);
     // reco.p.SetZ(true_unit_vec.Z()*smeared_p_transverse);
+    return reco;
   }
 
 }
