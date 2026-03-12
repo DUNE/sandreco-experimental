@@ -85,7 +85,7 @@ namespace smearing{
             const auto measure_pt_res = compute_measurement_smearing(mev_to_gev(p_transverse));
             const auto mcs_pt_res = compute_mcs_smearing();
 
-            const auto pt_res = std::hypot(measure_pt_res, mcs_pt_res) / p_transverse;
+            const auto pt_res = std::hypot(measure_pt_res, mcs_pt_res);
             
             // random extraction of the smearing factor (force a positive Pt)
             std::normal_distribution<double> relative_pt_error(1.0, pt_res);
