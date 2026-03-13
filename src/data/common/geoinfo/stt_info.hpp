@@ -14,7 +14,6 @@ namespace sand {
     struct station : public tracker_info::station {
       wire_list x_view() const;
       wire_list y_view() const;
-      void set_wire_list(std::vector<std::unique_ptr<wire>> &);
     };
 
    public:
@@ -30,8 +29,6 @@ namespace sand {
 
     const wire* get_wire_by_id(const geo_id& id) const;
 
-   private:
-    void set_wire_adjecency(std::vector<std::unique_ptr<wire>> & w );
   };
 
 } // namespace sand

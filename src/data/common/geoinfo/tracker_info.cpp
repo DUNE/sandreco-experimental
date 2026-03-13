@@ -1,4 +1,5 @@
 #include <tracker_info.hpp>
+#include <BVH.hpp>
 
 namespace sand {
 
@@ -154,7 +155,7 @@ namespace sand {
     }
   }
 
-  bool geoinfo::tracker_info::wire::is_adjecent(const geoinfo::tracker_info::wire& w) const {
+  bool geoinfo::tracker_info::wire::is_adjacent(const geoinfo::tracker_info::wire& w) const {
     for (const auto& adj : w.adjecent_wires) {
       if (adj->daq_channel == w.daq_channel) {
         return true;
@@ -162,5 +163,33 @@ namespace sand {
     }
     return false;
   };
+
+  void geoinfo::tracker_info::station::set_wire_adjacency() {
+    double dz; 
+    double dy;
+    dy = wires[0]->max_radius * sqrt(3) / 2.;
+    dz = wires[0]->max_radius * sqrt(3) / 2.;
+
+    double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
+
+    wire_list wl;
+    wl.reserve(wires.size());
+    for (const auto& wp : wires)
+        wl.push_back(wp.get());
+
+    auto start = std::chrono::system_clock::now();
+    BVH bvh(
+      wl,
+      2 * max_distance,
+      2 * max_distance
+    );
+
+    // BVH_Analyzer<wire>::printTreeInfo(bvh);
+    //BVH_Analyzer<wire>::printLeafChannelInfo(bvh);
+
+    auto end_build = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
+    UFW_INFO("BVH for station corresponding to link {} built in {} ms", wires[0]->parent->daq_link, elapsed.count());
+  }
 
 } // namespace sand

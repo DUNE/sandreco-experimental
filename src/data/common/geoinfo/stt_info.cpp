@@ -5,8 +5,8 @@
 #include <TGeoBBox.h>
 #include <TGeoMatrix.h>
 #include <TGeoTube.h>
-#include <BVH.hpp>
-#include <BVH_analyzer.hpp>
+// #include <BVH.hpp>
+// #include <BVH_analyzer.hpp>
 
 namespace sand {
 
@@ -50,7 +50,6 @@ namespace sand {
       stat->top_south    = centre + boxcorner;
       stat->bottom_north = centre - boxcorner;
       stat->parent = this;
-      std::vector<std::unique_ptr<wire>> wires_for_stat;
       
       nav->for_each_node([&](auto plane) {
         // The plane does not carry useful information for us.
@@ -81,57 +80,50 @@ namespace sand {
             w->daq_channel.link = w->geo.stt.supermodule;
             w->daq_channel.channel = (uint32_t(w->geo.stt.plane) << 16) | uint32_t(w->geo.stt.tube);
             stat->daq_link = w->geo.stt.supermodule;
-            wires_for_stat.emplace_back(std::move(w));
+            stat->wires.emplace_back(std::move(w));
           } else {
             UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
           }
         });
       });
 
-      set_wire_adjecency(wires_for_stat);
-      stat->set_wire_list(wires_for_stat);
+      stat->set_wire_adjacency();
       add_station(station_ptr(std::move(stat)));
     });
   }
 
   geoinfo::stt_info::~stt_info() = default;
 
-  void geoinfo::stt_info::station::set_wire_list(std::vector<std::unique_ptr<wire>> &wl) {
-    for (auto &w : wl) {
-      wires.emplace_back(std::move(w));
-    }
-  }
+  // void geoinfo::stt_info::station::set_wire_adjacency(){
+  //   double dz; 
+  //   double dy;
+  //   dy = wires[0]->max_radius * sqrt(3) / 2.;
+  //   dz = wires[0]->max_radius * sqrt(3) / 2.;
 
-  void geoinfo::stt_info::set_wire_adjecency(std::vector<std::unique_ptr<wire>> & ws){
-    double dz; 
-    double dy;
-    dy = ws[0]->max_radius * sqrt(3) / 2.;
-    dz = ws[0]->max_radius * sqrt(3) / 2.;
+  //   double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
 
-    double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
+  //   auto start = std::chrono::system_clock::now();
+  //   // BVH<wire> bvh(
+  //   //   ws,
+  //   //   2 * max_distance,
+  //   //   2 * max_distance
+  //   // );
 
-    auto start = std::chrono::system_clock::now();
-    BVH<wire> bvh(
-      ws,
-      2 * max_distance,
-      2 * max_distance
-    );
+  //   // BVH_Analyzer<wire>::printTreeInfo(bvh);
+  //   //BVH_Analyzer<wire>::printLeafChannelInfo(bvh);
 
-    BVH_Analyzer<wire>::printTreeInfo(bvh);
-    //BVH_Analyzer<wire>::printLeafChannelInfo(bvh);
+  //   // for (const auto& w : ws) {
+  //   //   uint8_t plane = static_cast<uint8_t>(w->daq_channel.channel >> 16);
+  //   //   uint16_t tube =static_cast<uint16_t>(w->daq_channel.channel & 0xFFFF);     
+  //   //   auto n_adjecent = w->adjecent_wires.size();
+  //   //   UFW_DEBUG("Wire channel ({},{},{},{}) z={} has {} adjacent wires", w->daq_channel.subdetector, w->daq_channel.link, plane, tube, w->head.z(), n_adjecent);
+  //   // }
 
-    // for (const auto& w : ws) {
-    //   uint8_t plane = static_cast<uint8_t>(w->daq_channel.channel >> 16);
-    //   uint16_t tube =static_cast<uint16_t>(w->daq_channel.channel & 0xFFFF);     
-    //   auto n_adjecent = w->adjecent_wires.size();
-    //   UFW_DEBUG("Wire channel ({},{},{},{}) z={} has {} adjacent wires", w->daq_channel.subdetector, w->daq_channel.link, plane, tube, w->head.z(), n_adjecent);
-    // }
+  //   auto end_build = std::chrono::system_clock::now();
+  //   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
+  //   UFW_INFO("BVH for station corresponding to link {} built in {} ms", ws[0]->parent->daq_link, elapsed.count());
 
-    auto end_build = std::chrono::system_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
-    UFW_INFO("BVH for station corresponding to link {} built in {} ms", ws[0]->parent->daq_link, elapsed.count());
-
-  }
+  // }
 
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;

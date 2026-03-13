@@ -26,6 +26,10 @@ namespace sand {
     static const std::size_t s_max_wire_spacers = 0;
 
     struct station;
+    struct wire;
+
+    using wire_ptr  = std::unique_ptr<const wire>;
+    using wire_list = std::vector<const wire*>;
 
     struct wire {
       struct catenary {
@@ -36,8 +40,8 @@ namespace sand {
       using spacer_array   = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X
                                                                      ///< coordinate, starting from north.
       const station* parent;                                         ///< The parent station
-      std::vector<const wire*>  adjecent_wires;                      ///< The list of adjecent wires  
-      bool is_adjecent(const wire& w) const;                         ///< Check if the wire is adjecent                   
+      mutable wire_list  adjecent_wires;                             ///< The list of adjecent wires  TODO: explain why we are setting this mutable
+      bool is_adjacent(const wire& w) const;                         ///< Check if the wire is adjecent                   
       channel_id daq_channel;                                        ///< The unique daq identifier
       pos_3d head;                                                   ///< The readout end of the wire
       pos_3d tail;                                                   ///< The termination end of the wire
@@ -58,9 +62,6 @@ namespace sand {
       double closest_approach_point(const pos_3d&) const;
       xform_3d wire_plane_transform() const; /// transform from local wire plane to global coordinates
     };
-
-    using wire_ptr  = std::unique_ptr<const wire>;
-    using wire_list = std::vector<const wire*>;
 
     enum target_material : uint8_t {
       TRKONLY = 0,
@@ -88,6 +89,7 @@ namespace sand {
         }
         return wl;
       }
+      void set_wire_adjacency();
     };
 
    protected:
