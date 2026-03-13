@@ -38,6 +38,7 @@ namespace sand {
   void BVH::createTree( Node & node,
                         typename wire_list::iterator begin,
                         typename wire_list::iterator end) {
+    node.aabb_ = (*begin)->aabb;
     for (auto it = begin + 1; it != end; ++it) {
       node.aabb_.expand((*it)->aabb);
     }
