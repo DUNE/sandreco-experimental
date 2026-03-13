@@ -156,7 +156,7 @@ namespace sand {
   }
 
   bool geoinfo::tracker_info::wire::is_adjacent(const geoinfo::tracker_info::wire& w) const {
-    for (const auto& adj : w.adjecent_wires) {
+    for (const auto& adj : w.adjacent_wires) {
       if (adj->daq_channel == w.daq_channel) {
         return true;
       }
@@ -190,6 +190,73 @@ namespace sand {
     auto end_build = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
     UFW_INFO("BVH for station corresponding to link {} built in {} ms", wires[0]->parent->daq_link, elapsed.count());
+  }
+
+  geoinfo::tracker_info::wire::AABB::AABB(const geoinfo::tracker_info::wire& w) {
+    min_ = pos_3d(1E9, 1E9, 1E9);
+    max_ = pos_3d(-1E9, -1E9, -1E9);
+    std::vector<pos_3d> vertices;
+    auto p                = w.head;
+    const auto& transform = w.wire_plane_transform();
+    auto p_rotated        = transform.Inverse() * p;
+
+    // auto h_2 = wire->length() /2.;
+    auto w_2 = w.max_radius / 2.;
+
+    pos_3d v1 = p_rotated + dir_3d(0, w_2, 0);
+    pos_3d v2 = p_rotated + dir_3d(0, -w_2, 0);
+
+    auto p1 = transform * v1;
+    auto p2 = transform * v2;
+
+    vertices.push_back(pos_3d(p1.X(), p1.Y(), p.Z() + w_2));
+    vertices.push_back(pos_3d(p2.X(), p2.Y(), p.Z() + w_2));
+
+    p         = w.tail;
+    p_rotated = transform.Inverse() * p;
+    pos_3d v3 = p_rotated + dir_3d(0, w_2, 0);
+    pos_3d v4 = p_rotated + dir_3d(0, -w_2, 0);
+
+    auto p3 = transform * v3;
+    auto p4 = transform * v4;
+
+    vertices.push_back(pos_3d(p3.X(), p3.Y(), p.Z() - w_2));
+    vertices.push_back(pos_3d(p4.X(), p4.Y(), p.Z() - w_2));
+
+    for (const auto& v : vertices) {
+      min_.SetX(std::min(min_.X(), v.X()));
+      max_.SetX(std::max(max_.X(), v.X()));
+      min_.SetY(std::min(min_.Y(), v.Y()));
+      max_.SetY(std::max(max_.Y(), v.Y()));
+      min_.SetZ(std::min(min_.Z(), v.Z()));
+      max_.SetZ(std::max(max_.Z(), v.Z()));
+      // UFW_DEBUG("Vertex: ({}, {}, {})", v.X(), v.Y(), v.Z());
+    }
+  }
+
+  void geoinfo::tracker_info::wire::AABB::expand(const AABB& second_aabb) {
+    min_.SetX(std::min(min_.X(), second_aabb.min_.X()));
+    max_.SetX(std::max(max_.X(), second_aabb.max_.X()));
+    min_.SetY(std::min(min_.Y(), second_aabb.min_.Y()));
+    max_.SetY(std::max(max_.Y(), second_aabb.max_.Y()));
+    min_.SetZ(std::min(min_.Z(), second_aabb.min_.Z()));
+    max_.SetZ(std::max(max_.Z(), second_aabb.max_.Z()));
+  }
+
+ /**
+  * @brief Checks if two AABBs are overlapping.
+  *
+  * @param second_aabb The second AABB to check for overlap.
+  * @param epsilon The epsilon value for the overlap check.
+  * @return True if the AABBs are overlapping, false otherwise.
+  */
+  bool geoinfo::tracker_info::wire::AABB::isOverlapping(const AABB& second_aabb, double epsilon) const {
+    if (max_.X() + epsilon >= second_aabb.min_.X() && min_.X() - epsilon <= second_aabb.max_.X()
+        && max_.Y() + epsilon >= second_aabb.min_.Y() && min_.Y() - epsilon <= second_aabb.max_.Y()
+        && max_.Z() + epsilon >= second_aabb.min_.Z() && min_.Z() - epsilon <= second_aabb.max_.Z()) {
+      return true;
+    }
+    return false;
   }
 
 } // namespace sand

@@ -36,11 +36,23 @@ namespace sand {
         pos_3d minimum;
         double a;
       };
+
+      struct AABB {
+        AABB() {};
+        AABB(const wire & wire);
+        void expand(const AABB& second_aabb);
+        bool isOverlapping(const AABB& second_aabb, double epsilon = 0) const;
+        pos_3d min_;
+        pos_3d max_;
+      };
+
+      AABB aabb;
+
       using catenary_array = std::array<catenary, s_max_wire_spacers + 1>;
       using spacer_array   = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X
                                                                      ///< coordinate, starting from north.
       const station* parent;                                         ///< The parent station
-      mutable wire_list  adjecent_wires;                             ///< The list of adjecent wires  TODO: explain why we are setting this mutable
+      mutable wire_list  adjacent_wires;                             ///< The list of adjacent wires  TODO: explain why we are setting this mutable
       bool is_adjacent(const wire& w) const;                         ///< Check if the wire is adjecent                   
       channel_id daq_channel;                                        ///< The unique daq identifier
       pos_3d head;                                                   ///< The readout end of the wire

@@ -19,7 +19,8 @@ target_sources(sand_geoinfo PRIVATE
                stt_info.cpp
                tracker_info.cpp
                subdetector_info.cpp
-               geoinfo.cpp)
+               geoinfo.cpp
+               BVH.cpp)
 
 target_include_directories(sand_geoinfo PRIVATE . .. ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/grain)
 

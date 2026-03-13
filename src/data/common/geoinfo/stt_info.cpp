@@ -79,6 +79,7 @@ namespace sand {
             w->daq_channel.subdetector = STT;
             w->daq_channel.link = w->geo.stt.supermodule;
             w->daq_channel.channel = (uint32_t(w->geo.stt.plane) << 16) | uint32_t(w->geo.stt.tube);
+            w->aabb = geoinfo::tracker_info::wire::AABB(*w);
             stat->daq_link = w->geo.stt.supermodule;
             stat->wires.emplace_back(std::move(w));
           } else {
@@ -93,37 +94,6 @@ namespace sand {
   }
 
   geoinfo::stt_info::~stt_info() = default;
-
-  // void geoinfo::stt_info::station::set_wire_adjacency(){
-  //   double dz; 
-  //   double dy;
-  //   dy = wires[0]->max_radius * sqrt(3) / 2.;
-  //   dz = wires[0]->max_radius * sqrt(3) / 2.;
-
-  //   double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
-
-  //   auto start = std::chrono::system_clock::now();
-  //   // BVH<wire> bvh(
-  //   //   ws,
-  //   //   2 * max_distance,
-  //   //   2 * max_distance
-  //   // );
-
-  //   // BVH_Analyzer<wire>::printTreeInfo(bvh);
-  //   //BVH_Analyzer<wire>::printLeafChannelInfo(bvh);
-
-  //   // for (const auto& w : ws) {
-  //   //   uint8_t plane = static_cast<uint8_t>(w->daq_channel.channel >> 16);
-  //   //   uint16_t tube =static_cast<uint16_t>(w->daq_channel.channel & 0xFFFF);     
-  //   //   auto n_adjecent = w->adjecent_wires.size();
-  //   //   UFW_DEBUG("Wire channel ({},{},{},{}) z={} has {} adjacent wires", w->daq_channel.subdetector, w->daq_channel.link, plane, tube, w->head.z(), n_adjecent);
-  //   // }
-
-  //   auto end_build = std::chrono::system_clock::now();
-  //   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
-  //   UFW_INFO("BVH for station corresponding to link {} built in {} ms", ws[0]->parent->daq_link, elapsed.count());
-
-  // }
 
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;
