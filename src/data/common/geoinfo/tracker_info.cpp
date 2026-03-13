@@ -184,7 +184,7 @@ namespace sand {
       2 * max_distance
     );
 
-    // BVH_Analyzer<wire>::printTreeInfo(bvh);
+    bvh.printTreeInfo();
     //BVH_Analyzer<wire>::printLeafChannelInfo(bvh);
 
     auto end_build = std::chrono::system_clock::now();
@@ -243,13 +243,6 @@ namespace sand {
     max_.SetZ(std::max(max_.Z(), second_aabb.max_.Z()));
   }
 
- /**
-  * @brief Checks if two AABBs are overlapping.
-  *
-  * @param second_aabb The second AABB to check for overlap.
-  * @param epsilon The epsilon value for the overlap check.
-  * @return True if the AABBs are overlapping, false otherwise.
-  */
   bool geoinfo::tracker_info::wire::AABB::isOverlapping(const AABB& second_aabb, double epsilon) const {
     if (max_.X() + epsilon >= second_aabb.min_.X() && min_.X() - epsilon <= second_aabb.max_.X()
         && max_.Y() + epsilon >= second_aabb.min_.Y() && min_.Y() - epsilon <= second_aabb.max_.Y()

@@ -1,10 +1,3 @@
-/**
- * @file BVH.hpp
- * @author Federico Battisti
- * @brief Contains the classes needed to implement the bounding volume hierarchy method.
- *
- */
-
 #pragma once
 #include <tracker_info.hpp>
 #include <map>
@@ -15,19 +8,14 @@ namespace sand {
   using wire_list = geoinfo::tracker_info::wire_list;
   using wire = geoinfo::tracker_info::wire;
 
-  // Forward declaration
-  // template <typename WireT>
-  // class BVH_Analyzer;
-
 
   /**
    * @brief Node structure for the BVH tree.
    *
    * This structure represents a node in the BVH tree and stores 
    * information about the wire object, left child, right child, 
-   * and the AABB.
+   * and the AABB enveloping the tree starting from the node.
    *
-   * @template WireT The type of wire objects used in the BVH tree.
    */
   struct Node {
     wire::AABB aabb_;
@@ -41,14 +29,14 @@ namespace sand {
    * @brief Defines the BVH class for bounding volume hierarchy.
    *
    * This class provides methods for creating a bounding volume hierarchy (BVH) for a set of wires.
-   * It uses the Node and AABB structures to construct the BVH tree.
    *
-   * @template WireT The type of wire objects used in the BVH tree.
    */
   class BVH {
     public:
 
       BVH(wire_list & wires, double max_distance, double overlap_tolerance);
+
+      void printTreeInfo();
 
       // // Add friend declaration for BVH_Analyzer
       // template <typename T>
@@ -63,6 +51,16 @@ namespace sand {
                               double max_distance, double overlap_tolerance);
       std::unique_ptr<Node> root_ = std::make_unique<Node>();
       wire_list & wires_;
+
+    private:
+      size_t getNodeDepth(const Node * node);
+      bool isBalanced(const Node * node);
+      size_t countNodes(const Node * node);
+      size_t countLeaves(const Node * node);
+      void countNodesAtDepth(const Node * node, size_t current_depth,
+                               std::vector<size_t> & depth_counts);
+      const Node * findDeepestLeaf(const Node * node, size_t current_depth,
+                                   size_t & max_depth);
   };
 
 } // namespace sand
