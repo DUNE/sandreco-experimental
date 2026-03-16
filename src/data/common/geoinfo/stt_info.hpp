@@ -28,7 +28,6 @@ namespace sand {
     geo_path path(geo_id) const override;
 
     const wire* get_wire_by_id(const geo_id& id) const;
-
   };
 
 } // namespace sand
