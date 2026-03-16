@@ -52,8 +52,10 @@ namespace sand {
       using spacer_array   = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X
                                                                      ///< coordinate, starting from north.
       const station* parent;                                         ///< The parent station
-      mutable wire_list  adjacent_wires;                             ///< The list of adjacent wires  TODO: explain why we are setting this mutable
-      bool is_adjacent(const wire& w) const;                         ///< Check if the wire is adjecent                   
+      mutable wire_list  adjacent_wires;                             ///< The list of adjacent wires. 
+                                                                     ///< The mutable attribute makes the element of a const object modifiable.
+                                                                     ///< In this case needed because the adjacency can be attributed only once all wires are constructed.
+      bool is_adjacent(const wire * w) const;                         ///< Check if the wire is adjecent                   
       channel_id daq_channel;                                        ///< The unique daq identifier
       pos_3d head;                                                   ///< The readout end of the wire
       pos_3d tail;                                                   ///< The termination end of the wire
