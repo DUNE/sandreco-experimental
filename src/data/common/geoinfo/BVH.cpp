@@ -155,8 +155,10 @@ void BVH::printTreeInfo() {
       if (deepest && deepest->wire_) {
         UFW_DEBUG("--- Deepest Leaf Node ---");
         UFW_DEBUG("Depth: {}", deepest_depth);
-        UFW_DEBUG("Wire channel: ({},{},{})", int(deepest->wire_->daq_channel.subdetector), 
-                  int(deepest->wire_->daq_channel.link), int(deepest->wire_->daq_channel.channel));
+        uint8_t plane = static_cast<uint8_t>(deepest->wire_->daq_channel.channel >> 16);
+        uint16_t tube = static_cast<uint16_t>(deepest->wire_->daq_channel.channel & 0xFFFF);
+        UFW_DEBUG("Wire channel: ({},{},{},{})", int(deepest->wire_->daq_channel.subdetector), 
+                  int(deepest->wire_->daq_channel.link), plane, tube);
       }
 
       UFW_DEBUG("=====================================");
