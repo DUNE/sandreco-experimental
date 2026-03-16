@@ -185,11 +185,10 @@ namespace sand {
     );
 
     bvh.printTreeInfo();
-    //BVH_Analyzer<wire>::printLeafChannelInfo(bvh);
 
     auto end_build = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
-    UFW_INFO("BVH for station corresponding to link {} built in {} ms", wires[0]->parent->daq_link, elapsed.count());
+    UFW_DEBUG("BVH for station corresponding to link {} built in {} ms", wires[0]->parent->daq_link, elapsed.count());
   }
 
   geoinfo::tracker_info::wire::AABB::AABB(const geoinfo::tracker_info::wire& w) {
