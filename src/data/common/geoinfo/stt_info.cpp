@@ -5,8 +5,6 @@
 #include <TGeoBBox.h>
 #include <TGeoMatrix.h>
 #include <TGeoTube.h>
-// #include <BVH.hpp>
-// #include <BVH_analyzer.hpp>
 
 namespace sand {
 
