@@ -31,6 +31,10 @@ namespace smearing {
       
       double get_path_len_over_x0(const std::vector<sand::vec_4d> hit_points);
 
+      inline double compute_mcs_angle_smearing(const double path_len_over_x0, const double p) {
+        return ( 13.6e-3/p * sqrt(path_len_over_x0) * (1 + 0.038 * log(path_len_over_x0)) );
+      };
+
   namespace gluckstern {
 
     struct GlucksternSmearing {
@@ -50,18 +54,20 @@ namespace smearing {
      private:
       int m_n_pts;               // number of trajectory hits in the tracker
       double m_lever_arm;        // lever arm from the trajectory hits in the tracker [m]
-      double m_path_len_over_x0; // cumulative l/x0 over the trajectory path in the tracker
+      double m_path_len_over_x0; // cumulative l/x0 over the trajectory path in the tracker (3D)
 
       static ufw::context::random_engine& m_random_engine() { return ufw::context::current()->engine(); };
 
+      // detector res contribution to Gluckstern smearing: using transverse lever_arm
       double compute_measurement_smearing(const double p_transverse) const {
         return (k_single_hit_sigma * p_transverse) / (0.3 * k_b_field_magnitude * m_lever_arm)
              * std::sqrt(720.0 / (m_n_pts + 4));
       }
 
-      double compute_mcs_smearing() const {
+      // MCS contribution to GLuckstern smearing: using transverse lever_arm
+      double compute_mcs_measurement_smearing(const double path_len_over_x0_tr) const {
         return ( ( (19.2 * k_MeV_to_J) / (std::sqrt(2)*m_lever_arm*k_e_charge*k_b_field_magnitude*k_light_velocity)) 
-              * std::sqrt(m_path_len_over_x0) );
+              * std::sqrt(path_len_over_x0_tr) );
       }
     };
 
