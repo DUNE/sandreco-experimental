@@ -30,18 +30,23 @@ namespace sand {
       size_t countNodes() const;
       size_t countLeaves() const; 
 
-      void   countNodesAtDepth(size_t current_depth,
+      void  countNodesAtDepth(size_t current_depth,
                               std::vector<size_t> & depth_counts) const;
 
       const Node * findDeepestLeaf(size_t current_depth,
                                   size_t & max_depth) const;
+
+      void createTree(typename wire_list::iterator begin,
+                      typename wire_list::iterator end);   
+                      
+                      
+      void searchAdjacentCells(const Node * other_node,
+                              double max_distance, double overlap_tolerance) const;
       
 
   private:
       std::unique_ptr<Node> left_;
       std::unique_ptr<Node> right_;
-
-      friend class BVH;  // BVH::createTree can access left_ and right_ directly
   };
 
   /**
@@ -61,12 +66,7 @@ namespace sand {
       const Node* root() const { return root_.get(); }
 
     private:
-      void createTree(Node & node,
-                      typename wire_list::iterator begin,
-                      typename wire_list::iterator end);
 
-      void searchAdjacentCells(const Node * node, const Node * other_node,
-                              double max_distance, double overlap_tolerance);
       std::unique_ptr<Node> root_ = std::make_unique<Node>();
       wire_list & wires_;
   };
