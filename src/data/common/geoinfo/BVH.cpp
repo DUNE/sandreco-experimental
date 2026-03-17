@@ -130,23 +130,23 @@ void BVH::printTreeInfo() {
         return;
       }
 
-      size_t depth  = getNodeDepth(root_.get());
-      size_t leaves = countLeaves(root_.get());
-      size_t total  = countNodes(root_.get());
+      size_t depth  = root_->getDepth();
+      size_t leaves = root_->countLeaves();
+      size_t total  = root_->countNodes();
 
       UFW_DEBUG("========== BVH TREE ANALYSIS ==========");
       UFW_DEBUG("Depth: {} levels", depth);
       UFW_DEBUG("Total nodes: {}",  total);
       UFW_DEBUG("Leaf nodes: {}", leaves);
       UFW_DEBUG("Internal nodes: {}", (total - leaves));
-      UFW_DEBUG("Balance: {}", (isBalanced(root_.get()) ? "Balanced" : "Unbalanced"));
+      UFW_DEBUG("Balance: {}", (root_->isBalanced() ? "Balanced" : "Unbalanced"));
 
-      if(!isBalanced(root_.get())) UFW_ERROR("Tree is not balanced!");
+      if(!root_->isBalanced()) UFW_ERROR("Tree is not balanced!");
 
       // Print depth distribution
       UFW_DEBUG("--- Depth Distribution ---");
       std::vector<size_t> depth_counts(depth + 1, 0);
-      countNodesAtDepth(root_.get(), 0, depth_counts);
+      root_->countNodesAtDepth(0, depth_counts);
 
       for (size_t i = 0; i <= depth; ++i) {
         if (depth_counts[i] > 0) {
@@ -156,7 +156,7 @@ void BVH::printTreeInfo() {
 
       // Find deepest leaf
       size_t deepest_depth       = 0;
-      const Node * deepest = findDeepestLeaf(root_.get(), 0, deepest_depth);
+      const Node * deepest = root_->findDeepestLeaf(0, deepest_depth);
       if (deepest && deepest->wire_) {
         UFW_DEBUG("--- Deepest Leaf Node ---");
         UFW_DEBUG("Depth: {}", deepest_depth);
@@ -169,87 +169,65 @@ void BVH::printTreeInfo() {
       UFW_DEBUG("=====================================");
     }
 
-    size_t BVH::countLeaves(const Node * node) {
-      if (!node)
-        return 0;
-      if (!node->left_ && !node->right_)
-        return 1;
-      return countLeaves(node->left_.get()) + countLeaves(node->right_.get());
+  size_t Node::countLeaves() const {
+      if (!left_ && !right_)
+          return 1;
+      size_t count = 0;
+      if (left_)  count += left_->countLeaves();
+      if (right_) count += right_->countLeaves();
+      return count;
+  }
+
+  size_t Node::getDepth() const {
+      if (!left_ && !right_)
+          return 1;
+      return 1 + std::max(
+          left_  ? left_->getDepth()  : 0,
+          right_ ? right_->getDepth() : 0
+      );
+  }
+
+    size_t Node::countNodes() const {
+      return 1
+          + (left_  ? left_->countNodes()  : 0)
+          + (right_ ? right_->countNodes() : 0);
     }
 
-    size_t BVH::getNodeDepth(const Node * node) {
-      if (!node)
-        return 0;
-      if (!node->left_ && !node->right_)
-        return 1;
+    bool Node::isBalanced() const {
+        size_t left_depth  = left_  ? left_->getDepth()  : 0;
+        size_t right_depth = right_ ? right_->getDepth() : 0;
 
-      size_t left_depth = 0, right_depth = 0;
-      if (node->left_)
-        left_depth = getNodeDepth(node->left_.get());
-      if (node->right_)
-        right_depth = getNodeDepth(node->right_.get());
+        int diff = std::abs(static_cast<int>(left_depth) - static_cast<int>(right_depth));
 
-      return 1 + std::max(left_depth, right_depth);
+        return diff <= 1
+            && (left_  ? left_->isBalanced()  : true)
+            && (right_ ? right_->isBalanced() : true);
     }
 
-    size_t BVH::countNodes(const Node * node) {
-      if (!node)
-        return 0;
-      return 1 + countNodes(node->left_.get()) + countNodes(node->right_.get());
-    }
+  void Node::countNodesAtDepth(size_t current_depth, std::vector<size_t>& depth_counts) const {
+      if (current_depth >= depth_counts.size())
+          depth_counts.resize(current_depth + 1, 0);
 
-    bool BVH::isBalanced(const Node * node) {
-      if (!node)
-        return true;
-
-      size_t left_depth  = getNodeDepth(node->left_.get());
-      size_t right_depth = getNodeDepth(node->right_.get());
-
-      int diff = std::abs(static_cast<int>(left_depth) - static_cast<int>(right_depth));
-
-      return diff <= 1 && isBalanced(node->left_.get()) && isBalanced(node->right_.get());
-    }
-
-    void BVH::countNodesAtDepth(const Node * node, size_t current_depth,
-                                  std::vector<size_t>& depth_counts) {
-      if (!node)
-        return;
-
-      if (current_depth >= depth_counts.size()) {
-        depth_counts.resize(current_depth + 1, 0);
-      }
       depth_counts[current_depth]++;
 
-      countNodesAtDepth(node->left_.get(), current_depth + 1, depth_counts);
-      countNodesAtDepth(node->right_.get(), current_depth + 1, depth_counts);
-    }
+      if (left_)  left_->countNodesAtDepth(current_depth + 1, depth_counts);
+      if (right_) right_->countNodesAtDepth(current_depth + 1, depth_counts);
+  }
 
-  const Node * BVH::findDeepestLeaf(const Node * node, size_t current_depth,
-                                              size_t& max_depth) {
-      if (!node)
-        return nullptr;
-
-      if (!node->left_ && !node->right_) {
-        // Leaf node
+const Node* Node::findDeepestLeaf(size_t current_depth, size_t& max_depth) const {
+    if (!left_ && !right_) {
         if (current_depth > max_depth) {
-          max_depth = current_depth;
-          return node;
+            max_depth = current_depth;
+            return this;
         }
         return nullptr;
-      }
-
-      const Node * left_deepest  = findDeepestLeaf(node->left_.get(), current_depth + 1, max_depth);
-      const Node * right_deepest = findDeepestLeaf(node->right_.get(), current_depth + 1, max_depth);
-
-      // Return the deeper one
-      if (left_deepest && right_deepest) {
-        // Both found, return one (doesn't matter which)
-        return left_deepest;
-      } else if (left_deepest) {
-        return left_deepest;
-      } else {
-        return right_deepest;
-      }
     }
+
+    const Node* left_deepest  = left_  ? left_->findDeepestLeaf(current_depth + 1, max_depth)  : nullptr;
+    const Node* right_deepest = right_ ? right_->findDeepestLeaf(current_depth + 1, max_depth) : nullptr;
+
+    if (left_deepest) return left_deepest;
+    return right_deepest;
+}
 
 } // namespace sand

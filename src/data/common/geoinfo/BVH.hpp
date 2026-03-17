@@ -18,10 +18,30 @@ namespace sand {
    *
    */
   struct Node {
-    wire::AABB aabb_;
-    const wire * wire_ = nullptr;
-    std::unique_ptr<Node> left_;
-    std::unique_ptr<Node> right_;
+      wire::AABB aabb_;
+      const wire* wire_ = nullptr;
+
+      const Node* left()  const { return left_.get(); }
+      const Node* right() const { return right_.get(); }
+
+      size_t getDepth() const;
+      bool   isBalanced() const;
+      
+      size_t countNodes() const;
+      size_t countLeaves() const; 
+
+      void   countNodesAtDepth(size_t current_depth,
+                              std::vector<size_t> & depth_counts) const;
+
+      const Node * findDeepestLeaf(size_t current_depth,
+                                  size_t & max_depth) const;
+      
+
+  private:
+      std::unique_ptr<Node> left_;
+      std::unique_ptr<Node> right_;
+
+      friend class BVH;  // BVH::createTree can access left_ and right_ directly
   };
 
   /**
@@ -38,9 +58,7 @@ namespace sand {
 
       void printTreeInfo();
 
-      // // Add friend declaration for BVH_Analyzer
-      // template <typename T>
-      // friend class BVH_Analyzer;
+      const Node* root() const { return root_.get(); }
 
     private:
       void createTree(Node & node,
@@ -51,16 +69,6 @@ namespace sand {
                               double max_distance, double overlap_tolerance);
       std::unique_ptr<Node> root_ = std::make_unique<Node>();
       wire_list & wires_;
-
-    private:
-      size_t getNodeDepth(const Node * node);
-      bool isBalanced(const Node * node);
-      size_t countNodes(const Node * node);
-      size_t countLeaves(const Node * node);
-      void countNodesAtDepth(const Node * node, size_t current_depth,
-                               std::vector<size_t> & depth_counts);
-      const Node * findDeepestLeaf(const Node * node, size_t current_depth,
-                                   size_t & max_depth);
   };
 
 } // namespace sand
