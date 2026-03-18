@@ -18,6 +18,7 @@ namespace sand {
    *
    */
   struct Node {
+    public:
       wire::AABB aabb_;
       const wire* wire_ = nullptr;
 
@@ -45,8 +46,8 @@ namespace sand {
       
 
   private:
-      std::unique_ptr<Node> left_;
-      std::unique_ptr<Node> right_;
+    std::unique_ptr<Node> left_;
+    std::unique_ptr<Node> right_;
   };
 
   /**
@@ -54,6 +55,9 @@ namespace sand {
    * @brief Defines the BVH class for bounding volume hierarchy.
    *
    * This class provides methods for creating a bounding volume hierarchy (BVH) for a set of wires.
+   * It also provides methods for printing information about the BVH tree.
+   * The tree information is stored as a nested sequence of unique_ptr to elements of the Node class. 
+   * The root of the tree is stored in root_.
    *
    */
   class BVH {

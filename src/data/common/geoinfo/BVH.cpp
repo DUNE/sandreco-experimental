@@ -8,7 +8,7 @@ namespace sand {
   /**
    * @brief Constructor for the BVH class.
    *
-   * @param wires The vector of pointers to tracker wire objects.
+   * @param wires The wire_list from which the BVH tree is constructed.
    * @param max_distance The maximum distance between wires to be considered adjacent.
    * @param overlap_tolerance The tolerance for overlap between wires.
    */
@@ -17,11 +17,63 @@ namespace sand {
       root_->searchAdjacentCells(root(), max_distance, overlap_tolerance);
     };
 
+  /**
+   * @brief Prints information about the BVH tree.
+   *
+   * This method prints out the depth of the tree, the total number of nodes,
+   * the number of leaf nodes, the number of internal nodes, and whether the tree is
+   * balanced or not. It also prints out the depth distribution of the nodes and finds
+   * the deepest leaf node, printing out its depth and wire channel information.
+   */
+  void BVH::printTreeInfo() {
+    if (!root_) {
+      UFW_ERROR("Tree is empty!");
+      return;
+    }
 
- /**
-  * @brief Creates a BVH tree for a set of wires.
+    size_t depth  = root_->getDepth();
+    size_t leaves = root_->countLeaves();
+    size_t total  = root_->countNodes();
+
+    UFW_DEBUG("========== BVH TREE ANALYSIS ==========");
+    UFW_DEBUG("Depth: {} levels", depth);
+    UFW_DEBUG("Total nodes: {}",  total);
+    UFW_DEBUG("Leaf nodes: {}", leaves);
+    UFW_DEBUG("Internal nodes: {}", (total - leaves));
+    UFW_DEBUG("Balance: {}", (root_->isBalanced() ? "Balanced" : "Unbalanced"));
+
+    if(!root_->isBalanced()) UFW_ERROR("Tree is not balanced!");
+
+    // Print depth distribution
+    UFW_DEBUG("--- Depth Distribution ---");
+    std::vector<size_t> depth_counts(depth + 1, 0);
+    root_->countNodesAtDepth(0, depth_counts);
+
+    for (size_t i = 0; i <= depth; ++i) {
+      if (depth_counts[i] > 0) {
+        UFW_DEBUG("Depth {} : {} nodes",i , depth_counts[i]);
+      }
+    }
+
+    // Find deepest leaf
+    size_t deepest_depth       = 0;
+    const Node * deepest = root_->findDeepestLeaf(0, deepest_depth);
+    if (deepest && deepest->wire_) {
+      UFW_DEBUG("--- Deepest Leaf Node ---");
+      UFW_DEBUG("Depth: {}", deepest_depth);
+      uint8_t plane = static_cast<uint8_t>(deepest->wire_->daq_channel.channel >> 16);
+      uint16_t tube = static_cast<uint16_t>(deepest->wire_->daq_channel.channel & 0xFFFF);
+      UFW_DEBUG("Wire channel: ({},{},{},{})", int(deepest->wire_->daq_channel.subdetector), 
+                int(deepest->wire_->daq_channel.link), plane, tube);
+    }
+
+    UFW_DEBUG("=====================================");
+  }
+
+
+  /**
+  * @brief Creates a BVH tree for a set of wires, starting from the Node from which the function in called.
   *
-  * @param node The root node of the BVH tree.
   * @param begin Iterator to the beginning of the range of wires.
   * @param end Iterator to the end of the range of wires.
   */
@@ -77,12 +129,13 @@ namespace sand {
   /**
    * @brief Searches recursively for adjacent cells in the BVH tree.
    *
-   * @param node The current node in the BVH tree.
-   * @param other_node The other node in the BVH tree to check for adjacency.
+   * @param other The other node in the BVH tree to check for adjacency. 
+   *              Typically this would start as a pointer to the same node from which the function is called, 
+   *              then the search will progress recursivelly.
    * @param max_distance The maximum distance for adjacency.
    * @param overlap_tolerance The overlap tolerance for adjacency.
    */
-void Node::searchAdjacentCells(const Node* other, double max_distance, double overlap_tolerance) const {
+  void Node::searchAdjacentCells(const Node* other, double max_distance, double overlap_tolerance) const {
     if (!other)
         return;
 
@@ -115,62 +168,33 @@ void Node::searchAdjacentCells(const Node* other, double max_distance, double ov
         searchAdjacentCells(other->left(),  max_distance, overlap_tolerance);
         searchAdjacentCells(other->right(), max_distance, overlap_tolerance);
     }
-}
-
-void BVH::printTreeInfo() {
-      if (!root_) {
-        UFW_ERROR("Tree is empty!");
-        return;
-      }
-
-      size_t depth  = root_->getDepth();
-      size_t leaves = root_->countLeaves();
-      size_t total  = root_->countNodes();
-
-      UFW_DEBUG("========== BVH TREE ANALYSIS ==========");
-      UFW_DEBUG("Depth: {} levels", depth);
-      UFW_DEBUG("Total nodes: {}",  total);
-      UFW_DEBUG("Leaf nodes: {}", leaves);
-      UFW_DEBUG("Internal nodes: {}", (total - leaves));
-      UFW_DEBUG("Balance: {}", (root_->isBalanced() ? "Balanced" : "Unbalanced"));
-
-      if(!root_->isBalanced()) UFW_ERROR("Tree is not balanced!");
-
-      // Print depth distribution
-      UFW_DEBUG("--- Depth Distribution ---");
-      std::vector<size_t> depth_counts(depth + 1, 0);
-      root_->countNodesAtDepth(0, depth_counts);
-
-      for (size_t i = 0; i <= depth; ++i) {
-        if (depth_counts[i] > 0) {
-          UFW_DEBUG("Depth {} : {} nodes",i , depth_counts[i]);
-        }
-      }
-
-      // Find deepest leaf
-      size_t deepest_depth       = 0;
-      const Node * deepest = root_->findDeepestLeaf(0, deepest_depth);
-      if (deepest && deepest->wire_) {
-        UFW_DEBUG("--- Deepest Leaf Node ---");
-        UFW_DEBUG("Depth: {}", deepest_depth);
-        uint8_t plane = static_cast<uint8_t>(deepest->wire_->daq_channel.channel >> 16);
-        uint16_t tube = static_cast<uint16_t>(deepest->wire_->daq_channel.channel & 0xFFFF);
-        UFW_DEBUG("Wire channel: ({},{},{},{})", int(deepest->wire_->daq_channel.subdetector), 
-                  int(deepest->wire_->daq_channel.link), plane, tube);
-      }
-
-      UFW_DEBUG("=====================================");
-    }
-
-  size_t Node::countLeaves() const {
-      if (!left_ && !right_)
-          return 1;
-      size_t count = 0;
-      if (left_)  count += left_->countLeaves();
-      if (right_) count += right_->countLeaves();
-      return count;
   }
 
+
+
+  /**
+   * @brief Recursively counts the number of leaves in the subtree rooted at this node.
+   *
+   * A leaf node is a node with no children (i.e. both left_ and right_ are null).
+   *
+   * @return The number of leaves in the subtree rooted at this node.
+   */
+  size_t Node::countLeaves() const {
+    if (!left_ && !right_)
+        return 1;
+    size_t count = 0;
+    if (left_)  count += left_->countLeaves();
+    if (right_) count += right_->countLeaves();
+    return count;
+  }
+
+  /**
+   * @brief Recursively computes the depth of the subtree rooted at this node.
+   *
+   * The depth of a node is the number of edges from the node to the furthest leaf node.
+   *
+   * @return The depth of the subtree rooted at this node.
+   */
   size_t Node::getDepth() const {
       if (!left_ && !right_)
           return 1;
@@ -180,34 +204,67 @@ void BVH::printTreeInfo() {
       );
   }
 
-    size_t Node::countNodes() const {
-      return 1
-          + (left_  ? left_->countNodes()  : 0)
-          + (right_ ? right_->countNodes() : 0);
-    }
-
-    bool Node::isBalanced() const {
-        size_t left_depth  = left_  ? left_->getDepth()  : 0;
-        size_t right_depth = right_ ? right_->getDepth() : 0;
-
-        int diff = std::abs(static_cast<int>(left_depth) - static_cast<int>(right_depth));
-
-        return diff <= 1
-            && (left_  ? left_->isBalanced()  : true)
-            && (right_ ? right_->isBalanced() : true);
-    }
-
-  void Node::countNodesAtDepth(size_t current_depth, std::vector<size_t>& depth_counts) const {
-      if (current_depth >= depth_counts.size())
-          depth_counts.resize(current_depth + 1, 0);
-
-      depth_counts[current_depth]++;
-
-      if (left_)  left_->countNodesAtDepth(current_depth + 1, depth_counts);
-      if (right_) right_->countNodesAtDepth(current_depth + 1, depth_counts);
+  /**
+   * @brief Recursively counts the total number of nodes in the subtree rooted at this node.
+   * @return The total number of nodes in the subtree rooted at this node.
+   */
+  size_t Node::countNodes() const {
+    return 1
+        + (left_  ? left_->countNodes()  : 0)
+        + (right_ ? right_->countNodes() : 0);
   }
 
-const Node* Node::findDeepestLeaf(size_t current_depth, size_t& max_depth) const {
+  /**
+   * @brief Recursively checks if the subtree rooted at this node is balanced.
+   *
+   * A subtree is considered balanced if the absolute difference between 
+   * the depths of its left and right subtrees is at most 1, and both its 
+   * left and right subtrees are also balanced.
+   *
+   * @return true if the subtree is balanced, false otherwise.
+   */
+  bool Node::isBalanced() const {
+    size_t left_depth  = left_  ? left_->getDepth()  : 0;
+    size_t right_depth = right_ ? right_->getDepth() : 0;
+
+    int diff = std::abs(static_cast<int>(left_depth) - static_cast<int>(right_depth));
+
+    return diff <= 1
+        && (left_  ? left_->isBalanced()  : true)
+        && (right_ ? right_->isBalanced() : true);
+  }
+
+  /**
+   * @brief Recursively counts the number of nodes at each depth in the subtree rooted at this node.
+   * @param current_depth The current depth to count the nodes at.
+   * @param depth_counts A reference to a vector to store the count of nodes at each depth.
+   *
+   * This method recursively traverses the subtree and counts the number of nodes at each depth.
+   * The count is stored in the depth_counts vector, which is resized if necessary.
+   */
+  void Node::countNodesAtDepth(size_t current_depth, std::vector<size_t>& depth_counts) const {
+    if (current_depth >= depth_counts.size())
+        depth_counts.resize(current_depth + 1, 0);
+
+    depth_counts[current_depth]++;
+
+    if (left_)  left_->countNodesAtDepth(current_depth + 1, depth_counts);
+    if (right_) right_->countNodesAtDepth(current_depth + 1, depth_counts);
+  }
+
+  /**
+   * @brief Finds the deepest leaf node in the subtree rooted at this node.
+   *
+   * A leaf node is a node with no children (i.e. both left_ and right_ are null).
+   *
+   * This method recursively traverses the subtree and finds the deepest leaf node.
+   * The max_depth parameter is used to keep track of the maximum depth seen so far.
+   *
+   * @param current_depth The current depth to start searching from.
+   * @param max_depth A reference to a variable to store the maximum depth seen so far.
+   * @return A pointer to the deepest leaf node, or nullptr if no leaf node is found.
+   */
+  const Node* Node::findDeepestLeaf(size_t current_depth, size_t& max_depth) const {
     if (!left_ && !right_) {
         if (current_depth > max_depth) {
             max_depth = current_depth;
@@ -221,6 +278,6 @@ const Node* Node::findDeepestLeaf(size_t current_depth, size_t& max_depth) const
 
     if (left_deepest) return left_deepest;
     return right_deepest;
-}
+  }
 
 } // namespace sand
