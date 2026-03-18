@@ -1,7 +1,7 @@
 #include <fast_digi.hpp>
 #include <geoinfo/ecal_info.hpp>
-#include <ecal/digi.h>
-#include <ecal/pes.h>
+#include <ecal/digit.h>
+#include <ecal/photo_electron.h>
 
 namespace sand::ecal {
 
@@ -19,7 +19,7 @@ namespace sand::ecal {
   }
 
   /// Constructor: Initialize digitization process with PES input and DIGI output
-  fast_digi::fast_digi() : process({{"pes", "sand::ecal::pes"}}, {{"digi", "sand::ecal::digi"}}) {
+  fast_digi::fast_digi() : process({{"pes", "sand::ecal::pes_container"}}, {{"digi", "sand::ecal::digits_container"}}) {
     UFW_DEBUG("Creating a ecal fast digitization process at {}", fmt::ptr(this));
   }
 
@@ -30,9 +30,9 @@ namespace sand::ecal {
     // Get ECAL geometry information
     const auto& gecal = get<geoinfo>().ecal();
     // Get input photo-electron collection
-    auto& pes = get<sand::ecal::pes>("pes");
+    auto& pes = get<sand::ecal::pes_container>("pes");
     // Get output digitized signal collection
-    auto& digi = set<sand::ecal::digi>("digi");
+    auto& digi = set<sand::ecal::digits_container>("digi");
 
     // Process photo-electrons for each PMT channel
     for (auto [pmt, pe_collection] : pes.collection) {
@@ -68,9 +68,9 @@ namespace sand::ecal {
           // timing window for particle crossing is conservatively estimated taking into
           // account a maximal path length for scintillation photons of 5 m, a velocity of
           // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
-          digi::signal signal{reco::digi{pmt, reco::digi::time{tdc - 35., tdc, tdc + 5.}}, adc, tdc, tot};
+          digits_container::digit signal{reco::digi{pmt, reco::digi::time{tdc - 35., tdc, tdc + 5.}}, adc, tdc, tot};
           // Collect all truth hits from photo-electrons in this pulse
-          std::vector<pes::pe>::iterator it = start_pe;
+          std::vector<pes_container::photo_electron>::iterator it = start_pe;
 
           // Add truth hit information from all contributing photo-electrons
           while (it != this_pe) {
@@ -82,7 +82,7 @@ namespace sand::ecal {
             signal.insert(this_pe->true_hits());
 
           // Store the digitized signal in output collection
-          digi.signals.push_back(signal);
+          digi.digits.push_back(signal);
 
           // Skip photo-electrons in the dead time window after signal detection
           while (this_pe->arrival_time < start_int_window + m_int_time_window + m_dead_time_window
