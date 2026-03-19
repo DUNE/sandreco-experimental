@@ -13,6 +13,7 @@
 #include <tracker/digi.h>
 #include <tracker/cluster_container.h>
 
+#include <cluster_analyzer.hpp>
 #include <clustering.hpp>
 
 namespace sand::tracker {
@@ -21,42 +22,30 @@ namespace sand::tracker {
     process::configure(cfg);
   }
 
-  clustering::clustering() : process({{"digi", "sand::tracker::digi"}}, {{"clu", "sand::tracker::cluster_container"}}) {
+    clustering::clustering() : process({{"digi", "sand::tracker::digi"}}, {{"clu", "sand::tracker::cluster_container"}}) {
     UFW_DEBUG("Creating a clustering process at {}", fmt::ptr(this));
   }
 
-  void clustering::run() {
-    UFW_DEBUG("Running clustering process at {}", fmt::ptr(this));
-    const auto& tree = get<sand::edep_reader>();
-    const auto& gi   = get<geoinfo>();
+   void clustering::run(){
+
     const auto& digi = get<sand::tracker::digi>("digi");
-    const auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
-    auto & clu_out = set<sand::tracker::cluster_container>("clu");
 
+    auto& clu_out = set<sand::tracker::cluster_container>("clu");
+
+ 
     auto signals_by_station = group_signals_by_station();
-    UFW_INFO("Stations with signals : {}", signals_by_station.size());
-    for (const auto &[station, signals] : signals_by_station) {
-      UFW_DEBUG("Clusterizing {} signals for station corresponding to daq_link {}.", signals.size(), station->daq_link);
-      clusterize_signals(signals);
-      total_clusters += clu_out.clusters.size();
-    }
-    //Clustering process debug info
-    const size_t nSignals = digi.signals.size();
-    const size_t nClusters = clu_out.clusters.size();
-    UFW_INFO("=========CLUSTER ANALYSIS=========");
-    UFW_INFO("Total signals collected : {}", nSignals);
-    UFW_INFO("Total clusters found : {}", nClusters);
 
-    if(nClusters > 0 ){
-      std::vector<size_t> cluster_size;
-      cluster_size.reserve(nClusters);
-      for(const auto& c : clu_out.clusters){
-        cluster_size.push_back(c.digits().size());
-      }
-
+    for (const auto& [station, signals] : signals_by_station)
+    {
+        clusterize_signals(signals);
     }
 
-   UFW_DEBUG(" Completed clustering process at {}", fmt::ptr(this));
+    if (cluster_analyzer_)
+    {
+      const auto& digi = get<sand::tracker::digi>("digi");
+      const auto& gi   = get<geoinfo>();
+      cluster_analyzer_->analyzeEvent(digi, clu_out, gi);
+    }
 
   }
 
@@ -101,7 +90,7 @@ namespace sand::tracker {
     {
         const auto& gi = get<geoinfo>();
         visited[index] = true;
-       cluster.add_digit(index);
+        cluster.add_digit(index);
 
         const auto& wire_i = gi.tracker().wire_at(signals[index].channel());
 

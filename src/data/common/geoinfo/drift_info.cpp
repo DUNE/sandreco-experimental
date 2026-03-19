@@ -194,7 +194,7 @@ namespace sand {
     int tgt_ct = val / 10;
     int mod_ct = val - tgt_ct * 10;
 
-    int plane             = gi.drift.plane;
+    int plane  = gi.drift.plane;
 
     std::string supermod_name;
     // UFW_INFO("tgt_ct: {}, mod_ct: {}, plane: {}, dir: {}", tgt_ct, mod_ct, plane, dir);
