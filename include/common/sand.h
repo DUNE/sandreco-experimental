@@ -174,7 +174,7 @@ namespace sand {
   struct geo_id {
     using supermodule_t = uint8_t;
     using plane_t       = uint8_t;
-    using tube_t        = uint8_t;
+    using tube_t        = uint16_t;
 
     enum region_t : uint8_t { BARREL = 0, ENDCAP_A = 1, ENDCAP_B = 2, UNKNOWN = 255 };
     enum element_t : uint8_t {
