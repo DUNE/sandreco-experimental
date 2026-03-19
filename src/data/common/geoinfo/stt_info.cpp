@@ -76,7 +76,8 @@ namespace sand {
             // FIXME temporary implementation of w->channel
             w->daq_channel.subdetector = STT;
             w->daq_channel.link = w->geo.stt.supermodule;
-            w->daq_channel.channel = (w->geo.stt.plane << 16) | w->geo.stt.tube;
+            w->daq_channel.channel = (uint32_t(w->geo.stt.plane) << 16) | uint32_t(w->geo.stt.tube);
+            w->aabb = geoinfo::tracker_info::wire::AABB(*w);
             stat->daq_link = w->geo.stt.supermodule;
             stat->wires.emplace_back(std::move(w));
           } else {
@@ -84,6 +85,8 @@ namespace sand {
           }
         });
       });
+
+      stat->set_wire_adjacency();
       add_station(station_ptr(std::move(stat)));
     });
   }

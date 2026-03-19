@@ -25,6 +25,7 @@ namespace sand::tracker {
        * @unit ADC counts (arbitrary units)
        */
       double adc;
+
     };
 
     using signal_collection = std::vector<signal>;
