@@ -13,7 +13,7 @@ build:
    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=./install
    - cd build && make -j8 install
 
-artifacts:
+ artifacts:
    paths:
      - src/streamers/root/tree_streamer_types.hpp
      - install/lib64/*
