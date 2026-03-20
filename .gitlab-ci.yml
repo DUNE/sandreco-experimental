@@ -47,7 +47,7 @@ pages:
   - mv ./html/ public/
   artifacts:
     paths:
-    - public
+    - docs/public
   # only:
   # - develop
   # - main
