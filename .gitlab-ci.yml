@@ -9,9 +9,9 @@
 #    # a pages deploy
 #    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
 stages:
+ - doxygen
  - build
  - test
- - doxygen
 
 image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
 
