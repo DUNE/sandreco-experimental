@@ -35,3 +35,6 @@ You can place a sample config.json that runs your module (and any ancillary modu
 It will be picked up by the testing system and run as part of the continuous integration.
 Only do this if you can supply a meaningful input test data that is reasonably small (under a few 100kb), as large binary files shall not be stored in baltig.
 If you have a justified need for a larger file, we can bake it into the CI image.
+
+## CAF info
+[Here](src/processes/fake_reco/fields.md)
