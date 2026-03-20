@@ -41,7 +41,7 @@ test:
 pages:
   stage: doxygen
   script:
-  - dnf install doxygen graphviz
+  - dnf install -y doxygen graphviz
   - cd docs
   - doxygen Doxyfile.in
   - mv docs/html/ public/
