@@ -44,7 +44,7 @@ pages:
   - dnf install -y doxygen graphviz
   - cd docs
   - doxygen Doxyfile.in
-  - mv docs/html/ public/
+  - mv ./html/ public/
   artifacts:
     paths:
     - public
