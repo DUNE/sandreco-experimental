@@ -21,3 +21,17 @@ test:
   script:
     - cp -r install/lib64/* /usr/local/lib64/
     - cd build && ctest --output-on-failure
+
+
+pages:
+  script:
+  - dnf install doxygen graphviz ttf-freefont
+  - cd docs
+  - doxygen Doxyfile.in
+  - mv docs/html/ public/
+  artifacts:
+    paths:
+    - public
+  # only:
+  # - develop
+  # - main
