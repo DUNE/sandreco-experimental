@@ -1,41 +1,31 @@
-# The Docker image that will be used to build your app
-#image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
-#create-pages:
-#  pages:
-#    # The folder that contains the files to be exposed at the Page URL
-#    publish: public
-#  rules:
-#    # This ensures that only pushes to the default branch will trigger
-#    # a pages deploy
-#    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
 stages:
+ - build
+ - test
  - doxygen
-# - build
-# - test
 
 image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
 
-#build:
-#  stage: build
-#  script:
-#    - mkdir install
-#    - mkdir build
-#    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=./install
-#    - cd build && make -j8 install
+build:
+ stage: build
+ script:
+   - mkdir install
+   - mkdir build
+   - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=./install
+   - cd build && make -j8 install
 
-  #artifacts:
-  #  paths:
-  #    - src/streamers/root/tree_streamer_types.hpp
-  #    - install/lib64/*
-  #    - build/CTestTestfile.cmake
-  #    - build/tests/*
+artifacts:
+   paths:
+     - src/streamers/root/tree_streamer_types.hpp
+     - install/lib64/*
+     - build/CTestTestfile.cmake
+     - build/tests/*
 
 # run tests using the binaries built above
-#test:
-#  stage: test
-#  script:
-#    - cp -r install/lib64/* /usr/local/lib64/
-#    - cd build && ctest --output-on-failure
+test:
+ stage: test
+ script:
+   - cp -r install/lib64/* /usr/local/lib64/
+   - cd build && ctest --output-on-failure
 
 
 pages:
