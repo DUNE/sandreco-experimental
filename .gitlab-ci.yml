@@ -44,10 +44,11 @@ pages:
   - dnf install -y doxygen graphviz
   - cd docs
   - doxygen Doxyfile.in
-  - mv ./html/ public/
+  - cd ..
+  - mv ./docs/html/ public/
   artifacts:
     paths:
-    - docs/public
+    - public
   # only:
   # - develop
   # - main
