@@ -17,6 +17,24 @@
 
 namespace sand::grain {
 
+  /**
+   * \class sand::grain::mask_weights_computation
+   *
+   * \brief Computes geometric solid angle weights for GRAIN coded aperture cameras.
+   *
+   * Computes geometric solid angles for voxels in the detector volume by leveraging OpenCL acceleration.
+   * This process calculates the probability for a photon emitted in each voxel to reach each sensor pixel.
+   * A voxel is subdivided into smaller voxels for increased precision, the result is then averaged.
+   * Outputs weights stored in HDF5 format.
+   *
+   * \subsection Configuration
+   * | Parameter Name              | Type    | Unit       | Required/Default | Description                                                                 |
+   * |-----------------------------|---------|------------|------------------|-----------------------------------------------------------------------------|
+   * | `voxel_size`                | double  | mm         | Required          | Size of each voxel in the grid to be computed.                              |
+   * | `lar_attenuation_length`    | double  | mm         | Required          | Mean free path length for light attenuation in liquid argon.  |
+   * | `pde`                       | double  | ratio [0.0-1.0] | Required          | Photodetector efficiency.               |
+   * | `minivoxels_per_side`       | uint    |            | Required          | Number of minivoxels per side of larger voxels for refined solid angle computation.|
+   */
   class mask_weights_computation : public ufw::process {
    public:
     mask_weights_computation();

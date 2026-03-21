@@ -16,10 +16,10 @@ namespace sand::ecal {
    * 
    * | Parameter Name          | Type    | Unit               | Required/Default | Description
    * |-------------------------|---------|---------------------|----------|----------------
-   * | `int_time_window`      | `double`| nanoseconds       | **Required** | Integration window duration for accumulating photo-electrons.
-   * | `dead_time_window`     | `double`| nanoseconds       | **Required** | Electronics dead time after pulse detection.
-   * | `pe_threshold`         | `double`| photo-electrons    | **Required** | Minimum photo-electrons required to trigger a pulse output.
-   * | `constant_fraction`    | `double`| ratio [0.0-1.0]   | **Required** | CFD Threshold Fraction.
+   * | `int_time_window`      | `double`| nanoseconds       | Required | Integration window duration for accumulating photo-electrons.
+   * | `dead_time_window`     | `double`| nanoseconds       | Required | Electronics dead time after pulse detection.
+   * | `pe_threshold`         | `double`| photo-electrons    | Required | Minimum photo-electrons required to trigger a pulse output.
+   * | `constant_fraction`    | `double`| ratio [0.0-1.0]   | Required | CFD Threshold Fraction.
    * 
    */
 
