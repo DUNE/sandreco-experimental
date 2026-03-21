@@ -15,7 +15,7 @@ namespace sand::ecal {
     // Minimum number of photo-electrons required to trigger a digitized signal
     m_pe_threshold = cfg.at("pe_threshold");
     // Constant fraction for timing discrimination (constant fraction discriminator)
-    m_costant_fraction = cfg.at("costant_fraction");
+    m_constant_fraction = cfg.at("constant_fraction");
   }
 
   /// Constructor: Initialize digitization process with PES input and DIGI output
@@ -59,7 +59,7 @@ namespace sand::ecal {
           auto adc = double(pe_count); // for now, we just use the number of PEs as the ADC value. This can be improved
                                        // by using a more realistic response function.
           // Calculate timing using constant fraction discriminator method
-          auto tdc = std::next(start_pe, int(m_costant_fraction * pe_count))->arrival_time;
+          auto tdc = std::next(start_pe, int(m_constant_fraction * pe_count))->arrival_time;
           // Time-over-threshold (TOT) calculation placeholder
           auto tot = 0.; // we don't have a good way to estimate the TOT value, so we set it to 0 for now. This can
                          // be improved by using a more realistic response function that includes the pulse shape.
