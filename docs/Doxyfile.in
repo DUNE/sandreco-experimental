@@ -2,7 +2,7 @@ DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "@CMAKE_PROJECT_NAME@"
 PROJECT_NUMBER         = "@CMAKE_PROJECT_VERSION@"
 PROJECT_BRIEF          = "A modular reconstruction software for SAND"
-INPUT                  = @CMAKE_SOURCE_DIR@/include/ \
+INPUT                  = @CMAKE_SOURCE_DIR@/include/common/ \
                          @CMAKE_SOURCE_DIR@/src \
                          @CMAKE_SOURCE_DIR@/README.md
 PROJECT_LOGO           = @CMAKE_SOURCE_DIR@/docs/sand.png
@@ -127,14 +127,12 @@ FILE_PATTERNS          = *.c \
                          *.h++ \
                          *.md \
                          *.dox \
-                         *.py \
+                         *.py
 RECURSIVE              = YES
 EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = */build/*
 EXCLUDE_PATTERNS      += */tests/*
-EXCLUDE_PATTERNS      += *json.hpp
-EXCLUDE_PATTERNS      += *test.c*
 EXCLUDE_SYMBOLS        =
 EXAMPLE_PATH           =
 EXAMPLE_PATTERNS       = *
