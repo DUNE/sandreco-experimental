@@ -20,8 +20,8 @@ build:
      - build/tests/*
      - build/docs/html
 
-  pages:
-    public: build/docs/html
+ pages:
+   public: build/docs/html
 
 # run tests using the binaries built above
 test:
