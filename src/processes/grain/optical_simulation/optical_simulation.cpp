@@ -32,10 +32,10 @@ namespace sand::grain {
    *
    *
    * \subsection Configuration
-   * | Parameter Name          | Type      | Unit  | Required/Default | Description                                                 |
-   * |-------------------------|-----------|-------|-------------------|------------------------------------------------------------|
-   * | `geometry`              | string    |       | Required          | Internal GDML for GRAIN  |
-   * | `energy_split_threshold`| double    | MeV   | Default: 100      | Threshold energy at which to split events for memory usage |
+   * | Parameter Name           | Type   | Unit  | Required/Default | Description                                                 |
+   * |--------------------------|--------|-------|------------------|-------------------------------------------------------------|
+   * | `geometry`               | string |       | Required         | Internal GDML file for GRAIN.                               |
+   * | `energy_split_threshold` | double | MeV   | Default: 100     | Threshold energy at which to split events for memory usage. |
    *
    */
 

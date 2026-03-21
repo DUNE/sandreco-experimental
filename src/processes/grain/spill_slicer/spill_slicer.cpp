@@ -24,11 +24,11 @@ namespace sand::grain {
    * Outputs generated pixel images (`images`) for each given camera.
    *
    * \subsection Configuration
-   * | Parameter Name              | Type     | Unit  | Required/Default | Description                                 |
-   * |------------------------------|----------|-------|------------------|---------------------------------------------|
-   * | `slice_times`               | vector\<double\>   | ns    | Default: []       | Predefined time slices for photon assignment.
-   * | `min_response_signal`        | double   | ** ?? ** | Required if slice_times is empty | Minimum photon response signal to trigger slicing. |
-   * | `delta_ns_for_comparison`   | double   | ns    | Required if slice_times is empty | ** ?? **
+   * | Parameter Name            | Type             | Unit   | Required/Default                 | Description                                        |
+   * |---------------------------|------------------|--------|----------------------------------|----------------------------------------------------|
+   * | `slice_times`             | vector\<double\> | ns     | Default: []                      | Predefined time slices for photon assignment.      |
+   * | `min_response_signal`     | double           | **??** | Required if slice_times is empty | Minimum photon response signal to trigger slicing. |
+   * | `delta_ns_for_comparison` | double           | ns     | Required if slice_times is empty | **??**                                             |
    */
 
   class spill_slicer : public ufw::process {

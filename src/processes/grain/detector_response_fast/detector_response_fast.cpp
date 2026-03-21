@@ -24,9 +24,9 @@ namespace sand::grain {
    * simulates detector electronics, and generates digitized output (`digi`).
    *
    * \subsection Configuration
-   * | Parameter Name | Type | Unit| Required/Default | Description |
-   * |--------|-------|-----|--------------|------------------|
-   * | `pde`  | double | ratio [0.0-1.0] | Required | Photodetector efficiency. |
+   * | Parameter Name | Type   | Unit            | Required/Default | Description               |
+   * |----------------|--------|-----------------|------------------|---------------------------|
+   * | `pde`          | double | ratio [0.0-1.0] | Required         | Photodetector efficiency. |
    */
 
   detector_response_fast::detector_response_fast()

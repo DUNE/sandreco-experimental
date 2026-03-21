@@ -4,6 +4,26 @@
 #include <ecal/photo_electron.h>
 
 namespace sand::ecal {
+  /**
+   * \class sand::ecal::fast_digi
+   * \brief Processes raw photo-electron (PE) inputs from PMTs to digitized signals,
+   *        leveraging a sliding-window algorithm to detect pulses.
+   *
+   * This process utilizes a sliding time window to integrate PMT photo-electrons,
+   * enforcing dead-time to simulate the behaviour of the readout electronics, and rejecting
+   * signals below a photo-electron threshold.
+   * It applies constant fraction discrimination to extract the best timing of the signal.
+   *
+   * \subsection Configuration
+   * 
+   * | Parameter Name      | Type     | Unit            | Required/Default | Description                                                   |
+   * |---------------------|----------|-----------------|------------------|---------------------------------------------------------------|
+   * | `int_time_window`   | `double` | nanoseconds     | Required         | Integration window duration for accumulating photo-electrons. |
+   * | `dead_time_window`  | `double` | nanoseconds     | Required         | Electronics dead time after pulse detection.                  |
+   * | `pe_threshold`      | `double` | photo-electrons | Required         | Minimum photo-electrons required to trigger a pulse output.   |
+   * | `constant_fraction` | `double` | ratio [0.0-1.0] | Required         | CFD Threshold Fraction.                                       |
+   * 
+   */
 
   /// Configure digitization parameters from configuration file
   void fast_digi::configure(const ufw::config& cfg) {
