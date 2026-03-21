@@ -15,6 +15,20 @@ UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::detector_response_fast)
 
 namespace sand::grain {
 
+  /**
+   * \class sand::grain::detector_response_fast
+   *
+   * \brief SiPM and electronics response for GRAIN.
+   *
+   * Given photon hits (`hits` input), this process finds the correct SiPM pixel,
+   * simulates detector electronics, and generates digitized output (`digi`).
+   *
+   * \subsection Configuration
+   * | Parameter Name | Type | Unit| Required/Default | Description |
+   * |--------|-------|-----|--------------|------------------|
+   * | `pde`  | double | ratio [0.0-1.0] | Required | Photodetector efficiency. |
+   */
+
   detector_response_fast::detector_response_fast()
     : process({{"hits", "sand::grain::hits"}}, {{"digi", "sand::grain::digi"}}), m_uniform(0.0, 1.0) {
     UFW_DEBUG("Creating a detector_response_fast process at {}", fmt::ptr(this));
