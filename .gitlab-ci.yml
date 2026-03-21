@@ -21,7 +21,7 @@ build:
      - build/docs/html
 
  pages:
-   public: build/docs/html
+   publish: build/docs/html
 
 # run tests using the binaries built above
 test:
