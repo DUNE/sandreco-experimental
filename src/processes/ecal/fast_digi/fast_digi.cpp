@@ -4,6 +4,26 @@
 #include <ecal/photo_electron.h>
 
 namespace sand::ecal {
+  /**
+   * \class sand::ecal::fast_digi
+   * \brief Processes raw photo-electron (PE) inputs from PMTs to digitized signals,
+   *        leveraging a sliding-window algorithm to detect pulses.
+   *
+   * This process utilizes a sliding time window to integrate PMT photo-electrons,
+   * enforcing dead-time to simulate the behaviour of the readout electronics, and rejecting
+   * signals below a photo-electron threshold.
+   * It applies constant fraction discrimination to extract the best timing of the signal.
+   *
+   * \subsection Configuration
+   * 
+   * | Parameter Name      | Type     | Unit            | Required/Default | Description                                                   |
+   * |---------------------|----------|-----------------|------------------|---------------------------------------------------------------|
+   * | `int_time_window`   | `double` | nanoseconds     | Required         | Integration window duration for accumulating photo-electrons. |
+   * | `dead_time_window`  | `double` | nanoseconds     | Required         | Electronics dead time after pulse detection.                  |
+   * | `pe_threshold`      | `double` | photo-electrons | Required         | Minimum photo-electrons required to trigger a pulse output.   |
+   * | `constant_fraction` | `double` | ratio [0.0-1.0] | Required         | CFD Threshold Fraction.                                       |
+   * 
+   */
 
   /// Configure digitization parameters from configuration file
   void fast_digi::configure(const ufw::config& cfg) {
@@ -15,7 +35,7 @@ namespace sand::ecal {
     // Minimum number of photo-electrons required to trigger a digitized signal
     m_pe_threshold = cfg.at("pe_threshold");
     // Constant fraction for timing discrimination (constant fraction discriminator)
-    m_costant_fraction = cfg.at("costant_fraction");
+    m_constant_fraction = cfg.at("constant_fraction");
   }
 
   /// Constructor: Initialize digitization process with PES input and DIGI output
@@ -59,7 +79,7 @@ namespace sand::ecal {
           auto adc = double(pe_count); // for now, we just use the number of PEs as the ADC value. This can be improved
                                        // by using a more realistic response function.
           // Calculate timing using constant fraction discriminator method
-          auto tdc = std::next(start_pe, int(m_costant_fraction * pe_count))->arrival_time;
+          auto tdc = std::next(start_pe, int(m_constant_fraction * pe_count))->arrival_time;
           // Time-over-threshold (TOT) calculation placeholder
           auto tot = 0.; // we don't have a good way to estimate the TOT value, so we set it to 0 for now. This can
                          // be improved by using a more realistic response function that includes the pulse shape.

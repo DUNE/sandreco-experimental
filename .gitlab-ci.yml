@@ -1,7 +1,6 @@
 stages:
  - build
  - test
- - doxygen
 
 image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
 
@@ -10,7 +9,7 @@ build:
  script:
    - mkdir install
    - mkdir build
-   - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=./install
+   - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=ON -DCMAKE_INSTALL_PREFIX=./install
    - cd build && make -j8 install
 
  artifacts:
@@ -19,6 +18,10 @@ build:
      - install/lib64/*
      - build/CTestTestfile.cmake
      - build/tests/*
+     - build/docs/html
+
+ pages:
+   publish: build/docs/html
 
 # run tests using the binaries built above
 test:
@@ -26,20 +29,3 @@ test:
  script:
    - cp -r install/lib64/* /usr/local/lib64/
    - cd build && ctest --output-on-failure
-
-
-pages:
-  stage: doxygen
-  script:
-  - dnf install -y doxygen graphviz
-  - cd docs
-  - doxygen Doxyfile.in
-  - cd ..
-  - mv ./docs/html/ public/
-  artifacts:
-    paths:
-    - public
-  # only:
-  # - develop
-  # - main
-

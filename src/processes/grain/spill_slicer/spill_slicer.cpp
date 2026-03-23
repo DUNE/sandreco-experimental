@@ -14,6 +14,23 @@
 
 namespace sand::grain {
 
+  /**
+   * \class sand::grain::spill_slicer
+   *
+   * \brief Processes digitized signals into time-based images/slices for further reconstruction.
+   *
+   * This process accepts digitized signals (digi) and classifies time-of-flight photons into multiple time-based "slices."
+   * Each slice represents a defined time window, and pixel-level data is assigned to the appropriate slice based on photon timing.
+   * Outputs generated pixel images (`images`) for each given camera.
+   *
+   * \subsection Configuration
+   * | Parameter Name            | Type             | Unit   | Required/Default                 | Description                                        |
+   * |---------------------------|------------------|--------|----------------------------------|----------------------------------------------------|
+   * | `slice_times`             | vector\<double\> | ns     | Default: []                      | Predefined time slices for photon assignment.      |
+   * | `min_response_signal`     | double           | **??** | Required if slice_times is empty | Minimum photon response signal to trigger slicing. |
+   * | `delta_ns_for_comparison` | double           | ns     | Required if slice_times is empty | **??**                                             |
+   */
+
   class spill_slicer : public ufw::process {
    public:
     spill_slicer();

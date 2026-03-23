@@ -16,6 +16,21 @@
 
 namespace sand::stt {
 
+  /**
+   * \class sand::stt::stt_fast_digi
+   *
+   * \brief Digitizes simulated energy deposits in STT tubes, simulating detector response and output for wire signals.
+   *
+   * Converts energy deposition information into digitized signals with simulated drift time, signal propagation,
+   * in the STT geometry.
+   *
+   * \subsection Configuration
+   * | Parameter Name   | Type   | Unit  | Required/Default | Description                          |
+   * |------------------|--------|-------|------------------|--------------------------------------|
+   * | `drift_velocity` | double | mm/ns | Required         | Drift velocity of ionized particles. |
+   * | `wire_velocity`  | double | mm/ns | Required         | Signal transit time along the wire.  |
+   * | `sigma_tdc`      | double | ns    | Required         | Time resolution of TDC.              |
+   */
   void stt_fast_digi::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_drift_velocity = cfg.at("drift_velocity");

@@ -25,6 +25,20 @@ UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::optical_simulation)
 
 namespace sand::grain {
 
+  /**
+   * \class sand::grain::optical_simulation
+   *
+   * \brief Simulates optical effects, including scintillation light propagation, absorption, and scattering via Geant 4.
+   *
+   *
+   * \subsection Configuration
+   * | Parameter Name           | Type   | Unit  | Required/Default | Description                                                 |
+   * |--------------------------|--------|-------|------------------|-------------------------------------------------------------|
+   * | `geometry`               | string |       | Required         | Internal GDML file for GRAIN.                               |
+   * | `energy_split_threshold` | double | MeV   | Default: 100     | Threshold energy at which to split events for memory usage. |
+   *
+   */
+
   void optical_simulation::configure(const ufw::config& cfg) {
     process::configure(cfg);
 
