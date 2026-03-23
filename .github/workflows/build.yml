@@ -23,8 +23,9 @@ jobs:
             -w /workspace \
             ${{ env.DOCKER_IMAGE }} \
             bash -c "
-              mkdir build &&
-              cd build &&
-              cmake -S .. -B . &&
-              cmake --build . --parallel --target install
+              set -ex
+              mkdir -p build
+              cd build
+              cmake -S .. -B . --debug-output
+              cmake --build . --parallel --target install --verbose
             "
