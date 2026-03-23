@@ -1,0 +1,28 @@
+name: Build Sandreco (Docker)
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Pull Docker image
+        run: docker pull baltig.infn.it:4567/dune/sand-ci/sand-dev-cpu:latest
+
+      - name: Build inside container
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            myorg/sandreco-env:latest \
+            bash -c "
+              mkdir build &&
+              cd build &&
+              cmake -S .. -B . &&
+              cmake --build . --parallel --target install
+            "
+            
