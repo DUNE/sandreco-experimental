@@ -18,9 +18,14 @@ jobs:
 
       - name: Build inside container
         run: |
-          docker run --rm -i \
+          docker run --rm -t \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ${{ env.DOCKER_IMAGE }} \
-            bash -c "set -ex; mkdir -p build; cd build; cmake -S .. -B . --debug-output; cmake --build . --parallel --target install --verbose"
-            
+            bash -c "
+            set -x
+            mkdir -p build
+            cd build
+            cmake -S .. -B . --debug-output
+            cmake --build . --parallel --target install --verbose
+            "
