@@ -1,0 +1,39 @@
+name: Build and Test Sandreco
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      ####################################################################
+      # Configure and build
+      ####################################################################
+      - name: Configure and build
+        run: |
+          mkdir -p install
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_DOCUMENTATION=ON \
+            -DCMAKE_INSTALL_PREFIX=./install
+
+          cmake --build build -j8
+          cmake --install build
+
+      ####################################################################
+      # Run tests
+      ####################################################################
+      - name: Run tests
+        run: |
+          cp -r install/lib64/* /usr/local/lib64/ || true
+          cd build
+          ctest --output-on-failure
