@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     container:
@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       ####################################################################
-      # Build
+      # Configure and build
       ####################################################################
       - name: Configure and build
         run: |
@@ -30,62 +30,6 @@ jobs:
           cmake --install build
 
       ####################################################################
-      # Pack artifacts (IMPORTANT)
-      ####################################################################
-      - name: Pack build artifacts
-        run: |
-          # GitHub Actions stores artifacts as ZIP archives,
-          # and ZIP does NOT preserve Unix file permissions (e.g. +x).
-          #
-          # This breaks compiled binaries, causing "permission denied"
-          # errors when running tests.
-          #
-          # Solution: package everything into a tar.gz archive instead.
-          # tar preserves:
-          #   - executable permissions
-          #   - symlinks
-          #   - full directory structure
-          #
-          # This is the correct way to transfer C/C++ build outputs between jobs.
-
-          tar -czf build.tar.gz build install
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: build.tar.gz
-
-  test:
-    runs-on: ubuntu-latest
-    needs: build
-
-    container:
-      image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      ####################################################################
-      # Download artifacts
-      ####################################################################
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-
-      ####################################################################
-      # Unpack artifacts (IMPORTANT)
-      ####################################################################
-      - name: Unpack build artifacts
-        run: |
-          # Extracting the tar archive restores executable permissions (+x),
-          # preventing "permission denied" errors in tests.
-
-          tar -xzf build.tar.gz
-
-      ####################################################################
       # Run tests
       ####################################################################
       - name: Run tests
@@ -93,4 +37,3 @@ jobs:
           cp -r install/lib64/* /usr/local/lib64/ || true
           cd build
           ctest --output-on-failure
-          
