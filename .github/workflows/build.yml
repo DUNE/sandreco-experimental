@@ -1,21 +1,76 @@
-name: Build Sandreco (Docker)
+name: Build and Test Sandreco
 
-on: [push]
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     container:
-      image: baltig.infn.it:4567/dune/sand-ci/sand-dev-cpu:latest
+      image: ${{ env.DOCKER_IMAGE }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build
+      ####################################################################
+      # Build
+      ####################################################################
+      - name: Configure and build
         run: |
+          mkdir install
           mkdir build
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_DOCUMENTATION=ON \
+            -DCMAKE_INSTALL_PREFIX=./install
+
           cd build
-          cmake -S .. -B .
-          cmake --build . --parallel --target install
+          make -j8 install
+
+      ####################################################################
+      # Upload artifacts
+      ####################################################################
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            src/streamers/root/tree_streamer_types.hpp
+            install/lib64/*
+            build/CTestTestfile.cmake
+            build/tests/*
+            build/docs/html
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+
+    container:
+      image: ${{ env.DOCKER_IMAGE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      ####################################################################
+      # Download artifacts
+      ####################################################################
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      ####################################################################
+      # Run tests
+      ####################################################################
+      - name: Run tests
+        run: |
+          cp -r install/lib64/* /usr/local/lib64/ || true
+          cd build
+          ctest --output-on-failure
