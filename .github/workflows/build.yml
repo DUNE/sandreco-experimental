@@ -70,4 +70,8 @@ jobs:
         run: |
           cp -r install/lib64/* /usr/local/lib64/ || true
           cd build
+          echo "=== standalone ==="
+          ls -l build/tests/standalone/hdf5/
+          echo "=== working test ==="
+          ls -l build/tests/
           ctest --output-on-failure
