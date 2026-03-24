@@ -2,30 +2,20 @@ name: Build Sandreco (Docker)
 
 on: [push]
 
-env:
-  DOCKER_IMAGE: baltig.infn.it:4567/dune/sand-ci/sand-dev-cpu:latest
-
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    container:
+      image: baltig.infn.it:4567/dune/sand-ci/sand-dev-cpu:latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Pull Docker image
-        run: docker pull ${{ env.DOCKER_IMAGE }}
-
-      - name: Build inside container
+      - name: Build
         run: |
-          docker run --rm -t \
-            -v ${{ github.workspace }}:/workspace \
-            -w /workspace \
-            ${{ env.DOCKER_IMAGE }} \
-            bash -c "
-            set -x
-            mkdir -p build
-            cd build
-            cmake -S .. -B . --debug-output
-            cmake --build . --parallel --target install --verbose
-            "
+          mkdir build
+          cd build
+          cmake -S .. -B .
+          cmake --build . --parallel --target install
