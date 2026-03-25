@@ -11,7 +11,7 @@
     }
   },
   "contexts": {
-    "keys": 17,
+    "keys": 2,
     "locals": {
       "sand::edep_reader": {
         "uri": "test/sand-spills.5.edep.root"
@@ -33,7 +33,7 @@
     },
     {
       "sand::caf::caf_streamer": {
-        "uri": "test/sand-spills.5.edep.root",
+        "uri": "test/output.caf.root",
         "tree": "cafTree"
       },
       "write": ["produced_caf"]
