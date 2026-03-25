@@ -1,4 +1,5 @@
 #include "caf_filler.hpp"
+#include "utils/GlucksternSmearing.hpp"
 
 namespace sand {
 
@@ -31,6 +32,27 @@ namespace sand {
     // else the particle is neutral cannot be reconstructed
 
     add_truth_match(reco, id);
+    return reco;
+  }
+
+  ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part,
+                                                                    const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj) {
+    // start by filling all fields from truth
+    auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
+    // return from_true for all particle except muons (temporarily)
+    if(std::abs(true_part.pdg)!=13) { return reco; }
+
+    // for muons in the drift tracker (temporarily) smear according to the Gluckstern formula
+    const auto& hit_map = true_part_trj.GetHitMap();
+    const auto& it = hit_map.find(component::DRIFT);
+    if(it == hit_map.end()) { return reco; }
+    const auto& hit_vec = it->second;
+
+    const auto gluckstern_helper = smearing::gluckstern::GlucksternSmearing{hit_vec};
+
+    // apply the measurement resolution smearing
+    reco.p = gluckstern_helper.apply_smearing(true_part.p);
+    
     return reco;
   }
 

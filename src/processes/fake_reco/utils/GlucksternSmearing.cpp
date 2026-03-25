@@ -6,6 +6,7 @@ namespace smearing{
         return E / 1000.0f;
       }
     
+    template<Mode M>
     double get_path_len_over_x0(const std::vector<sand::vec_4d> hit_points){
         // here hit_points are taken as the medium point of the original HitSegment
 
@@ -26,9 +27,15 @@ namespace smearing{
             if ( current_hit_pos.Z() < last_hit_point.Z() ) {
                 auto next_hit_pos = static_cast<sand::pos_3d>(hit_points[i+1].Vect());
                 sand::dir_3d current_dir = (next_hit_pos - current_hit_pos);
-                nav->set_track(current_hit_pos, current_dir);
+
+                if constexpr (M == Mode::transverse) {
+                    nav->set_track(current_hit_pos, {0., current_dir.Y(), current_dir.Z()});
+                }
+                else {
+                    nav->set_track(current_hit_pos, current_dir);
+                }
                 nav->FindNextBoundary(1);
-                
+                    
                 auto atomic_nr = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetZ());
                 auto mass_nr = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetA());
 
@@ -62,7 +69,7 @@ namespace smearing{
                 if(hit.GetEnergyDeposit() > k_hit_energy_thr){
                     hit_pts_above_thr.push_back(0.5*(hit.GetStart()+hit.GetStop()));
                 }
-            }
+            } 
             
             if (hit_pts_above_thr.size()<2) { // require at least 2 points
               UFW_ERROR("Trajectory has <2 hits above energy threshold.");
@@ -74,28 +81,26 @@ namespace smearing{
               m_lever_arm /= 1E3; // mm -> m
             }
             
-            // then compute path_len/x0 (in 3D)
-            m_path_len_over_x0 = get_path_len_over_x0(hit_pts_above_thr);
+            // then compute path_len/x0
+            m_path_len_over_x0.full = get_path_len_over_x0<Mode::full>(hit_pts_above_thr);
+            m_path_len_over_x0.transverse = get_path_len_over_x0<Mode::transverse>(hit_pts_above_thr);
         }
 
         caf::SRVector3D GlucksternSmearing::apply_smearing(const caf::SRLorentzVector& true_p) const {
 
             const float p_transverse = std::hypot(true_p.Y(), true_p.Z());
-
-            // useful for MCS and dip angle smearing
             const auto dip_angle = std::acos(p_transverse / true_p.Mag());
             const auto zy_angle = std::atan(true_p.Y() / true_p.Z());
-            const auto path_len_over_x0_tr = m_path_len_over_x0 * std::cos(dip_angle);
-
+            
             // pt resolution (det + MCS)
             const auto measure_pt_res = compute_measurement_smearing(mev_to_gev(p_transverse));
-            const auto mcs_pt_res = compute_mcs_measurement_smearing(path_len_over_x0_tr);
+            const auto mcs_pt_res = compute_mcs_measurement_smearing(m_path_len_over_x0.transverse);
             const auto pt_res = std::hypot(measure_pt_res, mcs_pt_res);
             
-            // MCS angle smearing: for zy used transverse path and p
-            const auto mcs_dip_angle_res = compute_mcs_angle_smearing(m_path_len_over_x0, mev_to_gev(true_p.Mag())); 
-            const auto mcs_zy_angle_res = compute_mcs_angle_smearing(path_len_over_x0_tr, mev_to_gev(p_transverse));
-
+            // MCS angle smearing: for zy used transverse path and transverse p
+            const auto mcs_dip_angle_res = compute_mcs_angle_smearing(m_path_len_over_x0.full, mev_to_gev(true_p.Mag())); 
+            const auto mcs_zy_angle_res = compute_mcs_angle_smearing(m_path_len_over_x0.transverse, mev_to_gev(p_transverse));
+            
             // random extraction of the smearing factor (force a positive Pt)
             std::normal_distribution<double> relative_pt_error(1.0, pt_res);
             double ran_pt = relative_pt_error(m_random_engine());
@@ -119,6 +124,7 @@ namespace smearing{
                                             smeared_p_transverse*std::cos(smeared_zy_angle)};
             
         }
-
     }
+    template double get_path_len_over_x0<Mode::full>(const std::vector<sand::vec_4d>);
+    template double get_path_len_over_x0<Mode::transverse>(const std::vector<sand::vec_4d>);
 }

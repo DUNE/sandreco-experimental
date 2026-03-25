@@ -29,6 +29,9 @@ namespace smearing {
         return tgm.navigator()->GetStep() * 0.1;
       }
       
+      enum class Mode {full, transverse };
+
+      template<Mode M>
       double get_path_len_over_x0(const std::vector<sand::vec_4d> hit_points);
 
       inline double compute_mcs_angle_smearing(const double path_len_over_x0, const double p) {
@@ -36,6 +39,11 @@ namespace smearing {
       };
 
   namespace gluckstern {
+
+    struct PathLengthOverX0{
+      double full;
+      double transverse;
+    };
 
     struct GlucksternSmearing {
       // FIXME: hardcoded smearing parameters (pass a Config helper struct from the process)
@@ -53,8 +61,8 @@ namespace smearing {
 
      private:
       int m_n_pts;               // number of trajectory hits in the tracker
-      double m_lever_arm;        // lever arm from the trajectory hits in the tracker [m]
-      double m_path_len_over_x0; // cumulative l/x0 over the trajectory path in the tracker (3D)
+      double m_lever_arm;        // lever arm from the trajectory hits in the tracker [m] (zy plane)
+      PathLengthOverX0 m_path_len_over_x0; // cumulative l/x0 over the trajectory path in the tracker
 
       static ufw::context::random_engine& m_random_engine() { return ufw::context::current()->engine(); };
 
