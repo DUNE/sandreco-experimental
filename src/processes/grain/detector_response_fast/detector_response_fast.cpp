@@ -67,7 +67,7 @@ namespace sand::grain {
               ch.link        = photon.camera_id;
               // consistent indexing: Row Major
               ch.channel = i * camera_width + j;
-              digi::signal pe{reco::digi{sand::truth(photon.true_hit), ch, reco::digi::time{photon.pos.T()}}, photon.pos.T(), NAN, 1.0};
+              digi::signal pe{reco::digi{sand::truth(photon.true_hit), ch, reco::digi<>::time{photon.pos.T()}}, photon.pos.T(), NAN, 1.0};
               digi_out.signals.emplace_back(pe);
               m_stat_photons_accepted++;
               // UFW_DEBUG("Added photon to SiPM {},{}", i, j);

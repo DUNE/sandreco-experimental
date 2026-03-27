@@ -12,7 +12,7 @@ namespace sand::tracker {
     /**
      * @brief A signal recorded by a tracker channel.
      */
-    struct signal : reco::digi {
+    struct signal : reco::digi<> {
 
       /**
        * @brief Time-to-digital converter (TDC) value.

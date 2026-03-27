@@ -11,7 +11,7 @@
 namespace sand::grain {
 
   struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct signal : public reco::digi {
+    struct signal : public reco::digi<> {
       /// Calibrated time [ns] of rising edge since start of context.
       double time_rising_edge;
       /// Calibrated time [ns] over threshold.
