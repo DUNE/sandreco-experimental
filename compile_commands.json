@@ -1,0 +1,314 @@
+[
+{
+  "directory": "/home/sand/sandreco-experimental/src/streamers/caf_streamer",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -I/home/sand/sandreco-experimental/src/streamers/caf_streamer -I/home/sand/sandreco-experimental/src/streamers/caf_streamer/. -I/home/sand/sandreco-experimental/include -I/usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_caf_caf_streamer_dictionaries.dir/sand_caf_caf_streamer_dictionaries.cxx.o -c /home/sand/sandreco-experimental/src/streamers/caf_streamer/sand_caf_caf_streamer_dictionaries.cxx",
+  "file": "/home/sand/sandreco-experimental/src/streamers/caf_streamer/sand_caf_caf_streamer_dictionaries.cxx",
+  "output": "src/streamers/caf_streamer/CMakeFiles/sand_caf_caf_streamer_dictionaries.dir/sand_caf_caf_streamer_dictionaries.cxx.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/streamers/caf_streamer",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_caf_caf_streamer_EXPORTS -I/home/sand/sandreco-experimental/src/streamers/caf_streamer/. -I/home/sand/sandreco-experimental/include -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_caf_caf_streamer.dir/caf_streamer.cpp.o -c /home/sand/sandreco-experimental/src/streamers/caf_streamer/caf_streamer.cpp",
+  "file": "/home/sand/sandreco-experimental/src/streamers/caf_streamer/caf_streamer.cpp",
+  "output": "src/streamers/caf_streamer/CMakeFiles/sand_caf_caf_streamer.dir/caf_streamer.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/streamers/png",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_png_png_streamer_EXPORTS -I/home/sand/sandreco-experimental/src/streamers/png/. -I/home/sand/sandreco-experimental/include -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_png_png_streamer.dir/png_streamer.cpp.o -c /home/sand/sandreco-experimental/src/streamers/png/png_streamer.cpp",
+  "file": "/home/sand/sandreco-experimental/src/streamers/png/png_streamer.cpp",
+  "output": "src/streamers/png/CMakeFiles/sand_png_png_streamer.dir/png_streamer.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/streamers/root",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -I/usr/local/include/sandreco/public -I/home/sand/sandreco-experimental/src/streamers/root -I/home/sand/sandreco-experimental/src/streamers/root/. -I/home/sand/sandreco-experimental/include -I/usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_root_tree_streamer_dictionaries.dir/sand_root_tree_streamer_dictionaries.cxx.o -c /home/sand/sandreco-experimental/src/streamers/root/sand_root_tree_streamer_dictionaries.cxx",
+  "file": "/home/sand/sandreco-experimental/src/streamers/root/sand_root_tree_streamer_dictionaries.cxx",
+  "output": "src/streamers/root/CMakeFiles/sand_root_tree_streamer_dictionaries.dir/sand_root_tree_streamer_dictionaries.cxx.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/streamers/root",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_root_tree_streamer_EXPORTS -I/home/sand/sandreco-experimental/src/streamers/root/. -I/home/sand/sandreco-experimental/include -I/usr/local/include/sandreco/public -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_root_tree_streamer.dir/tree_streamer.cpp.o -c /home/sand/sandreco-experimental/src/streamers/root/tree_streamer.cpp",
+  "file": "/home/sand/sandreco-experimental/src/streamers/root/tree_streamer.cpp",
+  "output": "src/streamers/root/CMakeFiles/sand_root_tree_streamer.dir/tree_streamer.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_geant_gdml_parser_EXPORTS -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser/. -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_geant_gdml_parser.dir/geant_gdml_parser.cpp.o -c /home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser/geant_gdml_parser.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser/geant_gdml_parser.cpp",
+  "output": "src/data/grain/geant_gdml_parser/CMakeFiles/sand_grain_geant_gdml_parser.dir/geant_gdml_parser.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/grain/geant_run_manager",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_geant_run_manager_EXPORTS -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager/. -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_geant_run_manager.dir/geant_run_manager.cpp.o -c /home/sand/sandreco-experimental/src/data/grain/geant_run_manager/geant_run_manager.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/grain/geant_run_manager/geant_run_manager.cpp",
+  "output": "src/data/grain/geant_run_manager/CMakeFiles/sand_grain_geant_run_manager.dir/geant_run_manager.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/edep_reader",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_edep_reader_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/edep_reader/. -I/home/sand/sandreco-experimental/src/data/common/edep_reader/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -Wno-shadow -std=c++11  -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1  -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -pipe -fsigned-char -fsized-deallocation -pthread -O3 -DNDEBUG -fno-trapping-math -ftree-vectorize -fno-math-errno -O3 -DNDEBUG -std=c++17 -fPIC   -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -o CMakeFiles/sand_edep_reader.dir/edep_reader.cpp.o -c /home/sand/sandreco-experimental/src/data/common/edep_reader/edep_reader.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/edep_reader/edep_reader.cpp",
+  "output": "src/data/common/edep_reader/CMakeFiles/sand_edep_reader.dir/edep_reader.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/edep_reader",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_edep_reader_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/edep_reader/. -I/home/sand/sandreco-experimental/src/data/common/edep_reader/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -Wno-shadow -std=c++11  -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1  -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -pipe -fsigned-char -fsized-deallocation -pthread -O3 -DNDEBUG -fno-trapping-math -ftree-vectorize -fno-math-errno -O3 -DNDEBUG -std=c++17 -fPIC   -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -o CMakeFiles/sand_edep_reader.dir/EDEPTree.cpp.o -c /home/sand/sandreco-experimental/src/data/common/edep_reader/EDEPTree.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/edep_reader/EDEPTree.cpp",
+  "output": "src/data/common/edep_reader/CMakeFiles/sand_edep_reader.dir/EDEPTree.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/edep_reader",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_edep_reader_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/edep_reader/. -I/home/sand/sandreco-experimental/src/data/common/edep_reader/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -Wno-shadow -std=c++11  -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1  -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -pipe -fsigned-char -fsized-deallocation -pthread -O3 -DNDEBUG -fno-trapping-math -ftree-vectorize -fno-math-errno -O3 -DNDEBUG -std=c++17 -fPIC   -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -o CMakeFiles/sand_edep_reader.dir/EDEPTrajectory.cpp.o -c /home/sand/sandreco-experimental/src/data/common/edep_reader/EDEPTrajectory.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/edep_reader/EDEPTrajectory.cpp",
+  "output": "src/data/common/edep_reader/CMakeFiles/sand_edep_reader.dir/EDEPTrajectory.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/edep_reader",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_edep_reader_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/edep_reader/. -I/home/sand/sandreco-experimental/src/data/common/edep_reader/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -Wno-shadow -std=c++11  -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1  -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -pipe -fsigned-char -fsized-deallocation -pthread -O3 -DNDEBUG -fno-trapping-math -ftree-vectorize -fno-math-errno -O3 -DNDEBUG -std=c++17 -fPIC   -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -o CMakeFiles/sand_edep_reader.dir/EDEPHit.cpp.o -c /home/sand/sandreco-experimental/src/data/common/edep_reader/EDEPHit.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/edep_reader/EDEPHit.cpp",
+  "output": "src/data/common/edep_reader/CMakeFiles/sand_edep_reader.dir/EDEPHit.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/genie_reader",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_genie_reader_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/genie_reader/. -I/home/sand/sandreco-experimental/src/data/common/genie_reader/.. -I/home/sand/sandreco-experimental/include -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -Wno-shadow -std=c++11  -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1  -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -pipe -fsigned-char -fsized-deallocation -pthread -O3 -DNDEBUG -fno-trapping-math -ftree-vectorize -fno-math-errno -O3 -DNDEBUG -std=c++17 -fPIC   -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -o CMakeFiles/sand_genie_reader.dir/genie_reader.cpp.o -c /home/sand/sandreco-experimental/src/data/common/genie_reader/genie_reader.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/genie_reader/genie_reader.cpp",
+  "output": "src/data/common/genie_reader/CMakeFiles/sand_genie_reader.dir/genie_reader.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/genie_reader",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_genie_reader_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/genie_reader/. -I/home/sand/sandreco-experimental/src/data/common/genie_reader/.. -I/home/sand/sandreco-experimental/include -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -Wno-shadow -std=c++11  -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1  -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -pipe -fsigned-char -fsized-deallocation -pthread -O3 -DNDEBUG -fno-trapping-math -ftree-vectorize -fno-math-errno -O3 -DNDEBUG -std=c++17 -fPIC   -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -o CMakeFiles/sand_genie_reader.dir/GenieWrapper.cpp.o -c /home/sand/sandreco-experimental/src/data/common/genie_reader/GenieWrapper.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/genie_reader/GenieWrapper.cpp",
+  "output": "src/data/common/genie_reader/CMakeFiles/sand_genie_reader.dir/GenieWrapper.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/geoinfo",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_geoinfo_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/geoinfo/. -I/home/sand/sandreco-experimental/src/data/common/geoinfo/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_geoinfo.dir/drift_info.cpp.o -c /home/sand/sandreco-experimental/src/data/common/geoinfo/drift_info.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/geoinfo/drift_info.cpp",
+  "output": "src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/drift_info.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/geoinfo",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_geoinfo_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/geoinfo/. -I/home/sand/sandreco-experimental/src/data/common/geoinfo/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_geoinfo.dir/ecal_info.cpp.o -c /home/sand/sandreco-experimental/src/data/common/geoinfo/ecal_info.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/geoinfo/ecal_info.cpp",
+  "output": "src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/ecal_info.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/geoinfo",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_geoinfo_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/geoinfo/. -I/home/sand/sandreco-experimental/src/data/common/geoinfo/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_geoinfo.dir/grain_info.cpp.o -c /home/sand/sandreco-experimental/src/data/common/geoinfo/grain_info.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/geoinfo/grain_info.cpp",
+  "output": "src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/grain_info.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/geoinfo",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_geoinfo_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/geoinfo/. -I/home/sand/sandreco-experimental/src/data/common/geoinfo/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_geoinfo.dir/stt_info.cpp.o -c /home/sand/sandreco-experimental/src/data/common/geoinfo/stt_info.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/geoinfo/stt_info.cpp",
+  "output": "src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/stt_info.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/geoinfo",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_geoinfo_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/geoinfo/. -I/home/sand/sandreco-experimental/src/data/common/geoinfo/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_geoinfo.dir/tracker_info.cpp.o -c /home/sand/sandreco-experimental/src/data/common/geoinfo/tracker_info.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/geoinfo/tracker_info.cpp",
+  "output": "src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/tracker_info.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/geoinfo",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_geoinfo_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/geoinfo/. -I/home/sand/sandreco-experimental/src/data/common/geoinfo/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_geoinfo.dir/subdetector_info.cpp.o -c /home/sand/sandreco-experimental/src/data/common/geoinfo/subdetector_info.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/geoinfo/subdetector_info.cpp",
+  "output": "src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/subdetector_info.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/geoinfo",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_geoinfo_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/geoinfo/. -I/home/sand/sandreco-experimental/src/data/common/geoinfo/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_geoinfo.dir/geoinfo.cpp.o -c /home/sand/sandreco-experimental/src/data/common/geoinfo/geoinfo.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/geoinfo/geoinfo.cpp",
+  "output": "src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/geoinfo.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/geoinfo",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_geoinfo_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/geoinfo/. -I/home/sand/sandreco-experimental/src/data/common/geoinfo/.. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -isystem /usr/include/root -isystem /usr/local/include/Geant4 -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_geoinfo.dir/BVH.cpp.o -c /home/sand/sandreco-experimental/src/data/common/geoinfo/BVH.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/geoinfo/BVH.cpp",
+  "output": "src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/BVH.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/hdf5",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_hdf5_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/hdf5/. -I/home/sand/sandreco-experimental/src/data/common/hdf5/.. -I/home/sand/sandreco-experimental/include -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_hdf5.dir/hdf5.cpp.o -c /home/sand/sandreco-experimental/src/data/common/hdf5/hdf5.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/hdf5/hdf5.cpp",
+  "output": "src/data/common/hdf5/CMakeFiles/sand_hdf5.dir/hdf5.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/ocl",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_cl_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/ocl/. -I/home/sand/sandreco-experimental/src/data/common/ocl/.. -I/home/sand/sandreco-experimental/include -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_cl.dir/ocl.cpp.o -c /home/sand/sandreco-experimental/src/data/common/ocl/ocl.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/ocl/ocl.cpp",
+  "output": "src/data/common/ocl/CMakeFiles/sand_cl.dir/ocl.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/data/common/root_tgeomanager",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_root_tgeomanager_EXPORTS -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager/. -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager/.. -I/home/sand/sandreco-experimental/include -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_root_tgeomanager.dir/root_tgeomanager.cpp.o -c /home/sand/sandreco-experimental/src/data/common/root_tgeomanager/root_tgeomanager.cpp",
+  "file": "/home/sand/sandreco-experimental/src/data/common/root_tgeomanager/root_tgeomanager.cpp",
+  "output": "src/data/common/root_tgeomanager/CMakeFiles/sand_root_tgeomanager.dir/root_tgeomanager.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/common/geoinfo_test",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_common_geoinfo_test_EXPORTS -I/home/sand/sandreco-experimental/src/processes/common/geoinfo_test/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_common_geoinfo_test.dir/geoinfo_test.cpp.o -c /home/sand/sandreco-experimental/src/processes/common/geoinfo_test/geoinfo_test.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/common/geoinfo_test/geoinfo_test.cpp",
+  "output": "src/processes/common/geoinfo_test/CMakeFiles/sand_common_geoinfo_test.dir/geoinfo_test.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/common/genie_reader_test",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_common_genie_reader_test_EXPORTS -I/home/sand/sandreco-experimental/src/processes/common/genie_reader_test/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_common_genie_reader_test.dir/genie_reader_test.cpp.o -c /home/sand/sandreco-experimental/src/processes/common/genie_reader_test/genie_reader_test.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/common/genie_reader_test/genie_reader_test.cpp",
+  "output": "src/processes/common/genie_reader_test/CMakeFiles/sand_common_genie_reader_test.dir/genie_reader_test.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/fake_reco",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_fake_reco_EXPORTS -I/home/sand/sandreco-experimental/src/processes/fake_reco -I/home/sand/sandreco-experimental/src/processes/fake_reco/../../data/common -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_fake_reco.dir/fake_reco.cpp.o -c /home/sand/sandreco-experimental/src/processes/fake_reco/fake_reco.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/fake_reco/fake_reco.cpp",
+  "output": "src/processes/fake_reco/CMakeFiles/sand_fake_reco.dir/fake_reco.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/fake_reco",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_fake_reco_EXPORTS -I/home/sand/sandreco-experimental/src/processes/fake_reco -I/home/sand/sandreco-experimental/src/processes/fake_reco/../../data/common -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_fake_reco.dir/caf_handlers/caf_filler_true.cpp.o -c /home/sand/sandreco-experimental/src/processes/fake_reco/caf_handlers/caf_filler_true.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/fake_reco/caf_handlers/caf_filler_true.cpp",
+  "output": "src/processes/fake_reco/CMakeFiles/sand_fake_reco.dir/caf_handlers/caf_filler_true.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/fake_reco",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_fake_reco_EXPORTS -I/home/sand/sandreco-experimental/src/processes/fake_reco -I/home/sand/sandreco-experimental/src/processes/fake_reco/../../data/common -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_fake_reco.dir/caf_handlers/caf_filler_reco.cpp.o -c /home/sand/sandreco-experimental/src/processes/fake_reco/caf_handlers/caf_filler_reco.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/fake_reco/caf_handlers/caf_filler_reco.cpp",
+  "output": "src/processes/fake_reco/CMakeFiles/sand_fake_reco.dir/caf_handlers/caf_filler_reco.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/fake_reco",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_fake_reco_EXPORTS -I/home/sand/sandreco-experimental/src/processes/fake_reco -I/home/sand/sandreco-experimental/src/processes/fake_reco/../../data/common -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_fake_reco.dir/genie_helpers/EvtCode_parser.cpp.o -c /home/sand/sandreco-experimental/src/processes/fake_reco/genie_helpers/EvtCode_parser.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/fake_reco/genie_helpers/EvtCode_parser.cpp",
+  "output": "src/processes/fake_reco/CMakeFiles/sand_fake_reco.dir/genie_helpers/EvtCode_parser.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/optical_simulation.cpp.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/optical_simulation.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/optical_simulation.cpp",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/optical_simulation.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/ActionInitialization.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/ActionInitialization.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/ActionInitialization.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/ActionInitialization.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/AnalysisManager.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/AnalysisManager.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/AnalysisManager.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/AnalysisManager.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/DetectorConstruction.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/DetectorConstruction.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/DetectorConstruction.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/DetectorConstruction.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/EventAction.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/EventAction.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/EventAction.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/EventAction.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/PhysicsList.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/PhysicsList.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/PhysicsList.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/PhysicsList.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/PrimaryGeneratorAction.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/PrimaryGeneratorAction.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/PrimaryGeneratorAction.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/PrimaryGeneratorAction.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/RunAction.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/RunAction.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/RunAction.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/RunAction.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/SensitiveArgon.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/SensitiveArgon.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/SensitiveArgon.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/SensitiveArgon.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/SensitiveArgonHit.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/SensitiveArgonHit.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/SensitiveArgonHit.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/SensitiveArgonHit.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/Sensor.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/Sensor.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/Sensor.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/Sensor.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/SensorHit.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/SensorHit.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/SensorHit.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/SensorHit.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DG4LIB_BUILD_DLL -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/grain/geant_run_manager -I/home/sand/sandreco-experimental/src/data/grain/geant_gdml_parser -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/edep_reader -isystem /usr/include/root -isystem /usr/local/include/Geant4 -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_optical_simulation.dir/StackingAction.cc.o -c /home/sand/sandreco-experimental/src/processes/grain/optical_simulation/StackingAction.cc",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/optical_simulation/StackingAction.cc",
+  "output": "src/processes/grain/optical_simulation/CMakeFiles/sand_grain_optical_simulation.dir/StackingAction.cc.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/detector_response_fast",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_detector_response_fast_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/detector_response_fast/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/common/edep_reader -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -isystem /usr/include/root -isystem /usr/local/include/EDepSim -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_detector_response_fast.dir/detector_response_fast.cpp.o -c /home/sand/sandreco-experimental/src/processes/grain/detector_response_fast/detector_response_fast.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/detector_response_fast/detector_response_fast.cpp",
+  "output": "src/processes/grain/detector_response_fast/CMakeFiles/sand_grain_detector_response_fast.dir/detector_response_fast.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/spill_slicer",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_spill_slicer_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/spill_slicer/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/grain -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_spill_slicer.dir/spill_slicer.cpp.o -c /home/sand/sandreco-experimental/src/processes/grain/spill_slicer/spill_slicer.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/spill_slicer/spill_slicer.cpp",
+  "output": "src/processes/grain/spill_slicer/CMakeFiles/sand_grain_spill_slicer.dir/spill_slicer.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/grain/mask_weights_computation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_grain_mask_weights_computation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/grain/mask_weights_computation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/common/ocl -I/home/sand/sandreco-experimental/src/data/common/geoinfo -I/home/sand/sandreco-experimental/src/data/common/hdf5 -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_grain_mask_weights_computation.dir/mask_weights_computation.cpp.o -c /home/sand/sandreco-experimental/src/processes/grain/mask_weights_computation/mask_weights_computation.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/grain/mask_weights_computation/mask_weights_computation.cpp",
+  "output": "src/processes/grain/mask_weights_computation/CMakeFiles/sand_grain_mask_weights_computation.dir/mask_weights_computation.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/stt/fast_digi",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_stt_stt_fast_digi_EXPORTS -I/home/sand/sandreco-experimental/src/processes/stt/fast_digi/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/common/edep_reader -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -isystem /usr/local/include/EDepSim -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_stt_stt_fast_digi.dir/stt_fast_digi.cpp.o -c /home/sand/sandreco-experimental/src/processes/stt/fast_digi/stt_fast_digi.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/stt/fast_digi/stt_fast_digi.cpp",
+  "output": "src/processes/stt/fast_digi/CMakeFiles/sand_stt_stt_fast_digi.dir/stt_fast_digi.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/drift/fast_digi",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_drift_drift_fast_digi_EXPORTS -I/home/sand/sandreco-experimental/src/processes/drift/fast_digi/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/common/edep_reader -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -isystem /usr/local/include/EDepSim -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_drift_drift_fast_digi.dir/drift_fast_digi.cpp.o -c /home/sand/sandreco-experimental/src/processes/drift/fast_digi/drift_fast_digi.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/drift/fast_digi/drift_fast_digi.cpp",
+  "output": "src/processes/drift/fast_digi/CMakeFiles/sand_drift_drift_fast_digi.dir/drift_fast_digi.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/tracker/clustering",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_tracker_clustering_EXPORTS -I/home/sand/sandreco-experimental/src/processes/tracker/clustering/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/common/edep_reader -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -isystem /usr/local/include/EDepSim -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_tracker_clustering.dir/clustering.cpp.o -c /home/sand/sandreco-experimental/src/processes/tracker/clustering/clustering.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/tracker/clustering/clustering.cpp",
+  "output": "src/processes/tracker/clustering/CMakeFiles/sand_tracker_clustering.dir/clustering.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/ecal/optical_simulation",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_ecal_optical_simulation_EXPORTS -I/home/sand/sandreco-experimental/src/processes/ecal/optical_simulation/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/common/edep_reader -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -isystem /usr/local/include/EDepSim -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_ecal_optical_simulation.dir/optical_simulation.cpp.o -c /home/sand/sandreco-experimental/src/processes/ecal/optical_simulation/optical_simulation.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/ecal/optical_simulation/optical_simulation.cpp",
+  "output": "src/processes/ecal/optical_simulation/CMakeFiles/sand_ecal_optical_simulation.dir/optical_simulation.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/ecal/fast_digi",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_ecal_fast_digi_EXPORTS -I/home/sand/sandreco-experimental/src/processes/ecal/fast_digi/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/common/edep_reader -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -isystem /usr/local/include/EDepSim -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_ecal_fast_digi.dir/fast_digi.cpp.o -c /home/sand/sandreco-experimental/src/processes/ecal/fast_digi/fast_digi.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/ecal/fast_digi/fast_digi.cpp",
+  "output": "src/processes/ecal/fast_digi/CMakeFiles/sand_ecal_fast_digi.dir/fast_digi.cpp.o"
+},
+{
+  "directory": "/home/sand/sandreco-experimental/src/processes/ecal/spill_slicer_placeholder",
+  "command": "/usr/bin/c++ -DFMT_LOCALE -DFMT_SHARED -DROOT_SUPPORT_CLAD -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -DSPDLOG_SHARED_LIB -Dsand_ecal_spill_slicer_placeholder_EXPORTS -I/home/sand/sandreco-experimental/src/processes/ecal/spill_slicer_placeholder/. -I/home/sand/sandreco-experimental/include -I/home/sand/sandreco-experimental/src/data/common -I/home/sand/sandreco-experimental/src/data/common/edep_reader -I/home/sand/sandreco-experimental/src/data/common/root_tgeomanager -I/home/sand/sandreco-experimental/src/data/common/geoinfo -isystem /usr/local/include/EDepSim -isystem /usr/include/root -O3 -DNDEBUG -std=c++17 -fPIC -o CMakeFiles/sand_ecal_spill_slicer_placeholder.dir/spill_slicer_placeholder.cpp.o -c /home/sand/sandreco-experimental/src/processes/ecal/spill_slicer_placeholder/spill_slicer_placeholder.cpp",
+  "file": "/home/sand/sandreco-experimental/src/processes/ecal/spill_slicer_placeholder/spill_slicer_placeholder.cpp",
+  "output": "src/processes/ecal/spill_slicer_placeholder/CMakeFiles/sand_ecal_spill_slicer_placeholder.dir/spill_slicer_placeholder.cpp.o"
+}
+]

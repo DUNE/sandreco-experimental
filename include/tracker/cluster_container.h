@@ -10,6 +10,11 @@
 
 namespace sand::tracker {
 
+/**
+ * @class cluster_container
+ * @brief Container for clusters in the tracker.
+ */
+
 struct cluster_container :
     ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
 
@@ -22,6 +27,9 @@ struct cluster_container :
         {}
     };
 
+/**
+ * @brief Collection of clusters in the tracker. Each cluster contains a vector of digit indices that belong to that cluster.
+ */
     using cluster_collection = std::vector<cluster>;
     cluster_collection clusters;
 };
