@@ -75,32 +75,32 @@ namespace sand::ecal {
 
         // Check if pulse meets minimum threshold for digitization
         if (pe_count >= m_pe_threshold) {
-          // Calculate ADC value proportional to collected photo-electrons
-          auto adc = double(pe_count); // for now, we just use the number of PEs as the ADC value. This can be improved
-                                       // by using a more realistic response function.
           // Calculate timing using constant fraction discriminator method
           auto tdc = std::next(start_pe, int(m_constant_fraction * pe_count))->arrival_time;
-          // Time-over-threshold (TOT) calculation placeholder
-          auto tot = 0.; // we don't have a good way to estimate the TOT value, so we set it to 0 for now. This can
-                         // be improved by using a more realistic response function that includes the pulse shape.
 
           // Create digitized signal with PMT channel, timing window, and measurements
           // timing window for particle crossing is conservatively estimated taking into
           // account a maximal path length for scintillation photons of 5 m, a velocity of
           // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
-          digits_container::digit signal{reco::digi{pmt, reco::digi::time{tdc - 35., tdc, tdc + 5.}}, adc, tdc, tot};
+          digits_container::digit signal(pmt, {tdc - 35., tdc, tdc + 5.});
           // Collect all truth hits from photo-electrons in this pulse
           std::vector<pes_container::photo_electron>::iterator it = start_pe;
 
           // Add truth hit information from all contributing photo-electrons
           while (it != this_pe) {
-            signal.insert(it->true_hits());
+            signal.insert(*it);
             it++;
           }
           // Include the boundary photo-electron if it exists
           if (this_pe != pe_collection.end())
-            signal.insert(this_pe->true_hits());
+            signal.insert(*this_pe);
 
+          // Calculate ADC value proportional to collected photo-electrons
+          signal.adc = double(pe_count); // for now, we just use the number of PEs as the ADC value. This can be improved
+                                         // by using a more realistic response function.
+          // Time-over-threshold (TOT) calculation placeholder
+          signal.tot = NAN; // we don't have a good way to estimate the TOT value, so we set it to NAN for now. This can
+                         // be improved by using a more realistic response function that includes the pulse shape.
           // Store the digitized signal in output collection
           digi.digits.push_back(signal);
 
