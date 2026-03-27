@@ -32,17 +32,26 @@ namespace sand {
 
 namespace sand {
 
+  /**
+   * Base class for a collection of objects that are built from MC truth.
+   */
+  template <typename T = sand::truth_index>
   class truth {
-    
+    static_assert(std::is_base_of_v<sand::truth_index, T>, "T must be or derive from sand::truth_index");
+
+  public:
+    using true_hit_type = T;
+
   public:
     truth() = default;
-    truth(truth_index onehit) : m_hits{onehit} {}
-    const std::set<truth_index> true_hits() const { return m_hits; }
-    inline void insert(truth_index i) { m_hits.emplace(i); }
-    inline void insert(const std::set<truth_index>& set) { m_hits.insert(set.begin(), set.end()); }
+    truth(true_hit_type onehit) : m_hits{onehit} {}
+    const std::set<true_hit_type>& true_hits() const { return m_hits; }
+    inline void emplace(true_hit_type&& i) { m_hits.emplace(std::move(i)); }
+    inline void insert(true_hit_type i) { m_hits.emplace(i); }
+    inline void insert(const std::set<true_hit_type>& set) { m_hits.insert(set.begin(), set.end()); }
 
   private:
-    std::set<truth_index> m_hits;
+    std::set<true_hit_type> m_hits;
 
   };
 
