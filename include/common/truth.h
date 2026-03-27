@@ -24,8 +24,14 @@ namespace sand {
 
 namespace sand {
 
-  using truth_index = std::size_t;
-  
+  struct truth_index {
+    std::size_t i;
+  };
+
+  bool operator < (const truth_index& lhs, const truth_index& rhs) {
+    return lhs.i < rhs.i;
+  }
+
 } // namespace sand
 
 #endif //__CLING__

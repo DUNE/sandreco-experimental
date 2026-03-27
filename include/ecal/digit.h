@@ -19,6 +19,9 @@ namespace sand::ecal {
     /// measurements, providing comprehensive digitization data from the calorimeter.
     struct digit : reco::digi<pes_container::photo_electron> {
       using digi_base_type = reco::digi<pes_container::photo_electron>;
+      /// @brief Default constuctor produces an invalid digit, required only by ROOT
+      digit() :
+        digi_base_type(), adc(NAN), tot(NAN) {}
       /// @brief Constructor for a simulation digi
       digit(channel_id ch, time t) :
         digi_base_type(ch, t, source::sim), adc(NAN), tot(NAN) {}
