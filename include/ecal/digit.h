@@ -19,18 +19,25 @@ namespace sand::ecal {
     /// measurements, providing comprehensive digitization data from the calorimeter.
     struct digit : reco::digi<pes_container::photo_electron> {
       using digi_base_type = reco::digi<pes_container::photo_electron>;
-      /// @brief Default constuctor produces an invalid digit, required only by ROOT
+      /// @brief Default constuctor produces an invalid digit, required by ROOT, do not use
       digit() :
-        digi_base_type(), adc(NAN), tot(NAN) {}
+        digi_base_type() {}
       /// @brief Constructor for a simulation digi
-      digit(channel_id ch, time t) :
-        digi_base_type(ch, t, source::sim), adc(NAN), tot(NAN) {}
+      digit(channel_id ch, time t, double a, double tt) :
+        digi_base_type(ch, t, source::sim), m_adc(a), m_tot(tt) {}
 
       /// @brief Analog-to-digital conversion value representing charge
-      double adc;
+      double adc() const { return m_adc; };
+
+      /// @brief The TDC time coincides with the best estimate for the digi time
+      double tdc() const { return t().best(); }
 
       /// @brief Time-over-threshold value for pulse width information
-      double tot;
+      double tot() const { return m_tot; };
+
+    private:
+      double m_adc = NAN;
+      double m_tot = NAN;
     };
 
     /// @brief Vector container for digitized signals
