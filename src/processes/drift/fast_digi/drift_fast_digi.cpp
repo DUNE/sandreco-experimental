@@ -353,8 +353,8 @@ namespace sand::drift {
     tracker::digi::signal signal(channel, trange, edep_total);
 
     UFW_DEBUG("  Created signal: Channel(subdetector {}, channel {}), TDC = {}, ADC = {}",
-              static_cast<int>(signal.channel().subdetector), static_cast<int>(signal.channel().channel), signal.tdc,
-              signal.adc);
+              static_cast<int>(signal.channel().subdetector), static_cast<int>(signal.channel().channel), signal.tdc(),
+              signal.adc());
 
     return signal;
   }
