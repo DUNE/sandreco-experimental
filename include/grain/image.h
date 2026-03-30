@@ -3,13 +3,15 @@
 #include <ufw/data.hpp>
 #include <common/truth.h>
 #include <grain/grain.h>
+#include <grain/photons.h>
 #include <algorithm>
 #include <memory>
 
 namespace sand::grain {
 
   struct images : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct pixel : public sand::truth<> {
+    using truth = sand::truth<hits::photon>;
+    struct pixel : public truth {
       double amplitude;
       double time_first;
     };
@@ -26,7 +28,7 @@ namespace sand::grain {
       pixel_array<T> amplitude_array() const;
       template <typename T>
       pixel_array<T> time_array() const;
-      inline sand::truth<> all_hits() const;
+      inline truth all_hits() const;
     };
 
     using image_list = std::vector<image>;
@@ -50,8 +52,8 @@ namespace sand::grain {
     return ret;
   }
 
-  inline sand::truth<> images::image::all_hits() const {
-    sand::truth<> hits;
+  inline images::truth images::image::all_hits() const {
+    images::truth hits;
     for (const pixel& p : pixels) {
       hits.insert(p.true_hits());
     }
