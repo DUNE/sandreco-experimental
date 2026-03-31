@@ -868,13 +868,18 @@ src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/DependInfo.cmake
 src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/flags.make
 src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/link.txt
 src/data/common/geoinfo/CMakeFiles/sand_geoinfo.dir/progress.make
-src/*/*/*/CMakeFiles/*
-src/*/*/CMakeFiles/*
-src/*/CMakeFiles/*
-src/*/*/*/*cmake
-src/*/*/*cmake
-src/*/*cmake
-src/*/*/*/Makefile
-src/*/*/Makefile
-src/*/Makefile
-src/processes/common/CMakeFiles/progress.marks
+
+# Build
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# CMake deps
+_deps/
+
+# binaries
+*.so
+*.a
+*.o

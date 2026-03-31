@@ -131,6 +131,10 @@ void clustering::build_cluster(
     const auto& wire_i =
         gi.tracker().wire_at(signals[index].channel());
 
+        UFW_DEBUG("Wire {} has {} adjacent wires",
+          wire_i.daq_channel,
+          wire_i.adjacent_wires.size());
+
     for (size_t j = 0; j < signals.size(); ++j)
     {
         if (visited[j])
