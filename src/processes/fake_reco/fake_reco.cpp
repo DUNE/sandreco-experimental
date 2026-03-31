@@ -161,8 +161,8 @@ namespace sand {
       const auto& true_prim = true_ixn.prim[i];
       const auto& prim_id   = true_prim.ancestor_id;
 
-      // Create SRRecoParticle from truth
-      auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
+      // Create SRRecoParticle from truth+smearing
+      auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true_with_smearing(true_prim, prim_id);
       reco_ixn.part.sandreco.push_back(std::move(reco_part));
       reco_ixn.part.nsandreco++;
 

@@ -70,6 +70,8 @@ namespace sand {
 
     [[nodiscard]] static ::caf::SRRecoParticle from_true(const ::caf::SRTrueParticle& true_part,
                                                          const ::caf::TrueParticleID& id);
+    [[nodiscard]] static ::caf::SRRecoParticle from_true_with_smearing(const ::caf::SRTrueParticle& true_part,
+                                                         const ::caf::TrueParticleID& id);
   };
 
   /// @brief Fills SRTrack from truth (fake reconstruction)
