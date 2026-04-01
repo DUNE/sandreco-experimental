@@ -86,6 +86,10 @@ namespace sand {
 
     [[nodiscard]] static ::caf::SRTrack from_true(const ::caf::SRTrueParticle& true_part,
                                                   const ::caf::TrueParticleID& id);
+
+    [[nodiscard]] static ::caf::SRTrack from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part,
+                                                                      const ::caf::TrueParticleID& id, 
+                                                                          const EDEPTrajectory& true_part_trj);
   };
 
   /// @brief Fills SRShower from truth (fake reconstruction)
