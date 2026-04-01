@@ -1,4 +1,4 @@
-# Fields filled by the `fake_reco` process
+# Fields filled by the fake_reco process
 
 This document describes which CAF structure fields are filled by `fake_reco` using the `CAFFiller<T>` templates.
 

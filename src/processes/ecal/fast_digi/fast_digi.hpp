@@ -2,26 +2,25 @@
 #include <ufw/process.hpp>
 
 namespace sand::ecal {
+class fast_digi : public ufw::process {
+ public:
+  fast_digi();
+  void configure(const ufw::config& cfg) override;
+  void run() override;
 
-  class fast_digi : public ufw::process {
-   public:
-    fast_digi();
-    void configure(const ufw::config& cfg) override;
-    void run() override;
+ private:
+  /// @brief Integration time window for signal accumulation
+  double m_int_time_window;
 
-   private:
-    /// @brief Integration time window for signal accumulation
-    double m_int_time_window;
+  /// @brief Dead time window preventing pulse pile-up detection
+  double m_dead_time_window;
 
-    /// @brief Dead time window preventing pulse pile-up detection
-    double m_dead_time_window;
+  /// @brief Threshold for photo-electron detection
+  double m_pe_threshold;
 
-    /// @brief Threshold for photo-electron detection
-    double m_pe_threshold;
-
-    /// @brief Constant fraction for timing discrimination
-    double m_costant_fraction;
-  };
+  /// @brief Constant fraction for timing discrimination
+  double m_constant_fraction;
+};
 } // namespace sand::ecal
 
 UFW_REGISTER_PROCESS(sand::ecal::fast_digi)

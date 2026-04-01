@@ -3,6 +3,7 @@
 #include <ufw/data.hpp>
 #include <common/digi.h>
 #include <common/sand.h>
+#include <ecal/photo_electron.h>
 
 namespace sand::ecal {
   /// @brief Digitized signal data container for ECAL
@@ -16,15 +17,27 @@ namespace sand::ecal {
     ///
     /// A signal extends the base reco::digi class with additional ADC, TDC, and TOT
     /// measurements, providing comprehensive digitization data from the calorimeter.
-    struct digit : reco::digi {
-      /// @brief Analog-to-digital conversion value representing charge
-      double adc;
+    struct digit : reco::digi<pes_container::photo_electron> {
+      using digi_base_type = reco::digi<pes_container::photo_electron>;
+      /// @brief Default constuctor produces an invalid digit, required by ROOT, do not use
+      digit() :
+        digi_base_type() {}
+      /// @brief Constructor for a simulation digi
+      digit(channel_id ch, time t, double a, double tt) :
+        digi_base_type(ch, t, source::sim), m_adc(a), m_tot(tt) {}
 
-      /// @brief Time-to-digital conversion value representing timing information
-      double tdc;
+      /// @brief Analog-to-digital conversion value representing charge
+      double adc() const { return m_adc; };
+
+      /// @brief The TDC time coincides with the best estimate for the digi time
+      double tdc() const { return t().best(); }
 
       /// @brief Time-over-threshold value for pulse width information
-      double tot;
+      double tot() const { return m_tot; };
+
+    private:
+      double m_adc = NAN;
+      double m_tot = NAN;
     };
 
     /// @brief Vector container for digitized signals

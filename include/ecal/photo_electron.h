@@ -15,14 +15,14 @@ namespace sand::ecal {
     ///
     /// A photo-electron extends the base truth class with an additional arrival time
     /// measurement, useful for timing-based analysis in the calorimeter.
-    struct photo_electron : public sand::truth {
+    struct photo_electron : public sand::truth_index {
       /// @brief Default constructor initializing pe with NaN arrival time
-      photo_electron() : sand::truth(), arrival_time(NAN) {};
+      photo_electron() : sand::truth_index(), arrival_time(NAN) {};
 
       /// @brief Parameterized constructor
       /// @param idx Truth index identifier for the photo-electron
       /// @param tm Arrival time of the photo-electron (in nanoseconds or appropriate unit)
-      photo_electron(truth_index idx, double tm) : sand::truth(idx), arrival_time(tm) {};
+      photo_electron(truth_index idx, double tm) : truth_index(idx), arrival_time(tm) {};
 
       /// @brief Arrival time of the photo-electron
       double arrival_time;

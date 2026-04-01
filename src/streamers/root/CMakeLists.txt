@@ -68,4 +68,5 @@ ROOT_GENERATE_DICTIONARY(sand_root_tree_streamer_dictionaries tree_streamer_type
 
 install(TARGETS sand_root_tree_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer_rdict.pcm
-        ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer.rootmap DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer.rootmap
+        ${CMAKE_CURRENT_SOURCE_DIR}/tree_streamer_types.hpp DESTINATION ${CMAKE_INSTALL_LIBDIR})

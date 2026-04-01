@@ -69,4 +69,5 @@ ROOT_GENERATE_DICTIONARY(sand_caf_caf_streamer_dictionaries caf_streamer_types.h
 
 install(TARGETS sand_caf_caf_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer_rdict.pcm
-        ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer.rootmap DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer.rootmap
+        ${CMAKE_CURRENT_SOURCE_DIR}/caf_streamer_types.hpp DESTINATION ${CMAKE_INSTALL_LIBDIR})

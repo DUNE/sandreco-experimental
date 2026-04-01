@@ -70,7 +70,6 @@ namespace sand {
         stat->bottom_north = centre - boxcorner;
         stat->parent = this;
 
-
         if (tgt == TRKONLY) {
           nav->for_each_node([&](auto driftmod) {
             std::string driftmodname = driftmod->GetName();
@@ -78,7 +77,7 @@ namespace sand {
             nav->cd(full_path);
             auto ID = id(partial_path(full_path, gi));
             stat->daq_link = ID.drift.supermodule;
-            stat->set_drift_view(full_path, ID);
+            stat->generate_drift_view(full_path, ID);
           });
         } else {
           nav->for_each_node([&](auto driftchamber) {
@@ -94,10 +93,12 @@ namespace sand {
               nav->cd(full_path);
               auto ID = id(partial_path(full_path, gi));
               stat->daq_link = ID.drift.supermodule;
-              stat->set_drift_view(full_path, ID);
+              stat->generate_drift_view(full_path, ID);
             });
           });
         }
+
+        stat->set_wire_adjacency();
         add_station(station_ptr(std::move(stat)));
       });
     });
@@ -257,7 +258,7 @@ namespace sand {
   }
 
 
-  void geoinfo::drift_info::station::set_drift_view(const geo_path & driftmod_path, const geo_id& id) {
+  void geoinfo::drift_info::station::generate_drift_view(const geo_path & driftmod_path, const geo_id& id) {
 
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
@@ -281,11 +282,11 @@ namespace sand {
     } else {
         UFW_ERROR("DriftMod '{}' has unrecognized plane '{}'.", driftmod_name, plane_ID);
     }
-    set_wire_list(plane_ID);
+    generate_wire_list(plane_ID);
 
   }
 
-  void geoinfo::drift_info::station::set_wire_list(const size_t & view_ID) {
+  void geoinfo::drift_info::station::generate_wire_list(const size_t & view_ID) {
 
     /////Get gas volume properties
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
@@ -326,6 +327,7 @@ namespace sand {
 
     /// Find intersections of wires with frame
     double transverse_position = max_wire_plane_y - drift->view_offset()[view_ID];
+    size_t wire_index = 0;
     while (transverse_position > -max_wire_plane_y) {
       pos_3d wire_centre_rot(0., transverse_position, 0.); // origin of the vector in rotated frame
 
@@ -349,8 +351,10 @@ namespace sand {
         w->max_radius         = drift->view_spacing()[view_ID] / 2.0;
         w->daq_channel.subdetector = DRIFT;
         w->daq_channel.link = daq_link;
-        w->daq_channel.channel = (view_ID << 16) | wires.size();
+        w->daq_channel.channel = (uint32_t(view_ID) << 16) | uint32_t(wire_index);
+        w->aabb               = geoinfo::tracker_info::wire::AABB(*w);
         wires.emplace_back(std::move(w));
+        ++wire_index;
       } else {
         UFW_DEBUG("Transverse position {} has {} intersections, skipping.", transverse_position, intersections_global.size());
       }
