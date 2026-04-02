@@ -9,11 +9,22 @@
 
 namespace sand::debug {
 
+struct trajectory_debug {
+    int pdg{};
+    int trj_idx{};
+    std::vector<EDEPHit> hits{};
+};
+
+struct interaction_debug {
+    int interaction_idx{};
+    std::vector<trajectory_debug> trajectories{};
+};
+
 struct debug_data : public ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-  std::vector<std::vector<EDEPHit>> hits = {};
+  std::vector<interaction_debug> edep_interactions{};
 
   void clear() {
-    hits.clear();
+    edep_interactions.clear();
   }
 };
 

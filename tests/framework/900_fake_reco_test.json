@@ -28,7 +28,8 @@
       },
       "reqs": {},
       "prods": {
-        "output_caf": "produced_caf"
+        "output_caf": "produced_caf",
+        "debug_data": "produced_debug"
       }
     },
     {
@@ -37,6 +38,13 @@
         "tree": "cafTree"
       },
       "write": ["produced_caf"]
+    },
+    {
+      "sand::debug::debug_streamer": {
+        "uri": "test/output.debug.root",
+        "tree": "debugTree"
+      },
+      "write": ["produced_debug"]
     }
   ]
 }

@@ -11,6 +11,7 @@
 #include <genie_reader/GenieWrapper.h>
 
 #include <debug/debug_data.hpp>
+#include <duneanaobj/StandardRecord/SRTrueParticle.h>
 #include <vector>
 
 namespace sand {
@@ -18,7 +19,7 @@ namespace sand {
     /// @brief Fill debug_data with EDEPHit information from the EDEPTree / edep_reader.
     /// @param reader The EDepSim reader containing the event data.
     /// @return A debug_data struct populated with EDEPHit information.
-    sand::debug::debug_data from_edep(const EDEPTrajectory& traj);
+    sand::debug::trajectory_debug from_edep(const EDEPTrajectory& traj, const ::caf::SRTrueParticle& prim);
 
 
 } // namespace sand
