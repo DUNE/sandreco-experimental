@@ -3,16 +3,17 @@ add_library(sand_fake_reco
     utils/GlucksternSmearing.cpp
     caf_handlers/caf_filler_true.cpp
     caf_handlers/caf_filler_reco.cpp
+    debug_handlers/debug_filler.cpp
     genie_helpers/EvtCode_parser.cpp
 )
 
-add_dependencies(sand_fake_reco sand_edep_reader sand_genie_reader sand_caf_caf_streamer)
+add_dependencies(sand_fake_reco sand_edep_reader sand_genie_reader sand_caf_caf_streamer sand_debug_debug_streamer)
 target_include_directories(sand_fake_reco PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ../../data/common/
     ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_libraries(sand_fake_reco PUBLIC ufw::ufw PRIVATE ROOT::Core ROOT::EG sand_edep_reader sand_genie_reader sand_caf_caf_streamer duneanaobj::StandardRecord)
+target_link_libraries(sand_fake_reco PUBLIC ufw::ufw PRIVATE ROOT::Core ROOT::EG sand_edep_reader sand_genie_reader sand_caf_caf_streamer duneanaobj::StandardRecord sand_debug_debug_streamer)
 
 install(TARGETS sand_fake_reco EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})

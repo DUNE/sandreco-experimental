@@ -1,6 +1,7 @@
 #include "fake_reco.hpp"
 
 #include "caf_handlers/caf_filler.hpp"
+#include "debug_handlers/debug_filler.hpp"
 
 #include <ufw/factory.hpp>
 
@@ -32,6 +33,8 @@ namespace sand {
     }
 
     m_caf = &set<sand::caf::caf_wrapper>("output_caf");
+
+    m_debug_data = &set<sand::debug::debug_data>("debug_data");
 
     const auto& primaries = m_edep->GetChildrenTrajectories();
     const auto edep_map   = make_edep_interaction_map();
@@ -183,6 +186,11 @@ namespace sand {
     for (std::size_t i{}; i != edep_count; ++i) {
       const auto& true_prim = true_ixn.prim[i];
       const auto& prim_id   = true_prim.ancestor_id;
+
+      // Fill debug data
+      const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
+      auto debug_data = from_edep(true_prim_trj);
+      auto hits = debug_data.hits;
 
       // Create SRRecoParticle from truth
       auto reco_part = make_reco(true_prim, prim_id);

@@ -62,10 +62,10 @@ file(APPEND tree_streamer_linkdef.h "#endif\n")
 
 include_directories(${duneanaobj_INCLUDE_DIR})
 include_directories(${CMAKE_INSTALL_FULL_INCLUDEDIR}/sandreco/public)
-include_directories(/usr/local/include/sandreco/private/data/common /usr/local/include/EDepSim)
+include_directories(${CMAKE_SOURCE_DIR}/src/data/common /usr/local/include/EDepSim)
 
 ROOT_GENERATE_DICTIONARY(sand_root_tree_streamer_dictionaries tree_streamer_types.hpp MODULE sand_root_tree_streamer LINKDEF tree_streamer_linkdef.h
-    OPTIONS "-I${CMAKE_INSTALL_FULL_INCLUDEDIR}/sandreco/public" "-I/usr/local/include/sandreco/private/data/common" "-I/usr/local/include/EDepSim")
+    OPTIONS "-I${CMAKE_INSTALL_FULL_INCLUDEDIR}/sandreco/public" "-I${CMAKE_SOURCE_DIR}/src/data/common" "-I/usr/local/include/EDepSim")
 
 install(TARGETS sand_root_tree_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer_rdict.pcm
