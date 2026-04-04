@@ -19,7 +19,7 @@ namespace sand {
     /// @brief Fill debug_data with EDEPHit information from the EDEPTree / edep_reader.
     /// @param reader The EDepSim reader containing the event data.
     /// @return A debug_data struct populated with EDEPHit information.
-    sand::debug::trajectory_debug from_edep(const EDEPTrajectory& traj, const ::caf::SRTrueParticle& prim);
+    std::vector<EDEPHit> from_edep(const EDEPTrajectory& traj);
 
 
 } // namespace sand

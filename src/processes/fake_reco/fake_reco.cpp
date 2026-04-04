@@ -94,12 +94,8 @@ namespace sand {
       auto& sand_ixn = m_caf->nd.sand.ixn.emplace_back();
       m_caf->nd.sand.nixn++;
 
-      // Create debug interaction structure
-      auto& ixn_debug = m_debug_data->edep_interactions.emplace_back();
-      ixn_debug.interaction_idx = ixn_idx;
-
       // Process particles: create SRRecoParticle, SRTrack, SRShower
-      process_interaction_particles(true_ixn, reco_ixn, sand_ixn, ixn_debug, ixn_idx, first_prim_idx, prim_count);
+      process_interaction_particles(true_ixn, reco_ixn, sand_ixn, ixn_idx, first_prim_idx, prim_count);
 
       // Compute direction from sum of particle momenta
       auto sum_mom = std::accumulate(reco_ixn.part.sandreco.begin(), reco_ixn.part.sandreco.end(),
@@ -160,11 +156,10 @@ namespace sand {
 
     // Debug data branch
     m_debug_data->clear();
-    m_debug_data->edep_interactions.reserve(n_interactions);
   }
 
   void fake_reco::process_interaction_particles(::caf::SRTrueInteraction& true_ixn, ::caf::SRInteraction& reco_ixn,
-                                                ::caf::SRSANDInt& sand_ixn, ::sand::debug::interaction_debug& ixn_debug,
+                                                ::caf::SRSANDInt& sand_ixn,
                                                 [[maybe_unused]] std::size_t interaction_index,
                                                 std::size_t edep_first_index, std::size_t edep_count) const {
     // Reserve space for reco objects
@@ -205,7 +200,11 @@ namespace sand {
 
       // Fill debug data
       const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
-      ixn_debug.trajectories.push_back(from_edep(true_prim_trj, true_prim));
+      auto hits = from_edep(true_prim_trj);
+      for (auto& hit : hits){
+        m_debug_data->track_hits_map[true_prim.G4ID].push_back(hit);
+        m_debug_data->hits.push_back(hit);
+      }
 
       // Create SRRecoParticle from truth
       auto reco_part = make_reco(true_prim, prim_id);

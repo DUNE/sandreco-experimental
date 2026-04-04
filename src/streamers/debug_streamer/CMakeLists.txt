@@ -27,10 +27,6 @@ file(WRITE debug_streamer_linkdef.h
     "#pragma link C++ class sand::debug::debug_data+;\n"
     "#pragma link C++ class EDEPHit+;\n"
     "#pragma link C++ class std::vector<EDEPHit>+;\n"
-    "#pragma link C++ class sand::debug::trajectory_debug+;\n"
-    "#pragma link C++ class sand::debug::interaction_debug+;\n"
-    "#pragma link C++ class std::vector<sand::debug::trajectory_debug>+;\n"
-    "#pragma link C++ class std::vector<sand::debug::interaction_debug>+;\n"
     "#endif\n"
 )
 
