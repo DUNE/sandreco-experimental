@@ -1,9 +1,5 @@
-add_library(sand_grain_mask_weights_computation)
+sandreco_add_process(sand_grain_mask_weights_computation)
 
-target_sources(sand_grain_mask_weights_computation PRIVATE mask_weights_computation.cpp ${SOURCES})
+target_sources(sand_grain_mask_weights_computation PRIVATE mask_weights_computation.cpp)
 
-target_include_directories(sand_grain_mask_weights_computation PRIVATE . ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/common)
-
-target_link_libraries(sand_grain_mask_weights_computation PUBLIC ufw::ufw sand_cl PRIVATE sand_geoinfo sand_hdf5)
-
-install(TARGETS sand_grain_mask_weights_computation EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+target_link_libraries(sand_grain_mask_weights_computation PUBLIC sand_cl PRIVATE sand_geoinfo sand_hdf5)
