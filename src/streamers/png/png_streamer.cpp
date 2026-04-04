@@ -3,8 +3,9 @@
 
 #include <png.h>
 
+#include <data.h>
+
 #include <ufw/config.hpp>
-#include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/streamer.hpp>
 
