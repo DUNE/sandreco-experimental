@@ -1,0 +1,13 @@
+#pragma once
+
+#ifdef UFW_USER_BUILD
+#  error "This file (version.h) must be included before any ufw headers"
+#endif
+
+#include <ufw/version.hpp>
+
+#undef UFW_USER_BUILD
+#undef UFW_USER_VERSION
+
+#define UFW_USER_BUILD "@GIT_COMMIT_HASH@"
+#define UFW_USER_VERSION "@PROJECT_VERSION@"
