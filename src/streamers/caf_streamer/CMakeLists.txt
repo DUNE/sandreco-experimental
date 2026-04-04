@@ -1,12 +1,10 @@
-add_library(sand_caf_caf_streamer)
+sandreco_add_streamer(sand_caf_caf_streamer)
 
 target_sources(sand_caf_caf_streamer PRIVATE
     caf_streamer.hpp
     caf_streamer.cpp)
 
-target_include_directories(sand_caf_caf_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include)
-
-target_link_libraries(sand_caf_caf_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw duneanaobj::StandardRecord)
+target_link_libraries(sand_caf_caf_streamer PRIVATE ROOT::RIO ROOT::Tree duneanaobj::StandardRecord)
 
 include(GNUInstallDirs)
 
@@ -67,7 +65,6 @@ file(APPEND caf_streamer_linkdef.h "#endif\n")
 include_directories(${duneanaobj_INCLUDE_DIR})
 ROOT_GENERATE_DICTIONARY(sand_caf_caf_streamer_dictionaries caf_streamer_types.hpp MODULE sand_caf_caf_streamer LINKDEF caf_streamer_linkdef.h)
 
-install(TARGETS sand_caf_caf_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer_rdict.pcm
         ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer.rootmap
         ${CMAKE_CURRENT_SOURCE_DIR}/caf_streamer_types.hpp DESTINATION ${CMAKE_INSTALL_LIBDIR})

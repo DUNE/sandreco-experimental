@@ -1,14 +1,13 @@
-add_library(sand_root_tree_streamer)
-
+sandreco_add_streamer(sand_root_tree_streamer)
 
 target_sources(sand_root_tree_streamer PRIVATE
     tree_streamer.hpp
     tree_streamer.cpp)
 
 get_target_property(duneanaobj_INCLUDE_DIR duneanaobj::StandardRecord INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(sand_root_tree_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${duneanaobj_INCLUDE_DIR})
+target_include_directories(sand_root_tree_streamer PRIVATE ${duneanaobj_INCLUDE_DIR})
 
-target_link_libraries(sand_root_tree_streamer PUBLIC ufw::ufw PRIVATE ROOT::RIO ROOT::Tree)
+target_link_libraries(sand_root_tree_streamer PRIVATE ROOT::RIO ROOT::Tree)
 
 #The streamer relies on dictionary generation and its own definitions for
 #correct representation of any user type. This requires all said types to be known.
@@ -28,7 +27,7 @@ list(TRANSFORM USER_TYPES_INCLUDES APPEND ">\n")
 
 file(WRITE tree_streamer_types.hpp ${COMMENT_NO_EDIT})
 file(APPEND tree_streamer_types.hpp "#ifndef UFW_IMPLEMENT_STREAMER_FOR_TYPE\n#define UFW_IMPLEMENT_STREAMER_FOR_TYPE(T)\n#endif\n")
-file(APPEND tree_streamer_types.hpp "#include <ufw/data.hpp>\n")
+file(APPEND tree_streamer_types.hpp "#include <data.h>\n") # Which in turn includes ufw/data.hpp
 file(APPEND tree_streamer_types.hpp ${USER_TYPES_INCLUDES})
 
 #Generate the linkdef file tree_streamer_linkdef.h
@@ -69,7 +68,6 @@ include_directories(${CMAKE_INSTALL_FULL_INCLUDEDIR}/sandreco/public)
 ROOT_GENERATE_DICTIONARY(sand_root_tree_streamer_dictionaries tree_streamer_types.hpp MODULE sand_root_tree_streamer LINKDEF tree_streamer_linkdef.h
     OPTIONS "-I${CMAKE_INSTALL_FULL_INCLUDEDIR}/sandreco/public")
 
-install(TARGETS sand_root_tree_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer_rdict.pcm
         ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer.rootmap
         ${CMAKE_CURRENT_SOURCE_DIR}/tree_streamer_types.hpp DESTINATION ${CMAKE_INSTALL_LIBDIR})

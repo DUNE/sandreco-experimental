@@ -5,7 +5,7 @@
 #ifndef SANDRECO_CAF_WRAPPER_HPP
 #define SANDRECO_CAF_WRAPPER_HPP
 
-#include <common/data.h>
+#include <data.h>
 
 #include <duneanaobj/StandardRecord/StandardRecord.h>
 

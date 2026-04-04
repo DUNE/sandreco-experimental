@@ -10,8 +10,6 @@
 #include <Math/Vector3D.h>
 #include <Math/Vector4D.h>
 
-#include <common/version.h>
-
 #include <ufw/utils.hpp>
 
 namespace sand {
