@@ -1,19 +1,14 @@
+#include <common/sand.h>
+#include <geoinfo/grain_info.hpp>
+#include <hdf5/hdf5.hpp>
+
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
-#include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
 #include <ocl/ocl.hpp>
-
-#include <chrono>
-#include <random>
-#include <string>
-
-#include <geoinfo/grain_info.hpp>
-#include <hdf5/hdf5.hpp>
 #include <mask_weights_computation.hpp>
-#include <common/sand.h>
 
 namespace sand::grain {
 

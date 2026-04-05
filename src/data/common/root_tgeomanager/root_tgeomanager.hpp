@@ -1,7 +1,5 @@
 #pragma once
 
-#include "ufw/utils.hpp"
-#include <ufw/data.hpp>
 #include <common/sand.h>
 
 #include <TGeoManager.h>

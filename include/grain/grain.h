@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ufw/utils.hpp"
 #include <memory>
 
 #include <common/sand.h>

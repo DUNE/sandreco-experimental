@@ -1,14 +1,13 @@
 
 #pragma once
 
-#include <ufw/data.hpp>
 #include <common/digi.h>
 #include <common/sand.h>
 #include <common/truth.h>
 
 namespace sand::tracker {
 
-  struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
+  struct digi : managed_data_base {
     /**
      * @brief A signal recorded by a tracker channel.
      */

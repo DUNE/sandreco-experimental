@@ -3,8 +3,6 @@
 #include <common/truth.h>
 #include <edep_reader/EDEPTree.h>
 
-#include <ufw/data.hpp>
-
 #include <EDepSim/TG4Event.h>
 
 class TG4HitSegment;

@@ -1,4 +1,5 @@
-#include <ufw/factory.hpp>
+#include <common/data.h>
+
 #include <ufw/process.hpp>
 
 namespace sand::ecal {
@@ -24,4 +25,3 @@ class fast_digi : public ufw::process {
 } // namespace sand::ecal
 
 UFW_REGISTER_PROCESS(sand::ecal::fast_digi)
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::fast_digi)

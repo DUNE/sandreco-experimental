@@ -1,14 +1,14 @@
-#include <filesystem>
+#include <optical_simulation.hpp>
+
+#include <edep_reader/edep_reader.hpp>
+#include <geant_gdml_parser/geant_gdml_parser.hpp>
+#include <geant_run_manager/geant_run_manager.hpp>
+#include <grain/photons.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
-#include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
-
-#include <edep_reader/edep_reader.hpp>
-#include <optical_simulation.hpp>
-#include <grain/photons.h>
 
 #include "ActionInitialization.hh"
 #include "AnalysisManager.hh"
@@ -17,9 +17,6 @@
 #include "G4MaterialPropertiesTable.hh"
 #include "G4NistManager.hh"
 #include "PhysicsList.hh"
-
-#include <geant_gdml_parser/geant_gdml_parser.hpp>
-#include <geant_run_manager/geant_run_manager.hpp>
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::optical_simulation)
 
