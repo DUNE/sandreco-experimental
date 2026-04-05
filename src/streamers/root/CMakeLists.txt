@@ -33,7 +33,7 @@ file(APPEND tree_streamer_types.hpp ${USER_TYPES_INCLUDES})
 #Generate the linkdef file tree_streamer_linkdef.h
 set(USER_TYPES_LINKDEF "")
 foreach(USER_TYPE_PATH ${USER_TYPES})
-  file(STRINGS "${CMAKE_SOURCE_DIR}/include/${USER_TYPE_PATH}" USER_FILE_LINES REGEX "UFW_DECLARE_MANAGED_DATA")
+  file(STRINGS "${CMAKE_SOURCE_DIR}/include/${USER_TYPE_PATH}" USER_FILE_LINES REGEX "^UFW_DECLARE_(MANAGED|UNMANAGED)_DATA")
   foreach(LINE ${USER_FILE_LINES})
     string(REGEX MATCH "\\(([^()]*)\\)" _ ${LINE})
     list(APPEND USER_TYPES_LINKDEF ${CMAKE_MATCH_1})
