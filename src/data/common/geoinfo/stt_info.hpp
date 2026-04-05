@@ -1,7 +1,6 @@
 #pragma once
 
 #include <geoinfo/tracker_info.hpp>
-#include <optional>
 
 namespace sand {
 

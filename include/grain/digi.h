@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include <ufw/data.hpp>
 #include <common/digi.h>
 #include <common/sand.h>
 #include <common/truth.h>
@@ -11,7 +10,7 @@
 
 namespace sand::grain {
 
-  struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
+  struct digi : managed_data_base {
     struct signal : public reco::digi<hits::photon> {
       using digi_base_type = reco::digi<hits::photon>;
       /// @brief Default constuctor produces an invalid digit, required by ROOT, do not use

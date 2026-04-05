@@ -1,18 +1,16 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/data.hpp>
-#include <ufw/factory.hpp>
-#include <ufw/process.hpp>
+#include <drift_fast_digi.hpp>
 
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/drift_info.hpp>
 #include <geoinfo/geoinfo.hpp>
-#include <geoinfo/stt_info.hpp>
 #include <geoinfo/tracker_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
 
-#include <drift_fast_digi.hpp>
+#include <ufw/config.hpp>
+#include <ufw/context.hpp>
+#include <ufw/factory.hpp>
+#include <ufw/process.hpp>
 
 namespace sand::drift {
 
@@ -446,3 +444,5 @@ namespace sand::drift {
     return point.T() + sqrt((pos_3d(point.Vect()) - w.head).Mag2()) / v_signal_inwire;
   }
 } // namespace sand::drift
+
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::drift::drift_fast_digi)

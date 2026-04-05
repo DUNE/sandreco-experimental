@@ -2,6 +2,8 @@
 
 #include <set>
 
+#include <common/data.h>
+
 #ifndef __CLING__
 #  include <ufw/index.hpp>
 

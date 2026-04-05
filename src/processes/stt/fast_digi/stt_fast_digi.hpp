@@ -1,16 +1,10 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/data.hpp>
-#include <ufw/factory.hpp>
-#include <ufw/process.hpp>
-
+#include <tracker/digi.h>
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/drift_info.hpp>
 #include <geoinfo/geoinfo.hpp>
 #include <geoinfo/stt_info.hpp>
-#include <geoinfo/tracker_info.hpp>
-#include <root_tgeomanager/root_tgeomanager.hpp>
-#include <tracker/digi.h>
+
+#include <ufw/process.hpp>
 
 namespace sand::stt {
 
@@ -44,4 +38,3 @@ namespace sand::stt {
 } // namespace sand::stt
 
 UFW_REGISTER_PROCESS(sand::stt::stt_fast_digi)
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::stt::stt_fast_digi)
