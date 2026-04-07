@@ -10,7 +10,7 @@ build:
    - mkdir install
    - mkdir build
    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=ON -DCMAKE_INSTALL_PREFIX=./install
-   - cd build && make -j8 install
+   - cd build && make install
 
  artifacts:
    paths:
