@@ -24,7 +24,7 @@
     }
     },
     "contexts" : {
-      "keys" : 3,
+      "keys" :  [10,11,15],
       "locals" : {}
     },
     "run" : [
@@ -38,7 +38,7 @@
       {
         "sand::grain::volumereco" : {
           "voxel_size" : 150.0,
-          "max_iterations" : 10,
+          "max_iterations" : 3,
           "pde" : 1.0
         },
         "reqs" : {"images": "images"},
