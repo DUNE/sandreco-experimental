@@ -3,6 +3,7 @@ PROJECT_NAME           = "@CMAKE_PROJECT_NAME@"
 PROJECT_NUMBER         = "@CMAKE_PROJECT_VERSION@"
 PROJECT_BRIEF          = "A modular reconstruction software for SAND"
 INPUT                  = @CMAKE_SOURCE_DIR@/include/common/ \
+                         @CMAKE_SOURCE_DIR@/docs \
                          @CMAKE_SOURCE_DIR@/src \
                          @CMAKE_SOURCE_DIR@/README.md
 PROJECT_LOGO           = @CMAKE_SOURCE_DIR@/docs/sand.png

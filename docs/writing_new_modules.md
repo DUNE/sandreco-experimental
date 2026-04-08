@@ -50,6 +50,14 @@ Try to keep the header clean of unnecessary dependencies. Use forward declaratio
 
 Remember to UFW_REGISTER_PROCESS here, while the factory goes in the .cpp
 
+If you see this error when building
+
+```
+#error "This file (version.h) must be included before any ufw headers"
+```
+
+you need to make sure that sand headers are included before ufw headers in all cases.
+
 ### Source
 
 Go wild implementing your algorithm. Use `get<T>()` for managed inputs, `set<T>()` for managed outputs and `instance<T>()` for complex data.
