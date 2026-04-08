@@ -2,6 +2,8 @@
 #include <TFile.h>
 #include <TTree.h>
 
+#include <data.h>
+
 #include <ufw/config.hpp>
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>

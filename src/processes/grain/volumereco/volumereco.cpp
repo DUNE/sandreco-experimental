@@ -1,9 +1,3 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/data.hpp>
-#include <ufw/factory.hpp>
-#include <ufw/process.hpp>
-
 #include <ocl/ocl.hpp>
 
 #include <chrono>
@@ -19,6 +13,11 @@
 #include <common/sand.h>
 #include <grain/image.h>
 #include <grain/grain.h>
+
+#include <ufw/config.hpp>
+#include <ufw/context.hpp>
+#include <ufw/factory.hpp>
+#include <ufw/process.hpp>
 
 namespace sand::grain {
 

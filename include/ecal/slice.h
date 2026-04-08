@@ -1,6 +1,5 @@
 #pragma once
 
-#include <ufw/data.hpp>
 #include <ecal/digit.h>
 
 namespace sand::ecal {
@@ -11,7 +10,7 @@ namespace sand::ecal {
    * This struct inherits from a base class providing managed data functionality
    * and contains a collection of slices, where each slice is a collection of digits.
    */
-  struct slices_container : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
+  struct slices_container : managed_data_base {
     /** @brief Type alias for a single slice, which is a collection of digits. */
     using slice = digits_container::digits_collection;
 

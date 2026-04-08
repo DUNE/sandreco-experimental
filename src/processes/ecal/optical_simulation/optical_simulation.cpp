@@ -3,6 +3,8 @@
 #include <geoinfo/ecal_info.hpp>
 #include <ecal/photo_electron.h>
 
+#include <ufw/factory.hpp>
+
 namespace sand::ecal {
 
   /// Configure the optical simulation process by loading parameters from config
@@ -111,3 +113,5 @@ namespace sand::ecal {
   }
 
 } // namespace sand::ecal
+
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::optical_simulation)

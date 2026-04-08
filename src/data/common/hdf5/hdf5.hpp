@@ -1,8 +1,8 @@
 
 #pragma once
 
+#include <common/data.h>
 #include <ufw/config.hpp>
-#include <ufw/data.hpp>
 
 #include <H5Cpp.h>
 #include <H5DataType.h>

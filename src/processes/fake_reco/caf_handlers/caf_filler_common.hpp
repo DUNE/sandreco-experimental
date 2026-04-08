@@ -4,7 +4,6 @@
 /// @file caf_filler_common.hpp
 /// @brief Utilities for CAF fillers: PDG classification, vector math, truth matching
 
-#include <ufw/utils.hpp>
 
 #include <duneanaobj/StandardRecord/SREnums.h>
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
@@ -14,7 +13,8 @@
 #include <TParticlePDG.h>
 
 #include <cmath>
-#include <string_view>
+
+#include <ufw/utils.hpp>
 
 namespace sand {
 
