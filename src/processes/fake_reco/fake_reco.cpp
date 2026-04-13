@@ -1,6 +1,7 @@
 #include "fake_reco.hpp"
 
 #include "caf_handlers/caf_filler.hpp"
+#include "utils/smearer.hpp"
 
 #include <ufw/factory.hpp>
 
@@ -156,13 +157,18 @@ namespace sand {
     // Reserve space for reco objects
     reco_ixn.part.sandreco.reserve(edep_count);
 
+    //start rng machine for smearing
+    auto part_smearing = smearer::ParticleSmearer();
+
     // Loop over primary particles
     for (std::size_t i{}; i != edep_count; ++i) {
       const auto& true_prim = true_ixn.prim[i];
       const auto& prim_id   = true_prim.ancestor_id;
 
-      // Create SRRecoParticle from truth+smearing
-      auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true_with_smearing(true_prim, prim_id);
+      // Create SRRecoParticle from truth
+      auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
+      // add E smearing
+      part_smearing.E_smearing(reco_part);
       reco_ixn.part.sandreco.push_back(std::move(reco_part));
       reco_ixn.part.nsandreco++;
 

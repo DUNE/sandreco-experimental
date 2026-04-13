@@ -1,5 +1,6 @@
 add_library(sand_fake_reco
     fake_reco.cpp
+    utils/smearer.cpp
     caf_handlers/caf_filler_true.cpp
     caf_handlers/caf_filler_reco.cpp
     genie_helpers/EvtCode_parser.cpp

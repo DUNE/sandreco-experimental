@@ -11,7 +11,7 @@ namespace sand {
 
     [[nodiscard]] constexpr float gev_to_mev(float E) { return E * 1000.0f; }
   } // namespace
-
+/*
   namespace fake_reco_constants {
     constexpr float E_res    = 0.057f; // sigma = 5.7% sqrtE in gev
     constexpr float time_res = 0.054f; // sigma = 54/sqrtE
@@ -19,6 +19,7 @@ namespace sand {
     constexpr float p_res    = 0.04f;  // sigma = 4% p
 
   }
+*/
 
   ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true(const ::caf::SRTrueParticle& true_part,
                                                                     const ::caf::TrueParticleID& id) {
@@ -43,7 +44,7 @@ namespace sand {
     add_truth_match(reco, id);
     return reco;
   }
-
+/*
   ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_smearing(const ::caf::SRTrueParticle& true_part,
                                                                        const ::caf::TrueParticleID& id) {
     std::mt19937 gen(std::random_device{}());
@@ -55,14 +56,15 @@ namespace sand {
     //const float stddev_p = reco.p.Mag() * fake_reco_constants::p_res;
 
     reco.E = std::max(0.0f, reco.E + gaus_smear(stddev_E));
-    //if (reco.p.Mag() > 0.0f) {
-    //  const float smeared_mag = std::max(0.0f, reco.p.Mag() + gaus_smear(stddev_p));
-    //  const float scale       = smeared_mag / reco.p.Mag();
-    //  reco.p = ::caf::SRVector3D{reco.p.X() * scale, reco.p.Y() * scale, reco.p.Z() * scale}; // keep direction
-    //}
+    if (reco.p.Mag() > 0.0f) {
+      const float smeared_mag = std::max(0.0f, reco.p.Mag() + gaus_smear(stddev_p));
+      const float scale       = smeared_mag / reco.p.Mag();
+      reco.p = ::caf::SRVector3D{reco.p.X() * scale, reco.p.Y() * scale, reco.p.Z() * scale}; // keep direction
+    }
 
     return reco;
   }
+*/
 
   ::caf::SRTrack CAFFiller<::caf::SRTrack>::from_true(const ::caf::SRTrueParticle& true_part,
                                                       const ::caf::TrueParticleID& id) {
