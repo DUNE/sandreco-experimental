@@ -157,9 +157,6 @@ namespace sand {
     // Reserve space for reco objects
     reco_ixn.part.sandreco.reserve(edep_count);
 
-    //start rng machine for smearing
-    auto part_smearing = smearer::ParticleSmearer();
-
     // Loop over primary particles
     for (std::size_t i{}; i != edep_count; ++i) {
       const auto& true_prim = true_ixn.prim[i];
@@ -167,8 +164,16 @@ namespace sand {
 
       // Create SRRecoParticle from truth
       auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
-      // add E smearing
-      part_smearing.E_smearing(reco_part);
+      // add E,p smearing
+      auto energy_smearing = smearer::EnergySmearer();
+      auto true_prim_traj = *m_edep->GetTrajectory(true_prim.G4ID);
+      const auto& hit_map = true_prim_traj.GetHitMap();
+      const auto& it = hit_map.find(component::DRIFT);
+      const auto& hit_vec = it->second;
+      auto momentum_smearing = smearer::Gluckstern::Gluckstern_smearer(hit_vec);
+      energy_smearing.E_smearing(reco_part);
+      momentum_smearing.p_smearing(reco_part);
+
       reco_ixn.part.sandreco.push_back(std::move(reco_part));
       reco_ixn.part.nsandreco++;
 
