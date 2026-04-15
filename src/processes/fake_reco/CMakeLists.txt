@@ -18,5 +18,3 @@ target_include_directories(sand_fake_reco PRIVATE
 )
 
 target_link_libraries(sand_fake_reco PUBLIC ufw::ufw PRIVATE ROOT::Core ROOT::EG sand_edep_reader sand_genie_reader sand_caf_caf_streamer duneanaobj::StandardRecord sand_debug_debug_streamer)
-
-install(TARGETS sand_fake_reco EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})

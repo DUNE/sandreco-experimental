@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include <common/version.h>
 #include <ufw/data.hpp>
 #include <edep_reader/EDEPHit.h>
 

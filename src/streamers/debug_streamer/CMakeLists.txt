@@ -4,7 +4,7 @@ target_sources(sand_debug_debug_streamer PRIVATE
     debug_streamer.hpp
     debug_streamer.cpp)
 
-target_include_directories(sand_debug_debug_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/common/ /usr/local/include/EDepSim)
+target_include_directories(sand_debug_debug_streamer PRIVATE . ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include ${CMAKE_SOURCE_DIR}/src/data/common/ /usr/local/include/EDepSim)
 
 target_link_libraries(sand_debug_debug_streamer PRIVATE ROOT::RIO ROOT::Tree ufw::ufw)
 
@@ -30,7 +30,7 @@ file(WRITE debug_streamer_linkdef.h
     "#endif\n"
 )
 
-ROOT_GENERATE_DICTIONARY(sand_debug_debug_streamer_dictionaries debug_streamer_types.hpp MODULE sand_debug_debug_streamer LINKDEF debug_streamer_linkdef.h OPTIONS "-I${CMAKE_SOURCE_DIR}/include")
+ROOT_GENERATE_DICTIONARY(sand_debug_debug_streamer_dictionaries debug_streamer_types.hpp MODULE sand_debug_debug_streamer LINKDEF debug_streamer_linkdef.h OPTIONS "-I${CMAKE_SOURCE_DIR}/include" "-I${CMAKE_BINARY_DIR}/include")
 
 install(TARGETS sand_debug_debug_streamer EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_debug_debug_streamer_rdict.pcm
