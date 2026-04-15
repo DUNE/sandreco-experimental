@@ -6,18 +6,21 @@
 namespace sand {
 
   root_tgeomanager::root_tgeomanager(const ufw::config& cfg) {
+    UFW_INFO("Constructing instance of root_tgeomanager at {}. Current gGeoManager = {}", fmt::ptr(this), fmt::ptr(gGeoManager));
     if (gGeoManager) {
       UFW_FATAL("Does not support multiple geomanagers. Existing instance at {}.", fmt::ptr(gGeoManager));
     }
     auto filepath = cfg.path_at("geometry");
     m_geomanager  = TGeoManager::Import(filepath.c_str());
+    UFW_INFO("root_tgeomanager at {} now references m_geomenater {}. Current gGeoManager = {}", fmt::ptr(this), fmt::ptr(m_geomanager), fmt::ptr(gGeoManager));
     if (!m_geomanager) {
       UFW_ERROR("Cannot find valid TGeoManager in '{}'.", filepath.c_str());
     }
   }
 
   root_tgeomanager::~root_tgeomanager() {
-    if (gGeoManager != m_geomanager) {
+    UFW_INFO("Destroying instance of root_tgeomanager at {}. Current gGeoManager = {}", fmt::ptr(this), fmt::ptr(gGeoManager));
+    if (gGeoManager && (gGeoManager != m_geomanager)) {
       UFW_FATAL("Does not support multiple geomanagers. Existing instance at {}.", fmt::ptr(gGeoManager));
     }
   }

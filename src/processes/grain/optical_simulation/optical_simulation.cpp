@@ -1,14 +1,14 @@
-#include <filesystem>
+#include <optical_simulation.hpp>
+
+#include <edep_reader/edep_reader.hpp>
+#include <geant_gdml_parser/geant_gdml_parser.hpp>
+#include <geant_run_manager/geant_run_manager.hpp>
+#include <grain/photons.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
-#include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
-
-#include <edep_reader/edep_reader.hpp>
-#include <optical_simulation.hpp>
-#include <grain/photons.h>
 
 #include "ActionInitialization.hh"
 #include "AnalysisManager.hh"
@@ -18,12 +18,23 @@
 #include "G4NistManager.hh"
 #include "PhysicsList.hh"
 
-#include <geant_gdml_parser/geant_gdml_parser.hpp>
-#include <geant_run_manager/geant_run_manager.hpp>
-
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::optical_simulation)
 
 namespace sand::grain {
+
+  /**
+   * \class sand::grain::optical_simulation
+   *
+   * \brief Simulates optical effects, including scintillation light propagation, absorption, and scattering via Geant 4.
+   *
+   *
+   * \subsection Configuration
+   * | Parameter Name           | Type   | Unit  | Required/Default | Description                                                 |
+   * |--------------------------|--------|-------|------------------|-------------------------------------------------------------|
+   * | `geometry`               | string |       | Required         | Internal GDML file for GRAIN.                               |
+   * | `energy_split_threshold` | double | MeV   | Default: 100     | Threshold energy at which to split events for memory usage. |
+   *
+   */
 
   void optical_simulation::configure(const ufw::config& cfg) {
     process::configure(cfg);

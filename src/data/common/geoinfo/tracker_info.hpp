@@ -26,16 +26,36 @@ namespace sand {
     static const std::size_t s_max_wire_spacers = 0;
 
     struct station;
+    struct wire;
+
+    using wire_ptr  = std::unique_ptr<const wire>;
+    using wire_list = std::vector<const wire*>;
 
     struct wire {
       struct catenary {
         pos_3d minimum;
         double a;
       };
+
+      struct AABB {
+        AABB() {};
+        AABB(const wire & wire);
+        void expand(const AABB& second_aabb);
+        bool isOverlapping(const AABB& second_aabb, double epsilon = 0) const;
+        pos_3d min_;
+        pos_3d max_;
+      };
+
+      AABB aabb;
+
       using catenary_array = std::array<catenary, s_max_wire_spacers + 1>;
       using spacer_array   = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X
                                                                      ///< coordinate, starting from north.
       const station* parent;                                         ///< The parent station
+      mutable wire_list  adjacent_wires;                             ///< The list of adjacent wires. 
+                                                                     ///< The mutable attribute makes the element of a const object modifiable.
+                                                                     ///< In this case needed because the adjacency can be attributed only once all wires are constructed.
+      bool is_adjacent(const wire * w) const;                         ///< Check if the wire is adjecent                   
       channel_id daq_channel;                                        ///< The unique daq identifier
       pos_3d head;                                                   ///< The readout end of the wire
       pos_3d tail;                                                   ///< The termination end of the wire
@@ -52,12 +72,10 @@ namespace sand {
       pos_3d actual(pos_3d) const;
       std::size_t segment(pos_3d x) const;
       std::pair<double,double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
+      double closest_approach_segment_distance(const pos_3d&, const pos_3d&) const;
       double closest_approach_point(const pos_3d&) const;
       xform_3d wire_plane_transform() const; /// transform from local wire plane to global coordinates
     };
-
-    using wire_ptr  = std::unique_ptr<const wire>;
-    using wire_list = std::vector<const wire*>;
 
     enum target_material : uint8_t {
       TRKONLY = 0,
@@ -85,6 +103,7 @@ namespace sand {
         }
         return wl;
       }
+      void set_wire_adjacency();
     };
 
    protected:
@@ -108,11 +127,8 @@ namespace sand {
 
     const station* get_station_by_ID(std::size_t i) const { return m_stations.at(i).get(); }
 
-    virtual const wire& wire_at(channel_id);
+    virtual const wire& wire_at(channel_id) const;
 
-    // std::pair<vec_4d,vec_4d> closest_points(const vec_4d&, const vec_4d&, double, const wire&) const; //TO-DO use pos_3d if time is not needed
-    // vec_4d closest_point(const vec_4d&, double, const wire&) const;
-    // double get_min_time(const vec_4d&, double, const wire&) const;
     std::pair<const wire*, size_t> closest_wire_in_list(wire_list, pos_3d) const;
 
    protected:
@@ -123,7 +139,7 @@ namespace sand {
     const station* at(std::size_t i) const { return m_stations.at(i).get(); }
 
     template <typename Func>
-    void for_each_station(Func&& f) {
+    void for_each_station(Func&& f) const {
       for (auto& sptr : m_stations) {
         std::forward<Func>(f)(*sptr);
       }

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <ufw/data.hpp>
-
+#include <common/data.h>
 #include <common/truth.h>
 
 #include <genie_reader/GenieWrapper.h>
@@ -9,8 +8,6 @@
 #include <TBits.h>
 #include <TObjString.h>
 
-#include <utility>
-#include <vector>
 
 class TFile;
 class TTree;

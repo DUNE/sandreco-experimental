@@ -1,4 +1,7 @@
-add_library(sand_fake_reco
+sandreco_add_process(sand_fake_reco)
+
+target_sources(sand_fake_reco
+    PRIVATE
     fake_reco.cpp
     utils/GlucksternSmearing.cpp
     caf_handlers/caf_filler_true.cpp

@@ -5,7 +5,7 @@
 #ifndef SANDRECO_CAF_WRAPPER_HPP
 #define SANDRECO_CAF_WRAPPER_HPP
 
-#include <ufw/data.hpp>
+#include <data.h>
 
 #include <duneanaobj/StandardRecord/StandardRecord.h>
 
@@ -13,7 +13,7 @@ namespace sand::caf {
 
   struct caf_wrapper
     : public ::caf::StandardRecord
-    , public ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {};
+    , public sand::managed_data_base {};
 
 } // namespace sand::caf
 

@@ -1,7 +1,4 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/data.hpp>
-#include <ufw/factory.hpp>
+#include <detector_response_fast.hpp>
 
 #include <geoinfo/geoinfo.hpp>
 #include <geoinfo/grain_info.hpp>
@@ -9,11 +6,28 @@
 #include <grain/grain.h>
 #include <grain/photons.h>
 
-#include <detector_response_fast.hpp>
+#include <ufw/config.hpp>
+#include <ufw/context.hpp>
+#include <ufw/factory.hpp>
+
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::detector_response_fast)
 
 namespace sand::grain {
+
+  /**
+   * \class sand::grain::detector_response_fast
+   *
+   * \brief SiPM and electronics response for GRAIN.
+   *
+   * Given photon hits (`hits` input), this process finds the correct SiPM pixel,
+   * simulates detector electronics, and generates digitized output (`digi`).
+   *
+   * \subsection Configuration
+   * | Parameter Name | Type   | Unit            | Required/Default | Description               |
+   * |----------------|--------|-----------------|------------------|---------------------------|
+   * | `pde`          | double | ratio [0.0-1.0] | Required         | Photodetector efficiency. |
+   */
 
   detector_response_fast::detector_response_fast()
     : process({{"hits", "sand::grain::hits"}}, {{"digi", "sand::grain::digi"}}), m_uniform(0.0, 1.0) {
@@ -53,8 +67,7 @@ namespace sand::grain {
               ch.link        = photon.camera_id;
               // consistent indexing: Row Major
               ch.channel = i * camera_width + j;
-              digi::signal pe{reco::digi{sand::truth(photon.true_hit), ch, reco::digi::time{photon.pos.T()}}, photon.pos.T(), NAN, 1.0};
-              digi_out.signals.emplace_back(pe);
+              digi_out.signals.emplace_back(photon, ch, digi::signal::time{photon.pos.T()}, NAN, 1.0);
               m_stat_photons_accepted++;
               // UFW_DEBUG("Added photon to SiPM {},{}", i, j);
               channel_found = true;

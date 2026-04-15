@@ -2,15 +2,13 @@
 
 #include <vector>
 
-#include <ufw/data.hpp>
 #include <common/truth.h>
 #include <grain/grain.h>
 
 namespace sand::grain {
 
-  struct hits : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct photon {
-      truth_index true_hit;
+  struct hits : managed_data_base {
+    struct photon : public sand::truth_index {
       vec_4d pos;
       pos_3d origin;
       mom_4d p;
