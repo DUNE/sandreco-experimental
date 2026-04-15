@@ -1,4 +1,5 @@
 #pragma once
+#include "common/version.h"
 #include <ufw/context.hpp>
 #include <edep_reader/EDEPTrajectory.h>
 #include <edep_reader/EDEPTree.h>

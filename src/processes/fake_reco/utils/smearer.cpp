@@ -1,3 +1,4 @@
+#include "common/version.h"
 #include "smearer.hpp"
 
 namespace smearer {
