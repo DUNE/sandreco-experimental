@@ -1,15 +1,13 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/data.hpp>
-#include <ufw/factory.hpp>
-#include <ufw/process.hpp>
-
 #include <grain/digi.h>
 #include <grain/image.h>
 
+#include <ufw/config.hpp>
+#include <ufw/context.hpp>
+#include <ufw/factory.hpp>
+#include <ufw/process.hpp>
+
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <vector>
 
 namespace sand::grain {

@@ -1,19 +1,14 @@
+#include <common/sand.h>
+#include <geoinfo/grain_info.hpp>
+#include <hdf5/hdf5.hpp>
+
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
-#include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
 #include <ocl/ocl.hpp>
-
-#include <chrono>
-#include <random>
-#include <string>
-
-#include <geoinfo/grain_info.hpp>
-#include <hdf5/hdf5.hpp>
 #include <mask_weights_computation.hpp>
-#include <common/sand.h>
 
 namespace sand::grain {
 
@@ -82,11 +77,11 @@ namespace sand::grain {
   }
 
   mask_weights_computation::mask_weights_computation() : process({}, {}) {
-    UFW_DEBUG("Creating an mask_weights_computation process at {}.", fmt::ptr(this));
+    UFW_DEBUG("Creating a mask_weights_computation process at {}.", fmt::ptr(this));
   }
 
   void mask_weights_computation::run() {
-    UFW_DEBUG("Running an mask_weights_computation process at {}.", fmt::ptr(this));
+    UFW_DEBUG("Running a mask_weights_computation process at {}.", fmt::ptr(this));
     auto& platform = instance<cl::platform>();
     const auto& gi = instance<geoinfo>();
 
@@ -149,7 +144,7 @@ namespace sand::grain {
       cl::NDRange global_size(mask_rects_size, sensor_rects_size);
       UFW_DEBUG("Frustum global work size: ({},{})", global_size[0], global_size[1]);
       cl::Event ev_frustum_kernel_execution;
-      platform.queues().front().enqueueNDRangeKernel(m_frustum_kernel, cl::NullRange, cl::NDRange(global_size),
+      platform.queues().front().enqueueNDRangeKernel(m_frustum_kernel, cl::NullRange, global_size,
                                                      cl::NullRange, nullptr, &ev_frustum_kernel_execution);
       void* frustum_p = h_frustum_array.get();
       cl::Event ev_copy_frustum_from_device =
@@ -191,9 +186,10 @@ namespace sand::grain {
 
       // Write to hdf5
       array.write(camera.name, range, h_solidangle_array.get());
+      array.set_attribute(camera.name, "camera_id", std::to_string(camera.id));
       auto t_stop = std::chrono::high_resolution_clock::now();
       double elapsed_time = std::chrono::duration<double>(t_stop - t_start).count();
-      UFW_INFO("{} completed, time taken: {} s", camera.name, elapsed_time);
+      UFW_INFO("{} completed, id: {}, time taken: {} s", camera.name, std::to_string(camera.id), elapsed_time);
     }
   }
 } // namespace sand::grain

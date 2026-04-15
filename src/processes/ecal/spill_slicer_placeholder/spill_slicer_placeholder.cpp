@@ -2,6 +2,8 @@
 #include <ecal/digit.h>
 #include <ecal/slice.h>
 
+#include <ufw/factory.hpp>
+
 namespace sand::ecal {
 
   void spill_slicer_placeholder::configure(const ufw::config& cfg) { process::configure(cfg); }
@@ -18,3 +20,4 @@ namespace sand::ecal {
     slices.collection.emplace_back(digi.digits);
   }
 } // namespace sand::ecal
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::spill_slicer_placeholder)

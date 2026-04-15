@@ -1,9 +1,10 @@
-#include <ufw/utils.hpp>
-#include <ufw/context.hpp>
 #include <grain/photons.h>
 #include <geoinfo/grain_info.hpp>
-
 #include <optical_simulation.hpp>
+
+#include <ufw/utils.hpp>
+#include <ufw/context.hpp>
+
 
 #include <G4Event.hh>
 #include <G4HCofThisEvent.hh>

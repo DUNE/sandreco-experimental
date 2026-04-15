@@ -1,11 +1,10 @@
 #include <TFile.h>
 #include <TTree.h>
 
+#include <edep_reader/edep_reader.hpp>
+
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
-#include <ufw/data.hpp>
-
-#include <edep_reader/edep_reader.hpp>
 
 namespace sand {
   truth_adapter::value_type& truth_adapter::at(const index_type&) { UFW_FATAL("Not yet implemented"); }

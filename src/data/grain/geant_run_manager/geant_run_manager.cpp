@@ -1,5 +1,3 @@
-#include <ufw/factory.hpp>
-
 #include <geant_run_manager.hpp>
 
 namespace sand::grain {

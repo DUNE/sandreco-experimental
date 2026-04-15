@@ -38,7 +38,7 @@ The main class of your module (and realistically also the other ones) should go 
 Super general things can go in sand::, otherwise use your subdetector, lowercase `sand::grain::`, `sand::ecal::`, `sand::tracker::` and so on...
 The namespace becomes part of your module name, and must be used in the configuration files.
 
-When writing the `CMakeLists.txt` for a module named `sand::ecal::some_algo_name`, make sure to use a target name `sand_ecal_some_algo_name`.
+Refer to [this](docs/writing_new_modules.md) page for more details.
 
 ### Automatic testing
 

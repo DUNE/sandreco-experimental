@@ -3,6 +3,8 @@
 #include <ecal/digit.h>
 #include <ecal/photo_electron.h>
 
+#include <ufw/factory.hpp>
+
 namespace sand::ecal {
   /**
    * \class sand::ecal::fast_digi
@@ -129,3 +131,4 @@ namespace sand::ecal {
     }
   }
 } // namespace sand::ecal
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::fast_digi)

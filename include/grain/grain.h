@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ufw/utils.hpp"
 #include <memory>
 
 #include <common/sand.h>
@@ -26,6 +25,8 @@ namespace sand::grain {
 
   using index_3d = ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<size_t>>;
   using size_3d  = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<size_t>>;
+  // Has metric (-,-,-,+) but sould not be used in scalar products anyway
+  using size_4d  = ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<size_t>>;
 
   template <typename T>
   class voxel_array {
@@ -142,5 +143,12 @@ template <>
 struct fmt::formatter<sand::grain::size_3d> : formatter<string_view> {
   auto format(const sand::grain::size_3d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({}, {}, {})", c.x(), c.y(), c.z());
+  }
+};
+
+template <>
+struct fmt::formatter<sand::grain::size_4d> : formatter<string_view> {
+  auto format(const sand::grain::size_4d& c, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "({}, {}, {}, {})", c.x(), c.y(), c.z(), c.t());
   }
 };

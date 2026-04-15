@@ -1,0 +1,5 @@
+sandreco_add_process(sand_grain_volumereco)
+
+target_sources(sand_grain_volumereco PRIVATE volumereco.cpp)
+
+target_link_libraries(sand_grain_volumereco PUBLIC sand_cl PRIVATE sand_geoinfo sand_hdf5)

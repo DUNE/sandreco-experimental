@@ -1,7 +1,4 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/data.hpp>
-#include <ufw/factory.hpp>
+#include <detector_response_fast.hpp>
 
 #include <geoinfo/geoinfo.hpp>
 #include <geoinfo/grain_info.hpp>
@@ -9,7 +6,10 @@
 #include <grain/grain.h>
 #include <grain/photons.h>
 
-#include <detector_response_fast.hpp>
+#include <ufw/config.hpp>
+#include <ufw/context.hpp>
+#include <ufw/factory.hpp>
+
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::detector_response_fast)
 

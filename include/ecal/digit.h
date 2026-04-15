@@ -1,6 +1,5 @@
 #pragma once
 
-#include <ufw/data.hpp>
 #include <common/digi.h>
 #include <common/sand.h>
 #include <ecal/photo_electron.h>
@@ -12,7 +11,7 @@ namespace sand::ecal {
   /// signal information from the electromagnetic calorimeter detectors. Each signal
   /// contains ADC (analog-to-digital conversion), TDC (time-to-digital conversion),
   /// and TOT (time-over-threshold) measurements.
-  struct digits_container : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
+  struct digits_container : managed_data_base {
     /// @brief Digitized signal with timing and charge information
     ///
     /// A signal extends the base reco::digi class with additional ADC, TDC, and TOT

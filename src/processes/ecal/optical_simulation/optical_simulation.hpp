@@ -1,4 +1,5 @@
-#include <ufw/factory.hpp>
+#include <common/data.h>
+
 #include <ufw/process.hpp>
 
 namespace sand::ecal {
@@ -35,4 +36,3 @@ namespace sand::ecal {
 } // namespace sand::ecal
 
 UFW_REGISTER_PROCESS(sand::ecal::optical_simulation)
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::optical_simulation)
