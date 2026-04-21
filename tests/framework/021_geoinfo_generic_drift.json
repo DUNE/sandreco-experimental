@@ -6,7 +6,7 @@
     "ufw-env" : {}
   },
   "globals" : {
-    "sand::root_tgeomanager" : { "geometry" : "test/drift_1C_9_CH2_4v.sand-events.0000000.EDEPSIM.root" },
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_flex_DRIFT.inner-volume.spills.8.root" },
     "sand::geoinfo" : { "grain_geometry" : "gdml-masks", 
                          "drift_view_angle" : [0.0, -0.087266463, 0.087266463],
                          "drift_view_offset" : [10.0, 10.0, 10.0],
