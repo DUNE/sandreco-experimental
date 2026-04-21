@@ -1,23 +1,31 @@
+stages:
+ - build
+ - test
+
 image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
 
 build:
-  stage: build
-  script:
-    - mkdir install
-    - mkdir build
-    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=./install
-    - cd build && make -j8 install
+ stage: build
+ script:
+   - mkdir install
+   - mkdir build
+   - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=ON -DCMAKE_INSTALL_PREFIX=./install
+   - cd build && make -j8 install
 
-  artifacts:
-    paths:
-      - src/streamers/root/tree_streamer_types.hpp
-      - install/lib64/*
-      - build/CTestTestfile.cmake
-      - build/tests/*
+ artifacts:
+   paths:
+     - src/streamers/root/tree_streamer_types.hpp
+     - install/lib64/*
+     - build/CTestTestfile.cmake
+     - build/tests/*
+     - build/docs/html
+
+ pages:
+   publish: build/docs/html
 
 # run tests using the binaries built above
 test:
-  stage: test
-  script:
-    - cp -r install/lib64/* /usr/local/lib64/
-    - cd build && ctest --output-on-failure
+ stage: test
+ script:
+   - cp -r install/lib64/* /usr/local/lib64/
+   - cd build && ctest --output-on-failure

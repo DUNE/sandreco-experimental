@@ -4,7 +4,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/tools/cmake")
 project(sandreco
   LANGUAGES CXX
   DESCRIPTION "A reconstruction framework for DUNE/ND/SAND"
-  VERSION 0.1.0)
+  VERSION 1.0.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,6 +13,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(GNUInstallDirs)
 include(CTest)
 include(ClangFormat)
+include(Versioning)
+
+message(STATUS "Building sandreco version ${PROJECT_VERSION}, build ${GIT_COMMIT_HASH}")
 
 option(BUILD_SHARED_LIBS "Build libraries as shared libraries by default." ON)
 option(BUILD_TESTS "Build Tests" ON)
@@ -27,6 +30,8 @@ find_package(spdlog REQUIRED)
 find_package(ROOT COMPONENTS MathCore REQUIRED)
 
 find_package(ufw REQUIRED)
+
+find_package(duneanaobj REQUIRED)
 
 add_subdirectory(include)
 
@@ -56,7 +61,7 @@ configure_package_config_file(
 
 write_basic_package_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/sandrecoConfigVersion.cmake
-  VERSION 0.1.0
+  VERSION ${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
   )
 

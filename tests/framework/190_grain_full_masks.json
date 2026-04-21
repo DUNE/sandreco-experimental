@@ -27,10 +27,21 @@
     "sand::grain::geant_gdml_parser" : {
       "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" },
       "gdml-lenses" : { "path" : "geometries/grain/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}
+    },
+    "sand::cl::platform" : {},
+    "sand::hdf5::ndarray" : {
+      "angle_reader" : {
+        "uri" : "test/voxel_weights.h5",
+        "io" : "read"
+      },
+      "score_writer" : {
+        "uri" : "test/volumereco.h5",
+        "io" : "overwrite"
+      }
     }
   },
   "contexts" : {
-    "keys" : 2,
+    "keys" : [10,11,15],
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"}
     },
@@ -73,6 +84,15 @@
           "scale" : 16
         },
         "write" : ["grain_images"]
+      },
+      {
+        "sand::grain::volumereco" : {
+          "voxel_size" : 150.0,
+          "max_iterations" : 3,
+          "pde" : 1.0
+        },
+        "reqs" : {"images": "grain_images"},
+        "prods" : {}
       }
   ]
 }

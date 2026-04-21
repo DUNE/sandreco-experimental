@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <common/data.h>
+
 #include <ufw/utils.hpp>
 
 #include <cmath>

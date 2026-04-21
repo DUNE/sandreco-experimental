@@ -1,14 +1,12 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/data.hpp>
-#include <ufw/factory.hpp>
-#include <ufw/process.hpp>
-
-#include <geoinfo/ecal_info.hpp>
 #include <geoinfo/geoinfo.hpp>
+#include <geoinfo/ecal_info.hpp>
 #include <geoinfo/grain_info.hpp>
 #include <geoinfo/tracker_info.hpp>
-#include <common/sand.h>
+
+#include <ufw/config.hpp>
+#include <ufw/context.hpp>
+#include <ufw/factory.hpp>
+#include <ufw/process.hpp>
 
 namespace sand::common {
 

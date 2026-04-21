@@ -2,22 +2,36 @@
 
 #include <vector>
 
-#include <ufw/data.hpp>
 #include <common/digi.h>
 #include <common/sand.h>
 #include <common/truth.h>
 #include <grain/grain.h>
+#include <grain/photons.h>
 
 namespace sand::grain {
 
-  struct digi : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    struct signal : public reco::digi {
-      /// Calibrated time [ns] of rising edge since start of context.
-      double time_rising_edge;
-      /// Calibrated time [ns] over threshold.
-      double time_over_threshold;
-      /// Calibrated signal amplitude [photoelectrons].
-      double npe;
+  struct digi : managed_data_base {
+    struct signal : public reco::digi<hits::photon> {
+      using digi_base_type = reco::digi<hits::photon>;
+      /// @brief Default constuctor produces an invalid digit, required by ROOT, do not use
+      signal() :
+        digi_base_type() {}
+      /// @brief Constructor for a simulation digi
+      signal(hits::photon truth, channel_id ch, time t, double np, double tt) :
+        digi_base_type(truth, ch, t), m_npe(np), m_tot(tt) {}
+
+      /// @brief Amplitude in detected photons
+      double npe() const { return m_npe; };
+
+      /// @brief The TDC time coincides with the best estimate for the digi time
+      double tdc() const { return t().best(); }
+
+      /// @brief Time-over-threshold value for pulse width information
+      double tot() const { return m_tot; };
+
+    private:
+      double m_npe;
+      double m_tot;
     };
 
     using signal_collection = std::vector<signal>;

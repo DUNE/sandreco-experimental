@@ -1,0 +1,5 @@
+sandreco_add_process(sand_ecal_spill_slicer_placeholder)
+
+target_sources(sand_ecal_spill_slicer_placeholder PRIVATE spill_slicer_placeholder.cpp)
+
+target_link_libraries(sand_ecal_spill_slicer_placeholder PRIVATE sand_edep_reader sand_root_tgeomanager sand_geoinfo)

@@ -1,11 +1,7 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/data.hpp>
-#include <ufw/factory.hpp>
-#include <ufw/process.hpp>
-
 #include <grain/digi.h>
 #include <grain/photons.h>
+
+#include <ufw/process.hpp>
 
 namespace sand::grain {
 

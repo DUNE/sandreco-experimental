@@ -10,7 +10,6 @@
 ///   auto track = CAFFiller<caf::SRTrack>::from_true(true_part, id);
 /// @endcode
 
-#include "caf_filler_common.hpp"
 
 #include <duneanaobj/StandardRecord/SRInteraction.h>
 #include <duneanaobj/StandardRecord/SRRecoParticle.h>
@@ -23,7 +22,7 @@
 #include <edep_reader/EDEPTree.h>
 #include <genie_reader/GenieWrapper.h>
 
-#include <vector>
+#include "caf_filler_common.hpp"
 
 namespace sand {
 

@@ -1,13 +1,11 @@
 #include <deque>
-#include <filesystem>
+
+#include <grain/photons.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
-#include <ufw/data.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
-
-#include <grain/photons.h>
 
 #include <TH1D.h>
 

@@ -1,8 +1,9 @@
+#include <optical_simulation.hpp>
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/ecal_info.hpp>
-#include <optical_simulation.hpp>
-#include <ufw/process.hpp>
-#include <ecal/pes.h>
+#include <ecal/photo_electron.h>
+
+#include <ufw/factory.hpp>
 
 namespace sand::ecal {
 
@@ -14,7 +15,7 @@ namespace sand::ecal {
   }
 
   /// Constructor: Initialize the optical simulation process with output PES data
-  optical_simulation::optical_simulation() : process({}, {{"pes", "sand::ecal::pes"}}) {
+  optical_simulation::optical_simulation() : process({}, {{"pes", "sand::ecal::pes_container"}}) {
     UFW_DEBUG("Creating ECAL optical simulation process at {}", fmt::ptr(this));
   }
 
@@ -25,7 +26,7 @@ namespace sand::ecal {
     const auto& tree  = get<sand::edep_reader>();
     const auto& gecal = get<geoinfo>().ecal();
     // Get output photo-electron collection
-    auto& pes = set<sand::ecal::pes>("pes");
+    auto& pes = set<sand::ecal::pes_container>("pes");
 
     // Process each trajectory from the energy deposit record
     for (const auto& trj : tree) {
@@ -75,7 +76,7 @@ namespace sand::ecal {
             auto arrival_time = h_t + scintillation_time(fiber.scintillation_rise_time, fiber.scintillation_decay_time)
                               + propagation_time(l, fiber.light_velocity);
             // Create photo-electron with truth hit ID and calculated arrival time
-            pes::pe pe_(hit.GetId(), arrival_time);
+            pes_container::photo_electron pe_(hit.GetId(), arrival_time);
             // Build complete channel ID from cell geometry
             channel_id chid = gecal.channel({cid, fl});
             // Store photo-electron in output collection
@@ -112,3 +113,5 @@ namespace sand::ecal {
   }
 
 } // namespace sand::ecal
+
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::optical_simulation)

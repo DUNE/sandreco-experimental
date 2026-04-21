@@ -1,9 +1,10 @@
-#include <ufw/utils.hpp>
-#include <ufw/context.hpp>
 #include <grain/photons.h>
 #include <geoinfo/grain_info.hpp>
-
 #include <optical_simulation.hpp>
+
+#include <ufw/utils.hpp>
+#include <ufw/context.hpp>
+
 
 #include <G4Event.hh>
 #include <G4HCofThisEvent.hh>
@@ -66,7 +67,7 @@ void AnalysisManager::EndOfEvent(const G4Event* pEvent) {
         ph.scatter = sensorHit->scatter();
         ph.inside_camera = (sensorHit->productionVolume() == sensorHit->camName());
         ph.camera_id = geom.grain().at(sensorHit->camName()).id;
-        ph.true_hit = sensorHit->truth();
+        ph.reset(sensorHit->truth());
         hits.photons.push_back(ph);
       }
     }

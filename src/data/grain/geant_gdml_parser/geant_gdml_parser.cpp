@@ -1,7 +1,6 @@
-#include <ufw/config.hpp>
-#include <ufw/factory.hpp>
-
 #include <geant_gdml_parser.hpp>
+
+#include <ufw/config.hpp>
 
 namespace sand::grain {
 
