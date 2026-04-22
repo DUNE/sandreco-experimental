@@ -1,0 +1,3 @@
+sandreco_add_test_process(sand_test_test_module)
+
+target_sources(sand_test_test_module PRIVATE test_module.cpp)
