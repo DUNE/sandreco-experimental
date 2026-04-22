@@ -1,0 +1,19 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-ldpath": [ "010_modules", "/usr/local/lib64" ]
+  },
+  "globals" : {},
+  "contexts" : {
+    "keys" : 3,
+    "locals" : {}
+  },
+  "run" : [
+    {
+      "sand::test::test_module": {
+        "greeting": "Hiiii!!!!"
+      },
+      "reqs": {},
+      "prods": {}
+    }]
+}
