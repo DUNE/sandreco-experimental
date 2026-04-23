@@ -107,7 +107,7 @@ namespace smearing{
             while(ran_pt<=0){
                 ran_pt = relative_pt_error(m_random_engine());
             }
-            const float smeared_p_transverse = p_transverse * ran_pt;
+            const float smeared_p_transverse = mev_to_gev(p_transverse) * ran_pt;
             
             // random extraction of the smearing factor
             std::normal_distribution<double> abs_dip_angle_error(0.0, mcs_dip_angle_res);
@@ -119,7 +119,7 @@ namespace smearing{
             double ran_zy_angle = abs_zy_angle_error(m_random_engine());
             const float smeared_zy_angle = zy_angle + ran_zy_angle;
 
-            return caf::SRVector3D{p_transverse*std::tan(smeared_dip_angle), 
+            return caf::SRVector3D{mev_to_gev(p_transverse)*std::tan(smeared_dip_angle), 
                                        smeared_p_transverse*std::sin(smeared_zy_angle),
                                             smeared_p_transverse*std::cos(smeared_zy_angle)};
             
