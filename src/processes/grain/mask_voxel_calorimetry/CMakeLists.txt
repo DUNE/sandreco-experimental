@@ -1,0 +1,5 @@
+sandreco_add_process(sand_grain_mask_voxel_calorimetry)
+
+target_sources(sand_grain_mask_voxel_calorimetry PRIVATE mask_voxel_calorimetry.cpp)
+
+target_link_libraries(sand_grain_mask_voxel_calorimetry PRIVATE sand_geoinfo sand_hdf5)
