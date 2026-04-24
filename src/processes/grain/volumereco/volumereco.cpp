@@ -13,6 +13,7 @@
 #include <common/sand.h>
 #include <grain/image.h>
 #include <grain/grain.h>
+#include <grain/voxels.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -218,7 +219,7 @@ namespace sand::grain {
     }
   }
 
-  volumereco::volumereco() : process({{"images", "sand::grain::images"}}, {}) {
+  volumereco::volumereco() : process({{"images", "sand::grain::images"}}, {{"photon_amplitudes", "sand::grain::voxels"}}) {
     UFW_DEBUG("Creating a volumereco process at {}.", fmt::ptr(this));
   }
 
@@ -227,7 +228,7 @@ namespace sand::grain {
     ++m_event_number;
     UFW_DEBUG("Event number {}.", m_event_number);
     const auto& images_in = get<images>("images");
-    //auto& voxel_out = set<voxel_array<float>>("voxels");
+    auto& photon_amplitude_out = set<voxels>("photon_amplitudes");
     auto& platform = instance<cl::platform>();
     const auto& gi = instance<geoinfo>();
 
@@ -355,9 +356,10 @@ namespace sand::grain {
     // Retrieve voxel score
     // std::vector<float> tmp_scores(n_voxels);
     // void* scores_p = tmp_scores.data();
-    voxel_array<float> scores(voxels.size());
+    photon_amplitude_out.voxels.emplace_back(voxels.size());
+    //voxel_array<float> scores(voxels.size());
     cl::Event ev_copy_scores_from_device =
-          m_previous_amplitude_buffers[0].read(scores, platform.queues()[0], 0, -1, {ev_multiply_matrices_in_place});
+          m_previous_amplitude_buffers[0].read(photon_amplitude_out.voxels.back(), platform.queues()[0], 0, -1, {ev_multiply_matrices_in_place});
     
     // Be sure that all GPU computations are completed
     for (const auto& queue : platform.queues()) {
@@ -367,7 +369,7 @@ namespace sand::grain {
     auto& score_writer = instance<sand::hdf5::ndarray>("score_writer");
     sand::hdf5::ndarray::ndrange range({voxels.size().x(), voxels.size().y(), voxels.size().z()});
     range.set_type(H5::PredType::NATIVE_FLOAT);
-    score_writer.write(std::to_string(m_event_number), range, scores.data());
+    score_writer.write(std::to_string(m_event_number), range, photon_amplitude_out.voxels.back().data());
   }
 } // namespace sand::grain
 

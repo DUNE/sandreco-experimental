@@ -42,7 +42,14 @@
           "pde" : 1.0
         },
         "reqs" : {"images": "images"},
-        "prods" : {}
+        "prods" : {"photon_amplitudes": "pippo"}
+      }, 
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "/home/sand/volumereco.root",
+          "tree" : "recos"
+        },
+        "write" : [ "pippo" ]
       }
     ]
   }
