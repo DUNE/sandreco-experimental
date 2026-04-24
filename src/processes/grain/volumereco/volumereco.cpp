@@ -353,10 +353,11 @@ namespace sand::grain {
                                                   cl::NullRange, nullptr, &ev_multiply_matrices_in_place);
 
     // Retrieve voxel score
-    std::vector<float> tmp_scores(n_voxels);
-    void* scores_p = tmp_scores.data();
+    // std::vector<float> tmp_scores(n_voxels);
+    // void* scores_p = tmp_scores.data();
+    voxel_array<float> scores(voxels.size());
     cl::Event ev_copy_scores_from_device =
-          m_previous_amplitude_buffers[0].read(scores_p, platform.queues()[0], 0, -1, {ev_multiply_matrices_in_place});
+          m_previous_amplitude_buffers[0].read(scores, platform.queues()[0], 0, -1, {ev_multiply_matrices_in_place});
     
     // Be sure that all GPU computations are completed
     for (const auto& queue : platform.queues()) {
@@ -366,7 +367,7 @@ namespace sand::grain {
     auto& score_writer = instance<sand::hdf5::ndarray>("score_writer");
     sand::hdf5::ndarray::ndrange range({voxels.size().x(), voxels.size().y(), voxels.size().z()});
     range.set_type(H5::PredType::NATIVE_FLOAT);
-    score_writer.write(std::to_string(m_event_number), range, tmp_scores.data());
+    score_writer.write(std::to_string(m_event_number), range, scores.data());
   }
 } // namespace sand::grain
 
