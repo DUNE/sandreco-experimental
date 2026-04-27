@@ -41,8 +41,15 @@
           "max_iterations" : 3,
           "pde" : 1.0
         },
-        "reqs" : {"images": "images"},
-        "prods" : {}
+        "reqs" : { "images" : "images" },
+        "prods" : { "photon_amplitudes" : "lightmap" }
+      },
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/volumereco.root",
+          "tree" : "recos"
+        },
+        "write" : ["lightmap"]
       }
     ]
   }
