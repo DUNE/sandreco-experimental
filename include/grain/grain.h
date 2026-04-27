@@ -31,19 +31,21 @@ namespace sand::grain {
   template <typename T>
   class voxel_array {
    public:
-    voxel_array(size_3d sz) : m_data(new T[count(sz)]), m_size(sz) {}
+    voxel_array(size_3d sz) : m_data(count(sz)), m_size(sz) {}
 
-    voxel_array(size_3d sz, T init) : m_data(new T[count(sz)]), m_size(sz) { std::fill_n(data(), count(sz), init); }
+    voxel_array(size_3d sz, T init) : m_data(count(sz), init), m_size(sz) {}
 
-    voxel_array(size_3d sz, const T* raw) : m_data(new T[count(sz)]), m_size(sz) {
+    voxel_array(size_3d sz, const T* raw) : m_data(count(sz)), m_size(sz) {
       std::copy_n(raw, count(sz), data());
     }
 
-    voxel_array(const voxel_array&) = delete;
+    voxel_array() : m_data(), m_size(0,0,0) {}
+
+    voxel_array(const voxel_array&) = default;
 
     voxel_array(voxel_array&&) = default;
 
-    voxel_array& operator= (const voxel_array&) = delete;
+    voxel_array& operator= (const voxel_array&) = default;
 
     voxel_array& operator= (voxel_array&&) = default;
 
@@ -69,9 +71,9 @@ namespace sand::grain {
 
     T* begin() { return data(); }
 
-    const T* data() const { return m_data.get(); }
+    const T* data() const { return m_data.data(); }
 
-    T* data() { return m_data.get(); }
+    T* data() { return m_data.data(); }
 
     const T* end() const { return data() + count(m_size); }
 
@@ -126,7 +128,7 @@ namespace sand::grain {
     static size_t count(size_3d sz) { return sz.x() * sz.y() * sz.z(); }
 
    private:
-    std::unique_ptr<T[]> m_data;
+    std::vector<T> m_data;
     size_3d m_size;
   };
 
