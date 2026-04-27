@@ -59,23 +59,28 @@ namespace sand::grain {
   namespace { //TODO this will probably be useful as a separate header with helper functions
 
     py::array::ShapeContainer size2shape(size_3d sz) {
-      return py::array::ShapeContainer{sz.x(), sz.y(), sz.z()};
+      return py::array::ShapeContainer({sz.x(), sz.y(), sz.z()});
     }
 
     py::array_t<double, py::array::c_style> xform2ndarray(xform_3d xf) {
-      py::array_t<double, py::array::c_style> xform = py::array_t<double>({4, 3});
+      py::array_t<double, py::array::c_style> xform = py::array_t<double>({3, 4});
       auto xform_buf = xform.request();
       double* ptr = static_cast<double*>(xform_buf.ptr);
-      //TODO apply the z transform of SiPMs
       xf.GetComponents(ptr);
+      //TODO this is likely not the correct orientation for this transform, rows and columns may be confused.
+      //TODO apply the z transform of SiPMs
       return xform;
     }
 
     py::array_t<double, py::array::c_style> pixels2ndarray(const pixel_array<images::pixel>& pixels) {
       py::array_t<double, py::array::c_style> image(py::array::ShapeContainer({camera_height, camera_width, 2u}));
       auto buf = image.request();
-      images::pixel* ptr = static_cast<images::pixel*>(buf.ptr);
-      std::copy(pixels.begin(), pixels.end(), ptr);
+      double* ptr = static_cast<double*>(buf.ptr);
+      //we only copy amplitude and time, not the truth
+      for (auto it = pixels.begin(); it != pixels.end(); ++it) {
+        *ptr++ = it->amplitude;
+        *ptr++ = it->time_first;
+      }
       return image;
     }
 
@@ -88,18 +93,19 @@ namespace sand::grain {
   }
 
   void prior_wrapper::configure(const ufw::config& cfg) {
+    pyprocess::configure(cfg); //this is initializing the python interpreter and needs to be first.
     const auto& gi = instance<geoinfo>();
     m_voxel_size = cfg.at("voxel_size");
     dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
     auto mask = gi.grain().fiducial_voxels(voxel_sizes);
     //TODO these args could be passed via cfg, but it is inefficient to pass them via json.
     //one can fully reimplement pyprocess::configure to pass different arguments to configure as python types.
-    m_private->shape = size2shape(mask.size());
+    m_private.reset(new prior_wrapper::prior_private{size2shape(mask.size()), {}, {}});
     m_private->fiducial_mask.resize(m_private->shape);
     for (const auto& camera : gi.grain().mask_cameras()) {
+      UFW_INFO("Transform for camera {}", camera.name);
       m_private->transforms[camera.name.c_str()] = xform2ndarray(camera.transform);
     }
-    pyprocess::configure(cfg);
   }
 
   void prior_wrapper::run() {

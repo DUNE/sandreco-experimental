@@ -1,0 +1,44 @@
+{
+    "ufw" : {
+      "ufw-loglevel" : "debug",
+      "ufw-basepath" : "/usr/local/share/sandreco/data",
+      "ufw-ldpath" : ["/usr/local/lib64"],
+      "ufw-env" : {}
+    },
+    "globals" : {
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
+    "sand::geoinfo" : { "grain_geometry" : "gdml-masks" },
+    "sand::grain::geant_gdml_parser" : {
+      "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" }
+    }
+    },
+    "contexts" : {
+      "keys" :  [10],
+      "locals" : {}
+    },
+    "run" : [
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/images.root",
+          "tree" : "cameras"
+        },
+        "read" : ["images"]
+      },
+      {
+        "sand::grain::prior_wrapper" : {
+          "module" : "/usr/local/lib64/sandreco/python/prior.py",
+          "voxel_size" : 150.0
+        },
+        "reqs" : { "images" : "images" },
+        "prods" : { "prior" : "lightmap" }
+      },
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/prior.root",
+          "tree" : "prior"
+        },
+        "write" : ["lightmap"]
+      }
+    ]
+  }
+  
