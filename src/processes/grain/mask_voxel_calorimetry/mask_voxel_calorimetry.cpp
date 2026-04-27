@@ -19,16 +19,23 @@ namespace sand::grain {
   /**
    * \class sand::grain::mask_voxel_calorimetry
    *
-   * \brief brief description
+   * \brief Reconstructs deposited energy from voxelized photon amplitude data using calibration coefficients.
    *
-   *    *
+   * This process reads photon amplitude voxel arrays, computes the total amplitude per event,
+   * and converts it to deposited energy using a linear calibration model. The calibration
+   * parameters map raw photon amplitudes to reconstructed energy values.
+   *
+   * \subsection Input
+   * - **photon_amplitudes** (`sand::grain::voxels`): Voxelized photon amplitude data organized by event.
+   *   Each event contains a voxel_array of amplitude values across the detector.
+   *
    * \subsection Configuration
-   * | Parameter Name            | Type             | Unit   | Required/Default                 | Description                                        |
-   * |---------------------------|------------------|--------|----------------------------------|----------------------------------------------------|
-   * | `slice_times`             | vector\<double\> | ns     | Default: []                      | Predefined time slices for photon assignment.      |
-   * | `min_response_signal`     | double           | **??** | Required if slice_times is empty | Minimum photon response signal to trigger slicing. |
-   * | `delta_ns_for_comparison` | double           | ns     | Required if slice_times is empty | **??**                                             |
+   * | Parameter Name       | Type      | Unit   | Required/Default  | Description                                        |
+   * |----------------------|-----------|--------|-------------------|----------------------------------------------------|
+   * | `calib_slope`        | double    | MeV    | Required          | Calibration slope (m) for energy reconstruction.   |
+   * | `calib_intercept`    | double    | MeV    | Required          | Calibration intercept (q) for energy reconstruction. |
    */
+
 
   class mask_voxel_calorimetry : public ufw::process {
    public:
