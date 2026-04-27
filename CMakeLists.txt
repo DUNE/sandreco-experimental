@@ -31,6 +31,8 @@ find_package(ROOT COMPONENTS MathCore REQUIRED)
 
 find_package(ufw REQUIRED)
 
+find_package(pybind11 REQUIRED)
+
 find_package(duneanaobj REQUIRED)
 
 add_subdirectory(include)
