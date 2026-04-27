@@ -7,6 +7,7 @@
 #include <hdf5/hdf5.hpp>
 #include <common/sand.h>
 #include <grain/grain.h>
+#include <grain/voxels.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -36,29 +37,32 @@ namespace sand::grain {
     void run() override;
 
    private:
-    double m_calib_A;
-    double m_calib_B;
-
+    double m_calib_m;
+    double m_calib_q;
+    uint64_t m_stat_events_processed;
   };
 
   void mask_voxel_calorimetry::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_calib_A = cfg.at("calib_A");
-    m_calib_B = cfg.at("calib_B");
+    m_calib_m = cfg.at("calib_slope");
+    m_calib_q = cfg.at("calib_intercept");
   }
 
 
-  mask_voxel_calorimetry::mask_voxel_calorimetry() : process({}, {}) {
+  mask_voxel_calorimetry::mask_voxel_calorimetry() : process({{"photon_amplitudes", "sand::grain::voxels"}}, {}) {
     UFW_INFO("Creating a mask_voxel_calorimetry process at {}", fmt::ptr(this));
   }
 
   void mask_voxel_calorimetry::run() {
-    auto& recos = instance<sand::hdf5::ndarray>("reco_reader");
-    auto r = recos.datasets();
-    auto current_id = static_cast<uint64_t>(ufw::context::current()->id());
-    auto current_id_s = std::to_string(current_id);
-    std::cout << "current id " << current_id << ", r[id] " << r[current_id] << std::endl;
-    
+    const auto& photon_amplitude_in      = get<voxels>("photon_amplitudes");
+    UFW_DEBUG("Reconstructed {} events in spill", photon_amplitude_in.voxels.size());
+    m_stat_events_processed = 0.;
+    for (const auto& evt_voxels : photon_amplitude_in.voxels) {
+      double total_amplitude = std::accumulate(evt_voxels.begin(), evt_voxels.end(), 0.);
+      m_stat_events_processed++;
+      double deposited_energy = m_calib_m * total_amplitude + m_calib_q;
+      UFW_DEBUG("Event {}: photon amplitude total = {}, deposited energy = {} MeV", m_stat_events_processed, total_amplitude, deposited_energy);
+    };
   }
 
 } // namespace sand::grain
