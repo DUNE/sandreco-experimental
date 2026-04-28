@@ -56,12 +56,12 @@
       ]
     },
     {
-      "sand::ecal::spill_slicer_placeholder": {},
+      "sand::ecal::digit_spill_slicer_placeholder": {},
       "reqs": {
         "digi": "ecal_digits_read_from_file"
       },
       "prods": {
-        "slices": "ecal_slices"
+        "digit_slices": "digit_ecal_slices"
       }
     }
   ]
