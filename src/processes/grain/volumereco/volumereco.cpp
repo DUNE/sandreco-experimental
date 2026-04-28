@@ -223,7 +223,7 @@ namespace sand::grain {
 
   void volumereco::run() {
     UFW_DEBUG("Running a volumereco process at {}.", fmt::ptr(this));
-    UFW_DEBUG("Event number {}.", ufw::context::current()->id());
+    UFW_INFO("Spill number {}.", ufw::context::current()->id());
     const auto& spill_images_in = get<images>("images");
     auto& photon_amplitude_out = set<voxels>("photon_amplitudes");
     auto& platform = instance<cl::platform>();
@@ -259,7 +259,7 @@ namespace sand::grain {
       }
         
       for (int iteration = 0; iteration < m_max_iterations; ++iteration) {
-        UFW_DEBUG("Iteration: {}", iteration);
+        UFW_INFO("Iteration: {}", iteration);
         // Fill maximization buffers with 0
         for (size_t i_device = 0; i_device < m_n_devices; ++i_device) {
           cl::Event ev_fill_maximization_buffer = m_maximization_buffers[i_device].write(starting_maximization.data(), platform.queues()[i_device], 0, -1);
@@ -367,6 +367,7 @@ namespace sand::grain {
         queue.finish();
       }
       // Write to hdf5
+      UFW_INFO("Write hdf5");
       auto& score_writer = instance<sand::hdf5::ndarray>("score_writer");
       sand::hdf5::ndarray::ndrange range({voxels.size().x(), voxels.size().y(), voxels.size().z()});
       range.set_type(H5::PredType::NATIVE_FLOAT);
