@@ -17,7 +17,7 @@ namespace sand::grain {
    *
    * \brief Processes digitized signals into time-based images/slices for further reconstruction.
    *
-   * This process accepts digitized signals (digi) and classifies time-of-flight photons into multiple time-based "slices."
+   * This process accepts digitized signals (digi) and classifies time-of-flight photons into multiple time-based "slices".
    * Each slice represents a defined time window, and pixel-level data is assigned to the appropriate slice based on photon timing.
    * Outputs generated pixel images (`images`) for each given camera.
    *
@@ -110,22 +110,22 @@ namespace sand::grain {
     m_stat_photons_accepted  = 0;
     m_stat_photons_discarded = 0;
     const auto& digis_in     = get<digi>("digi");
-    auto& images_out         = set<images>("images").images;
+    auto& spill_images_out   = set<images>("images").images;
     if (m_use_algo) {
       m_slice_times.clear();
       compute_slice_times();
     }
     for (int img_idx = 0; img_idx < m_slice_times.size() - 1; img_idx++) {
       UFW_INFO("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx + 1]);
-      size_t offset = images_out.size();
+      std::vector<images::image> event_images_out;
       for (auto& signal : digis_in.signals) {
         auto id = signal.channel().link;
-        auto it = std::find_if(images_out.begin() + offset, images_out.end(),
+        auto it = std::find_if(event_images_out.begin(), event_images_out.end(),
                                [id](auto& img) { return img.camera_id == id; });
-        if (it == images_out.end()) {
+        if (it == event_images_out.end()) {
           images::image img{id, m_slice_times[img_idx], m_slice_times[img_idx + 1]};
-          images_out.emplace_back(img);
-          it = images_out.end() - 1;
+          event_images_out.emplace_back(img);
+          it = event_images_out.end() - 1;
           it->blank();
           UFW_DEBUG("Created image for camera id: {}, starting at time: {}", id, m_slice_times[img_idx]);
         }
@@ -144,7 +144,7 @@ namespace sand::grain {
           m_stat_photons_discarded++;
         }
       }
-      for (const auto& img :images_out) {
+      for (const auto& img : event_images_out) {
         size_t maxhits = 0;
         double npe = 0.;
         for (int x = 0; x != camera_width; ++x) {
@@ -155,6 +155,7 @@ namespace sand::grain {
         }
         UFW_DEBUG("Camera {} recorded a total of {} photons from {} different MC true hits", img.camera_id, npe, maxhits );
       }
+      spill_images_out.emplace_back(event_images_out);
     }
     UFW_INFO("Processed {} photons; {} were accepted, {} discarded.", m_stat_photons_processed, m_stat_photons_accepted,
              m_stat_photons_discarded);
