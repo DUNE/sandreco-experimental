@@ -18,5 +18,5 @@ def run(fiducial, transforms, images):
   print(f"Processing {len(images)} images")
   for name, image in images.items():
     print(f"Processing image for camera {name}, which is of shape {image.shape}")
-  ret = np.zeros(fiducial.shape, dtype=float)
+  ret = np.ones(fiducial.shape, dtype=float)
   return ret

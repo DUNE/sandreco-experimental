@@ -112,11 +112,9 @@ namespace sand::grain {
     const auto& gi = instance<geoinfo>();
     const auto& images = get<sand::grain::images>("images");
     auto& prior = set<sand::grain::voxels>("prior");
-    // As of today, images is not spill oriented, while voxels are.
-    // I will pretend all images are in the first spill, TODO fix this when images becomes a vector of vectors.
-    for (int spill = 0; spill != 1; ++spill) {
+    for (auto& this_spill : images.images) {
       py::dict arg_images;
-      for (const auto& img : images.images) {
+      for (const auto& img : this_spill) {
         const auto& camera = gi.grain().at(img.camera_id);
         arg_images[camera.name.c_str()] = pixels2ndarray(img.pixels);
       }
