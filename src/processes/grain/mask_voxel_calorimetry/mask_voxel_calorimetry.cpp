@@ -1,10 +1,3 @@
-#include <algorithm>
-#include <array>
-#include <vector>
-#include <iostream>
-#include <string>
-
-#include <hdf5/hdf5.hpp>
 #include <common/sand.h>
 #include <grain/grain.h>
 #include <grain/voxels.h>
@@ -62,7 +55,7 @@ namespace sand::grain {
   }
 
   void mask_voxel_calorimetry::run() {
-    const auto& photon_amplitude_in      = get<voxels>("photon_amplitudes");
+    const auto& photon_amplitude_in  = get<voxels>("photon_amplitudes");
     auto& total_deposited_energy_out = set<total_energy>("total_deposited_energy").energies; 
     m_stat_events_processed = 0.;
     for (const auto& evt_voxels : photon_amplitude_in.voxels) {
