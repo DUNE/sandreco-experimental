@@ -8,6 +8,7 @@
 #include <common/sand.h>
 #include <grain/grain.h>
 #include <grain/voxels.h>
+#include <grain/energy.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -30,10 +31,10 @@ namespace sand::grain {
    *   Each event contains a voxel_array of amplitude values across the detector.
    *
    * \subsection Configuration
-   * | Parameter Name       | Type      | Unit   | Required/Default  | Description                                        |
-   * |----------------------|-----------|--------|-------------------|----------------------------------------------------|
-   * | `calib_slope`        | double    | MeV    | Required          | Calibration slope (m) for energy reconstruction.   |
-   * | `calib_intercept`    | double    | MeV    | Required          | Calibration intercept (q) for energy reconstruction. |
+   * | Parameter Name       | Type      | Unit       | Required/Default  | Description                                          |
+   * |----------------------|-----------|------------|-------------------|------------------------------------------------------|
+   * | `calib_slope`        | double    | MeV/npe    | Required          | Calibration slope (m) for energy reconstruction.     |
+   * | `calib_intercept`    | double    | MeV        | Required          | Calibration intercept (q) for energy reconstruction. |
    */
 
 
@@ -56,20 +57,20 @@ namespace sand::grain {
   }
 
 
-  mask_voxel_calorimetry::mask_voxel_calorimetry() : process({{"photon_amplitudes", "sand::grain::voxels"}}, {}) {
+  mask_voxel_calorimetry::mask_voxel_calorimetry() : process({{"photon_amplitudes", "sand::grain::voxels"}}, {{"total_deposited_energy", "sand::grain::total_energy"}}) {
     UFW_INFO("Creating a mask_voxel_calorimetry process at {}", fmt::ptr(this));
   }
 
   void mask_voxel_calorimetry::run() {
     const auto& photon_amplitude_in      = get<voxels>("photon_amplitudes");
-    UFW_DEBUG("Reconstructed {} events in spill", photon_amplitude_in.voxels.size());
+    auto& total_deposited_energy_out = set<total_energy>("total_deposited_energy").energies; 
     m_stat_events_processed = 0.;
     for (const auto& evt_voxels : photon_amplitude_in.voxels) {
       double total_amplitude = std::accumulate(evt_voxels.begin(), evt_voxels.end(), 0.);
+      total_deposited_energy_out.emplace_back( m_calib_m * total_amplitude + m_calib_q);
       m_stat_events_processed++;
-      double deposited_energy = m_calib_m * total_amplitude + m_calib_q;
-      UFW_DEBUG("Event {}: photon amplitude total = {}, deposited energy = {} MeV", m_stat_events_processed, total_amplitude, deposited_energy);
     };
+    UFW_DEBUG("Processed {} events in spill", m_stat_events_processed);
   }
 
 } // namespace sand::grain

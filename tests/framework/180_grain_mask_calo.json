@@ -25,7 +25,14 @@
           "calib_intercept" : 0.3
         },
         "reqs" : {"photon_amplitudes" : "lightmap"},
-        "prods" : {}
+        "prods" : {"total_deposited_energy": "total_energy"}
+      },
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/grain_energy.root",
+          "tree" : "energy"
+        },
+        "write" : [ "total_energy" ]
       }
     ]
   }
