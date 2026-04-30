@@ -2,7 +2,7 @@
     "ufw" : {
       "ufw-loglevel" : "debug",
       "ufw-basepath" : "/usr/local/share/sandreco/data",
-      "ufw-ldpath" : ["/usr/local/lib64"]
+      "ufw-ldpath" : ["/usr/local/lib64", "/home/sand/sandreco-experimental/build/tests/framework/150_modules"]
     },
     "globals" : {
     },
@@ -27,6 +27,11 @@
         "reqs" : {"digi" : "digis"},
         "prods" : {"images": "imgs"}
       },
+      {
+        "sand::test::test_grain_spill_slicer" : {},
+        "reqs" : {"images": "imgs"},
+        "prods" : {}
+      },      
       {
         "sand::root::tree_streamer" : { 
           "uri" : "test/images_masks.root",
