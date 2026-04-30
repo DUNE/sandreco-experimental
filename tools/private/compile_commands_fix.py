@@ -8,7 +8,8 @@ def replace_paths_in_strings(data, old_prefix, new_prefix):
     """
     if isinstance(data, str):
         data = data.replace(old_prefix, new_prefix)
-        data = data.replace('-g', '-I' + new_prefix + '/ufw/include/ -g')
+        data = data.replace('-std=c++17', '-std=c++17 -I' + new_prefix + '/ufw/include/ -I'  + new_prefix + '/ufw/build/lib/include/')
+        data = data.replace('/opt/root/include', '/usr/include/root')
         return data
     elif isinstance(data, dict):
         return {k: replace_paths_in_strings(v, old_prefix, new_prefix) for k, v in data.items()}

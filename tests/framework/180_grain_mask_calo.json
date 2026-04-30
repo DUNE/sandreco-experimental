@@ -1,0 +1,38 @@
+{
+    "ufw" : {
+      "ufw-loglevel" : "debug",
+      "ufw-basepath" : "/usr/local/share/sandreco/data",
+      "ufw-ldpath" : ["/usr/local/lib64"],
+      "ufw-env" : {}
+    },
+    "globals" : {
+    },
+    "contexts" : {
+      "keys" :  [10,11,15],
+      "locals" : {}
+    },
+    "run" : [
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/volumereco.root",
+          "tree" : "recos"
+        },
+        "read" : ["lightmap"]
+      },
+      {
+        "sand::grain::mask_voxel_calorimetry" : {
+          "calib_slope" : 1.1,
+          "calib_intercept" : 0.3
+        },
+        "reqs" : {"photon_amplitudes" : "lightmap"},
+        "prods" : {"total_deposited_energy": "total_energy"}
+      },
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/grain_energy.root",
+          "tree" : "energy"
+        },
+        "write" : [ "total_energy" ]
+      }
+    ]
+  }
