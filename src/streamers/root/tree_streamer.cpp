@@ -79,7 +79,7 @@ namespace sand::root {
     streamer::attach(d, id);
     var_info& info  = info_map().at(id);
     info.address    = &d;
-    auto brname     = ufw::simplified_name(info.type); // remove any namespace from the branch name, for convenience.
+    auto brname     = id;
     TBranch* brdata = nullptr;
     if (operation() & ufw::op_type::ro) {
       // attach data branch
