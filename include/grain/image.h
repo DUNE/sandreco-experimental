@@ -30,7 +30,7 @@ namespace sand::grain {
       inline truth all_hits() const;
     };
 
-    using image_list = std::vector<image>;
+    using image_list = std::vector<std::vector<image>>; // Outer vector containing events in one spill
 
     image_list images;
   };
