@@ -1,3 +1,5 @@
+#include <geoinfo/geoinfo.hpp>
+#include <geoinfo/grain_info.hpp>
 #include <common/sand.h>
 #include <grain/grain.h>
 #include <grain/voxels.h>
@@ -39,12 +41,14 @@ namespace sand::grain {
    private:
     double m_dist_wall;
     double m_amp_thr;
+    double m_voxel_size;
   };
 
   void voxels_to_point_cloud::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_dist_wall = cfg.value("dist_wall", 0.0);
     m_amp_thr = cfg.value("amp_thr", 0.0);
+    m_voxel_size = cfg.at("voxel_size");
   }
 
 
@@ -53,12 +57,19 @@ namespace sand::grain {
   }
 
   void voxels_to_point_cloud::run() {
+    const auto& gi = instance<geoinfo>();
     const auto& photon_amplitude_in  = get<voxels>("photon_amplitudes");
     auto& point_cloud_out = set<point_cloud>("point_cloud").points; 
+
+    UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
+    UFW_INFO("GRAIN size (local bbox):\n - LAr {};\n - optics fiducial {};", gi.grain().LAr_bbox(),
+             gi.grain().fiducial_bbox());
+    UFW_INFO("GRAIN min: {} max: {}", gi.grain().transform() * dir_3d(0.0, 0.0, 0.0), gi.grain().transform() * gi.grain().fiducial_bbox());
+
     for (const auto& evt_voxels : photon_amplitude_in.voxels) {
       std::vector<point_cloud::point> evt_points;
       const size_3d sizes = evt_voxels.size();
-      const xform_3d transform = evt_voxels.xform_id_to_fiducial(dir_3d(150.0, 150.0, 150.0));
+      const xform_3d transform = evt_voxels.xform_id_to_fiducial(dir_3d(m_voxel_size, m_voxel_size, m_voxel_size));
       for (size_t i{0}; i < sizes.x(); ++i) {
         for (size_t j{0}; j < sizes.y(); ++j) {
           for (size_t k{0}; k < sizes.z(); ++k) {
@@ -70,6 +81,10 @@ namespace sand::grain {
             UFW_DEBUG("Index: {}, Position: {}, Amplitude {}", i_voxel, position, amplitude);
           }
         }
+      }
+      UFW_DEBUG("New event");
+      for (const auto& p : evt_points) {
+        std::cout << p.position.x() << "," << p.position.y() << "," << p.position.z() << "\n";
       }
       point_cloud_out.emplace_back(evt_points);
     };

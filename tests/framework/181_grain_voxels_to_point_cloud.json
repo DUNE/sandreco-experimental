@@ -6,6 +6,11 @@
       "ufw-env" : {}
     },
     "globals" : {
+      "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
+      "sand::geoinfo" : { "grain_geometry" : "gdml-masks" },
+      "sand::grain::geant_gdml_parser" : {
+        "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" }
+      }
     },
     "contexts" : {
       "keys" :  [10,11,15],
@@ -22,7 +27,8 @@
       {
         "sand::grain::voxels_to_point_cloud" : {
           "dist_wall" : 1.1,
-          "amp_thr" : 0.3
+          "amp_thr" : 0.3,
+          "voxel_size" : 150.0
         },
         "reqs" : {"photon_amplitudes" : "lightmap"},
         "prods" : {"point_cloud": "point_cloud"}
