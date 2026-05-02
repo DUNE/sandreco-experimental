@@ -64,17 +64,15 @@ namespace sand::grain {
     const auto& photon_amplitude_in  = get<voxels>("photon_amplitudes");
     auto& point_cloud_out = set<point_cloud>("point_cloud").points; 
 
-    UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
-    UFW_INFO("GRAIN size (local bbox):\n - LAr {};\n - optics fiducial {};", gi.grain().LAr_bbox(),
-             gi.grain().fiducial_bbox());
+    int i_evt{0};
 
     for (const auto& evt_voxels : photon_amplitude_in.voxels) {
       std::vector<point_cloud::point> evt_points;
       const size_3d sizes = evt_voxels.size();
       const xform_3d transform = evt_voxels.xform_id_to_fiducial(dir_3d(m_voxel_size, m_voxel_size, m_voxel_size));
-      for (size_t i{0}; i < sizes.x(); ++i) {
+      for (size_t k{0}; k < sizes.z(); ++k) {
         for (size_t j{0}; j < sizes.y(); ++j) {
-          for (size_t k{0}; k < sizes.z(); ++k) {
+          for (size_t i{0}; i < sizes.x(); ++i) {
             index_3d i_voxel(i, j, k);
             double amplitude = evt_voxels.at(i_voxel);
             // Apply threshold on amplitude
@@ -89,11 +87,9 @@ namespace sand::grain {
           }
         }
       }
-      UFW_DEBUG("New event");
-      for (const auto& p : evt_points) {
-        std::cout << p.position.x() << "," << p.position.y() << "," << p.position.z() << "\n";
-      }
       point_cloud_out.emplace_back(evt_points);
+      UFW_INFO("Spill {}, event {}, point cloud size: {}", ufw::context::current()->id(), i_evt, evt_points.size());
+      i_evt++;
     };
   }
 

@@ -18,5 +18,3 @@ namespace sand::grain {
 
 UFW_DECLARE_MANAGED_DATA(sand::grain::point_cloud)
 
-UFW_DECLARE_UNMANAGED_DATA(sand::grain::images::point_cloud::point)
-
