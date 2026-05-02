@@ -10,6 +10,8 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
+#include <cmath>
+
 namespace sand::grain {
 
   /**
@@ -29,6 +31,7 @@ namespace sand::grain {
    * |----------------------|-----------|------------|-------------------|------------------------------------------------------|
    * | `dist_wall`          | double    | cm         | Defalut: 0.0      | Minimum distance from fiducial surface.              |
    * | `amp_thr`            | double    | npe        | Defalut: 0.0      | Minimum voxel amplitude.                             |
+   * | `voxel_size`         | double    | mm         | Required          | Size of voxels.                                      |
    */
 
 
@@ -64,7 +67,6 @@ namespace sand::grain {
     UFW_INFO("GRAIN position: '{}'", gi.grain().transform());
     UFW_INFO("GRAIN size (local bbox):\n - LAr {};\n - optics fiducial {};", gi.grain().LAr_bbox(),
              gi.grain().fiducial_bbox());
-    UFW_INFO("GRAIN min: {} max: {}", gi.grain().transform() * dir_3d(0.0, 0.0, 0.0), gi.grain().transform() * gi.grain().fiducial_bbox());
 
     for (const auto& evt_voxels : photon_amplitude_in.voxels) {
       std::vector<point_cloud::point> evt_points;
@@ -75,8 +77,13 @@ namespace sand::grain {
           for (size_t k{0}; k < sizes.z(); ++k) {
             index_3d i_voxel(i, j, k);
             double amplitude = evt_voxels.at(i_voxel);
+            // Apply threshold on amplitude
             if (amplitude < m_amp_thr) continue;
             pos_3d position = transform * pos_3d(i, j, k);
+            dir_3d distance_from_origin(std::abs(position.x()), std::abs(position.y()), std::abs(position.z()));
+            dir_3d distance_from_wall = gi.grain().fiducial_bbox() - distance_from_origin;
+            // Apply threshold on position
+            if (distance_from_wall.x() < m_dist_wall || distance_from_wall.y() < m_dist_wall || distance_from_wall.z() < m_dist_wall) continue;
             evt_points.emplace_back(point_cloud::point{position, amplitude});
             UFW_DEBUG("Index: {}, Position: {}, Amplitude {}", i_voxel, position, amplitude);
           }
