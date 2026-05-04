@@ -22,7 +22,7 @@
           "uri" : "test/volumereco.root",
           "tree" : "recos"
         },
-        "read" : ["lightmap"]
+        "read" : ["grain_lightmap"]
       },
       {
         "sand::grain::voxels_to_point_cloud" : {
@@ -30,15 +30,15 @@
           "amp_thr" : 1.0,
           "voxel_size" : 150.0
         },
-        "reqs" : {"photon_amplitudes" : "lightmap"},
-        "prods" : {"point_cloud": "point_cloud"}
+        "reqs" : {"photon_amplitudes" : "grain_lightmap"},
+        "prods" : {"point_cloud": "grain_point_cloud"}
       },
       {
         "sand::root::tree_streamer" : { 
           "uri" : "test/grain_point_cloud.root",
           "tree" : "point_cloud"
         },
-        "write" : [ "point_cloud" ]
+        "write" : [ "grain_point_cloud" ]
       }
     ]
   }

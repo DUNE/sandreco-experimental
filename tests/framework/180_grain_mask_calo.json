@@ -17,22 +17,22 @@
           "uri" : "test/volumereco.root",
           "tree" : "recos"
         },
-        "read" : ["lightmap"]
+        "read" : ["grain_lightmap"]
       },
       {
         "sand::grain::mask_voxel_calorimetry" : {
           "calib_slope" : 1.1,
           "calib_intercept" : 0.3
         },
-        "reqs" : {"photon_amplitudes" : "lightmap"},
-        "prods" : {"total_deposited_energy": "total_energy"}
+        "reqs" : {"photon_amplitudes" : "grain_lightmap"},
+        "prods" : {"total_deposited_energy": "grain_total_energy"}
       },
       {
         "sand::root::tree_streamer" : { 
           "uri" : "test/grain_energy.root",
           "tree" : "energy"
         },
-        "write" : [ "total_energy" ]
+        "write" : [ "grain_total_energy" ]
       }
     ]
   }

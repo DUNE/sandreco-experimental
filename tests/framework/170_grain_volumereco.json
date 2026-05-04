@@ -33,7 +33,7 @@
           "uri" : "test/images.root",
           "tree" : "cameras"
         },
-        "read" : ["images"]
+        "read" : ["grain_images"]
       },
       {
         "sand::grain::volumereco" : {
@@ -41,15 +41,15 @@
           "max_iterations" : 3,
           "pde" : 1.0
         },
-        "reqs" : { "images" : "images" },
-        "prods" : { "photon_amplitudes" : "lightmap" }
+        "reqs" : { "images" : "grain_images" },
+        "prods" : { "photon_amplitudes" : "grain_lightmap" }
       },
       {
         "sand::root::tree_streamer" : { 
           "uri" : "test/volumereco.root",
           "tree" : "recos"
         },
-        "write" : ["lightmap"]
+        "write" : ["grain_lightmap"]
       }
     ]
   }

@@ -43,14 +43,14 @@
         "energy_split_threshold" : 100
       },
       "reqs" : {},
-      "prods" : {"hits" : "foo"}
+      "prods" : {"hits" : "grain_hits"}
     },
     {
       "sand::root::tree_streamer" : { 
         "uri" : "test/sensors_masks.root",
         "tree" : "cameras"
       },
-      "write" : ["foo"]
+      "write" : ["grain_hits"]
     }
   ]
 }
