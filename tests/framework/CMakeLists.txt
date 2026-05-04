@@ -22,7 +22,7 @@ function(sandreco_add_test_process tgt)
                              "${CMAKE_BINARY_DIR}/include"  #for version.h
   )
   target_link_libraries(${tgt} PUBLIC ufw::ufw)
-  message(VERBOSE "Configuring process ${tgt} in ${CMAKE_CURRENT_SOURCE_DIR}")
+  install(TARGETS ${tgt} EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endfunction()
 
 
