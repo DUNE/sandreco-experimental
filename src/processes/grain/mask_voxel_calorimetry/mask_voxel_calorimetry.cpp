@@ -1,7 +1,7 @@
+#include <common/array.h>
 #include <common/sand.h>
 #include <grain/grain.h>
 #include <grain/voxels.h>
-#include <grain/energy.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -50,13 +50,14 @@ namespace sand::grain {
   }
 
 
-  mask_voxel_calorimetry::mask_voxel_calorimetry() : process({{"photon_amplitudes", "sand::grain::voxels"}}, {{"total_deposited_energy", "sand::grain::total_energy"}}) {
+  mask_voxel_calorimetry::mask_voxel_calorimetry() : process({{"photon_amplitudes", "sand::grain::voxels"}},
+                                                             {{"total_deposited_energy", "sand::array<double>"}}) {
     UFW_INFO("Creating a mask_voxel_calorimetry process at {}", fmt::ptr(this));
   }
 
   void mask_voxel_calorimetry::run() {
     const auto& photon_amplitude_in  = get<voxels>("photon_amplitudes");
-    auto& total_deposited_energy_out = set<total_energy>("total_deposited_energy").energies; 
+    auto& total_deposited_energy_out = set<array<double>>("total_deposited_energy").values;
     m_stat_events_processed = 0.;
     for (const auto& evt_voxels : photon_amplitude_in.voxels) {
       double total_amplitude = std::accumulate(evt_voxels.begin(), evt_voxels.end(), 0.);
