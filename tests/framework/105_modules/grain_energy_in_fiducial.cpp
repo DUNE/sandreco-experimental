@@ -1,6 +1,6 @@
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/grain_info.hpp>
-#include <grain/energy.h>
+#include <common/array.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -25,8 +25,8 @@ namespace sand::test {
     pos_3d m_max_LAr;
   };
 
-  grain_energy_in_fiducial::grain_energy_in_fiducial() : process({}, {{"inside", "sand::grain::total_energy"},
-                                                                      {"outside", "sand::grain::total_energy"}}) {
+  grain_energy_in_fiducial::grain_energy_in_fiducial() : process({}, {{"inside", "sand::array<double>"},
+                                                                      {"outside", "sand::array<double>"}}) {
   }
 
   void grain_energy_in_fiducial::configure(const ufw::config& cfg) {
@@ -89,8 +89,8 @@ namespace sand::test {
     }
     UFW_INFO("Found {} MeV inside, {} MeV outside, {} MeV total", inside, outside, total);
     //UFW_ASSERT(std::abs(total - outside - inside) < 1.e-6, "Total does not match");
-    set<sand::grain::total_energy>("inside").energies.push_back(inside);
-    set<sand::grain::total_energy>("outside").energies.push_back(outside);
+    set<sand::array<double>>("inside").values.push_back(inside);
+    set<sand::array<double>>("outside").values.push_back(outside);
   }
 
 } // namespace sand::test
