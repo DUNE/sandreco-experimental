@@ -1,8 +1,4 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/data.hpp>
-#include <ufw/factory.hpp>
-#include <ufw/process.hpp>
+#include <stt_fast_digi.hpp>
 
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/drift_info.hpp>
@@ -12,10 +8,28 @@
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
 
-#include <stt_fast_digi.hpp>
+#include <ufw/config.hpp>
+#include <ufw/context.hpp>
+#include <ufw/factory.hpp>
+#include <ufw/process.hpp>
 
 namespace sand::stt {
 
+  /**
+   * \class sand::stt::stt_fast_digi
+   *
+   * \brief Digitizes simulated energy deposits in STT tubes, simulating detector response and output for wire signals.
+   *
+   * Converts energy deposition information into digitized signals with simulated drift time, signal propagation,
+   * in the STT geometry.
+   *
+   * \subsection Configuration
+   * | Parameter Name   | Type   | Unit  | Required/Default | Description                          |
+   * |------------------|--------|-------|------------------|--------------------------------------|
+   * | `drift_velocity` | double | mm/ns | Required         | Drift velocity of ionized particles. |
+   * | `wire_velocity`  | double | mm/ns | Required         | Signal transit time along the wire.  |
+   * | `sigma_tdc`      | double | ns    | Required         | Time resolution of TDC.              |
+   */
   void stt_fast_digi::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_drift_velocity = cfg.at("drift_velocity");
@@ -103,12 +117,12 @@ namespace sand::stt {
     std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc); //FIXME should be member
     auto ran = gaussian_error(random_engine());
     //FIXME replace 200 with maximum drift + signal time
-    reco::digi::time trange{wire_time - 200., wire_time, wire_time + 5. * m_sigma_tdc};
-    tracker::digi::signal signal{reco::digi{channel, trange}, wire_time + ran, edep_total};
+    reco::digi<>::time trange{wire_time - 200., wire_time + ran, wire_time + 5. * m_sigma_tdc};
+    tracker::digi::signal signal(channel, trange, edep_total);
 
     UFW_DEBUG("  Created signal: Channel(subdetector {}, channel {}), TDC = {}, ADC = {}",
-              static_cast<int>(signal.channel().subdetector), static_cast<int>(signal.channel().channel), signal.tdc,
-              signal.adc);
+              static_cast<int>(signal.channel().subdetector), static_cast<int>(signal.channel().channel), signal.tdc(),
+              signal.adc());
 
     return signal;
   }
@@ -202,3 +216,5 @@ namespace sand::stt {
   }
 
 } // namespace sand::stt
+
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::stt::stt_fast_digi)

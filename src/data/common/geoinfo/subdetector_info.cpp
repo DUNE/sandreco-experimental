@@ -2,8 +2,6 @@
 #include <subdetector_info.hpp>
 #include <ufw/context.hpp>
 
-#include <regex>
-
 namespace sand {
 
   geoinfo::subdetector_info::subdetector_info(const geoinfo& gi, const geo_path& subpath)

@@ -1,25 +1,7 @@
-add_library(sand_root_tgeomanager)
-
-find_package(ROOT REQUIRED COMPONENTS Geom Physics Matrix MathCore RIO Tree)
-
 set(HDRS root_tgeomanager.hpp)
 
-target_sources(sand_root_tgeomanager PRIVATE
-               ${HDRS}
-               root_tgeomanager.cpp)
+sandreco_add_complex_data(sand_root_tgeomanager EXPORT_HEADERS ${HDRS})
 
-target_include_directories(sand_root_tgeomanager PRIVATE . .. ${CMAKE_SOURCE_DIR}/include)
+target_sources(sand_root_tgeomanager PRIVATE root_tgeomanager.cpp)
 
-target_link_libraries(sand_root_tgeomanager PUBLIC ROOT::Geom ROOT::MathCore ROOT::Matrix ufw::ufw PRIVATE ROOT::RIO ROOT::Tree)
-
-install(TARGETS sand_root_tgeomanager EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-if (EXPORT_PRIVATE_INTERFACES)
-    file(RELATIVE_PATH rel_path ${CMAKE_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
-
-    install(FILES ${HDRS} DESTINATION "include/sandreco/private/${rel_path}")
-
-    target_include_directories(sand_root_tgeomanager INTERFACE
-                               $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-                               $<INSTALL_INTERFACE:include/sandreco/private/${rel_path}/..>)
-endif()
+target_link_libraries(sand_root_tgeomanager PUBLIC ROOT::Geom ROOT::MathCore ROOT::Matrix PRIVATE ROOT::RIO ROOT::Tree)

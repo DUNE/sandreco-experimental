@@ -2,17 +2,13 @@
 #include <TFile.h>
 #include <TTree.h>
 
-#include <algorithm>
-#include <array>
-#include <climits>
-
 #include <EDepSim/TG4Event.h>
+
+#include <genie_reader/genie_reader.hpp>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
 #include <ufw/data.hpp>
-
-#include <genie_reader/genie_reader.hpp>
 
 namespace sand {
   genie_reader::genie_reader() {}

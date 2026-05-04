@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ufw/utils.hpp"
 #include <memory>
 
 #include <common/sand.h>
@@ -26,23 +25,27 @@ namespace sand::grain {
 
   using index_3d = ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<size_t>>;
   using size_3d  = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<size_t>>;
+  // Has metric (-,-,-,+) but sould not be used in scalar products anyway
+  using size_4d  = ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<size_t>>;
 
   template <typename T>
   class voxel_array {
    public:
-    voxel_array(size_3d sz) : m_data(new T[count(sz)]), m_size(sz) {}
+    voxel_array(size_3d sz) : m_data(count(sz)), m_size(sz) {}
 
-    voxel_array(size_3d sz, T init) : m_data(new T[count(sz)]), m_size(sz) { std::fill_n(data(), count(sz), init); }
+    voxel_array(size_3d sz, T init) : m_data(count(sz), init), m_size(sz) {}
 
-    voxel_array(size_3d sz, const T* raw) : m_data(new T[count(sz)]), m_size(sz) {
+    voxel_array(size_3d sz, const T* raw) : m_data(count(sz)), m_size(sz) {
       std::copy_n(raw, count(sz), data());
     }
 
-    voxel_array(const voxel_array&) = delete;
+    voxel_array() : m_data(), m_size(0,0,0) {}
+
+    voxel_array(const voxel_array&) = default;
 
     voxel_array(voxel_array&&) = default;
 
-    voxel_array& operator= (const voxel_array&) = delete;
+    voxel_array& operator= (const voxel_array&) = default;
 
     voxel_array& operator= (voxel_array&&) = default;
 
@@ -68,9 +71,9 @@ namespace sand::grain {
 
     T* begin() { return data(); }
 
-    const T* data() const { return m_data.get(); }
+    const T* data() const { return m_data.data(); }
 
-    T* data() { return m_data.get(); }
+    T* data() { return m_data.data(); }
 
     const T* end() const { return data() + count(m_size); }
 
@@ -125,7 +128,7 @@ namespace sand::grain {
     static size_t count(size_3d sz) { return sz.x() * sz.y() * sz.z(); }
 
    private:
-    std::unique_ptr<T[]> m_data;
+    std::vector<T> m_data;
     size_3d m_size;
   };
 
@@ -142,5 +145,12 @@ template <>
 struct fmt::formatter<sand::grain::size_3d> : formatter<string_view> {
   auto format(const sand::grain::size_3d& c, format_context& ctx) const -> format_context::iterator {
     return fmt::format_to(ctx.out(), "({}, {}, {})", c.x(), c.y(), c.z());
+  }
+};
+
+template <>
+struct fmt::formatter<sand::grain::size_4d> : formatter<string_view> {
+  auto format(const sand::grain::size_4d& c, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "({}, {}, {}, {})", c.x(), c.y(), c.z(), c.t());
   }
 };
