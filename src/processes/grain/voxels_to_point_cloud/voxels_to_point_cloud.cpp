@@ -29,7 +29,7 @@ namespace sand::grain {
    * \subsection Configuration
    * | Parameter Name       | Type      | Unit       | Required/Default  | Description                                          |
    * |----------------------|-----------|------------|-------------------|------------------------------------------------------|
-   * | `dist_wall`          | double    | cm         | Defalut: 0.0      | Minimum distance from fiducial surface.              |
+   * | `fiducial_distance`  | double    | mm         | Defalut: 0.0      | Minimum distance from fiducial surface.              |
    * | `amp_thr`            | double    | npe        | Defalut: 0.0      | Minimum voxel amplitude.                             |
    * | `voxel_size`         | double    | mm         | Required          | Size of voxels.                                      |
    */
@@ -42,14 +42,14 @@ namespace sand::grain {
     void run() override;
 
    private:
-    double m_dist_wall;
+    double m_fiducial_distance;
     double m_amp_thr;
     double m_voxel_size;
   };
 
   void voxels_to_point_cloud::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_dist_wall = cfg.value("dist_wall", 0.0);
+    m_fiducial_distance = cfg.value("fiducial_distance", 0.0);
     m_amp_thr = cfg.value("amp_thr", 0.0);
     m_voxel_size = cfg.at("voxel_size");
   }
@@ -78,10 +78,10 @@ namespace sand::grain {
             // Apply threshold on amplitude
             if (amplitude < m_amp_thr) continue;
             pos_3d position = transform * pos_3d(i, j, k);
-            dir_3d distance_from_origin(std::abs(position.x()), std::abs(position.y()), std::abs(position.z()));
-            dir_3d distance_from_wall = gi.grain().fiducial_bbox() - distance_from_origin;
+            dir_3d absolute_position(std::abs(position.x()), std::abs(position.y()), std::abs(position.z()));
+            dir_3d displacement_from_wall = gi.grain().fiducial_bbox() - absolute_position;
             // Apply threshold on position
-            if (distance_from_wall.x() < m_dist_wall || distance_from_wall.y() < m_dist_wall || distance_from_wall.z() < m_dist_wall) continue;
+            if (displacement_from_wall.x() < m_fiducial_distance || displacement_from_wall.y() < m_fiducial_distance || displacement_from_wall.z() < m_fiducial_distance) continue;
             evt_points.emplace_back(point_cloud::point{position, amplitude});
             UFW_DEBUG("Index: {}, Position: {}, Amplitude {}", i_voxel, position, amplitude);
           }
