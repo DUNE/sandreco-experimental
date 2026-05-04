@@ -3,6 +3,7 @@
 #include <tracker/cluster_container.h>
 #include <tracker/digi.h>
 #include <geoinfo/geoinfo.hpp>
+#include <geoinfo/tracker_info.hpp>
 
 #include <map>
 #include <set>

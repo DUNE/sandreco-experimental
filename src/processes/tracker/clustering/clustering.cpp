@@ -1,3 +1,5 @@
+#include <common/version.h>
+#include <clustering.hpp>
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
 #include <ufw/data.hpp>
@@ -12,9 +14,6 @@
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
 #include <tracker/cluster_container.h>
-
-#include <cluster_analyzer.hpp>
-#include <clustering.hpp>
 
 namespace {
 /**
@@ -118,7 +117,7 @@ void clustering::clusterize_signals(
 
 
 void clustering::build_cluster(
-    cluster_container::cluster& cluster,
+    cluster_container::cluster<>& cluster,
     const std::vector<digi::signal>& signals,
     std::vector<bool>& visited,
     size_t index,

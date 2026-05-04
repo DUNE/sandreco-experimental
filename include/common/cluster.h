@@ -12,7 +12,8 @@ namespace sand::reco {
    * The cluster class represents a generic cluster in the detector.
    * Specialized classes for each detector must inherit from cluster.
    */
-class cluster : public sand::truth {
+template <typename T = sand::truth_index>
+class cluster : public sand::truth<T> {
   public:
     cluster() = default;
     explicit cluster(std::vector<size_t> indices) : m_digit_indices(std::move(indices)) {}

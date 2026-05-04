@@ -18,19 +18,20 @@ namespace sand::tracker {
 struct cluster_container :
     ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
 
-    struct cluster : reco::cluster {
+    template <typename T = sand::truth_index>    
+    struct cluster : reco::cluster<T> {
 
         cluster() = default;
 
         explicit cluster(size_t idx)
-            : sand::reco::cluster(idx)
-        {}
+                : reco::cluster<T>(idx)  
+            {}
     };
 
 /**
  * @brief Collection of clusters in the tracker. Each cluster contains a vector of digit indices that belong to that cluster.
  */
-    using cluster_collection = std::vector<cluster>;
+    using cluster_collection = std::vector<cluster<>>;
     cluster_collection clusters;
 };
 
