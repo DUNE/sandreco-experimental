@@ -12,21 +12,44 @@ namespace sand {
 
 } // namespace sand
 
-#define SANDRECO_DEFINE_SCALAR_FOR_TYPE(T) \
-template struct sand::scalar<T>; \
-UFW_DECLARE_MANAGED_DATA(sand::scalar<T>)
+template struct sand::scalar<bool>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<bool>)
 
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(bool)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(int8_t)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(uint8_t)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(int16_t)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(uint16_t)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(int32_t)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(uint32_t)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(int64_t)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(uint64_t)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(float)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(double)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(sand::pos_3d)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(sand::dir_3d)
-SANDRECO_DEFINE_SCALAR_FOR_TYPE(sand::vec_4d)
+template struct sand::scalar<int8_t>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<int8_t>)
+
+template struct sand::scalar<uint8_t>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<uint8_t>)
+
+template struct sand::scalar<int16_t>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<int16_t>)
+
+template struct sand::scalar<uint16_t>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<uint16_t>)
+
+template struct sand::scalar<int32_t>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<int32_t>)
+
+template struct sand::scalar<uint32_t>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<uint32_t>)
+
+template struct sand::scalar<int64_t>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<int64_t>)
+
+template struct sand::scalar<uint64_t>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<uint64_t>)
+
+template struct sand::scalar<float>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<float>)
+
+template struct sand::scalar<double>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<double>)
+
+template struct sand::scalar<sand::pos_3d>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<sand::pos_3d>)
+
+template struct sand::scalar<sand::dir_3d>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<sand::dir_3d>)
+
+template struct sand::scalar<sand::vec_4d>;
+UFW_DECLARE_MANAGED_DATA(sand::scalar<sand::vec_4d>)
