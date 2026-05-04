@@ -1,7 +1,0 @@
-module "sand_caf_caf_streamer" {
-  requires cplusplus
-  module "caf_streamer_types.hpp" { header "caf_streamer_types.hpp" export * }
-  link "libsand_caf_caf_streamer.so"
-  export *
-}
-

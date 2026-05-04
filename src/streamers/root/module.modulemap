@@ -1,7 +1,0 @@
-module "sand_root_tree_streamer" {
-  requires cplusplus
-  module "tree_streamer_types.hpp" { header "tree_streamer_types.hpp" export * }
-  link "libsand_root_tree_streamer.so"
-  export *
-}
-
