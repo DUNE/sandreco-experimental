@@ -70,9 +70,9 @@ namespace sand::grain {
       std::vector<point_cloud::point> evt_points;
       const size_3d sizes = evt_voxels.size();
       const xform_3d transform = evt_voxels.xform_id_to_fiducial(dir_3d(m_voxel_size, m_voxel_size, m_voxel_size));
-      for (size_t k{0}; k < sizes.z(); ++k) {
+      for (size_t i{0}; i < sizes.x(); ++i) {
         for (size_t j{0}; j < sizes.y(); ++j) {
-          for (size_t i{0}; i < sizes.x(); ++i) {
+          for (size_t k{0}; k < sizes.z(); ++k) {
             index_3d i_voxel(i, j, k);
             double amplitude = evt_voxels.at(i_voxel);
             // Apply threshold on amplitude
