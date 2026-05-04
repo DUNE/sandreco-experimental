@@ -51,13 +51,13 @@
             "geometry" : "gdml-lenses",
             "pde": 0.999},
         "reqs" : {"hits" : "grain_hits"},
-        "prods" : {"digi": "grain_digits"}
+        "prods" : {"digi": "grain_digi"}
       },
       {
         "sand::grain::spill_slicer" : {
             "slice_times": [0.0, 2000.0, 20000.0]
         },
-        "reqs" : {"digi" : "grain_digits"},
+        "reqs" : {"digi" : "grain_digi"},
         "prods" : {"images": "grain_images"}
       },
       {
