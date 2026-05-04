@@ -26,14 +26,14 @@
     {
       "sand::test::grain_energy_in_fiducial" : {},
       "reqs" : {},
-      "prods" : {"inside" : "inside", "outside" : "outside"}
+      "prods" : {"inside" : "grain_edep_inside_fiducial", "outside" : "grain_edep_outside_fiducial"}
     },
     {
       "sand::root::tree_streamer" : {
         "uri" : "test/energy_in_fiducial.root",
         "tree" : "energies"
       },
-      "write" : ["inside", "outside"]
+      "write" : ["grain_edep_inside_fiducial", "grain_edep_outside_fiducial"]
     }
   ]
 }
