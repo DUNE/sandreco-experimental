@@ -37,14 +37,14 @@ namespace sand::test {
         UFW_ASSERT(image.time_end > image.time_begin, "Image time_begin comes after time_end.");
         // check pixels
         for (const auto& pixel : image.pixels) {
-          UFW_ASSERT(!std::isnan(pixel.amplitude) && pixel.amplitude >= 0, "Non-physical pixel amplitude: {}",
-                     pixel.amplitude);
-          UFW_ASSERT(pixel.amplitude == 0 && std::isnan(pixel.time_first),
+          UFW_ASSERT(pixel.amplitude >= 0.0, "Non-physical pixel amplitude: {}", pixel.amplitude);
+          UFW_ASSERT(pixel.amplitude > 0.0 || std::isnan(pixel.time_first),
                      "Time of first photon is not NaN, yet 0 photons were detected. time_first: {}", pixel.time_first);
-          if (pixel.amplitude > 0) {
-            UFW_ASSERT(!std::isnan(pixel.time_first) && pixel.time_first >= image.time_begin
-                           && pixel.time_first <= image.time_end,
-                       "Pixel time of first photon not in spill: {}", pixel.time_first);
+          if (pixel.amplitude > 0.0) {
+            UFW_ASSERT(!std::isnan(pixel.time_first),
+                       "Time of first photon is NaN, yet {} photons were detected. time_first: {}", pixel.amplitude);
+            UFW_ASSERT(pixel.time_first >= image.time_begin && pixel.time_first <= image.time_end,
+                       "Pixel time of first photon not in image declared time interval: {}", pixel.time_first);
           }
         }
       }
