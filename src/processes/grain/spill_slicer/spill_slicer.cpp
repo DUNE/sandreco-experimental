@@ -119,22 +119,22 @@ namespace sand::grain {
       UFW_INFO("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx + 1]);
       std::vector<images::image> event_images_out;
       for (auto& signal : digis_in.signals) {
-        auto id = signal.channel().link;
-        auto it = std::find_if(event_images_out.begin(), event_images_out.end(),
-                               [id](auto& img) { return img.camera_id == id; });
-        if (it == event_images_out.end()) {
-          images::image img{id, m_slice_times[img_idx], m_slice_times[img_idx + 1]};
-          event_images_out.emplace_back(img);
-          it = event_images_out.end() - 1;
-          it->blank();
-          UFW_DEBUG("Created image for camera id: {}, starting at time: {}", id, m_slice_times[img_idx]);
-        }
-        m_stat_photons_processed++;
         if (signal.tdc() >= m_slice_times[img_idx] && signal.tdc() < m_slice_times[img_idx + 1]) {
-          // UFW_DEBUG("signal to be assigned to image {}", img_idx);
+          auto id = signal.channel().link;
+          auto it = std::find_if(event_images_out.begin(), event_images_out.end(),
+                                [id](auto& img) { return img.camera_id == id; });
+          if (it == event_images_out.end()) {
+            images::image img{id, m_slice_times[img_idx], m_slice_times[img_idx + 1]};
+            event_images_out.emplace_back(img);
+            it = event_images_out.end() - 1;
+            it->blank();
+            UFW_DEBUG("Created image for camera id: {}, starting at time: {} ns", id, m_slice_times[img_idx]);
+          }
+          UFW_DEBUG("signal to be assigned to camera id {}, image {}", id, img_idx);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
           auto& pixel = it->pixels.Array()[signal.channel().channel];
           pixel.insert(signal.true_hits());
+          //UFW_DEBUG("adding {} photons to pixel.", signal.npe());
           pixel.amplitude += signal.npe();
           if (std::isnan(pixel.time_first) || (pixel.time_first > signal.tdc())) {
             pixel.time_first = signal.tdc();
@@ -143,6 +143,7 @@ namespace sand::grain {
         } else {
           m_stat_photons_discarded++;
         }
+        m_stat_photons_processed++;
       }
       for (const auto& img : event_images_out) {
         size_t maxhits = 0;
