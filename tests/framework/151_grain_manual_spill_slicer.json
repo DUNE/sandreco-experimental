@@ -2,12 +2,12 @@
     "ufw" : {
       "ufw-loglevel" : "debug",
       "ufw-basepath" : "/usr/local/share/sandreco/data",
-      "ufw-ldpath" : ["/usr/local/lib64", "/home/sand/sandreco-experimental/build/tests/framework/150_modules"]
+      "ufw-ldpath" : ["/usr/local/lib64"]
     },
     "globals" : {
     },
     "contexts" : {
-      "keys" : [16],
+      "keys" : [10,11,15,16],
       "locals" : {
       }
     },
