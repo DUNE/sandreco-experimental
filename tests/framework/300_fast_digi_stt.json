@@ -29,14 +29,14 @@
             "sigma_tdc": 3.5 
         },
         "reqs" : {},
-        "prods" : {"digi": "pippo"}
+        "prods" : {"digi": "stt_digi"}
       },
       {
         "sand::root::tree_streamer" : { 
           "uri" : "test/stt_fast_digi.root",
           "tree" : "stt_fast_digi"
         },
-        "write" : ["pippo"]
+        "write" : ["stt_digi"]
       }
     ]
   }

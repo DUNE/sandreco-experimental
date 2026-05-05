@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_grain_energy_in_fiducial)
+
+target_sources(sand_test_grain_energy_in_fiducial PRIVATE grain_energy_in_fiducial.cpp)
+
+target_link_libraries(sand_test_grain_energy_in_fiducial PRIVATE sand_edep_reader sand_geoinfo)

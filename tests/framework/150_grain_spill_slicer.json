@@ -17,15 +17,15 @@
           "uri" : "test/detresp_masks.root",
           "tree" : "cameras"
         },
-        "read" : [ "digis" ]
+        "read" : [ "grain_digi" ]
       },
       {
         "sand::grain::spill_slicer" : {
             "min_response_signal": 8,
             "delta_ns_for_comparison": 1000
         },
-        "reqs" : {"digi" : "digis"},
-        "prods" : {"images": "imgs"}
+        "reqs" : {"digi" : "grain_digi"},
+        "prods" : {"images": "grain_images"}
       },
       {
         "sand::test::test_grain_spill_slicer" : {},
@@ -37,7 +37,7 @@
           "uri" : "test/images_masks.root",
           "tree" : "cameras"
         },
-        "write" : [ "imgs" ]
+        "write" : [ "grain_images" ]
       }
     ]
   }
