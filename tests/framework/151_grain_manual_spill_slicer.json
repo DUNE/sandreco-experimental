@@ -7,7 +7,7 @@
     "globals" : {
     },
     "contexts" : {
-      "keys" : [10,11,15],
+      "keys" : [16],
       "locals" : {
       }
     },
@@ -28,7 +28,7 @@
       },
       {
         "sand::test::test_grain_spill_slicer" : {},
-        "reqs" : {"images": "imgs"},
+        "reqs" : {"images": "grain_images"},
         "prods" : {}
       },      
       {
