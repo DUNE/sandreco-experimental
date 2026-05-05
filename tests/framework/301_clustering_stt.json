@@ -23,25 +23,25 @@
     },
     "run" : [
       {
-        "sand::stt::stt_fast_digi" : {
-            "drift_velocity": 0.05,
-            "wire_velocity": 200.0, 
-            "sigma_tdc": 3.5 
+        "sand::root::tree_streamer": {
+          "uri": "test/stt_fast_digi.root",
+          "tree": "stt_fast_digi"
         },
-        "reqs" : {},
-        "prods" : {"digi": "pippo"}
+        "read": [
+          "sand_tracker_digi"
+        ]
       },
       {
         "sand::tracker::clustering" : {},
-        "reqs" : {"digi": "pippo"},
-        "prods" : {"clu": "pluto"}
+        "reqs" : {"digi": "sand_tracker_digi"},
+        "prods" : {"clu": "stt_cluster"}
       },
       {
         "sand::root::tree_streamer" : { 
           "uri" : "test/stt_cluster.root",
           "tree" : "stt_cluster"
         },
-        "write" : ["pluto"]
+        "write" : ["stt_cluster"]
       }
     ]
   }
