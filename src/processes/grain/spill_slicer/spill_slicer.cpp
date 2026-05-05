@@ -25,7 +25,7 @@ namespace sand::grain {
    * | Parameter Name            | Type             | Unit   | Required/Default                 | Description                                        |
    * |---------------------------|------------------|--------|----------------------------------|----------------------------------------------------|
    * | `slice_times`             | vector\<double\> | ns     | Default: []                      | Predefined time slices for photon assignment.      |
-   * | `min_response_signal`     | double           | **??** | Required if slice_times is empty | Minimum photon response signal to trigger slicing. |
+   * | `min_response_signal`     | double           | npe    | Required if slice_times is empty | Minimum photon response signal to trigger slicing. |
    * | `delta_ns_for_comparison` | double           | ns     | Required if slice_times is empty | **??**                                             |
    */
 
@@ -130,7 +130,7 @@ namespace sand::grain {
             it->blank();
             UFW_DEBUG("Created image for camera id: {}, starting at time: {} ns", id, m_slice_times[img_idx]);
           }
-          UFW_DEBUG("signal to be assigned to camera id {}, image {}", id, img_idx);
+          //UFW_DEBUG("signal to be assigned to camera id {}, image {}", id, img_idx);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
           auto& pixel = it->pixels.Array()[signal.channel().channel];
           pixel.insert(signal.true_hits());
