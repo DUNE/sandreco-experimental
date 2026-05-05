@@ -1,7 +1,8 @@
 {
   "ufw" : {
     "ufw-loglevel" : "debug",
-    "ufw-ldpath": [ "010_modules", "/usr/local/lib64" ]
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : [ "/usr/local/lib64" ]
   },
   "globals" : {},
   "contexts" : {

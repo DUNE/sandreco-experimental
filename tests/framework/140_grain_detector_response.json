@@ -26,22 +26,22 @@
           "uri" : "test/sensors_masks.root",
           "tree" : "cameras"
         },
-        "read" : ["foo"]
+        "read" : ["grain_hits"]
       },
       {
         "sand::grain::detector_response_fast" : {
           "pde" : 0.999,
           "geometry" : "gdml-masks"
         },
-        "reqs" : {"hits" : "foo"},
-        "prods" : {"digi": "pippo"}
+        "reqs" : {"hits" : "grain_hits"},
+        "prods" : {"digi": "grain_digi"}
       },
       {
         "sand::root::tree_streamer" : { 
           "uri" : "test/detresp_masks.root",
           "tree" : "cameras"
         },
-        "write" : [ "pippo" ]
+        "write" : [ "grain_digi" ]
       }
     ]
   }

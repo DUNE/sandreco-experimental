@@ -1,0 +1,5 @@
+sandreco_add_process(sand_grain_voxels_to_point_cloud)
+
+target_sources(sand_grain_voxels_to_point_cloud PRIVATE voxels_to_point_cloud.cpp)
+
+target_link_libraries(sand_grain_voxels_to_point_cloud PRIVATE sand_geoinfo)
