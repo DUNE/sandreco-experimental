@@ -28,12 +28,12 @@
           "tree": "stt_fast_digi"
         },
         "read": [
-          "sand_tracker_digi"
+          "stt_digi"
         ]
       },
       {
         "sand::tracker::clustering" : {},
-        "reqs" : {"digi": "sand_tracker_digi"},
+        "reqs" : {"digi": "stt_digi"},
         "prods" : {"clu": "stt_cluster"}
       },
       {
