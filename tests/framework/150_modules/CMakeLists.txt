@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_test_grain_spill_slicer)
+
+target_sources(sand_test_test_grain_spill_slicer PRIVATE test_grain_spill_slicer.cpp)
+
+target_link_libraries(sand_test_test_grain_spill_slicer PRIVATE ROOT::MathCore)

@@ -41,7 +41,7 @@
     }
   },
   "contexts" : {
-    "keys" : [10,11,15],
+    "keys" : [10,11,15,16],
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"}
     },

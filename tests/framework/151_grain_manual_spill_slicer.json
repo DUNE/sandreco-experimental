@@ -7,7 +7,7 @@
     "globals" : {
     },
     "contexts" : {
-      "keys" : [10,11,15],
+      "keys" : [10,11,15,16],
       "locals" : {
       }
     },
@@ -26,6 +26,11 @@
         "reqs" : {"digi" : "grain_digi"},
         "prods" : {"images": "grain_images"}
       },
+      {
+        "sand::test::test_grain_spill_slicer" : {},
+        "reqs" : {"images": "grain_images"},
+        "prods" : {}
+      },      
       {
         "sand::root::tree_streamer" : { 
           "uri" : "test/images.root",
