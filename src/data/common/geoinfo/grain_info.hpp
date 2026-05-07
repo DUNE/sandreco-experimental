@@ -54,7 +54,7 @@ namespace sand {
     using size_3i = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<size_t>>;
 
    public:
-    grain_info(const geoinfo&, const std::string&);
+    grain_info(const geoinfo&, const geo_path&, const ufw::config&);
 
     virtual ~grain_info();
 

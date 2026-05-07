@@ -751,7 +751,7 @@ namespace sand {
   // geoinfo::ecal_info
   //////////////////////////////////////////////////////
 
-  geoinfo::ecal_info::ecal_info(const geoinfo& gi) : subdetector_info(gi, "kloe_calo_volume_PV_0") {
+  geoinfo::ecal_info::ecal_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg) : subdetector_info(gi, gp) {
     find_modules(gi.root_path() / path());
   }
 

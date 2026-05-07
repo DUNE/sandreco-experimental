@@ -8,25 +8,19 @@
 
 namespace sand {
 
-  static constexpr char s_drift_path[] = "sand_inner_volume_PV_0/SANDtracker_PV_0";
-
   /**
    * @brief Construct a new geoinfo::drift info::drift info object
    *
    * @param gi
    */
-  geoinfo::drift_info::drift_info(const geoinfo& gi, 
-                                  const std::array<double, 3>& view_angle, 
-                                  const std::array<double, 3>& view_offset, 
-                                  const std::array<double, 3>& view_spacing) : tracker_info(gi, s_drift_path) {
-    // UFW_FATAL("drift");
+  geoinfo::drift_info::drift_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg) : tracker_info(gi, gp, cfg) {
     auto& tgm      = ufw::context::current()->instance<root_tgeomanager>();
     auto nav       = tgm.navigator();
     auto driftpath = gi.root_path() / path();
 
-    m_view_angle = view_angle;
-    m_view_offset = view_offset;
-    m_view_spacing =  view_spacing;
+    m_view_angle = cfg.value("view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
+    m_view_offset = cfg.value("view_offset", std::array<double, 3>{10.0, 10.0, 10.0});
+    m_view_spacing =  cfg.value("view_spacing", std::array<double, 3>{10.0, 10.0, 10.0});
 
     nav->cd(driftpath);
     nav->for_each_node([&](auto supermod) {

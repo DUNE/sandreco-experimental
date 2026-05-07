@@ -16,7 +16,7 @@ namespace sand {
       void generate_wire_list(const size_t &);
     };
 
-    drift_info(const geoinfo&, const std::array<double, 3>&, const std::array<double, 3>&, const std::array<double, 3>&);
+    drift_info(const geoinfo&, const geo_path&, const ufw::config&);
 
     virtual ~drift_info();
 

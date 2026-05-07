@@ -270,7 +270,7 @@ namespace sand {
     };
 
    public:
-    ecal_info(const geoinfo&);
+    ecal_info(const geoinfo&, const geo_path&, const ufw::config&);
     virtual ~ecal_info();
     const cell& at(const pos_3d& p) const;
     const cell& at(cell_id cid) const;
