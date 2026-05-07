@@ -107,7 +107,7 @@ namespace sand {
     gi.subdetector = DRIFT;
     // abuse the bad notation here, module/plane/straw
     std::string supermodpath(path.token(0));
-    // UFW_INFO("supermodule path: '{}'", supermodpath);
+    UFW_INFO("supermodule path: '{}'", supermodpath);
 
     auto tgt_ct = 0;
     auto trk_ct = 0;
@@ -141,6 +141,7 @@ namespace sand {
     }
 
     std::string modpath(path.token(1));
+    UFW_INFO("module path: '{}'", modpath);
     auto mod_ct = 0;
     if (modpath.find("CMod") != std::string::npos || modpath.find("TrkDrift") != std::string::npos) {
       mod_ct = 0; // Carbon
