@@ -16,8 +16,8 @@ template <typename T = sand::truth_index>
 class cluster : public sand::truth<T> {
   public:
     cluster() = default;
-    explicit cluster(std::vector<size_t> indices) : m_digit_indices(std::move(indices)) {}
-    explicit cluster(size_t index) : m_digit_indices({index}) {}
+    explicit cluster(std::vector<sand::reco::digi<>> ds) : m_digit_indices(std::move(ds)) {}
+    explicit cluster(sand::reco::digi<> d) : m_digit_indices({d}) {}
     
     cluster(const cluster&) = default;
     cluster(cluster&&) = default;
@@ -26,24 +26,24 @@ class cluster : public sand::truth<T> {
     ~cluster() = default;
     
 
-    const std::vector<size_t>& digits () const {return m_digit_indices;}
-    std::vector<size_t>& digits_mut() { return m_digit_indices; }
+    const std::vector<sand::reco::digi<>>& digits () const {return m_digit_indices;}
+    std::vector<sand::reco::digi<>>& digits_mut() { return m_digit_indices; }
 
-    bool contains(size_t idx) const {
+    bool contains(const sand::reco::digi<>& d) const {
         return std::find(m_digit_indices.begin(),
                          m_digit_indices.end(),
-                         idx) != m_digit_indices.end();
+                         d) != m_digit_indices.end();
     }
 
     // Modifiers
-    void add_digit(size_t idx) {
-        m_digit_indices.push_back(idx);
+    void add_digit(sand::reco::digi<> d) {
+        m_digit_indices.push_back(d);
     }
     
 
   private:
     /// Using shared ptrs to avoid copying, but allow digits to belong to multiple clusters
-    std::vector<size_t> m_digit_indices;
+    std::vector<sand::reco::digi<>> m_digit_indices;
   };
 
 

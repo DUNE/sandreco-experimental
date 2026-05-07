@@ -95,7 +95,7 @@ private:
 
             for (auto idx : c.digits())
             {
-                const auto& sig  = digi.signals[idx];
+                const auto& sig  = idx;
                 const auto& wire =
                     gi.tracker().wire_at(sig.channel());
 
@@ -138,7 +138,7 @@ private:
 
             for (auto idx : c.digits())
             {
-                const auto& sig  = digi.signals[idx];
+                const auto& sig  = idx;
                 const auto& wire =
                     gi.tracker().wire_at(sig.channel());
 

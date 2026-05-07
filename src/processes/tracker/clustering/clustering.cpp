@@ -99,7 +99,7 @@ void clustering::clusterize_signals(
     const auto& gi = get<geoinfo>();
 
     const size_t n = signals.size();
-    std::vector<bool> visited(n, false);
+    std::vector<char> visited(n, false);
 
     for (size_t i = 0; i < n; ++i)
     {
@@ -119,13 +119,13 @@ void clustering::clusterize_signals(
 void clustering::build_cluster(
     cluster_container::cluster<>& cluster,
     const std::vector<digi::signal>& signals,
-    std::vector<bool>& visited,
+    std::vector<char>& visited,
     size_t index,
     const geoinfo& gi)
 {
     visited[index] = true;
 
-    cluster.add_digit(index);
+    cluster.add_digit(signals[index]);
 
     const auto& wire_i =
         gi.tracker().wire_at(signals[index].channel());

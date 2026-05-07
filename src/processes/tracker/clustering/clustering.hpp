@@ -28,7 +28,7 @@ namespace sand::tracker {
       void clusterize_signals(const std::vector<digi::signal> & signals);
       void build_cluster(cluster_container::cluster<>& cluster,
                    const std::vector<digi::signal>& signals,
-                   std::vector<bool>& visited,
+                   std::vector<char>& visited,
                    size_t index,
                    const geoinfo& gi);
      std::unique_ptr<ClusterAnalyzer> cluster_analyzer_;

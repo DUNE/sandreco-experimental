@@ -49,6 +49,16 @@ namespace sand::reco {
       return *this;
     }
 
+    bool operator==(const timerange& other) const {
+        return m_earliest == other.m_earliest
+            && m_best     == other.m_best
+            && m_latest   == other.m_latest;
+    }
+
+    bool operator!=(const timerange& other) const {
+        return !(*this == other);
+    }
+
     bool contains(double t) const { return m_earliest <= t && t <= m_latest; }
 
    private:
