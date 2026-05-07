@@ -15,20 +15,6 @@
 #include <tracker/digi.h>
 #include <tracker/cluster_container.h>
 
-namespace {
-/**
- * @brief Get the view ID from a channel ID. The view ID is determined by the upper 16 bits of the channel number.
- * @param chid The channel ID to extract the view ID from.
- * @return The view ID corresponding to the given channel ID.
- */
-
-inline int getViewID(const sand::channel_id& chid)
-{
-    return static_cast<int>(chid.channel >> 16);
-}
-
-}
-
 namespace sand::tracker {
 
 void clustering::configure(const ufw::config& cfg)
