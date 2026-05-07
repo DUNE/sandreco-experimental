@@ -30,11 +30,11 @@ namespace sand::tracker {
                    std::vector<char>& visited,
                    size_t index,
                    const geoinfo& gi);
-      void analyze_cluster_container(const cluster_container& clu);
-      void log_clusters_sizes(const cluster_container& clu);
-      void log_clusters_distribution(const cluster_container& clu);
-      void log_clusters_topology(const cluster_container& clu);
-      void log_clusters_efficiency(const cluster_container& clu);
+      // void analyze_cluster_container(const cluster_container& clu);
+      // void log_clusters_sizes(const cluster_container& clu);
+      // void log_clusters_distribution(const cluster_container& clu);
+      // void log_clusters_topology(const cluster_container& clu);
+      // void log_clusters_efficiency(const cluster_container& clu);
 
 
   };

@@ -37,6 +37,12 @@
         "prods" : {"clu": "stt_cluster"}
       },
       {
+        "sand::test::test_tracker_clustering" : {},
+        "reqs" : {"clu": "stt_cluster",
+                  "digi": "stt_digi"},
+        "prods" : {}
+      }, 
+      {
         "sand::root::tree_streamer" : { 
           "uri" : "test/stt_cluster.root",
           "tree" : "stt_cluster"
