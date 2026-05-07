@@ -6,7 +6,6 @@
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
 #include <tracker/cluster_container.h>
-#include <cluster_analyzer.hpp>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -31,7 +30,11 @@ namespace sand::tracker {
                    std::vector<char>& visited,
                    size_t index,
                    const geoinfo& gi);
-     std::unique_ptr<ClusterAnalyzer> cluster_analyzer_;
+      void analyze_cluster_container(const cluster_container& clu);
+      void log_clusters_sizes(const cluster_container& clu);
+      void log_clusters_distribution(const cluster_container& clu);
+      void log_clusters_topology(const cluster_container& clu);
+      void log_clusters_efficiency(const cluster_container& clu);
 
 
   };
