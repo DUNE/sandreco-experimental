@@ -88,149 +88,115 @@ namespace sand::test {
     }
   }
 
-void geoinfo::test_ecal() {
-  sand::geoinfo& gi = instance<sand::geoinfo>();
+  void geoinfo::test_ecal() {
+    sand::geoinfo& gi = instance<sand::geoinfo>();
 
-  const auto& ecal = gi.ecal();
+    const auto& ecal = gi.ecal();
 
-  using face_location = sand::geoinfo::ecal_info::face_location;
-  using face_side     = sand::geoinfo::ecal_info::face_side;
-  using module_key    = std::pair<sand::geo_id::region_t, uint8_t>;
-  using side_pair     = std::pair<face_side, face_side>;
+    using face_location = sand::geoinfo::ecal_info::face_location;
+    using face_side     = sand::geoinfo::ecal_info::face_side;
+    using module_key    = std::pair<sand::geo_id::region_t, uint8_t>;
+    using side_pair     = std::pair<face_side, face_side>;
 
-  std::map<module_key, std::map<side_pair, size_t>> ecal_side_recap;
-  // key = (region, module), value = map of observed begin/end side pairs
-  // Example consistent:
-  //   (BARREL, 13) -> { (south, north) : 60 cells }
-  // Example inconsistent:
-  //   (BARREL, 13) -> { (south, north) : 52 cells, (north, south) : 8 cells }
+    std::map<module_key, std::map<side_pair, size_t>> ecal_side_recap;
+    // key = (region, module), value = map of observed begin/end side pairs
+    // Example consistent:
+    //   (BARREL, 13) -> { (south, north) : 60 cells }
+    // Example inconsistent:
+    //   (BARREL, 13) -> { (south, north) : 52 cells, (north, south) : 8 cells }
 
-  constexpr std::array<sand::geo_id::region_t, 3> regions = {
-      sand::geo_id::region_t::BARREL,
-      sand::geo_id::region_t::ENDCAP_A,
-      sand::geo_id::region_t::ENDCAP_B};
+    constexpr std::array<sand::geo_id::region_t, 3> regions = {
+        sand::geo_id::region_t::BARREL, sand::geo_id::region_t::ENDCAP_A, sand::geo_id::region_t::ENDCAP_B};
 
-  for (auto region : regions) {
-    const uint8_t n_modules =
-        region == sand::geo_id::region_t::BARREL ? 24 : 32;
+    for (auto region : regions) {
+      const uint8_t n_modules = region == sand::geo_id::region_t::BARREL ? 24 : 32;
 
-    for (uint8_t module = 0; module < n_modules; module++) {
-      uint8_t n_columns = 12;
+      for (uint8_t module = 0; module < n_modules; module++) {
+        uint8_t n_columns = 12;
 
-      if (region != sand::geo_id::region_t::BARREL) {
-        const auto local_module = uint8_t(module % 16);
+        if (region != sand::geo_id::region_t::BARREL) {
+          const auto local_module = uint8_t(module % 16);
 
-        if (local_module < 2) {
-          n_columns = 6;
-        } else if (local_module > 11) {
-          n_columns = 2;
-        } else {
-          n_columns = 3;
+          if (local_module < 2) {
+            n_columns = 6;
+          } else if (local_module > 11) {
+            n_columns = 2;
+          } else {
+            n_columns = 3;
+          }
         }
-      }
 
-      for (uint8_t row = 0; row < 5; row++) {
-        for (uint8_t column = 0; column < n_columns; column++) {
-          sand::geoinfo::ecal_info::cell_id cid;
-          cid.region        = region;
-          cid.module_number = module;
-          cid.row           = row;
-          cid.column        = column;
+        for (uint8_t row = 0; row < 5; row++) {
+          for (uint8_t column = 0; column < n_columns; column++) {
+            sand::geoinfo::ecal_info::cell_id cid;
+            cid.region        = region;
+            cid.module_number = module;
+            cid.row           = row;
+            cid.column        = column;
 
-          const auto& cell = ecal.at(cid);
+            const auto& cell = ecal.at(cid);
 
-          const auto begin_side = cell.side(face_location::begin);
-          const auto end_side   = cell.side(face_location::end);
+            const auto begin_side = cell.side(face_location::begin);
+            const auto end_side   = cell.side(face_location::end);
 
-          ecal_side_recap[std::make_pair(region, module)]
-                         [std::make_pair(begin_side, end_side)] += 1;
+            ecal_side_recap[std::make_pair(region, module)][std::make_pair(begin_side, end_side)] += 1;
+          }
         }
       }
     }
-  }
 
-  bool ecal_side_convention_ok = true;
+    bool ecal_side_convention_ok = true;
 
-  UFW_INFO("================ ECAL BEGIN/END SIDE RECAP ================");
+    UFW_INFO("================ ECAL BEGIN/END SIDE RECAP ================");
 
-  for (const auto& module_entry : ecal_side_recap) {
-    const auto region        = module_entry.first.first;
-    const auto module_number = module_entry.first.second;
-    const auto& side_counts  = module_entry.second;
+    for (const auto& module_entry : ecal_side_recap) {
+      const auto region        = module_entry.first.first;
+      const auto module_number = module_entry.first.second;
+      const auto& side_counts  = module_entry.second;
 
-    const char* region_label =
-        region == sand::geo_id::region_t::BARREL
-            ? "BARREL"
-            : (region == sand::geo_id::region_t::ENDCAP_A ? "ENDCAP_A" : "ENDCAP_B");
+      const char* region_label = region == sand::geo_id::region_t::BARREL
+                                   ? "BARREL"
+                                   : (region == sand::geo_id::region_t::ENDCAP_A ? "ENDCAP_A" : "ENDCAP_B");
 
-    if (side_counts.size() == 1) {
-      const auto current_side_pair = side_counts.begin()->first;
-      const auto begin_side        = current_side_pair.first;
-      const auto end_side          = current_side_pair.second;
+      if (side_counts.size() == 1) {
+        const auto current_side_pair = side_counts.begin()->first;
+        const auto begin_side        = current_side_pair.first;
+        const auto end_side          = current_side_pair.second;
 
-      bool valid_opposite_sides = false;
+        bool valid_opposite_sides = false;
 
-      if (region == sand::geo_id::region_t::BARREL) {
-        valid_opposite_sides =
-            (begin_side == face_side::north && end_side == face_side::south) ||
-            (begin_side == face_side::south && end_side == face_side::north);
-      } else if (region == sand::geo_id::region_t::ENDCAP_A ||
-                 region == sand::geo_id::region_t::ENDCAP_B) {
-        valid_opposite_sides =
-            (begin_side == face_side::down && end_side == face_side::up) ||
-            (begin_side == face_side::up && end_side == face_side::down);
-      }
+        if (region == sand::geo_id::region_t::BARREL) {
+          valid_opposite_sides = (begin_side == face_side::north && end_side == face_side::south)
+                              || (begin_side == face_side::south && end_side == face_side::north);
+        } else if (region == sand::geo_id::region_t::ENDCAP_A || region == sand::geo_id::region_t::ENDCAP_B) {
+          valid_opposite_sides = (begin_side == face_side::down && end_side == face_side::up)
+                              || (begin_side == face_side::up && end_side == face_side::down);
+        }
 
-      if (valid_opposite_sides) {
-        UFW_INFO("Module {} {} has begin = {} and end = {} in all {} cells",
-                 region_label,
-                 module_number,
-                 sand::geoinfo::ecal_info::face_side_name(begin_side),
-                 sand::geoinfo::ecal_info::face_side_name(end_side),
-                 side_counts.begin()->second);
+        if (valid_opposite_sides) {
+          UFW_INFO("Module {} {} has begin = {} and end = {} in all {} cells", region_label, module_number, begin_side,
+                   end_side, side_counts.begin()->second);
+        } else {
+          ecal_side_convention_ok = false;
+
+          UFW_WARN("Module {} {} has inconsistent begin/end side convention: begin = {}, end = {}", region_label,
+                   module_number, begin_side, end_side);
+        }
       } else {
         ecal_side_convention_ok = false;
-
-        UFW_WARN("Module {} {} has inconsistent begin/end side convention: begin = {}, end = {}",
-                 region_label,
-                 module_number,
-                 sand::geoinfo::ecal_info::face_side_name(begin_side),
-                 sand::geoinfo::ecal_info::face_side_name(end_side));
-      }
-    } else {
-      ecal_side_convention_ok = false;
-
-      std::ostringstream observed;
-
-      bool first_entry = true;
-      for (const auto& side_count : side_counts) {
-        if (!first_entry) {
-          observed << "; ";
+        for (const auto& side_count : side_counts) {
+          UFW_WARN("Module {} {} has inconsistent begin/end side convention.", region_label, module_number);
+          UFW_WARN("   begin = {}, end = {} in {} cells", side_count.first.first, side_count.first.second,
+                   side_count.second);
         }
-
-        first_entry = false;
-
-        observed << "begin = "
-                 << sand::geoinfo::ecal_info::face_side_name(side_count.first.first)
-                 << ", end = "
-                 << sand::geoinfo::ecal_info::face_side_name(side_count.first.second)
-                 << " in "
-                 << side_count.second
-                 << " cells";
       }
-
-      UFW_WARN("Module {} {} has inconsistent begin/end side convention. Observed: {}",
-               region_label,
-               module_number,
-               observed.str());
     }
+
+    UFW_INFO("===========================================================");
+
+    UFW_ASSERT(ecal_side_convention_ok,
+               "[ECAL SIDE CHECK] At least one ECAL module has inconsistent begin/end side convention");
   }
-
-  UFW_INFO("===========================================================");
-
-  UFW_ASSERT(ecal_side_convention_ok,
-             "[ECAL SIDE CHECK] At least one ECAL module has inconsistent begin/end side convention");
-}
 
 }; // namespace sand::test
 

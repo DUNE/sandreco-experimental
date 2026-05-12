@@ -811,22 +811,6 @@ namespace sand {
 
   geoinfo::ecal_info::~ecal_info() = default;
 
-  const char* geoinfo::ecal_info::face_side_name(geoinfo::ecal_info::face_side side) {
-    switch (side) {
-    case geoinfo::ecal_info::face_side::north:
-      return "north";
-    case geoinfo::ecal_info::face_side::south:
-      return "south";
-    case geoinfo::ecal_info::face_side::down:
-      return "down";
-    case geoinfo::ecal_info::face_side::up:
-      return "up";
-    case geoinfo::ecal_info::face_side::unknown:
-    default:
-      return "unknown";
-    }
-  }
-
   const cell& geoinfo::ecal_info::at(const pos_3d& p) const {
     auto nav = ufw::context::current()->instance<root_tgeomanager>().navigator();
     nav->find_node(p);

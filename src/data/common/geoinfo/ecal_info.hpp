@@ -320,3 +320,22 @@ namespace sand {
   };
 
 } // namespace sand
+
+template <>
+struct fmt::formatter<sand::geoinfo::ecal_info::face_side> : formatter<string_view> {
+  auto format(const sand::geoinfo::ecal_info::face_side& s, format_context& ctx) const -> format_context::iterator {
+    using face_t = sand::geoinfo::ecal_info::face_side;
+    switch (s) {
+    case face_t::north:
+      return fmt::format_to(ctx.out(), "north");
+    case face_t::south:
+      return fmt::format_to(ctx.out(), "south");
+    case face_t::down:
+      return fmt::format_to(ctx.out(), "down");
+    case face_t::up:
+      return fmt::format_to(ctx.out(), "up");
+    default:
+      return fmt::format_to(ctx.out(), "unknown");
+    }
+  }
+};
