@@ -106,6 +106,14 @@ namespace sand {
     enum class shape_element_type { straight, curved };
     enum class face_location { begin, end };
 
+    enum class face_side {
+      north, // smaller global X
+      south, // larger global X
+      down,  // smaller global Y
+      up,    // larger global Y
+      unknown
+    };
+
     struct shape_element_base {
       shape_element_face begin_face_; // face of the shape
       shape_element_face end_face_;   // face of the shape
@@ -240,6 +248,7 @@ namespace sand {
       double attenuation(double d) const;
       pos_3d offset2position(double offset_from_center) const;
       inline double total_pathlength() const { return element_collection().total_pathlength(); };
+      face_side side(face_location face_id) const;
 
      private:
       cell_id id_;
@@ -288,11 +297,11 @@ namespace sand {
       channel_id c;
       c.subdetector = subdetector_t::ECAL;
       c.channel     = (static_cast<uint32_t>(pid.face_) << 24) | (pid.cell_.module_number << 16) | (pid.cell_.row << 8)
-                | pid.cell_.column;
-      c.link = pid.cell_.region;
+                    | pid.cell_.column;
+      c.link        = pid.cell_.region;
       return c;
     };
-
+    static const char* face_side_name(face_side side);
     using subdetector_info::path;
 
     geo_id id(const geo_path& path) const override;

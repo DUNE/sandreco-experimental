@@ -5,8 +5,10 @@
     "ufw-ldpath" : ["/usr/local/lib64"]
   },
   "globals" : {
-    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
-  "sand::geoinfo" : { }
+    "sand::root_tgeomanager" : {
+      "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"
+    },
+    "sand::geoinfo" : {}
   },
   "contexts" : {
     "keys" : 1,
@@ -15,7 +17,10 @@
   },
   "run" : [
     {
-      "sand::test::geoinfo" : { "init" : ["ecal"] },
+      "sand::test::geoinfo" : {
+        "init" : ["ecal"],
+        "test" : ["ecal"]
+      },
       "reqs" : {}
     }
   ]
