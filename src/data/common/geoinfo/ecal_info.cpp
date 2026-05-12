@@ -581,8 +581,7 @@ namespace sand {
          + (1. - f.fraction) * std::exp(-d / f.attenuation_length_2);
   }
 
-  geoinfo::ecal_info::face_side
-  geoinfo::ecal_info::cell::side(geoinfo::ecal_info::face_location face_id) const {
+  geoinfo::ecal_info::face_side geoinfo::ecal_info::cell::side(geoinfo::ecal_info::face_location face_id) const {
     const auto& elements = element_collection().elements();
 
     if (elements.empty()) {
@@ -590,11 +589,9 @@ namespace sand {
       return geoinfo::ecal_info::face_side::unknown;
     }
 
-    const auto begin_centroid =
-        elements.front()->begin_face().centroid();
+    const auto begin_centroid = elements.front()->begin_face().centroid();
 
-    const auto end_centroid =
-        elements.back()->end_face().centroid();
+    const auto end_centroid = elements.back()->end_face().centroid();
 
     const auto cid = id();
 
@@ -604,36 +601,31 @@ namespace sand {
       }
 
       if (face_id == geoinfo::ecal_info::face_location::begin) {
-        return begin_centroid.x() < end_centroid.x()
-                   ? geoinfo::ecal_info::face_side::north
-                   : geoinfo::ecal_info::face_side::south;
+        return begin_centroid.x() < end_centroid.x() ? geoinfo::ecal_info::face_side::north
+                                                     : geoinfo::ecal_info::face_side::south;
       }
 
       if (face_id == geoinfo::ecal_info::face_location::end) {
-        return end_centroid.x() < begin_centroid.x()
-                   ? geoinfo::ecal_info::face_side::north
-                   : geoinfo::ecal_info::face_side::south;
+        return end_centroid.x() < begin_centroid.x() ? geoinfo::ecal_info::face_side::north
+                                                     : geoinfo::ecal_info::face_side::south;
       }
 
       return geoinfo::ecal_info::face_side::unknown;
     }
 
-    if (cid.region == geo_id::region_t::ENDCAP_A ||
-        cid.region == geo_id::region_t::ENDCAP_B) {
+    if (cid.region == geo_id::region_t::ENDCAP_A || cid.region == geo_id::region_t::ENDCAP_B) {
       if (is_zero_within_tolerance(begin_centroid.y() - end_centroid.y())) {
         return geoinfo::ecal_info::face_side::unknown;
       }
 
       if (face_id == geoinfo::ecal_info::face_location::begin) {
-        return begin_centroid.y() < end_centroid.y()
-                   ? geoinfo::ecal_info::face_side::down
-                   : geoinfo::ecal_info::face_side::up;
+        return begin_centroid.y() < end_centroid.y() ? geoinfo::ecal_info::face_side::down
+                                                     : geoinfo::ecal_info::face_side::up;
       }
 
       if (face_id == geoinfo::ecal_info::face_location::end) {
-        return end_centroid.y() < begin_centroid.y()
-                   ? geoinfo::ecal_info::face_side::down
-                   : geoinfo::ecal_info::face_side::up;
+        return end_centroid.y() < begin_centroid.y() ? geoinfo::ecal_info::face_side::down
+                                                     : geoinfo::ecal_info::face_side::up;
       }
 
       return geoinfo::ecal_info::face_side::unknown;
@@ -812,13 +804,14 @@ namespace sand {
   // geoinfo::ecal_info
   //////////////////////////////////////////////////////
 
-  geoinfo::ecal_info::ecal_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg) : subdetector_info(gi, gp) {
+  geoinfo::ecal_info::ecal_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg)
+    : subdetector_info(gi, gp) {
     find_modules(gi.root_path() / path());
   }
 
   geoinfo::ecal_info::~ecal_info() = default;
 
-const char* geoinfo::ecal_info::face_side_name(geoinfo::ecal_info::face_side side) {
+  const char* geoinfo::ecal_info::face_side_name(geoinfo::ecal_info::face_side side) {
     switch (side) {
     case geoinfo::ecal_info::face_side::north:
       return "north";
