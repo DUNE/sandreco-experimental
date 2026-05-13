@@ -30,7 +30,7 @@ namespace sand {
     return i;
   }
 
-  geoinfo::tracker_info::tracker_info(const geoinfo& gi, const geo_path& p) : subdetector_info(gi, p) {}
+  geoinfo::tracker_info::tracker_info(const geoinfo& gi, const geo_path& gp, const ufw::config&) : subdetector_info(gi, gp) {}
 
   geoinfo::tracker_info::~tracker_info() = default;
 

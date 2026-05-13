@@ -154,14 +154,20 @@ namespace sand {
   inline std::string_view geo_path::token(std::size_t i) const {
     std::size_t start = 0;
     std::size_t stop  = 0;
-    while (i--) {
-      start = find('/', start + 1);
+    if (empty()) {
+      return std::string_view();
     }
-    stop = find('/', start + 1);
+    if (at(0) == '/') {
+      start = 1;
+    }
+    while (i--) {
+      start = find('/', start) + 1;
+    }
+    stop = find('/', start);
     if (stop == std::string::npos) {
       stop = size();
     }
-    return std::string_view(data() + start + 1, stop - start - 1);
+    return std::string_view(data() + start, stop - start);
   }
 
   /**

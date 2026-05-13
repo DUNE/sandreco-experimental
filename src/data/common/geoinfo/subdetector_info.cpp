@@ -8,11 +8,7 @@ namespace sand {
     : r_info(gi), m_path(subpath) {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav  = tgm.navigator();
-    try {
-      nav->cd(r_info.root_path() / m_path);
-    } catch (const ufw::exception&) {
-      UFW_EXCEPT(path_not_found, r_info.root_path() / m_path);
-    }
+    nav->cd(r_info.root_path() / m_path);
     UFW_DEBUG("Using subdetector path '{}'.", m_path.c_str());
     TGeoHMatrix hm = nav->get_hmatrix();
     // I cry everytime... It's the same library...
