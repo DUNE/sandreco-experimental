@@ -16,7 +16,7 @@ namespace sand {
     };
 
    public:
-    stt_info(const geoinfo&);
+    stt_info(const geoinfo&, const geo_path&, const ufw::config&);
 
     virtual ~stt_info();
 

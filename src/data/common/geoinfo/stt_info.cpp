@@ -8,9 +8,7 @@
 
 namespace sand {
 
-  static constexpr char s_stt_path[] = "sand_inner_volume_PV_0/STTtracker_PV_0";
-
-  geoinfo::stt_info::stt_info(const geoinfo& gi) : tracker_info(gi, s_stt_path) {
+  geoinfo::stt_info::stt_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg) : tracker_info(gi, gp, cfg) {
     auto& tgm    = ufw::context::current()->instance<root_tgeomanager>();
     auto nav     = tgm.navigator();
     auto sttpath = gi.root_path() / path();

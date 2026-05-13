@@ -106,6 +106,14 @@ namespace sand {
     enum class shape_element_type { straight, curved };
     enum class face_location { begin, end };
 
+    enum class face_side {
+      north, // smaller global X
+      south, // larger global X
+      down,  // smaller global Y
+      up,    // larger global Y
+      unknown
+    };
+
     struct shape_element_base {
       shape_element_face begin_face_; // face of the shape
       shape_element_face end_face_;   // face of the shape
@@ -240,6 +248,7 @@ namespace sand {
       double attenuation(double d) const;
       pos_3d offset2position(double offset_from_center) const;
       inline double total_pathlength() const { return element_collection().total_pathlength(); };
+      face_side side(face_location face_id) const;
 
      private:
       cell_id id_;
@@ -270,7 +279,7 @@ namespace sand {
     };
 
    public:
-    ecal_info(const geoinfo&);
+    ecal_info(const geoinfo&, const geo_path&, const ufw::config&);
     virtual ~ecal_info();
     const cell& at(const pos_3d& p) const;
     const cell& at(cell_id cid) const;
@@ -292,7 +301,7 @@ namespace sand {
       c.link = pid.cell_.region;
       return c;
     };
-
+    static const char* face_side_name(face_side side);
     using subdetector_info::path;
 
     geo_id id(const geo_path& path) const override;
@@ -311,3 +320,22 @@ namespace sand {
   };
 
 } // namespace sand
+
+template <>
+struct fmt::formatter<sand::geoinfo::ecal_info::face_side> : formatter<string_view> {
+  auto format(const sand::geoinfo::ecal_info::face_side& s, format_context& ctx) const -> format_context::iterator {
+    using face_t = sand::geoinfo::ecal_info::face_side;
+    switch (s) {
+    case face_t::north:
+      return fmt::format_to(ctx.out(), "north");
+    case face_t::south:
+      return fmt::format_to(ctx.out(), "south");
+    case face_t::down:
+      return fmt::format_to(ctx.out(), "down");
+    case face_t::up:
+      return fmt::format_to(ctx.out(), "up");
+    default:
+      return fmt::format_to(ctx.out(), "unknown");
+    }
+  }
+};
