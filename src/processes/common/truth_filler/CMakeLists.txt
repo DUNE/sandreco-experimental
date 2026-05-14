@@ -1,0 +1,10 @@
+sandreco_add_process(sand_truth_filler)
+
+target_sources(sand_truth_filler
+    PRIVATE
+    truth_filler.cpp
+)
+
+add_dependencies(sand_truth_filler sand_edep_reader sand_genie_reader)
+
+target_link_libraries(sand_truth_filler PRIVATE sand_edep_reader sand_genie_reader ROOT::RIO ROOT::Tree)
