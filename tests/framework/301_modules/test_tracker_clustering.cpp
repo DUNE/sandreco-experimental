@@ -77,7 +77,7 @@ void test_tracker_clustering::log_clusters_sizes()
         sizes.reserve(clu.clusters.size());
 
         for (const auto& c : clu.clusters)
-            sizes.push_back(c.digits().size());
+            sizes.push_back(c.size());
 
         auto minmax = std::minmax_element(sizes.begin(), sizes.end());
         double avg =
@@ -110,7 +110,7 @@ void test_tracker_clustering::log_clusters_distribution()
             std::set<int> stations;
             std::set<int> planes;
 
-            for (auto idx : c.digits())
+            for (auto idx : c)
             {
                 const auto& sig  = idx;
                 const auto& wire =
@@ -152,7 +152,7 @@ void test_tracker_clustering::log_clusters_topology()
         {
             std::vector<uint32_t> wire_ids;
 
-            for (auto idx : c.digits())
+            for (auto idx : c)
             {
                 const auto& sig  = idx;
                 const auto& wire =
@@ -170,9 +170,9 @@ void test_tracker_clustering::log_clusters_topology()
                 wire_ids.back() - wire_ids.front();
 
             UFW_DEBUG("Cluster {} : size={}, wire span={}",
-                     cid,
-                     c.digits().size(),
-                     span);
+                    cid,
+                    c.size(),
+                    span);
 
             cid++;
         }
@@ -184,7 +184,7 @@ void test_tracker_clustering::log_clusters_efficiency()
         size_t single_hits = 0;
 
         for (const auto& c : clu.clusters)
-            if (c.digits().size() == 1)
+            if (c.size() == 1)
                 single_hits++;
 
         UFW_DEBUG("Isolated clusters (size=1) : {}", single_hits);

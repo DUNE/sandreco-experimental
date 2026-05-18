@@ -5,7 +5,6 @@
 #include <common/digi.h>
 #include <common/sand.h>
 #include <common/truth.h>
-#include <common/cluster.h>
 #include <tracker/digi.h>
 
 namespace sand::tracker {
@@ -18,20 +17,12 @@ namespace sand::tracker {
 struct cluster_container :
     ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
 
-    template <typename T = sand::truth_index>    
-    struct cluster : reco::cluster<T> {
-
-        cluster() = default;
-
-        explicit cluster(size_t idx)
-                : reco::cluster<T>(idx)  
-            {}
-    };
+    using cluster = digi::signal_collection;
 
 /**
  * @brief Collection of clusters in the tracker. Each cluster contains a vector of digit indices that belong to that cluster.
  */
-    using cluster_collection = std::vector<cluster<>>;
+    using cluster_collection = std::vector<cluster>;
     cluster_collection clusters;
 };
 

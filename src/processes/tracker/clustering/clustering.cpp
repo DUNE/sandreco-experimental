@@ -91,14 +91,14 @@ void clustering::clusterize_signals(
 
         build_cluster(current_cluster, signals, visited, i, gi);
 
-        if (!current_cluster.digits().empty())
+        if (!current_cluster.empty())
             clu_out.clusters.push_back(std::move(current_cluster));
     }
 }
 
 
 void clustering::build_cluster(
-    cluster_container::cluster<>& cluster,
+    cluster_container::cluster& cluster,
     const std::vector<digi::signal>& signals,
     std::vector<char>& visited,
     size_t index,
@@ -106,7 +106,7 @@ void clustering::build_cluster(
 {
     visited[index] = true;
 
-    cluster.add_digit(signals[index]);
+    cluster.push_back(signals[index]);
 
     const auto& wire_i =
         gi.tracker().wire_at(signals[index].channel());
