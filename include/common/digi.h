@@ -40,17 +40,6 @@ namespace sand::reco {
 
     time t() const { return m_time; }
 
-    bool operator==(const digi& other) const {
-        return truth_type::operator==(other)
-            && m_channel == other.m_channel
-            && m_time    == other.m_time
-            && m_source  == other.m_source;
-    }
-
-    bool operator!=(const digi& other) const {
-        return !(*this == other);
-    }
-
    private:
     channel_id m_channel;
     time m_time;
