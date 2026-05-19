@@ -1,0 +1,53 @@
+{
+    "ufw" : {
+      "ufw-loglevel" : "debug",
+      "ufw-basepath" : "/usr/local/share/sandreco/data",
+      "ufw-ldpath" : ["/usr/local/lib64"]
+    },
+    "globals" : {
+        "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_STT1.sand-events-in-sand_inner_volume.6.edep.root" },
+        "sand::geoinfo" : { "grain_geometry" : "gdml-masks", 
+                            "drift_view_angle" : [0.0, -0.087266463, 0.087266463],
+                            "drift_view_offset" : [10.0, 10.0, 10.0],
+                            "drift_view_spacing" : [10.0, 10.0, 10.0] },
+        "sand::grain::geant_gdml_parser" : {
+            "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" },
+            "gdml-lenses" : { "path" : "geometries/grain/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}
+        }
+    },
+    "contexts" : {
+        "keys" : 2,
+        "locals" : {
+        "sand::edep_reader" : {"uri" : "test/SAND_opt3_STT1.sand-events-in-sand_inner_volume.6.edep.root"}
+        }
+    },
+    "run" : [
+      {
+        "sand::root::tree_streamer": {
+          "uri": "test/stt_fast_digi.root",
+          "tree": "stt_fast_digi"
+        },
+        "read": [
+          "stt_digi"
+        ]
+      },
+      {
+        "sand::tracker::clustering" : {},
+        "reqs" : {"digi": "stt_digi"},
+        "prods" : {"clu": "stt_cluster"}
+      },
+      {
+        "sand::test::test_tracker_clustering" : {},
+        "reqs" : {"clu": "stt_cluster",
+                  "digi": "stt_digi"},
+        "prods" : {}
+      }, 
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/stt_cluster.root",
+          "tree" : "stt_cluster"
+        },
+        "write" : ["stt_cluster"]
+      }
+    ]
+  }
