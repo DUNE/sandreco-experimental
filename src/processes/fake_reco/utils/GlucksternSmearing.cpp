@@ -1,4 +1,5 @@
 #include "GlucksternSmearing.hpp"
+#include <fstream>
 
 namespace smearing{
 
@@ -21,17 +22,17 @@ namespace smearing{
         auto first_hit_point = static_cast<sand::pos_3d>(hit_points.front().Vect());
         auto last_hit_point = static_cast<sand::pos_3d>(hit_points.back().Vect());
             
-        auto initial_vol = nav->find_node(first_hit_point);
-
         double path_len_over_x0 = 0.;
 
-        for ( int i{}; i < hit_points.size()-1; ++i ) {
-
-            auto current_hit_pos = nav->get_point();
+        for (auto it = hit_points.begin(); it != hit_points.end() - 1; ++it){
+            auto current_hit_pos = static_cast<sand::pos_3d>(it->Vect());
             
+            // check if the current hit is not the last one
             if ( current_hit_pos.Z() < last_hit_point.Z() ) {
-                auto next_hit_pos = static_cast<sand::pos_3d>(hit_points[i+1].Vect());
-                sand::dir_3d current_dir = (next_hit_pos - current_hit_pos);
+                
+                auto next_hit_pos = static_cast<sand::pos_3d>(std::next(it)->Vect());
+
+                auto current_dir = (next_hit_pos - current_hit_pos).unit();                
 
                 if constexpr (M == Mode::transverse) {
                     nav->set_track(current_hit_pos, {0., current_dir.Y(), current_dir.Z()});
@@ -39,22 +40,41 @@ namespace smearing{
                 else {
                     nav->set_track(current_hit_pos, current_dir);
                 }
-                nav->FindNextBoundary(1);
+
+                sand::pos_3d last_pos = current_hit_pos;
+
+                // let the navigator go along the current direction until the next hit is found 
+                // or the navigator is very close to the next hit (to avoid stalled situations in case of the end of a track)
+                while(last_pos.Z() < next_hit_pos.Z() && std::abs(next_hit_pos.Z() - last_pos.Z()) > 1E-5){
+
+                    // needed otherwise FindNextBoundary may not see the next hit, trying to do the whole step up to the next boundary.
+                    // But if between the last pos and the boundary there is another hit, we have that last_pos > next_hit, so it exits 
+                    // the while, and the navigator assumes the new hit position which has a lower Z wrt to the last pos.
+                    // In this way, at most the navigator makes a step to reach the next hit
+                    double distance_to_next_hit = (next_hit_pos - last_pos).R();
+                    double step_max = std::min(10., distance_to_next_hit);
                     
-                auto atomic_nr = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetZ());
-                auto mass_nr = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetA());
+                    nav->FindNextBoundary(step_max);
+                     
+                    auto atomic_nr = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetZ());
+                    auto mass_nr = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetA());
+                    auto material_name = static_cast<std::string>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetName());
+                    
+                    auto rad_length = get_x0(atomic_nr, mass_nr); // g/cm2
+                    auto density = get_density_g_cm3(tgm);
+                    auto path_length = get_path_len_in_cm(tgm);
+                    
+                    path_len_over_x0 += path_length * density / rad_length;
+                    
+                    nav->Step(true, true);
+                    last_pos = nav->get_point();
 
-                auto rad_length = get_x0(atomic_nr, mass_nr); // g/cm2
-                auto density = get_density_g_cm3(tgm);
-                auto path_length = get_path_len_in_cm(tgm);
+                }
 
-                path_len_over_x0 += path_length * density / rad_length;
-                nav->Step(true, true);
-
-            } else {
-                UFW_INFO("All hits processed");
             }
         }
+
+        UFW_INFO("All hits processed");
 
         return path_len_over_x0;
     }
@@ -91,14 +111,12 @@ namespace smearing{
               m_path_len_over_x0.transverse = get_path_len_over_x0<Mode::transverse>(hit_pts_above_thr);
               m_smearing_enabled = true;
             }
-            
         }
 
         caf::SRVector3D GlucksternSmearing::apply_smearing(const caf::SRLorentzVector& true_p) const {
 
             
             const float p_transverse = std::hypot(true_p.Y(), true_p.Z());
-            // const auto dip_angle = std::acos(p_transverse / true_p.Mag());
             const auto dip_angle = std::atan(true_p.X() / p_transverse);
             const auto zy_angle = std::atan2(true_p.Y(), true_p.Z());
             
@@ -108,7 +126,7 @@ namespace smearing{
 
             // pt resolution (det + MCS)
             const auto measure_pt_res = compute_measurement_smearing(p_transverse_gev);
-            const auto mcs_pt_res = compute_mcs_measurement_smearing(m_path_len_over_x0.transverse);
+            const auto mcs_pt_res = compute_mcs_measurement_smearing(m_path_len_over_x0.full);
             const auto pt_res = std::hypot(measure_pt_res, mcs_pt_res);
             
             // MCS angle smearing: for zy used transverse path and transverse p

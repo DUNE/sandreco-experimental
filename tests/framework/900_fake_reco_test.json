@@ -24,7 +24,7 @@
   "run": [
     {
       "sand::fake_reco": {
-        "mode" : "truth"
+        "mode" : "smearing"
       },
       "reqs": {},
       "prods": {

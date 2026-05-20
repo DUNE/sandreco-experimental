@@ -51,6 +51,8 @@ namespace sand {
     const auto gluckstern_helper = smearing::gluckstern::GlucksternSmearing{hit_vec};
 
     // apply the measurement resolution smearing
+    if (!gluckstern_helper.IsValid()) { return reco; }
+
     reco.p = gluckstern_helper.apply_smearing(true_part.p);
     
     return reco;
