@@ -9,6 +9,15 @@
 
 namespace sand {
 
+  struct InteractionRange {
+    std::size_t first_primary_index;
+    std::size_t primary_count;
+  };
+
+  using Primaries = std::vector<EDEPTrajectory>;
+
+  std::vector<InteractionRange> make_interaction_ranges(Primaries const& primaries);
+
   struct truth_filler : public ufw::process {
     truth_filler();
     void configure(ufw::config const& cfg) override;
