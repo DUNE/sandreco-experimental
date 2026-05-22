@@ -1,7 +1,6 @@
 #include "fake_reco.hpp"
 
 #include "caf_handlers/caf_filler.hpp"
-#include "debug_handlers/debug_filler.hpp"
 
 #include <ufw/factory.hpp>
 
@@ -11,10 +10,10 @@
 namespace sand {
 
   fake_reco::fake_reco()
-    : process{{}, {{"output_caf", "sand::caf::caf_wrapper"}, {"debug_data", "sand::debug::debug_data"}}}, m_edep{nullptr}, m_genie{nullptr}, m_caf{nullptr} {}
+    : process{{}, {{"output_caf", "sand::caf::caf_wrapper"}}}, m_edep{nullptr}, m_genie{nullptr}, m_caf{nullptr} {}
 
-  void fake_reco::configure(const ufw::config& cfg) { 
-    process::configure(cfg); 
+  void fake_reco::configure(const ufw::config& cfg) {
+    process::configure(cfg);
     m_reco_mode = cfg.at("mode");
   }
 
@@ -33,8 +32,6 @@ namespace sand {
     }
 
     m_caf = &set<sand::caf::caf_wrapper>("output_caf");
-
-    m_debug_data = &set<sand::debug::debug_data>("debug_data");
 
     const auto& primaries = m_edep->GetChildrenTrajectories();
     const auto edep_map   = make_edep_interaction_map();
@@ -153,9 +150,6 @@ namespace sand {
 
     // SAND-specific reco branch
     m_caf->nd.sand.ixn.reserve(n_interactions);
-
-    // Debug data branch
-    m_debug_data->clear();
   }
 
   void fake_reco::process_interaction_particles(::caf::SRTrueInteraction& true_ixn, ::caf::SRInteraction& reco_ixn,
@@ -166,45 +160,27 @@ namespace sand {
     reco_ixn.part.sandreco.reserve(edep_count);
 
     std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)> make_reco;
-    std::function<::caf::SRTrack(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)> make_reco_track;
 
     // Fill reco particle from truth or adding a smearing to muons momentum
-    if (m_reco_mode == "truth"){
+    if (m_reco_mode == "truth") {
       UFW_INFO("Using reconstruction from truth");
-      make_reco = [](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id){
-        return CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id); 
+      make_reco = [](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        return CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
       };
-      make_reco_track = [](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id){
-        return CAFFiller<::caf::SRTrack>::from_true(true_prim, prim_id); 
-      };
-    }
-    else if (m_reco_mode == "smearing"){
+    } else if (m_reco_mode == "smearing") {
       UFW_INFO("Using reconstruction from truth with smearing");
-      make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id){
+      make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
         const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
         return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj);
       };
-      make_reco_track = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id){
-        const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
-        return CAFFiller<::caf::SRTrack>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj);
-      };
-    }
-    else { 
-          UFW_FATAL("You need to specify which reco mode you want to use");
+    } else {
+      UFW_FATAL("You need to specify which reco mode you want to use");
     }
 
     // Loop over primary particles
     for (std::size_t i{}; i != edep_count; ++i) {
       const auto& true_prim = true_ixn.prim[i];
       const auto& prim_id   = true_prim.ancestor_id;
-
-      // Fill debug data
-      const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
-      auto hits = from_edep(true_prim_trj);
-      for (auto& hit : hits){
-        m_debug_data->track_hits_map[true_prim.G4ID].push_back(hit);
-        m_debug_data->hits.push_back(hit);
-      }
 
       // Create SRRecoParticle from truth
       auto reco_part = make_reco(true_prim, prim_id);
@@ -213,7 +189,7 @@ namespace sand {
 
       // Create SRTrack or SRShower based on particle type
       if (is_track_like(true_prim.pdg)) {
-        auto track = make_reco_track(true_prim, prim_id);
+        auto track = CAFFiller<::caf::SRTrack>::from_true(true_prim, prim_id);
         sand_ixn.tracks.push_back(std::move(track));
         sand_ixn.ntracks++;
       } else if (is_shower_like(true_prim.pdg)) {

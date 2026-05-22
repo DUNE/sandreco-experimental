@@ -2,7 +2,6 @@
 #define SANDRECO_FAKE_RECO_HPP
 
 #include <caf/caf_wrapper.hpp>
-#include <debug/debug_data.hpp>
 #include <edep_reader/edep_reader.hpp>
 #include <genie_reader/genie_reader.hpp>
 
@@ -22,11 +21,10 @@ namespace sand {
   };
 
   class fake_reco : public ufw::process {
-    const edep_reader* m_edep;            ///< Pointer to the edep reader providing MC truth data
-    const genie_reader* m_genie;          ///< Pointer to the genie reader providing MC truth data
-    sand::caf::caf_wrapper* m_caf;        ///< Pointer to the CAF output wrapper (non-const for writing)
-    std::string m_reco_mode;              ///< Reconstruction mode (from truth or with smearing)
-    sand::debug::debug_data* m_debug_data; ///< Debug data to be filled and streamed
+    const edep_reader* m_edep;     ///< Pointer to the edep reader providing MC truth data
+    const genie_reader* m_genie;   ///< Pointer to the genie reader providing MC truth data
+    sand::caf::caf_wrapper* m_caf; ///< Pointer to the CAF output wrapper (non-const for writing)
+    std::string m_reco_mode;       ///< Reconstruction mode (from truth or with smearing)
 
     /// @brief Build map of edep-sim primaries grouped by interaction
     [[nodiscard]] std::vector<EdepInteractionRange> make_edep_interaction_map() const;
@@ -36,8 +34,8 @@ namespace sand {
 
     /// @brief Process all particles for one interaction
     void process_interaction_particles(::caf::SRTrueInteraction& true_ixn, ::caf::SRInteraction& reco_ixn,
-                                       ::caf::SRSANDInt& sand_ixn,
-                                       std::size_t interaction_index, std::size_t edep_first_index, std::size_t edep_count) const;
+                                       ::caf::SRSANDInt& sand_ixn, std::size_t interaction_index,
+                                       std::size_t edep_first_index, std::size_t edep_count) const;
 
     /// @brief Verify all size counters match vector sizes
     void assert_sizes() const;

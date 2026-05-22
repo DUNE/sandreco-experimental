@@ -35,26 +35,32 @@ namespace sand {
     return reco;
   }
 
-  ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part,
-                                                                    const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj) {
+  ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(
+      const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj) {
     // start by filling all fields from truth
     auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
     // return from_true for all particle except muons (temporarily)
-    if(std::abs(true_part.pdg)!=13) { return reco; }
+    if (std::abs(true_part.pdg) != 13) {
+      return reco;
+    }
 
     // for muons in the drift tracker (temporarily) smear according to the Gluckstern formula
     const auto& hit_map = true_part_trj.GetHitMap();
-    const auto& it = hit_map.find(component::DRIFT);
-    if(it == hit_map.end()) { return reco; }
+    const auto& it      = hit_map.find(component::DRIFT);
+    if (it == hit_map.end()) {
+      return reco;
+    }
     const auto& hit_vec = it->second;
 
     const auto gluckstern_helper = smearing::gluckstern::GlucksternSmearing{hit_vec};
 
     // apply the measurement resolution smearing
-    if (!gluckstern_helper.IsValid()) { return reco; }
+    if (!gluckstern_helper.IsValid()) {
+      return reco;
+    }
 
     reco.p = gluckstern_helper.apply_smearing(true_part.p);
-    
+
     return reco;
   }
 
@@ -77,20 +83,25 @@ namespace sand {
     return track;
   }
 
-    ::caf::SRTrack CAFFiller<::caf::SRTrack>::from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part,
-                                                                    const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj) {
+  ::caf::SRTrack CAFFiller<::caf::SRTrack>::from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part,
+                                                                       const ::caf::TrueParticleID& id,
+                                                                       const EDEPTrajectory& true_part_trj) {
     // start by filling SRRecoParticle with all fields from truth
     auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
     // start by filling SRTrack with all fields from truth
     auto reco_track = CAFFiller<::caf::SRTrack>::from_true(true_part, id);
 
     // return from_true for all particle except muons (temporarily)
-    if(std::abs(true_part.pdg)!=13) { return reco_track; }
+    if (std::abs(true_part.pdg) != 13) {
+      return reco_track;
+    }
 
     // for muons in the drift tracker (temporarily) smear according to the Gluckstern formula
     const auto& hit_map = true_part_trj.GetHitMap();
-    const auto& it = hit_map.find(component::DRIFT);
-    if(it == hit_map.end()) { return reco_track; }
+    const auto& it      = hit_map.find(component::DRIFT);
+    if (it == hit_map.end()) {
+      return reco_track;
+    }
     const auto& hit_vec = it->second;
 
     const auto gluckstern_helper = smearing::gluckstern::GlucksternSmearing{hit_vec};
@@ -100,9 +111,9 @@ namespace sand {
 
     // apply smearing on the energy as well, using the smeared momentum and the muon mass
     const double muon_mass = 105.6583755; // MeV/c^2
-    reco_track.E = std::sqrt(reco.p.x*reco.p.x + reco.p.y*reco.p.y + reco.p.z*reco.p.z + muon_mass*muon_mass);
+    reco_track.E = std::sqrt(reco.p.x * reco.p.x + reco.p.y * reco.p.y + reco.p.z * reco.p.z + muon_mass * muon_mass);
     reco_track.Evis = reco_track.E;
-    
+
     return reco_track;
   }
 
