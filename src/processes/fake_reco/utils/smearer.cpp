@@ -25,31 +25,39 @@ namespace smearer {
       auto finish = static_cast<sand::pos_3d>(hit_points.back().Vect());
       auto initial_volume = nav->find_node(start);
       double L_over_x0= 0.;
-      for (size_t i=0; i<hit_points.size()-1; i++){
-        auto position = nav->get_point();
-        if(position.Z()<finish.Z()){
-          auto next_position = static_cast<sand::pos_3d>(hit_points[i+1].Vect());
-          sand::dir_3d direction = next_position - position ;
+      for (auto it=hit_points.begin(); it != hit_points.end()-1; ++it){
+        auto current_hit_pos = static_cast<sand::pos_3d>(it->Vect());
+        if (current_hit_pos.Z()<finish.Z()){
+          auto next_hit_pos = static_cast<sand::pos_3d>(std::next(it)->Vect());
+          auto direction = (next_hit_pos - current_hit_pos).unit();
+          auto direction_transverse = direction;
+          direction_transverse.SetX(0);
+          direction_transverse.unit();
           if constexpr (M == Mode::transverse){
-            nav->set_track(position, {0, direction.Y(),direction.Z()});
+            nav->set_track(current_hit_pos, direction_transverse);
           } else {
-            nav->set_track(position,direction);
+            nav->set_track(current_hit_pos, direction);
           }
-          nav->FindNextBoundary(1);
-          int atomic_num = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetZ());
-          int mass_num = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetA());
-          auto rad_length = compute_x0(atomic_num, mass_num); 
-          auto density = get_density_g_cm3(tgm);
-          auto path_length = get_L_in_cm(tgm);
-          L_over_x0 += path_length * density / rad_length;
-          nav->Step(true,true);
-        } else {
-          UFW_INFO("All hits processed");
-        }
+          sand::pos_3d last_pos = current_hit_pos;
+          while(last_pos.Z()<next_hit_pos.Z() && std::abs(next_hit_pos.Z()-last_pos.Z()) > 1E-5){
+            double distance_to_next_hit = (next_hit_pos-last_pos).R();
+            double step_max = std::min(10.,distance_to_next_hit);
+            nav->FindNextBoundary(step_max);
+            auto atomic_num = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetZ());
+            auto mass_num = static_cast<int>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetA());
+            auto material_name = static_cast<std::string>(nav->GetCurrentNode()->GetVolume()->GetMaterial()->GetName());
+            auto rad_length = compute_x0(atomic_num,mass_num);
+            auto density = get_density_g_cm3(tgm);
+            auto path_length = get_L_in_cm(tgm);
+            L_over_x0 += path_length * density / rad_length;
+            nav->Step(true,true);
+            last_pos = nav->get_point();
+          }
+        } 
       }
       return L_over_x0;
     }
-    Gluckstern_smearer::Gluckstern_smearer(const std::vector<EDEPHit>& hits,unsigned int seed) : kRng(seed) {
+    Gluckstern_smearer::Gluckstern_smearer(const std::vector<EDEPHit>& hits) {
         std::vector<sand::vec_4d> hits_above_thr;
         hits_above_thr.reserve(hits.size());
 
@@ -68,30 +76,31 @@ namespace smearer {
               k_lever_arm /= 1E3; // mm -> m
             }
             
-            // then compute path_len/x0
+            
             k_L_over_x0_full = get_L_over_x0<Mode::full>(hits_above_thr);
             k_L_over_x0_transverse = get_L_over_x0<Mode::transverse>(hits_above_thr);
         }
       void Gluckstern_smearer::p_smearing(::caf::SRRecoParticle& part){
+        if (std::abs(part.pdg != 13)){return;} //only smear muon p
         const auto true_p = part.p;
         const float p_transverse = std::hypot(true_p.Y(),true_p.Z());
-        const float dip_angle = std::acos(p_transverse/true_p.Mag());
-        const float bending_angle = std::atan(true_p.Y()/true_p.Z());
+        const float dip_angle = std::atan(true_p.X()/p_transverse);
+        const float bending_angle = std::atan2(true_p.Y(),true_p.Z());
         
-        const auto pt_measure_res = compute_measurement_smearing(p_transverse / 1000);
-        const auto pt_mcs_res = compute_mcs_measurement_smearing(k_L_over_x0_transverse);
+        const auto pt_measure_res = compute_measurement_smearing(p_transverse / 1000.0f );
+        const auto pt_mcs_res = compute_mcs_measurement_smearing(k_L_over_x0_full);
         const auto pt_res = std::hypot(pt_measure_res,pt_mcs_res);
-        const auto dip_angle_mcs_res = compute_mcs_angle_smearing(k_L_over_x0_full, true_p.Mag() / 1000); 
-        const auto bending_angle_mcs_res = compute_mcs_angle_smearing(k_L_over_x0_transverse, p_transverse / 1000);
+        const auto dip_angle_mcs_res = compute_mcs_angle_smearing(k_L_over_x0_full, true_p.Mag() / 1000.0f ); 
+        const auto bending_angle_mcs_res = compute_mcs_angle_smearing(k_L_over_x0_transverse, p_transverse / 1000.0f );
 
         std::normal_distribution<float> pt_gaus (0, pt_res);
-        const auto pt_sigma = pt_gaus(kRng);
+        const auto pt_sigma = pt_gaus(kRng());
         const float smeared_pt = static_cast<float>(std::max(0.0f, p_transverse + pt_sigma));
         std::normal_distribution<float> dip_angle_gaus (0,dip_angle_mcs_res);
-        const float dip_angle_sigma = dip_angle_gaus(kRng);
+        const float dip_angle_sigma = dip_angle_gaus(kRng());
         const float smeared_dip_angle = dip_angle + dip_angle_sigma;
         std::normal_distribution<float> bending_angle_gaus (0,bending_angle_mcs_res);
-        const float  bending_angle_sigma = bending_angle_gaus(kRng);
+        const float  bending_angle_sigma = bending_angle_gaus(kRng());
         const float smeared_bending_angle = bending_angle + bending_angle_sigma;
 
         part.p.SetX(p_transverse * std::tan(smeared_dip_angle));

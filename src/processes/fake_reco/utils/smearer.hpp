@@ -54,14 +54,14 @@ namespace smearer {
       };
     class Gluckstern_smearer{
       private:
-      std::mt19937 kRng;
+      static ufw::context::random_engine& kRng() {return ufw::context::current()->engine();};
       int k_num_hits;
       double k_lever_arm;
       double k_L_over_x0_full;
       double k_L_over_x0_transverse;
 
       public:
-      Gluckstern_smearer(const std::vector<EDEPHit>& hits,unsigned int seed = std::random_device{}());
+      Gluckstern_smearer();
 
       inline double compute_measurement_smearing(const double p_transverse) {
         return (k_single_hit_sigma * p_transverse) / (0.3 * k_b_field_magnitude * k_lever_arm)

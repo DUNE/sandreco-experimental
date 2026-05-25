@@ -23,7 +23,9 @@
   },
   "run": [
     {
-      "sand::fake_reco": {},
+      "sand::fake_reco": {
+        "mode" : "smearing"
+      },
       "reqs": {},
       "prods": {
         "output_caf": "produced_caf"

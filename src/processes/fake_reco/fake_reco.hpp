@@ -24,6 +24,7 @@ namespace sand {
     const edep_reader* m_edep;     ///< Pointer to the edep reader providing MC truth data
     const genie_reader* m_genie;   ///< Pointer to the genie reader providing MC truth data
     sand::caf::caf_wrapper* m_caf; ///< Pointer to the CAF output wrapper (non-const for writing)
+    std::string m_reco_mode;
 
     /// @brief Build map of edep-sim primaries grouped by interaction
     [[nodiscard]] std::vector<EdepInteractionRange> make_edep_interaction_map() const;
