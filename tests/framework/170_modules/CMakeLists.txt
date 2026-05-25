@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_test_grain_volumereco)
+
+target_sources(sand_test_test_grain_volumereco PRIVATE test_grain_volumereco.cpp)
+
+target_link_libraries(sand_test_test_grain_volumereco PRIVATE ROOT::MathCore sand_geoinfo)

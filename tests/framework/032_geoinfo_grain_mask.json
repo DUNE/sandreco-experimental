@@ -1,0 +1,26 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : ["/usr/local/lib64"]
+  },
+  "globals" : {
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
+    "sand::geoinfo" : { "grain" : { "inner_geometry" : "gdml-masks" } },
+    "sand::grain::geant_run_manager" : {},
+    "sand::grain::geant_gdml_parser" : {
+      "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" }
+    }
+  },
+  "contexts" : {
+    "keys" : 1,
+    "locals" : {},
+    "seed" : 1111
+  },
+  "run" : [
+    {
+      "sand::test::geoinfo" : { "init" : ["grain"], "test" : ["grain"] },
+      "reqs" : {}
+    }
+  ]
+}

@@ -13,9 +13,9 @@
 namespace sand {
   genie_reader::genie_reader() {}
 
-  truth_adapter::value_type& truth_adapter::at(const index_type&) { UFW_FATAL("Not yet implemented"); }
+  //truth_adapter::value_type& truth_adapter::at(const index_type&) { UFW_FATAL("Not yet implemented"); }
 
-  bool truth_adapter::valid(const index_type&) { UFW_FATAL("Not yet implemented"); }
+  //bool truth_adapter::valid(const index_type&) { UFW_FATAL("Not yet implemented"); }
 
 } // namespace sand
 

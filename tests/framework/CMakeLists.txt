@@ -11,7 +11,26 @@ enable_testing()
 
 file(GLOB TEST_SCRIPTS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.json)
 
+function(sandreco_add_test_process tgt)
+  add_library(${tgt})
+  add_dependencies(${tgt} sandreco_version)
+  target_include_directories(${tgt}
+                             PRIVATE
+                             "${CMAKE_CURRENT_SOURCE_DIR}"
+                             "${CMAKE_SOURCE_DIR}/include"
+                             "${CMAKE_SOURCE_DIR}/include/common"
+                             "${CMAKE_BINARY_DIR}/include"  #for version.h
+  )
+  target_link_libraries(${tgt} PUBLIC ufw::ufw)
+  install(TARGETS ${tgt} EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endfunction()
+
+
 foreach(testScript ${TEST_SCRIPTS})
         get_filename_component(scriptname ${testScript} NAME_WE)
+        string(REGEX MATCH "^[0-9]+" test_id "${scriptname}")
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${test_id}_modules")
+            add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/${test_id}_modules")
+        endif()
         add_test(NAME ${scriptname} COMMAND ufwrun ${CMAKE_CURRENT_SOURCE_DIR}/${testScript})
 endforeach(testScript)

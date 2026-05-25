@@ -5,7 +5,7 @@
       "ufw-ldpath" : ["/usr/local/lib64"]
     },
     "globals" : {
-        "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
+        "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_STT1.sand-events-in-sand_inner_volume.6.edep.root" },
         "sand::geoinfo" : { "grain_geometry" : "gdml-masks", 
                             "drift_view_angle" : [0.0, -0.087266463, 0.087266463],
                             "drift_view_offset" : [10.0, 10.0, 10.0],
@@ -16,27 +16,38 @@
         }
     },
     "contexts" : {
-        "keys" : 3,
+        "keys" : 2,
         "locals" : {
-        "sand::edep_reader" : {"uri" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"}
+        "sand::edep_reader" : {"uri" : "test/SAND_opt3_STT1.sand-events-in-sand_inner_volume.6.edep.root"}
         }
     },
     "run" : [
       {
-        "sand::drift::drift_fast_digi" : {
-            "drift_velocity": 0.05,
-            "wire_velocity": 200.0, 
-            "sigma_tdc": 3.5 
+        "sand::root::tree_streamer": {
+          "uri": "test/stt_fast_digi.root",
+          "tree": "stt_fast_digi"
         },
-        "reqs" : {},
-        "prods" : {"digi": "pippo"}
+        "read": [
+          "stt_digi"
+        ]
       },
       {
+        "sand::tracker::clustering" : {},
+        "reqs" : {"digi": "stt_digi"},
+        "prods" : {"clu": "stt_cluster"}
+      },
+      {
+        "sand::test::test_tracker_clustering" : {},
+        "reqs" : {"clu": "stt_cluster",
+                  "digi": "stt_digi"},
+        "prods" : {}
+      }, 
+      {
         "sand::root::tree_streamer" : { 
-          "uri" : "test/drift_fast_digi.root",
-          "tree" : "drift_fast_digi"
+          "uri" : "test/stt_cluster.root",
+          "tree" : "stt_cluster"
         },
-        "write" : ["pippo"]
+        "write" : ["stt_cluster"]
       }
     ]
   }

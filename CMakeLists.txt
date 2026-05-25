@@ -4,7 +4,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/tools/cmake")
 project(sandreco
   LANGUAGES CXX
   DESCRIPTION "A reconstruction framework for DUNE/ND/SAND"
-  VERSION 1.0.1)
+  VERSION 1.0.3)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,6 +30,8 @@ find_package(spdlog REQUIRED)
 find_package(ROOT COMPONENTS MathCore REQUIRED)
 
 find_package(ufw REQUIRED)
+
+find_package(pybind11 REQUIRED)
 
 find_package(duneanaobj REQUIRED)
 

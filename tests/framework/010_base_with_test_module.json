@@ -1,0 +1,20 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : [ "/usr/local/lib64" ]
+  },
+  "globals" : {},
+  "contexts" : {
+    "keys" : 3,
+    "locals" : {}
+  },
+  "run" : [
+    {
+      "sand::test::test_module": {
+        "greeting": "Hiiii!!!!"
+      },
+      "reqs": {},
+      "prods": {}
+    }]
+}

@@ -30,7 +30,7 @@ namespace sand {
     return i;
   }
 
-  geoinfo::tracker_info::tracker_info(const geoinfo& gi, const geo_path& p) : subdetector_info(gi, p) {}
+  geoinfo::tracker_info::tracker_info(const geoinfo& gi, const geo_path& gp, const ufw::config&) : subdetector_info(gi, gp) {}
 
   geoinfo::tracker_info::~tracker_info() = default;
 
@@ -155,14 +155,14 @@ namespace sand {
     }
   }
 
-  bool geoinfo::tracker_info::wire::is_adjacent(const geoinfo::tracker_info::wire * w) const {
-    for (const auto * adj : w->adjacent_wires) {
-      if (adj == w) {
-        return true;
-      }
+bool geoinfo::tracker_info::wire::is_adjacent(const geoinfo::tracker_info::wire* w) const {
+  for (const auto* adj : adjacent_wires) {
+    if (adj == w) {
+      return true;
     }
-    return false;
-  };
+  }
+  return false;
+}
 
   void geoinfo::tracker_info::station::set_wire_adjacency() {
     double dz; 

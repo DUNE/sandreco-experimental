@@ -7,12 +7,12 @@
 #ifndef __CLING__
 #  include <ufw/index.hpp>
 
-class TG4HitSegment;
+class EDEPHit;
 
 namespace sand {
 
   struct truth_adapter {
-    using value_type = const TG4HitSegment;
+    using value_type = const EDEPHit;
     using index_type = std::size_t;
     static value_type& at(const index_type&);
     static bool valid(const index_type&);
@@ -57,6 +57,8 @@ namespace sand {
     inline void emplace(true_hit_type&& i) { m_hits.emplace(std::move(i)); }
     inline void insert(true_hit_type i) { m_hits.emplace(i); }
     inline void insert(const std::set<true_hit_type>& set) { m_hits.insert(set.begin(), set.end()); }
+    inline std::size_t size() const { return m_hits.size();}
+    inline bool empty() const { return m_hits.empty(); }
 
   private:
     std::set<true_hit_type> m_hits;

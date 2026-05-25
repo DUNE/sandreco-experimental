@@ -25,5 +25,5 @@ function(sandreco_add_complex_data tgt)
   endif()
 endfunction()
 
-add_subdirectory(common)
+add_subdirectory(common) 
 add_subdirectory(grain)

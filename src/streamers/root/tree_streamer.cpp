@@ -79,15 +79,14 @@ namespace sand::root {
     streamer::attach(d, id);
     var_info& info  = info_map().at(id);
     info.address    = &d;
-    auto brname     = ufw::simplified_name(info.type); // remove any namespace from the branch name, for convenience.
     TBranch* brdata = nullptr;
     if (operation() & ufw::op_type::ro) {
       // attach data branch
-      brdata = m_tree->GetBranch(brname.c_str());
-      UFW_ASSERT(brdata != nullptr, "TBranch '{}' not found.", brname);
+      brdata = m_tree->GetBranch(id.c_str());
+      UFW_ASSERT(brdata != nullptr, "TBranch '{}' not found.", id);
       brdata->SetAddress(static_cast<void*>(&info.address));
     } else if (operation() == ufw::op_type::wo) {
-      brdata = m_tree->Branch(brname.c_str(), info.type.c_str(), static_cast<void*>(&info.address));
+      brdata = m_tree->Branch(id.c_str(), info.type.c_str(), static_cast<void*>(&info.address));
     }
     // unclear if this is default...
     brdata->SetAutoDelete(false);
