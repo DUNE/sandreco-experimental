@@ -17,13 +17,13 @@
 namespace smearer {
   class EnergySmearer {
    private:
-    std::mt19937 kRng;
+    static ufw::context::random_engine& kRng() {return ufw::context::current()->engine();};
     const float k_E_stochastic = 0.057f; // sigma = 5.7% sqrt(E) in gev
     const float k_E_noise      = 0.01f;  // sigma = 1%
     const float k_E_constant   = 0.01f;  // sigma = 1% E
 
    public:
-    inline EnergySmearer(unsigned int seed = std::random_device{}()) : kRng(seed) {}
+    inline EnergySmearer();
     void E_smearing(::caf::SRRecoParticle& part);
     float sum_quad(float E);
   };
