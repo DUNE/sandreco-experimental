@@ -15,15 +15,11 @@
 #include <random>
 
 namespace smearer {
-  class EnergySmearer {
-   private:
+  namespace EnergySmearer {
     static ufw::context::random_engine& kRng() {return ufw::context::current()->engine();};
     const float k_E_stochastic = 0.057f; // sigma = 5.7% sqrt(E) in gev
     const float k_E_noise      = 0.01f;  // sigma = 1%
     const float k_E_constant   = 0.01f;  // sigma = 1% E
-
-   public:
-    inline EnergySmearer();
     void E_smearing(::caf::SRRecoParticle& part);
     float sum_quad(float E);
   };
@@ -61,7 +57,7 @@ namespace smearer {
       double k_L_over_x0_transverse;
 
       public:
-      Gluckstern_smearer();
+      Gluckstern_smearer(const std::vector<EDEPHit>& hits);
 
       inline double compute_measurement_smearing(const double p_transverse) {
         return (k_single_hit_sigma * p_transverse) / (0.3 * k_b_field_magnitude * k_lever_arm)

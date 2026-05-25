@@ -169,14 +169,13 @@ namespace sand {
       auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
       if (m_reco_mode == "smearing") {
         UFW_INFO("Reco with smearing");
-        auto energy_smearing = smearer::EnergySmearer();
         auto true_prim_traj  = *m_edep->GetTrajectory(true_prim.G4ID);
         const auto& hit_map  = true_prim_traj.GetHitMap();
         const auto& it       = hit_map.find(component::DRIFT);
         if (it != hit_map.end()) {
           const auto& hit_vec    = it->second;
           auto momentum_smearing = smearer::Gluckstern::Gluckstern_smearer(hit_vec);
-          energy_smearing.E_smearing(reco_part);
+          smearer::EnergySmearer::E_smearing(reco_part);
           momentum_smearing.p_smearing(reco_part);
         }
         reco_ixn.part.sandreco.push_back(std::move(reco_part));
