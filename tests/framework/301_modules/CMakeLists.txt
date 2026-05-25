@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_test_tracker_clustering)
+
+target_sources(sand_test_test_tracker_clustering PRIVATE test_tracker_clustering.cpp)
+
+target_link_libraries(sand_test_test_tracker_clustering PRIVATE sand_edep_reader sand_geoinfo)

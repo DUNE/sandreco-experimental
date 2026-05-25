@@ -66,10 +66,9 @@ namespace sand {
 
   } // namespace
 
-  static constexpr char s_grain_path[] = "sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0";
-
-  geoinfo::grain_info::grain_info(const geoinfo& gi, const std::string& inner_geom)
-    : subdetector_info(gi, s_grain_path), m_fiducial_solid(nullptr) {
+  geoinfo::grain_info::grain_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg)
+    : subdetector_info(gi, gp), m_fiducial_solid(nullptr) {
+    auto inner_geom = cfg.at("inner_geometry");
     UFW_INFO("Reading grain geometry details from {}.", inner_geom);
     // Parsing of this geometry assumes the file is well formed and complete
     auto& gdml             = ufw::context::current()->instance<grain::geant_gdml_parser>(ufw::public_id(inner_geom));

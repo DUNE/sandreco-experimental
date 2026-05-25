@@ -2,6 +2,8 @@
 
 #include <common/sand.h>
 
+#include <ufw/config.hpp>
+
 namespace sand {
 
   /**
@@ -18,22 +20,9 @@ namespace sand {
     class stt_info;
 
    private:
-    class path_not_found : public ufw::exception {
-     public:
-      path_not_found(const geo_path& p) : exception("Cannot find path '{}' in geometry.", p.c_str()) {}
-    };
-
     class invalid_geo_id : public ufw::exception {
      public:
-      invalid_geo_id(geo_id g) : exception("GUID {:x} is not a valid identifier.", g.raw) {}
-    };
-
-    class invalid_position : public ufw::exception {
-     public:
-      invalid_position(pos_3d pos)
-        : exception("No object found at position ({}, {}, {}).", pos.x(), pos.y(), pos.z()) {}
-      invalid_position(std::string_view type, pos_3d pos)
-        : exception("No {} found at position ({}, {}, {}).", type, pos.x(), pos.y(), pos.z()) {}
+      invalid_geo_id(geo_id g) : ufw::exception("GUID {:x} is not a valid identifier.", g.raw) {}
     };
 
    public:
@@ -41,15 +30,20 @@ namespace sand {
 
     ~geoinfo();
 
-    const ecal_info& ecal() const { return *m_ecal; }
+    const ecal_info& ecal() const { if (!m_ecal) { init_ecal(); } return *m_ecal; }
 
-    const grain_info& grain() const { return *m_grain; }
+    const grain_info& grain() const { if (!m_grain) { init_grain(); } return *m_grain; }
 
-    const tracker_info& tracker() const { return *m_tracker; }
+    const tracker_info& tracker() const { if (!m_tracker) { init_tracker(); } return *m_tracker; }
 
     geo_id id(const geo_path&) const;
 
     geo_path path(geo_id) const;
+
+   private:
+    void init_ecal() const;
+    void init_grain() const;
+    void init_tracker() const;
 
    private:
     friend class subdetector_info;
@@ -60,10 +54,14 @@ namespace sand {
     friend class stt_info;
 
    private:
-    std::unique_ptr<grain_info> m_grain;
-    std::unique_ptr<ecal_info> m_ecal;
-    std::unique_ptr<tracker_info> m_tracker;
+    mutable std::unique_ptr<grain_info> m_grain;
+    mutable std::unique_ptr<ecal_info> m_ecal;
+    mutable std::unique_ptr<tracker_info> m_tracker;
     geo_path m_root_path;
+    ufw::config m_grain_cfg;
+    ufw::config m_ecal_cfg;
+    ufw::config m_tracker_cfg;
+    subdetector_t m_tracker_type = NONE;
 
     const geo_path& root_path() const { return m_root_path; }
 

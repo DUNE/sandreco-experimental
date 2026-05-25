@@ -153,7 +153,12 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     //apply shift
     ApplyTranslation();
 
-    G4int myPDG = m_hits_it->GetPrimaryId();
+    int myPrimary = m_hits_it->GetContrib();
+    edep_reader& edep = ufw::context::current()->instance<edep_reader>();
+    auto myTrajectory = edep.GetTrajectory(myPrimary);
+    UFW_ASSERT(myTrajectory != edep.end(), "Trajectory not found");
+    int myPDG = myTrajectory->GetPDGCode();
+
     G4ParticleDefinition *myParticle = G4ParticleTable::GetParticleTable()->FindParticle(myPDG);
 
     //This is code from EDepSim to deal with nuclear PDGs
@@ -200,7 +205,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     else                   myNumPhotons = int(G4RandGauss::shoot(myphotons, sqrt(myphotons))+0.5);
     if(myNumPhotons < 0)   myNumPhotons = 0 ;
 
-    UFW_DEBUG("Shooting {} photons", myNumPhotons);
+    UFW_DEBUG("Shooting {} photons for hit {} with {} MeV energy, deposited by PDG {}", myNumPhotons, m_hits_it->GetId(), m_hits_it->GetSecondaryDeposit(), myPDG);
 
     //TODO: check better sources
     // Xe-DOPING --> Xe-doping increases the overall LY to 1.20 pure LAr

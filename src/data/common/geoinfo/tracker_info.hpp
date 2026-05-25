@@ -117,7 +117,7 @@ namespace sand {
     };
 
    public:
-    tracker_info(const geoinfo&, const geo_path&);
+    tracker_info(const geoinfo&, const geo_path&, const ufw::config&);
 
     virtual ~tracker_info();
 
