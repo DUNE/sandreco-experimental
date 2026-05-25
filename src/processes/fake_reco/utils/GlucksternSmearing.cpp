@@ -8,7 +8,7 @@ namespace smearing {
   [[nodiscard]] constexpr float gev_to_mev(float E) { return E * 1000.0f; }
 
   template <Mode M>
-  double get_path_len_over_x0(const std::vector<sand::vec_4d> hit_points) {
+  double get_path_len_over_x0(const std::vector<sand::vec_4d>& hit_points) {
     // here hit_points are taken as the medium point of the original HitSegment
 
     auto& tgm = ufw::context::current()->instance<sand::root_tgeomanager>();
@@ -97,10 +97,7 @@ namespace smearing {
 
         // then compute path_len/x0
         m_path_len_over_x0.full = get_path_len_over_x0<Mode::full>(hit_pts_above_thr);
-        UFW_INFO("line {}", __LINE__);
-
         m_path_len_over_x0.transverse = get_path_len_over_x0<Mode::transverse>(hit_pts_above_thr);
-        UFW_INFO("line {}", __LINE__);
         m_smearing_enabled = true;
       }
     }
@@ -146,6 +143,6 @@ namespace smearing {
                              gev_to_mev(smeared_p_transverse_gev) * std::cos(smeared_zy_angle)};
     }
   } // namespace gluckstern
-  template double get_path_len_over_x0<Mode::full>(const std::vector<sand::vec_4d>);
-  template double get_path_len_over_x0<Mode::transverse>(const std::vector<sand::vec_4d>);
+  template double get_path_len_over_x0<Mode::full>(const std::vector<sand::vec_4d>&);
+  template double get_path_len_over_x0<Mode::transverse>(const std::vector<sand::vec_4d>&);
 } // namespace smearing
