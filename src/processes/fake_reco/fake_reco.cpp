@@ -15,6 +15,10 @@ namespace sand {
   void fake_reco::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_reco_mode = cfg.at("mode");
+    m_hit_sigma_y = cfg.at("hit_sigma_y");
+    m_hit_sigma_x = cfg.at("hit_sigma_x");
+    m_hit_energy_thr = cfg.at("hit_energy_thr");
+    m_b_field_magnitude = cfg.at("b_field_magnitude");
   }
 
   void fake_reco::run() {
@@ -171,7 +175,7 @@ namespace sand {
       UFW_INFO("Using reconstruction from truth with smearing");
       make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
         const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
-        return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj);
+        return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj, m_hit_sigma_y, m_hit_sigma_x, m_hit_energy_thr, m_b_field_magnitude);
       };
     } else {
       UFW_FATAL("You need to specify which reco mode you want to use");
