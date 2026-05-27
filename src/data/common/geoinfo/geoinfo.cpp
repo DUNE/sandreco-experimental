@@ -56,7 +56,7 @@ namespace sand {
       isSTT |= (name.find("STTtracker") != std::string::npos);
     });
 
-    bool isGenericDrift = false;
+    bool isGenericDrift = false; /// CHECKME!!!
     for (int d = 0; d < nav->GetCurrentNode()->GetNdaughters(); ++d) {
       std::string daughter_tmp = nav->GetCurrentNode()->GetDaughter(d)->GetName(); // SANDtracker_PV_0
       if (daughter_tmp.find("SANDtracker") != std::string::npos) {
@@ -76,10 +76,10 @@ namespace sand {
     if (isSTT) {
       UFW_INFO("STT subdetector implementation detected.");
       m_tracker_cfg.update(stt_cfg);
-    } else if (isGenericDrift){
+      m_tracker_type = STT;
+    } else if (isGenericDrift){ /// FIXME!!!
       UFW_INFO("Generic Drift subdetector implementation detected.");
       m_tracker.reset(new generic_drift_info(*this, drift_view_angle, drift_view_offset, drift_view_spacing));
-      m_tracker_type = STT;
     } else {
       UFW_INFO("Drift subdetector implementation detected.");
       m_tracker_type = DRIFT;
