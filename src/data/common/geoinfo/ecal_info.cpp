@@ -581,6 +581,59 @@ namespace sand {
          + (1. - f.fraction) * std::exp(-d / f.attenuation_length_2);
   }
 
+  geoinfo::ecal_info::face_side geoinfo::ecal_info::cell::side(geoinfo::ecal_info::face_location face_id) const {
+    const auto& elements = element_collection().elements();
+
+    if (elements.empty()) {
+      UFW_ERROR("Cannot determine ECAL cell face side: cell {} has no shape elements", id().raw);
+      return geoinfo::ecal_info::face_side::unknown;
+    }
+
+    const auto begin_centroid = elements.front()->begin_face().centroid();
+
+    const auto end_centroid = elements.back()->end_face().centroid();
+
+    const auto cid = id();
+
+    if (cid.region == geo_id::region_t::BARREL) {
+      if (is_zero_within_tolerance(begin_centroid.x() - end_centroid.x())) {
+        return geoinfo::ecal_info::face_side::unknown;
+      }
+
+      if (face_id == geoinfo::ecal_info::face_location::begin) {
+        return begin_centroid.x() < end_centroid.x() ? geoinfo::ecal_info::face_side::north
+                                                     : geoinfo::ecal_info::face_side::south;
+      }
+
+      if (face_id == geoinfo::ecal_info::face_location::end) {
+        return end_centroid.x() < begin_centroid.x() ? geoinfo::ecal_info::face_side::north
+                                                     : geoinfo::ecal_info::face_side::south;
+      }
+
+      return geoinfo::ecal_info::face_side::unknown;
+    }
+
+    if (cid.region == geo_id::region_t::ENDCAP_A || cid.region == geo_id::region_t::ENDCAP_B) {
+      if (is_zero_within_tolerance(begin_centroid.y() - end_centroid.y())) {
+        return geoinfo::ecal_info::face_side::unknown;
+      }
+
+      if (face_id == geoinfo::ecal_info::face_location::begin) {
+        return begin_centroid.y() < end_centroid.y() ? geoinfo::ecal_info::face_side::down
+                                                     : geoinfo::ecal_info::face_side::up;
+      }
+
+      if (face_id == geoinfo::ecal_info::face_location::end) {
+        return end_centroid.y() < begin_centroid.y() ? geoinfo::ecal_info::face_side::down
+                                                     : geoinfo::ecal_info::face_side::up;
+      }
+
+      return geoinfo::ecal_info::face_side::unknown;
+    }
+
+    return geoinfo::ecal_info::face_side::unknown;
+  }
+
   pos_3d cell::offset2position(double offset_from_center) const {
     if (offset_from_center < -0.5 * total_pathlength())
       return element_collection().elements().front()->begin_face().centroid();
@@ -751,7 +804,8 @@ namespace sand {
   // geoinfo::ecal_info
   //////////////////////////////////////////////////////
 
-  geoinfo::ecal_info::ecal_info(const geoinfo& gi) : subdetector_info(gi, "kloe_calo_volume_PV_0") {
+  geoinfo::ecal_info::ecal_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg)
+    : subdetector_info(gi, gp) {
     find_modules(gi.root_path() / path());
   }
 

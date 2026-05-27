@@ -1,0 +1,5 @@
+sandreco_add_process(sand_tracker_clustering)
+
+target_sources(sand_tracker_clustering PRIVATE clustering.cpp)
+
+target_link_libraries(sand_tracker_clustering PRIVATE sand_edep_reader sand_root_tgeomanager sand_geoinfo)

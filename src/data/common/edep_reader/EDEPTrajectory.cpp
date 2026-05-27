@@ -551,6 +551,26 @@ bool EDEPTrajectory::HasHitWithId(int id) const {
 }
 
 /**
+ * @brief Returns the hit in the trajectory with the specified ID.
+ *
+ * This function searches through all hits in the trajectory and returns the one that has a matching ID.
+ *
+ * @param id The ID to search for.
+ * @return the hit with the specified ID.
+ */
+ const EDEPHit& EDEPTrajectory::GetHitWithId(int id) const {
+  auto f = [id](const EDEPHit& hit) { return (id == hit.GetId()) ? true : false; };
+  for (const auto& hits : hit_map_) {
+    auto found_hit = std::find_if(hits.second.begin(), hits.second.end(), f);
+    bool result    = (found_hit != hits.second.end());
+    if (result)
+      return *found_hit;
+  }
+  UFW_ERROR("Hit with id {} not found", id);
+}
+
+
+/**
  * @brief Checks if the trajectory has a hit with the specified ID in the specified detector component.
  * @param id The ID of the hit.
  * @param component_name The name of the detector component.

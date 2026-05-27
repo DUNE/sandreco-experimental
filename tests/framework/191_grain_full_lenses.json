@@ -19,18 +19,14 @@
   },
   "globals" : {
     "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
-    "sand::geoinfo" : { "grain_geometry" : "gdml-lenses", 
-                         "drift_view_angle" : [0.0, -0.087266463, 0.087266463],
-                         "drift_view_offset" : [10.0, 10.0, 10.0],
-                         "drift_view_spacing" : [10.0, 10.0, 10.0] },
+    "sand::geoinfo" : { "grain" : { "inner_geometry" : "gdml-lenses" } },
     "sand::grain::geant_run_manager" : {},
     "sand::grain::geant_gdml_parser" : {
-      "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" },
       "gdml-lenses" : { "path" : "geometries/grain/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}
     }
   },
   "contexts" : {
-    "keys" : [10,11,15],
+    "keys" : [10,11,15,16],
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"}
     },
@@ -51,13 +47,13 @@
             "geometry" : "gdml-lenses",
             "pde": 0.999},
         "reqs" : {"hits" : "grain_hits"},
-        "prods" : {"digi": "grain_digits"}
+        "prods" : {"digi": "grain_digi"}
       },
       {
         "sand::grain::spill_slicer" : {
             "slice_times": [0.0, 2000.0, 20000.0]
         },
-        "reqs" : {"digi" : "grain_digits"},
+        "reqs" : {"digi" : "grain_digi"},
         "prods" : {"images": "grain_images"}
       },
       {

@@ -20,40 +20,41 @@
 
 namespace sand {
 
+  namespace {
+    constexpr char root_path[]  = "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/";
+    constexpr char ecal_path[]  = "kloe_calo_volume_PV_0/";
+    constexpr char inner_path[] = "sand_inner_volume_PV_0/";
+    constexpr char grain_path[] = "GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0/";
+    constexpr char stt_path[]   = "STTtracker_PV_0/";
+    constexpr char drift_path[] = "SANDtracker_PV_0/";
+  }
+
+  /**
+   * Parameters for subdetectors are passed with a json object for that specific subdetector, whereas global paramters are
+   * passed as top level keys. Drift or STT specific parameters will be merged with the tracker ones.
+   */
   geoinfo::geoinfo(const ufw::config& cfg) {
-    m_root_path      = cfg.value("basepath", "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/");
+    m_root_path    = cfg.value("basepath", sand::root_path);
+    m_grain_cfg    = cfg.value("grain", ufw::json::object());
+    m_ecal_cfg     = cfg.value("ecal", ufw::json::object());
+    m_tracker_cfg  = cfg.value("tracker", ufw::json::object());
+    auto drift_cfg = cfg.value("drift", ufw::json::object());
+    auto stt_cfg   = cfg.value("stt", ufw::json::object());
+
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-
-    auto grain_path = cfg.at("grain_geometry");
-    auto drift_view_angle = cfg.value("drift_view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
-    auto drift_view_offset = cfg.value("drift_view_offset", std::array<double, 3>{10.0, 10.0, 10.0});
-    auto drift_view_spacing = cfg.value("drift_view_spacing", std::array<double, 3>{10.0, 10.0, 10.0});
-
-    auto nav               = tgm.navigator();
-
-    try {
-      nav->cd(m_root_path.c_str());
-    } catch (ufw::exception& e) {
-      UFW_EXCEPT(path_not_found, m_root_path);
-    }
+    auto nav  = tgm.navigator();
 
     UFW_DEBUG("Using root path '{}'.", m_root_path.c_str());
+    nav->cd(m_root_path.c_str());
 
-    m_grain.reset(new grain_info(*this, grain_path));
-    m_ecal.reset(new ecal_info(*this));
+    auto inner = m_root_path / inner_path;
 
-    auto subpath = m_root_path;
-    subpath = m_root_path / "sand_inner_volume_PV_0";
-
-    nav->cd(subpath.c_str());
+    nav->cd(inner);
     bool isSTT = false;
-    for (int d = 0; d < nav->GetCurrentNode()->GetNdaughters(); ++d) {
-      std::string daughter_tmp = nav->GetCurrentNode()->GetDaughter(d)->GetName(); // STTtracker_PV_0
-      if (daughter_tmp.find("STTtracker") != std::string::npos) {
-        isSTT = true;
-        break;
-      }
-    }
+    nav->for_each_node([&isSTT](auto node){
+      std::string name = node->GetName();
+      isSTT |= (name.find("STTtracker") != std::string::npos);
+    });
 
     bool isGenericDrift = false;
     for (int d = 0; d < nav->GetCurrentNode()->GetNdaughters(); ++d) {
@@ -74,17 +75,40 @@ namespace sand {
 
     if (isSTT) {
       UFW_INFO("STT subdetector implementation detected.");
-      m_tracker.reset(new stt_info(*this));
+      m_tracker_cfg.update(stt_cfg);
     } else if (isGenericDrift){
       UFW_INFO("Generic Drift subdetector implementation detected.");
       m_tracker.reset(new generic_drift_info(*this, drift_view_angle, drift_view_offset, drift_view_spacing));
+      m_tracker_type = STT;
     } else {
       UFW_INFO("Drift subdetector implementation detected.");
-      m_tracker.reset(new drift_info(*this, drift_view_angle, drift_view_offset, drift_view_spacing));
+      m_tracker_type = DRIFT;
+      m_tracker_cfg.update(drift_cfg);
     }
   }
 
   geoinfo::~geoinfo() = default;
+
+  void geoinfo::init_ecal() const {
+    m_ecal.reset(new ecal_info(*this, ecal_path, m_ecal_cfg));
+  }
+
+  void geoinfo::init_grain() const {
+    m_grain.reset(new grain_info(*this, geo_path(inner_path) / grain_path, m_grain_cfg));
+  }
+
+  void geoinfo::init_tracker() const {
+    switch (m_tracker_type) {
+      case DRIFT:
+      m_tracker.reset(new drift_info(*this, geo_path(inner_path) / drift_path, m_tracker_cfg));
+      return;
+      case STT:
+      m_tracker.reset(new stt_info(*this, geo_path(inner_path) / stt_path, m_tracker_cfg));
+      return;
+      default:
+      UFW_ERROR("Unknown tracker type");
+    }
+  }
 
   geo_id geoinfo::id(const geo_path& gp) const {
     geo_id gi;
