@@ -15,10 +15,10 @@ namespace sand {
   void fake_reco::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_reco_mode = cfg.at("mode");
-    m_hit_sigma_y = cfg.at("hit_sigma_y");
-    m_hit_sigma_x = cfg.at("hit_sigma_x");
-    m_hit_energy_thr = cfg.at("hit_energy_thr");
-    m_b_field_magnitude = cfg.at("b_field_magnitude");
+    m_hit_sigma_y = cfg.value("hit_sigma_y", 0.);
+    m_hit_sigma_x = cfg.value("hit_sigma_x", 0.);
+    m_hit_energy_thr = cfg.value("hit_energy_thr", 0.);
+    m_b_field_magnitude = cfg.value("b_field_magnitude", 0.);
   }
 
   void fake_reco::run() {

@@ -70,41 +70,39 @@ namespace sand {
     }
     
     GlucksternSmearing::GlucksternSmearing(double sigma_y, double sigma_x, double b, const std::vector<EDEPHit>& trk_hits)
-      : hit_sigma_y(sigma_y), hit_sigma_x(sigma_x), b_field_magnitude(b) {
-      if (sigma_y <= 0) throw std::invalid_argument("sigma_y must be positive");
-      if (sigma_x <= 0) throw std::invalid_argument("sigma_x must be positive");
-      if (b < 0) throw std::invalid_argument("b_field_magnitude cannot be negative");
-    }
+      : hit_sigma_y(sigma_y), hit_sigma_x(sigma_x), b_field_magnitude(b) {}
 
     GlucksternSmearing::GlucksternSmearing(const std::vector<EDEPHit>& trk_hits, const double hit_energy_thr) {
       // filter the hits below k_hit_energy_thr and fill the mean coordinates
-      std::vector<sand::vec_4d> hit_pts_above_thr;
-      hit_pts_above_thr.reserve(trk_hits.size());
+      std::vector<sand::vec_4d> m_hit_pts_above_thr;
+      m_hit_pts_above_thr.reserve(trk_hits.size());
 
       for (const auto& hit : trk_hits) {
         if (hit.GetEnergyDeposit() > hit_energy_thr) {
-          hit_pts_above_thr.push_back(0.5 * (hit.GetStart() + hit.GetStop()));
+          m_hit_pts_above_thr.push_back(0.5 * (hit.GetStart() + hit.GetStop()));
         }
       }
 
-      if (hit_pts_above_thr.size() < 2) { // require at least 2 points
+      if (m_hit_pts_above_thr.size() < 2) { // require at least 2 points
         UFW_INFO("Trajectory has <2 hits above energy threshold.");
         m_smearing_enabled = false;
       } else {
-        m_n_pts = hit_pts_above_thr.size(); // set the number of points for Gluckstern smearing
+        m_n_pts = m_hit_pts_above_thr.size(); // set the number of points for Gluckstern smearing
         // lever arm in the bending plane (YZ) for Gluckstern formula
-        const auto hits_delta = hit_pts_above_thr.back() - hit_pts_above_thr.front();
+        const auto hits_delta = m_hit_pts_above_thr.back() - m_hit_pts_above_thr.front();
         m_lever_arm           = std::hypot(hits_delta.Y(), hits_delta.Z());
         m_lever_arm /= 1E3; // mm -> m
 
-        // then compute path_len/x0
-        m_path_len_over_x0.full = get_path_len_over_x0<Mode::full>(hit_pts_above_thr);
-        m_path_len_over_x0.transverse = get_path_len_over_x0<Mode::transverse>(hit_pts_above_thr);
         m_smearing_enabled = true;
       }
     }
 
     caf::SRVector3D GlucksternSmearing::apply_smearing(const caf::SRLorentzVector& true_p, const double hit_sigma_y, const double hit_sigma_x, const double b_field_magnitude) const {
+
+      // compute path_len/x0 (in this way we isolate the use of ufw tgeomanager in a single function, and not in the constructor, so it is easier to make standalone tests)
+      m_path_len_over_x0.full = get_path_len_over_x0<Mode::full>(m_hit_pts_above_thr);
+      m_path_len_over_x0.transverse = get_path_len_over_x0<Mode::transverse>(m_hit_pts_above_thr);
+      
       const float p_transverse = std::hypot(true_p.Y(), true_p.Z());
       const auto dip_angle     = std::atan(true_p.X() / p_transverse);
       const auto zy_angle      = std::atan2(true_p.Y(), true_p.Z());

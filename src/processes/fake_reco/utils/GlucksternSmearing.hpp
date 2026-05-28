@@ -15,14 +15,14 @@
 
 namespace sand {
   
-  namespace smearing_constants {
+  namespace constants {
       constexpr double light_velocity    = TMath::C();  // [m/s]
       constexpr double e_charge          = TMath::Qe(); // [C]
       constexpr double MeV_to_J          = TMath::Qe()*1e6;
       constexpr double edepsim_density_to_g_cm3 = 6.42e18;
   }
   
-  namespace sk = smearing_constants;
+  namespace k = constants;
   
   /** @brief Calculates the radiation length (X0) according to the formula from: https://cds.cern.ch/record/1279627/files/PH-EP-Tech-Note-2010-013.pdf
   */
@@ -30,7 +30,7 @@ namespace sand {
 
   /// @brief Gets the density of the current material in g/cm³
   inline double get_density_g_cm3(sand::root_tgeomanager& tgm) {
-    return tgm.navigator()->GetCurrentNode()->GetVolume()->GetMaterial()->GetDensity() / sk::edepsim_density_to_g_cm3;
+    return tgm.navigator()->GetCurrentNode()->GetVolume()->GetMaterial()->GetDensity() / k::edepsim_density_to_g_cm3;
   }
 
   /// @brief Calculates the path length through the material in c
@@ -67,11 +67,14 @@ namespace sand {
     /// @brief Checks if the smearing was correctly initialized (i.e. > 2 hit points)
     bool IsValid() const { return m_smearing_enabled; }
 
+    int GetNHits() const { return m_n_pts; }
+
     private:
     int m_n_pts;                         // number of trajectory hits in the tracker
     double m_lever_arm;                  // lever arm from the trajectory hits in the tracker [m] (zy plane)
-    PathLengthOverX0 m_path_len_over_x0; // cumulative l/x0 over the trajectory path in the tracker
+    mutable PathLengthOverX0 m_path_len_over_x0; // cumulative l/x0 over the trajectory path in the tracker
     bool m_smearing_enabled = false;
+    std::vector<sand::vec_4d> m_hit_pts_above_thr;
 
     static ufw::context::random_engine& m_random_engine() { return ufw::context::current()->engine(); };
 
@@ -84,7 +87,7 @@ namespace sand {
     /// @brief Calculates the multiple Coulomb scattering contribution to Gluckstern smearing
     double compute_mcs_measurement_smearing(const double path_len_over_x0_tr, const double b_field_magnitude) const {
       return (
-          ((19.2 * sk::MeV_to_J) / (std::sqrt(2) * m_lever_arm * sk::e_charge * b_field_magnitude * sk::light_velocity))
+          ((19.2 * k::MeV_to_J) / (std::sqrt(2) * m_lever_arm * k::e_charge * b_field_magnitude * k::light_velocity))
           * std::sqrt(path_len_over_x0_tr));
     }
 

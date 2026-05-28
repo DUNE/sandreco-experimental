@@ -7,23 +7,29 @@
   },
   "globals": {
     "sand::root_tgeomanager": {
-      "geometry": "test/sand-spills.5.edep.root"
+      "geometry": "test/sand-events.0000000.OVERLAY.root"
     }
   },
   "contexts": {
     "keys": 2,
     "locals": {
       "sand::edep_reader": {
-        "uri": "test/sand-spills.5.edep.root"
+        "uri": "test/sand-events.0000000.OVERLAY.root"
       },
       "sand::genie_reader": {
-        "uri": "test/sand-spills.5.edep.root"
+        "uri": "test/sand-events.0000000.OVERLAY.root"
       }
     }
   },
   "run": [
     {
-      "sand::fake_reco": {},
+      "sand::fake_reco": {
+        "mode" : "smearing",
+        "hit_sigma_y" : 200e-6,
+        "hit_sigma_x" : 2e-3,
+        "hit_energy_thr" : 250e-6,
+        "b_field_magnitude" : 0.6
+      },
       "reqs": {},
       "prods": {
         "output_caf": "produced_caf"
