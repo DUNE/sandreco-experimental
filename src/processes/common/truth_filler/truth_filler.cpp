@@ -1,7 +1,10 @@
 #include "truth_filler.hpp"
+#include "truth_filler_details.hpp"
 
 #include <ufw/factory.hpp>
 #include <ufw/utils.hpp>
+
+#include <algorithm>
 #include <vector>
 
 namespace sand {
@@ -25,22 +28,27 @@ namespace sand {
   void truth_filler::configure(ufw::config const& cfg) { process::configure(cfg); }
 
   void truth_filler::run() {
-    auto const& genie = &get<genie_reader>();
-    auto const& edep  = &get<edep_reader>();
-    auto caf          = &set<sand::caf::caf_wrapper>("output_caf");
+    auto const* genie = &get<genie_reader>();
+    auto const* edep  = &get<edep_reader>();
+    auto* caf         = &set<sand::caf::caf_wrapper>("output_caf");
 
-    auto const& primaries = edep->GetChildrenTrajectories();
-
+    auto const& primaries   = edep->GetChildrenTrajectories();
     auto interaction_ranges = make_interaction_ranges(primaries);
 
-    UFW_ASSERT(interaction_ranges.size() == genie->events_.size(),
-               "Mismatch between edep-sim interactions ({}) and GENIE events ({})", interaction_ranges.size(),
-               genie->events_.size());
+    auto const n_ixn = genie->events_.size();
+
+    UFW_ASSERT(interaction_ranges.size() == n_ixn, "Mismatch between edep-sim interactions ({}) and GENIE events ({})",
+               interaction_ranges.size(), n_ixn);
+
+    caf->mc.nnu = static_cast<int>(n_ixn);
+    caf->mc.nu.reserve(n_ixn);
 
     for (std::size_t ixn_idx{}; ixn_idx != interaction_ranges.size(); ++ixn_idx) {
-      auto const& [first_prim_idx, prim_count] = interaction_ranges[ixn_idx];
-      auto const& event                        = genie->events_[ixn_idx];
-      auto const& stdhep                       = genie->stdHeps_[ixn_idx];
+      auto [first_prim_idx, prim_count] = interaction_ranges[ixn_idx];
+      const auto& event                 = genie->events_[ixn_idx];
+      const auto& stdhep                = genie->stdHeps_[ixn_idx];
+
+      auto& true_ixn = caf->mc.nu.emplace_back(sand::mctruth::true_interaction_from_genie(event, stdhep));
     }
   }
 
