@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_test_grain_mask_weight_computation)
+
+target_sources(sand_test_test_grain_mask_weight_computation PRIVATE test_grain_mask_weight_computation.cpp)
+
+target_link_libraries(sand_test_test_grain_mask_weight_computation PRIVATE sand_geoinfo sand_hdf5)
