@@ -44,7 +44,7 @@ namespace sand {
 
       // TRUTH
       // Create and fill SRTrueInteraction from GENIE
-      auto& true_ixn = m_caf->mc.nu.emplace_back(CAFFiller<::caf::SRTrueInteraction>::from_genie(event, stdhep));
+      auto true_ixn = m_caf->mc.nu.emplace_back(CAFFiller<::caf::SRTrueInteraction>::from_genie(event, stdhep));
 
       // Add pre-FSI hadrons from GENIE StdHep
       CAFFiller<::caf::SRTrueInteraction>::add_prefsi(true_ixn, stdhep);
