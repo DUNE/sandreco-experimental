@@ -74,7 +74,6 @@ namespace sand {
 
     GlucksternSmearing::GlucksternSmearing(const std::vector<EDEPHit>& trk_hits, const double hit_energy_thr) {
       // filter the hits below k_hit_energy_thr and fill the mean coordinates
-      std::vector<sand::vec_4d> m_hit_pts_above_thr;
       m_hit_pts_above_thr.reserve(trk_hits.size());
 
       for (const auto& hit : trk_hits) {

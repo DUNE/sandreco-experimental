@@ -14,7 +14,7 @@ namespace sand {
 
   void fake_reco::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_reco_mode = cfg.at("mode");
+    m_reco_mode = cfg.value("mode", "truth");
     m_hit_sigma_y = cfg.value("hit_sigma_y", 0.);
     m_hit_sigma_x = cfg.value("hit_sigma_x", 0.);
     m_hit_energy_thr = cfg.value("hit_energy_thr", 0.);
