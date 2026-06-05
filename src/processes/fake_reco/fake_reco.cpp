@@ -89,7 +89,7 @@ namespace sand {
       m_caf->nd.sand.nixn++;
 
       // Process particles: create SRRecoParticle, SRTrack, SRShower
-      process_interaction_particles(true_ixn, reco_ixn, sand_ixn, ixn_idx, first_prim_idx, prim_count);
+      process_interaction_particles(true_ixn, reco_ixn, sand_ixn);
 
       // Compute direction from sum of particle momenta
       auto sum_mom = std::accumulate(reco_ixn.part.sandreco.begin(), reco_ixn.part.sandreco.end(),
@@ -173,9 +173,7 @@ namespace sand {
   }
 
   void fake_reco::process_interaction_particles(::caf::SRTrueInteraction& true_ixn, ::caf::SRInteraction& reco_ixn,
-                                                ::caf::SRSANDInt& sand_ixn,
-                                                [[maybe_unused]] std::size_t interaction_index,
-                                                std::size_t edep_first_index, std::size_t edep_count) const {
+                                                ::caf::SRSANDInt& sand_ixn) const {
     // Reserve space for reco objects
     const std::size_t prim_count = true_ixn.prim.size();
     const std::size_t sec_count = true_ixn.sec.size();

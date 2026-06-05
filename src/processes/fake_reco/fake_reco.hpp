@@ -37,8 +37,7 @@ namespace sand {
 
     /// @brief Process all particles for one interaction
     void process_interaction_particles(::caf::SRTrueInteraction& true_ixn, ::caf::SRInteraction& reco_ixn,
-                                       ::caf::SRSANDInt& sand_ixn, std::size_t interaction_index,
-                                       std::size_t edep_first_index, std::size_t edep_count) const;
+                                       ::caf::SRSANDInt& sand_ixn) const;
 
     /// @brief Verify all size counters match vector sizes
     void assert_sizes() const;
