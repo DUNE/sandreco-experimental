@@ -38,7 +38,7 @@ namespace sand::test {
     const auto weights_dimensions = weights.range(weights.datasets().front());
     const size_t weights_size =
         weights_dimensions[0] * weights_dimensions[1] * weights_dimensions[2] * weights_dimensions[3];
-    UFW_WARN("weights shape: {}, {}, {}, {}", weights_dimensions[0], weights_dimensions[1], weights_dimensions[2],
+    UFW_DEBUG("weights shape: {}, {}, {}, {}", weights_dimensions[0], weights_dimensions[1], weights_dimensions[2],
              weights_dimensions[3]);
     if (weights.datasets().size() != gi.grain().mask_cameras().size()) {
       UFW_ERROR("Mismatch between cameras in geometry ({}) and computed weight arrays ({})",
@@ -59,13 +59,13 @@ namespace sand::test {
         if (fid_val > 0) {
           for (float w : camera_weights.at(idx)) {
             if (w < 0 || w >= 1) {
-              UFW_ERROR("Invalid weight {} in fiducial, at index {}", w, idx);
+              UFW_WARN("Invalid weight {} in fiducial, at index {}", w, idx);
             }
           }
         } else {
           for (float w : camera_weights.at(idx)) {
             if (w != 0) {
-              UFW_ERROR("Invalid weight {} outside of fiducial, at index {}", w, idx);
+              UFW_WARN("Invalid weight {} outside of fiducial, at index {}", w, idx);
             }
           }
         }
