@@ -39,7 +39,7 @@ namespace sand::test {
     const size_t weights_size =
         weights_dimensions[0] * weights_dimensions[1] * weights_dimensions[2] * weights_dimensions[3];
     UFW_DEBUG("weights shape: {}, {}, {}, {}", weights_dimensions[0], weights_dimensions[1], weights_dimensions[2],
-             weights_dimensions[3]);
+              weights_dimensions[3]);
     if (weights.datasets().size() != gi.grain().mask_cameras().size()) {
       UFW_ERROR("Mismatch between cameras in geometry ({}) and computed weight arrays ({})",
                 gi.grain().mask_cameras().size(), weights.datasets().size());
@@ -55,21 +55,25 @@ namespace sand::test {
       UFW_ASSERT(sizeof(grain::pixel_array<float>) == 4096, "pixel array is not dense");
       weights.read(camera, camera_weights.data());
       UFW_DEBUG("camera name {}", camera);
-      voxels.for_each([&camera_weights](const sand::grain::index_3d idx, auto fid_val) {
-        if (fid_val > 0) {
-          for (float w : camera_weights.at(idx)) {
-            if (w < 0 || w >= 1) {
-              UFW_WARN("Invalid weight {} in fiducial, at index {}", w, idx);
-            }
-          }
-        } else {
-          for (float w : camera_weights.at(idx)) {
-            if (w != 0) {
-              UFW_WARN("Invalid weight {} outside of fiducial, at index {}", w, idx);
-            }
-          }
+      float camera_w_sum = 0;
+      voxels.for_each([&camera_weights, &camera_w_sum](const sand::grain::index_3d idx, auto fid_val) {
+        for (float w : camera_weights.at(idx)) {
+          camera_w_sum += w;
+          //   if (fid_val > 0) {
+          //     for (float w : camera_weights.at(idx)) {
+          //       if (w < 0 || w >= 1) {
+          //         UFW_WARN("Invalid weight {} in fiducial, at index {}", w, idx);
+          //       }
+          //     }
+          //   } else {
+          //     for (float w : camera_weights.at(idx)) {
+          //       if (w != 0) {
+          //         UFW_WARN("Invalid weight {} outside of fiducial, at index {}", w, idx);
+          //       }
+          //     }
         }
       });
+      UFW_INFO("camera {} weights sum = {}", camera, camera_w_sum);
     }
   }
 } // namespace sand::test

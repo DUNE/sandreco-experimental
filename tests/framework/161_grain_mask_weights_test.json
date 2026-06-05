@@ -14,7 +14,7 @@
     },
     "sand::hdf5::ndarray" : {
         "angle_reader" : {
-          "uri" : "/home/sand/weights/voxel_weights_50mm.h5",
+          "uri" : "test/voxel_weights.h5",
           "io" : "read"
         }
       }
