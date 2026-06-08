@@ -19,7 +19,7 @@ namespace sand {
       constexpr double light_velocity    = TMath::C();  // [m/s]
       constexpr double e_charge          = TMath::Qe(); // [C]
       constexpr double MeV_to_J          = TMath::Qe()*1e6;
-      constexpr double edepsim_density_to_g_cm3 = 6.42e18;
+      constexpr double edepsim_density_to_g_cm3 = 6.24e18;
   }
   
   namespace k = constants;
@@ -54,15 +54,15 @@ namespace sand {
   };
 
   struct GlucksternSmearing {
-    const double hit_sigma_y       = 200e-6;    // single hit y resolution in meters
-    const double hit_sigma_x       = 2e-3;      // single hit x resolution in meters
-    const double b_field_magnitude = 0.6;       // magnetic field magnitude in Tesla
+    const double intrinsic_pos_res_t  = 200e-6;    // single hit y resolution in meters
+    const double intrinsic_pos_res_l  = 2e-3;      // single hit x resolution in meters
+    const double b_field_magnitude    = 0.6;       // magnetic field magnitude in Tesla
 
     GlucksternSmearing(double sigma_y, double sigma_x, double b, const std::vector<EDEPHit>& trk_hits);
     GlucksternSmearing(const std::vector<EDEPHit>& trk_hits, const double hit_energy_thr);
 
     /// @brief Applies smearing to the four-momentum vector
-    caf::SRVector3D apply_smearing(const caf::SRLorentzVector& true_p, const double hit_sigma_y, const double hit_sigma_x, const double b_field_magnitude) const;
+    caf::SRVector3D apply_smearing(const caf::SRLorentzVector& true_p, const double intrinsic_pos_res_t, const double intrinsic_pos_res_l, const double b_field_magnitude) const;
 
     /// @brief Checks if the smearing was correctly initialized (i.e. > 2 hit points)
     bool IsValid() const { return m_smearing_enabled; }
@@ -79,8 +79,8 @@ namespace sand {
     static ufw::context::random_engine& m_random_engine() { return ufw::context::current()->engine(); };
 
     /// @brief Calculates the detector resolution contribution to Gluckstern smearing
-    double compute_measurement_smearing(const double p_transverse, const double hit_sigma_y, const double b_field_magnitude) const {
-      return ((hit_sigma_y * p_transverse) / (0.3 * b_field_magnitude * m_lever_arm * m_lever_arm))
+    double compute_measurement_smearing(const double p_transverse, const double intrinsic_pos_res_t, const double b_field_magnitude) const {
+      return ((intrinsic_pos_res_t * p_transverse) / (0.3 * b_field_magnitude * m_lever_arm * m_lever_arm))
             * std::sqrt(720.0 / (m_n_pts + 4));
     }
 
@@ -92,9 +92,9 @@ namespace sand {
     }
 
     /// @brief Calculates the detector resolution contribution to the dip angle measurement
-    double compute_angle_measurement_smearing(const double hit_sigma_x) const {
+    double compute_angle_measurement_smearing(const double intrinsic_pos_res_l) const {
       return ( 
-        (hit_sigma_x / m_lever_arm) * std::sqrt(12*(m_n_pts -1) / m_n_pts*(m_n_pts + 1))
+        (intrinsic_pos_res_l / m_lever_arm) * std::sqrt(12*(m_n_pts -1) / m_n_pts*(m_n_pts + 1))
       );
     }
 

@@ -15,8 +15,8 @@ namespace sand {
   void fake_reco::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_reco_mode = cfg.value("mode", "truth");
-    m_hit_sigma_y = cfg.value("hit_sigma_y", 0.);
-    m_hit_sigma_x = cfg.value("hit_sigma_x", 0.);
+    m_intrinsic_pos_res_t = cfg.value("intrinsic_pos_res_t", 0.);
+    m_intrinsic_pos_res_l = cfg.value("intrinsic_pos_res_l", 0.);
     m_hit_energy_thr = cfg.value("hit_energy_thr", 0.);
     m_b_field_magnitude = cfg.value("b_field_magnitude", 0.);
   }
@@ -175,10 +175,10 @@ namespace sand {
       UFW_INFO("Using reconstruction from truth with smearing");
       make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
         const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
-        return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj, m_hit_sigma_y, m_hit_sigma_x, m_hit_energy_thr, m_b_field_magnitude);
+        return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj, m_intrinsic_pos_res_t, m_intrinsic_pos_res_l, m_hit_energy_thr, m_b_field_magnitude);
       };
     } else {
-      UFW_FATAL("You need to specify which reco mode you want to use");
+      UFW_ERROR("You need to specify which reco mode you want to use");
     }
 
     // Loop over primary particles

@@ -25,8 +25,8 @@
     {
       "sand::fake_reco": {
         "mode" : "smearing",
-        "hit_sigma_y" : 200e-6,
-        "hit_sigma_x" : 2e-3,
+        "intrinsic_pos_res_t" : 200e-6,
+        "intrinsic_pos_res_l" : 2e-3,
         "hit_energy_thr" : 250e-6,
         "b_field_magnitude" : 0.6
       },

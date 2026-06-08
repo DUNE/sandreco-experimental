@@ -76,7 +76,7 @@ namespace sand {
     [[nodiscard]] static ::caf::SRRecoParticle from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part,
                                                                           const ::caf::TrueParticleID& id, 
                                                                           const EDEPTrajectory& true_part_trj,
-                                                                          double hit_sigma_y, double hit_sigma_x, double hit_energy_thr, double b_field_magnitude);
+                                                                          double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude);
   };
 
   /// @brief Fills SRTrack from truth (fake reconstruction)

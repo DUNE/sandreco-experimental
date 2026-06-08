@@ -36,7 +36,7 @@ namespace sand {
   }
 
   ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(
-      const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj, double hit_sigma_y, double hit_sigma_x, double hit_energy_thr, double b_field_magnitude) {
+      const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj, double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude) {
     // start by filling all fields from truth
     auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
     // return from_true for all particle except muons (temporarily)
@@ -59,7 +59,7 @@ namespace sand {
       return reco;
     }
 
-    reco.p = gluckstern_helper.apply_smearing(true_part.p, hit_sigma_y, hit_sigma_x, b_field_magnitude);
+    reco.p = gluckstern_helper.apply_smearing(true_part.p, intrinsic_pos_res_t, intrinsic_pos_res_l, b_field_magnitude);
 
     return reco;
   }

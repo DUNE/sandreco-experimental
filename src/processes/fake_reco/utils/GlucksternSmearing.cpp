@@ -1,5 +1,4 @@
 #include "GlucksternSmearing.hpp"
-#include <fstream>
 
 namespace sand {
   
@@ -70,7 +69,7 @@ namespace sand {
     }
     
     GlucksternSmearing::GlucksternSmearing(double sigma_y, double sigma_x, double b, const std::vector<EDEPHit>& trk_hits)
-      : hit_sigma_y(sigma_y), hit_sigma_x(sigma_x), b_field_magnitude(b) {}
+      : intrinsic_pos_res_t(sigma_y), intrinsic_pos_res_l(sigma_x), b_field_magnitude(b) {}
 
     GlucksternSmearing::GlucksternSmearing(const std::vector<EDEPHit>& trk_hits, const double hit_energy_thr) {
       // filter the hits below k_hit_energy_thr and fill the mean coordinates
@@ -96,7 +95,7 @@ namespace sand {
       }
     }
 
-    caf::SRVector3D GlucksternSmearing::apply_smearing(const caf::SRLorentzVector& true_p, const double hit_sigma_y, const double hit_sigma_x, const double b_field_magnitude) const {
+    caf::SRVector3D GlucksternSmearing::apply_smearing(const caf::SRLorentzVector& true_p, const double intrinsic_pos_res_t, const double intrinsic_pos_res_l, const double b_field_magnitude) const {
 
       // compute path_len/x0 (in this way we isolate the use of ufw tgeomanager in a single function, and not in the constructor, so it is easier to make standalone tests)
       m_path_len_over_x0.full = get_path_len_over_x0<Mode::full>(m_hit_pts_above_thr);
@@ -111,12 +110,12 @@ namespace sand {
       const auto true_p_gev       = mev_to_gev(true_p.Mag());
 
       // pt resolution (det + MCS)
-      const auto measure_pt_res = compute_measurement_smearing(p_transverse_gev, hit_sigma_y, b_field_magnitude);
+      const auto measure_pt_res = compute_measurement_smearing(p_transverse_gev, intrinsic_pos_res_t, b_field_magnitude);
       const auto mcs_pt_res     = compute_mcs_measurement_smearing(m_path_len_over_x0.full, b_field_magnitude);
       const auto pt_res         = std::hypot(measure_pt_res, mcs_pt_res);
 
       // MCS angle smearing: for zy used transverse path
-      const auto measure_angle_res = compute_angle_measurement_smearing(hit_sigma_x);
+      const auto measure_angle_res = compute_angle_measurement_smearing(intrinsic_pos_res_l);
       const auto mcs_dip_angle_res = compute_mcs_angle_smearing(m_path_len_over_x0.full, true_p_gev);
       const auto mcs_zy_angle_res  = compute_mcs_angle_smearing(m_path_len_over_x0.transverse, true_p_gev);
       const auto dip_angle_res     = std::hypot(measure_angle_res, mcs_dip_angle_res);

@@ -131,7 +131,6 @@ BOOST_AUTO_TEST_CASE(few_hit_points) {
   const auto& hit_map = true_part_trj.GetHitMap();
   const auto& it      = hit_map.find(component::DRIFT);
   const auto& hit_vec = it->second;
-  BOOST_TEST_MESSAGE("hit_vec.size() = " << hit_vec.size());
 
   const auto gluckstern_helper = GlucksternSmearing(hit_vec, 50.0f);
   auto reco = CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_part, id, true_part_trj, 0.1f, 0.1f,
