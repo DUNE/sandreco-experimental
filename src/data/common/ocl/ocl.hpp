@@ -148,14 +148,14 @@ namespace sand::cl {
 
     /**
      * This function allocates a buffer that needs to be initialized from the host via memory mapping.
-     * As this is a queued operation, it requires a queue. Will use host pinned memory if available.
+     * As this is a queued operation, it requires a queue. Will use host pinned memory if  you add CL_MEM_ALLOC_HOST_PTR.
      * @returns A pseudo-pointer that can be written to by the user, it will perform the unmap when going out of scope.
      */
     template <cl_mem_flags Flags>
     std::enable_if_t<!read_from_host_flags(Flags), autounmapping_ptr>
     allocate(const cl::Context& ctx, cl::CommandQueue& q, size_t nbytes, const Events& prereq = Events{}) {
       UFW_ASSERT(!is_allocated(), "Cannot reallocate buffer.");
-      m_buffer            = cl::Buffer(ctx, Flags | CL_MEM_ALLOC_HOST_PTR, nbytes);
+      m_buffer            = cl::Buffer(ctx, Flags, nbytes);
       m_size              = nbytes;
       const Events* evptr = prereq.empty() ? nullptr : &prereq;
       autounmapping_ptr ret(m_buffer, q);
