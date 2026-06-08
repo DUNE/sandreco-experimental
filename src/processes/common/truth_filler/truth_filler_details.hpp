@@ -10,6 +10,8 @@ namespace sand::mctruth {
 
   [[nodiscard]] bool is_lepton_pdg(int pdg);
 
+  [[nodiscard]] bool is_darkneutrino_pdg(int pdg);
+
   [[nodiscard]] int find_final_lepton(StdHep const& stdhep);
 
   struct Kinematics {

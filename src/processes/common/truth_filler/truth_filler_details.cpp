@@ -13,6 +13,11 @@ namespace sand::mctruth {
     return false;
   }
 
+  bool is_darkneutrino_pdg(int pdg) {
+    const int abs_pdg = std::abs(pdg);
+    return abs_pdg == 2000030000;
+  }
+
   int find_final_lepton(StdHep const& stdhep) {
     const auto daughters = stdhep.daughters_indexes_of_part(static_cast<int>(StdHepIndex::nu));
     if (daughters.empty()) {
@@ -22,7 +27,7 @@ namespace sand::mctruth {
     if (daughters.size() != 1) {
       UFW_ERROR("Nu produced {} leptons, expected 1", daughters.size());
     }
-    if (!is_lepton_pdg(stdhep.Pdg_[daughters[0]])) {
+    if (!is_lepton_pdg(stdhep.Pdg_[daughters[0]]) && !is_darkneutrino_pdg(stdhep.Pdg_[daughters[0]])) {
       UFW_ERROR("Nu didn't produce a lepton, PDG: {}", stdhep.Pdg_[daughters[0]]);
     }
     return daughters[0];
