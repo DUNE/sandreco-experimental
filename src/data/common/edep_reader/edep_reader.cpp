@@ -7,9 +7,22 @@
 #include <ufw/context.hpp>
 
 namespace sand {
-  truth_adapter::value_type& truth_adapter::at(const index_type&) { UFW_FATAL("Not yet implemented"); }
+  truth_adapter::value_type& truth_adapter::at(const index_type& id) {
+    edep_reader& edep = ufw::context::current()->instance<edep_reader>();
+    auto trajectory   = edep.GetTrajectoryWithHitId(id);
+    UFW_ASSERT(trajectory != edep.end(), "Trajectory not found");
+    UFW_DEBUG("Accessing hit with id {}, produced by particle with PDG: {}", id, trajectory->GetPDGCode());
+    auto& hit = trajectory->GetHitWithId(id);
+    UFW_ASSERT(hit.GetContrib() == trajectory->GetId(), "Hit does not belong to trajectory");
+    UFW_ASSERT(trajectory == edep.GetTrajectory(hit.GetContrib()), "Trajectory has identity issues");
+    return hit;
+  }
 
-  bool truth_adapter::valid(const index_type&) { UFW_FATAL("Not yet implemented"); }
+  bool truth_adapter::valid(const index_type& id) {
+    edep_reader& edep = ufw::context::current()->instance<edep_reader>();
+    auto trajectory   = edep.GetTrajectoryWithHitId(id);
+    return trajectory != edep.end();
+  }
 
 } // namespace sand
 
