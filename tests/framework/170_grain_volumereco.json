@@ -7,7 +7,7 @@
     },
     "globals" : {
     "sand::cl::platform" : {},
-    "sand::grain::volumereco_cl_manager" : {},
+    "sand::grain::volumereco_cl_manager" : { "voxel_size" : 150.0 },
     "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
     "sand::geoinfo" : { "grain" : { "inner_geometry" : "gdml-masks" } },
     "sand::grain::geant_gdml_parser" : {
@@ -38,7 +38,6 @@
       },
       {
         "sand::grain::volumereco" : {
-          "voxel_size" : 150.0,
           "max_iterations" : 3,
           "pde" : 1.0
         },
