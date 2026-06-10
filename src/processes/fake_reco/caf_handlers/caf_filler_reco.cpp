@@ -8,7 +8,7 @@ namespace sand {
       return normalize_to_direction(p.p.px, p.p.py, p.p.pz);
     }
 
-    [[nodiscard]] constexpr float gev_to_mev(float E) { return E * 1000.0f; }
+    // [[nodiscard]] constexpr float gev_to_mev(float E) { return E * 1000.0f; }
   } // namespace
 
   ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true(const ::caf::SRTrueParticle& true_part,

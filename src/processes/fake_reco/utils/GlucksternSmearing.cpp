@@ -2,10 +2,6 @@
 
 namespace sand {
   
-    [[nodiscard]] constexpr float mev_to_gev(float E) { return E / 1000.0f; }
-  
-    [[nodiscard]] constexpr float gev_to_mev(float E) { return E * 1000.0f; }
-  
     template <Mode M>
     double get_path_len_over_x0(const std::vector<sand::vec_4d>& hit_points) {
       // here hit_points are taken as the medium point of the original HitSegment
@@ -88,8 +84,7 @@ namespace sand {
         m_n_pts = m_hit_pts_above_thr.size(); // set the number of points for Gluckstern smearing
         // lever arm in the bending plane (YZ) for Gluckstern formula
         const auto hits_delta = m_hit_pts_above_thr.back() - m_hit_pts_above_thr.front();
-        m_lever_arm           = std::hypot(hits_delta.Y(), hits_delta.Z());
-        m_lever_arm /= 1E3; // mm -> m
+        m_lever_arm           = mm_to_m(std::hypot(hits_delta.Y(), hits_delta.Z()));
 
         m_smearing_enabled = true;
       }
@@ -105,17 +100,19 @@ namespace sand {
       const auto dip_angle     = std::atan(true_p.X() / p_transverse);
       const auto zy_angle      = std::atan2(true_p.Y(), true_p.Z());
 
-      // convert to gev
+      // convert to gev and m
       const auto p_transverse_gev = mev_to_gev(p_transverse);
       const auto true_p_gev       = mev_to_gev(true_p.Mag());
+      const auto intrinsic_pos_res_t_m = mm_to_m(intrinsic_pos_res_t);
+      const auto intrinsic_pos_res_l_m = mm_to_m(intrinsic_pos_res_l);
 
       // pt resolution (det + MCS)
-      const auto measure_pt_res = compute_measurement_smearing(p_transverse_gev, intrinsic_pos_res_t, b_field_magnitude);
+      const auto measure_pt_res = compute_measurement_smearing(p_transverse_gev, intrinsic_pos_res_t_m, b_field_magnitude);
       const auto mcs_pt_res     = compute_mcs_measurement_smearing(m_path_len_over_x0.full, b_field_magnitude);
       const auto pt_res         = std::hypot(measure_pt_res, mcs_pt_res);
 
       // MCS angle smearing: for zy used transverse path
-      const auto measure_angle_res = compute_angle_measurement_smearing(intrinsic_pos_res_l);
+      const auto measure_angle_res = compute_angle_measurement_smearing(intrinsic_pos_res_l_m);
       const auto mcs_dip_angle_res = compute_mcs_angle_smearing(m_path_len_over_x0.full, true_p_gev);
       const auto mcs_zy_angle_res  = compute_mcs_angle_smearing(m_path_len_over_x0.transverse, true_p_gev);
       const auto dip_angle_res     = std::hypot(measure_angle_res, mcs_dip_angle_res);
