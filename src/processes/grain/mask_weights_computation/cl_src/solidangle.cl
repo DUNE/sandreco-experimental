@@ -1,4 +1,4 @@
-CL_KERNEL(void solidangle(const transform_t voxel_id_to_grain, const transform_t camera_transform, const uchar* fiducial,
+CL_KERNEL(void solidangle(const transform_t voxel_id_to_grain, const transform_t camera_transform, __global const uchar* fiducial,
                           __global const frustum_t* frustums, const int n_holes, __global const rect_f* mask_rects,
                           const float z_mask, const int n_sensors, __global const rect_f* sensor_rects,
                           const float z_sensors, const solidangle_cfg cfg, __global float* solid_angles) {
