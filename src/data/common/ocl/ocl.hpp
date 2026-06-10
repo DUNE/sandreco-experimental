@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include <common/data.h>
 #include <ufw/config.hpp>
+#include <common/data.h>
 
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_TARGET_OPENCL_VERSION 220
@@ -103,15 +103,15 @@ namespace sand::cl {
         return map_ptr;
       };
 
-      operator void* () { return get(); };
+      operator void*() { return get(); };
 
       cl::Event& event() { return map_evt; }
 
       cl::Event unmap() {
         UFW_ASSERT(map_ptr != nullptr, "unmap called multiple times");
-        map_evt.wait();
         cl::Event evt;
-        r_q.enqueueUnmapMemObject(r_buf, map_ptr, nullptr, &evt);
+        Events wait{map_evt};
+        r_q.enqueueUnmapMemObject(r_buf, map_ptr, &wait, &evt);
         map_ptr = nullptr;
         return std::move(evt);
       }

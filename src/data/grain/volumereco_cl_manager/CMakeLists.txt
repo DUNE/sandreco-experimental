@@ -6,4 +6,4 @@ find_package(Geant4 REQUIRED)
 
 target_sources(sand_grain_volumereco_cl_manager PRIVATE volumereco_cl_manager.cpp)
 
-target_link_libraries(sand_grain_volumereco_cl_manager PUBLIC sand_cl PRIVATE sand_geoinfo sand_hdf5)
+target_link_libraries(sand_grain_volumereco_cl_manager PUBLIC sand_cl sand_hdf5 PRIVATE sand_geoinfo)
