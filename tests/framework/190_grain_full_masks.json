@@ -25,7 +25,7 @@
       "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" }
     },
     "sand::cl::platform" : {},
-    "sand::grain::volumereco_cl_manager" : {},
+    "sand::grain::volumereco_cl_manager" : { "voxel_size" : 150.0 },
     "sand::hdf5::ndarray" : {
       "angle_reader" : {
         "uri" : "test/voxel_weights.h5",
@@ -84,7 +84,6 @@
       },
       {
         "sand::grain::volumereco" : {
-          "voxel_size" : 150.0,
           "max_iterations" : 3,
           "pde" : 1.0
         },

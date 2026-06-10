@@ -31,147 +31,36 @@ namespace sand::grain {
     static constexpr size_t s_max_platforms = 4;
     size_t m_n_devices;
     size_t m_max_iterations;
-    float m_voxel_size;
     float m_pde;
-    std::vector<cl::buffer> m_sensitivity_matrix_buffers;                       // One per GPU
-    std::vector<cl::buffer> m_inverted_sensitivity_matrix_buffers;              // One per GPU
-    std::unordered_map<channel_id::link_t, cl::buffer> m_system_matrix_buffers; // One per camera
-    std::vector<cl::buffer> m_image_buffers;                                    // One per camera
-    std::vector<cl::buffer> m_expectation_buffers;                              // One per GPU
-    std::vector<cl::buffer> m_maximization_buffers;                             // One per GPU
-    std::vector<cl::buffer> m_previous_amplitude_buffers;                       // One per GPU
+    std::vector<cl::buffer> m_image_buffers; // One per camera
   };
-
-  template <typename T>
-  // std::vector<T> volumereco::get_sensitivity_from_system_matrix(const std::vector<T>& system_matrix, size_4d
-  // dimensions)
-  std::vector<T> volumereco::get_sensitivity_from_system_matrix(const T* system_matrix, size_4d dimensions) {
-    std::vector<T> sensitivity_matrix(dimensions.X() * dimensions.Y() * dimensions.Z(), T{});
-    // sum over the sensor axis
-    for (std::size_t d0 = 0; d0 < dimensions.X(); ++d0) {
-      for (std::size_t d1 = 0; d1 < dimensions.Y(); ++d1) {
-        for (std::size_t d2 = 0; d2 < dimensions.Z(); ++d2) {
-          double sum{0.f};
-          std::size_t voxel_index = (d0 * dimensions.Y() + d1) * dimensions.Z() + d2;
-          for (std::size_t d3 = 0; d3 < dimensions.T(); ++d3) {
-            sum += system_matrix[voxel_index * dimensions.T() + d3];
-          }
-          sensitivity_matrix[voxel_index] = sum;
-        }
-      }
-    }
-    return sensitivity_matrix;
-  }
 
   void volumereco::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_voxel_size     = cfg.at("voxel_size");
     m_max_iterations = cfg.at("max_iterations");
     m_pde            = cfg.at("pde");
     auto& cl_manager = instance<volumereco_cl_manager>();
     m_n_devices      = cl_manager.platform().devices().size();
-
-    auto& array                      = instance<sand::hdf5::ndarray>("angle_reader");
-    const auto angle_dimensions_temp = array.range(array.datasets().front());
-    const size_4d angle_dimensions(angle_dimensions_temp[0], angle_dimensions_temp[1], angle_dimensions_temp[2],
-                                   angle_dimensions_temp[3]);
-    const size_t sensitivity_size = angle_dimensions.X() * angle_dimensions.Y() * angle_dimensions.Z();
-    const size_t angle_size       = sensitivity_size * angle_dimensions.T();
-
-    // Check that voxel shape matches between geometry and weights
-    const auto& gi = instance<geoinfo>();
-    dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
-    auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
-    UFW_ASSERT(angle_dimensions.X() == voxels.size().x() && angle_dimensions.Y() == voxels.size().y()
-                   && angle_dimensions.Z() == voxels.size().z(),
-               "hdf5 voxels shape: ({}, {}, {}). Geometry voxels shape: {}.", angle_dimensions.X(),
-               angle_dimensions.Y(), angle_dimensions.Z(), voxels.size());
-
-    // std::vector<float> temp_system(angle_size, 0.f);
-    std::vector<float> temp_sensitivity(sensitivity_size, 0.f);
-    for (const auto& camera : array.datasets()) {
-      // Tricky conversion from std::string to channel_id::link_t (uint8_t)
-      const auto camera_id = static_cast<channel_id::link_t>(std::stoi(array.attribute(camera, "camera_id")));
-      UFW_DEBUG("Loading camera {} with id {}", camera, camera_id);
-      // array.read(camera, temp_system);
-      auto& system_buf = m_system_matrix_buffers[camera_id];
-      // system_buf.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
-      //     platform.context(), angle_size * sizeof(float), temp_system.data());
-      auto mapped_ptr = system_buf.allocate<CL_MEM_READ_ONLY>(cl_manager.platform().context(),
-                                                              cl_manager.platform().queues()[camera_id % m_n_devices],
-                                                              angle_size * sizeof(float));
-      // auto mapped_ptr = system_buf.map<CL_MAP_WRITE>(platform.queues()[camera_id % m_n_devices]);
-      array.read(camera, static_cast<float*>(mapped_ptr.get()));
-
-      // Sensitivity matrix is system matrix summed over the sensors
-      std::transform(
-          temp_sensitivity.begin(), temp_sensitivity.end(),
-          get_sensitivity_from_system_matrix<float>(static_cast<float*>(mapped_ptr.get()), angle_dimensions).begin(),
-          temp_sensitivity.begin(), std::plus<float>());
-    }
-
+    auto& array      = instance<sand::hdf5::ndarray>("angle_reader");
+    cl_manager.load_weights(array);
     // Buffers for images
     m_image_buffers = std::vector<sand::cl::buffer>(array.datasets().size());
     for (auto& image_buffer : m_image_buffers) {
       image_buffer.allocate<CL_MEM_READ_WRITE>(cl_manager.platform().context(),
                                                camera_height * camera_width * sizeof(float));
     }
-
-    // Create buffers across all GPUs
-    UFW_DEBUG("n_devices: {}", m_n_devices);
-    m_sensitivity_matrix_buffers          = std::vector<sand::cl::buffer>(m_n_devices);
-    m_inverted_sensitivity_matrix_buffers = std::vector<sand::cl::buffer>(m_n_devices);
-    m_expectation_buffers                 = std::vector<sand::cl::buffer>(m_n_devices);
-    m_maximization_buffers                = std::vector<sand::cl::buffer>(m_n_devices);
-    m_previous_amplitude_buffers          = std::vector<sand::cl::buffer>(m_n_devices);
-
-    for (size_t i_device = 0; i_device < m_n_devices; ++i_device) {
-      UFW_DEBUG("Creating buffers on device {}", i_device);
-      auto& sensitivity_buf = m_sensitivity_matrix_buffers[i_device];
-      sensitivity_buf.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
-          cl_manager.platform().context(), sensitivity_size * sizeof(float), temp_sensitivity.data());
-      // Invert sensitivity matrix for faster computations later
-      auto& inverted_sensitivity_buf = m_inverted_sensitivity_matrix_buffers[i_device];
-      inverted_sensitivity_buf.allocate<CL_MEM_READ_WRITE>(cl_manager.platform().context(),
-                                                           sensitivity_size * sizeof(float));
-      cl::NDRange global_size(angle_dimensions.X(), angle_dimensions.Y(), angle_dimensions.Z());
-      cl::Event ev_invert_matrix_kernel_execution =
-          cl_manager.enqueue_on_device_with_args(cl_manager.invert_matrix(), i_device, cl::NullRange, global_size,
-                                                 cl::NullRange, sensitivity_buf, inverted_sensitivity_buf);
-
-      auto& expectation_buf = m_expectation_buffers[i_device];
-      expectation_buf.allocate<CL_MEM_READ_WRITE>(cl_manager.platform().context(),
-                                                  camera_height * camera_width * sizeof(float));
-
-      auto& maximization_buf = m_maximization_buffers[i_device];
-      maximization_buf.allocate<CL_MEM_READ_WRITE>(cl_manager.platform().context(), sensitivity_size * sizeof(float));
-
-      auto& previous_amplitude_buf = m_previous_amplitude_buffers[i_device];
-      previous_amplitude_buf.allocate<CL_MEM_READ_WRITE>(cl_manager.platform().context(),
-                                                         sensitivity_size * sizeof(float));
-    }
-
-    // Be sure that all GPU computations are completed
-    for (const auto& queue : cl_manager.platform().queues()) {
-      queue.finish();
-    }
   }
 
   volumereco::volumereco()
-    : process({{"images", "sand::grain::images"}}, {{"photon_amplitudes", "sand::grain::voxels"}}) {
-    UFW_DEBUG("Creating a volumereco process at {}.", fmt::ptr(this));
-  }
+    : process({{"images", "sand::grain::images"}}, {{"photon_amplitudes", "sand::grain::voxels"}}) {}
 
   void volumereco::run() {
-    UFW_DEBUG("Running a volumereco process at {}.", fmt::ptr(this));
-    UFW_INFO("Spill number {}.", ufw::context::current()->id());
     const auto& spill_images_in = get<images>("images");
     auto& photon_amplitude_out  = set<voxels>("photon_amplitudes");
     auto& cl_manager            = instance<volumereco_cl_manager>();
     const auto& gi              = instance<geoinfo>();
 
-    dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
-    auto voxels            = gi.grain().fiducial_voxels(voxel_sizes);
+    auto voxels            = cl_manager.fiducial();
     const size_t n_voxels  = voxels.size().x() * voxels.size().y() * voxels.size().z();
     const size_t n_sensors = camera_height * camera_width;
     const cl::NDRange voxel_shape(voxels.size().x(), voxels.size().y(), voxels.size().z());
@@ -182,98 +71,76 @@ namespace sand::grain {
 
     int i_event_in_spill{0};
 
-    // Unwrap spill into events
     for (const auto& images_in : spill_images_in.images) {
-      // Prepare before iterations
       for (const auto& image : images_in) {
         UFW_DEBUG("Image id: {}", image.camera_id);
-        if (m_system_matrix_buffers.count(image.camera_id) == 0) {
-          UFW_ERROR("Camera id {} not found in buffers", image.camera_id);
-        }
         // Sharing load evenly among GPUs, assuming camera ids range [0, n_cameras -1]
-        const size_t device_index = image.camera_id % m_n_devices;
-        UFW_DEBUG("Processing on device {}", device_index);
+        const size_t idev = image.camera_id % m_n_devices;
+        UFW_DEBUG("Processing on device {}", idev);
         // Copy data to device buffer
-        cl::Event ev_copy_image_to_buffer = m_image_buffers[image.camera_id].write(
-            image.amplitude_array<float>().Array(), cl_manager.platform().queues()[image.camera_id % m_n_devices], 0,
-            -1);
+        m_image_buffers[image.camera_id].write(image.amplitude_array<float>().Array(),
+                                               cl_manager.platform().queues()[image.camera_id % m_n_devices]);
         // Start with uniform voxel score distribution
-        cl::Event ev_fill_previous_amplitude_buffer = m_previous_amplitude_buffers[image.camera_id % m_n_devices].write(
-            starting_score.data(), cl_manager.platform().queues()[image.camera_id % m_n_devices], 0, -1);
+        cl_manager.previous_amplitudes()[image.camera_id % m_n_devices].write(
+            starting_score.data(), cl_manager.platform().queues()[image.camera_id % m_n_devices]);
       }
 
       for (int iteration = 0; iteration < m_max_iterations; ++iteration) {
         UFW_INFO("Iteration: {}", iteration);
         // Fill maximization buffers with 0
-        for (size_t i_device = 0; i_device < m_n_devices; ++i_device) {
-          cl::Event ev_fill_maximization_buffer = m_maximization_buffers[i_device].write(
-              starting_maximization.data(), cl_manager.platform().queues()[i_device], 0, -1);
+        for (size_t idev = 0; idev < m_n_devices; ++idev) {
+          cl_manager.maximization_buffers()[idev].write(starting_maximization, cl_manager.platform().queues()[idev]);
         }
-        // Be sure that all GPU computations are completed
-        for (const auto& queue : cl_manager.platform().queues()) {
-          queue.finish();
-        }
+        cl_manager.wait();
         for (const auto& image : images_in) {
-          const size_t device_index = image.camera_id % m_n_devices;
+          const size_t idev = image.camera_id % m_n_devices;
           // Expectation step
           cl::Event ev_expectation_kernel_execution = cl_manager.enqueue_on_device_with_args(
-              cl_manager.expectation(), device_index, cl::NullRange, sensors_shape, cl::NullRange,
+              cl_manager.expectation(), idev, cl::NullRange, sensors_shape, cl::NullRange,
               /*kernel args*/
-              m_system_matrix_buffers[image.camera_id], m_inverted_sensitivity_matrix_buffers[device_index],
-              static_cast<int>(n_voxels), m_pde, m_previous_amplitude_buffers[device_index],
-              m_expectation_buffers[device_index]);
+              cl_manager.system_matrix(image.camera_id), cl_manager.inverted_sensitivity()[idev],
+              static_cast<int>(n_voxels), m_pde, cl_manager.previous_amplitudes()[idev],
+              cl_manager.expectation_buffers()[idev]);
 
           // Maximization step
           cl::Events maximization_wait_for{ev_expectation_kernel_execution};
           cl::Event ev_maximization_kernel_execution = cl_manager.enqueue_on_device_after_with_args(
-              cl_manager.maximization(), device_index, cl::NullRange, voxel_shape, cl::NullRange, maximization_wait_for,
+              cl_manager.maximization(), idev, cl::NullRange, voxel_shape, cl::NullRange, maximization_wait_for,
               /*kernel args*/
-              m_system_matrix_buffers[image.camera_id], m_inverted_sensitivity_matrix_buffers[device_index],
-              static_cast<int>(n_sensors), m_pde, m_expectation_buffers[device_index], m_image_buffers[image.camera_id],
-              m_maximization_buffers[device_index]);
+              cl_manager.system_matrix(image.camera_id), cl_manager.inverted_sensitivity()[idev],
+              static_cast<int>(n_sensors), m_pde, cl_manager.expectation_buffers()[idev],
+              m_image_buffers[image.camera_id], cl_manager.maximization_buffers()[idev]);
         }
         // Be sure that all GPU computations are completed
-        for (const auto& queue : cl_manager.platform().queues()) {
-          queue.finish();
-        }
+        cl_manager.wait();
         // Now we have n_devices results from maximization step that need to be summed together
-        for (size_t i_device = 1; i_device < m_n_devices; ++i_device) {
+        for (size_t idev = 1; idev < m_n_devices; ++idev) {
           cl::Event ev_add_matrices_in_place = cl_manager.enqueue_on_device_with_args(
               cl_manager.add_matrices_in_place(), 0, cl::NullRange, voxel_shape, cl::NullRange,
               /*kernel args*/
-              m_maximization_buffers[0], m_maximization_buffers[i_device]);
+              cl_manager.maximization_buffers()[0], cl_manager.maximization_buffers()[idev]);
           cl_manager.platform().queues()[0].finish();
         }
         // Update amplitudes
-        for (size_t i_device = 0; i_device < m_n_devices; ++i_device) {
+        for (size_t idev = 0; idev < m_n_devices; ++idev) {
           cl::Event ev_multiply_matrices_in_place = cl_manager.enqueue_on_device_with_args(
-              cl_manager.multiply_matrices_in_place(), i_device, cl::NullRange, voxel_shape, cl::NullRange,
+              cl_manager.multiply_matrices_in_place(), idev, cl::NullRange, voxel_shape, cl::NullRange,
               /*kernel args*/
-              m_previous_amplitude_buffers[i_device], m_maximization_buffers[0]);
+              cl_manager.previous_amplitudes()[idev], cl_manager.maximization_buffers()[0]);
         }
-        // Be sure that all GPU computations are completed
-        for (const auto& queue : cl_manager.platform().queues()) {
-          queue.finish();
-        }
+        cl_manager.wait();
       }
       // Before saving the output, the amplitudes must be multiplied by inverted_sensitivity_matrix
       cl::Event ev_multiply_matrices_in_place = cl_manager.enqueue_on_device_with_args(
           cl_manager.multiply_matrices_in_place(), 0, cl::NullRange, voxel_shape, cl::NullRange,
           /*kernel args*/
-          m_previous_amplitude_buffers[0], m_inverted_sensitivity_matrix_buffers[0]);
+          cl_manager.previous_amplitudes()[0], cl_manager.inverted_sensitivity()[0]);
       // Retrieve voxel score
-      // std::vector<float> tmp_scores(n_voxels);
-      // void* scores_p = tmp_scores.data();
       photon_amplitude_out.voxels.emplace_back(voxels.size());
-      // voxel_array<float> scores(voxels.size());
-      cl::Event ev_copy_scores_from_device =
-          m_previous_amplitude_buffers[0].read(photon_amplitude_out.voxels.back(), cl_manager.platform().queues()[0], 0,
-                                               -1, {ev_multiply_matrices_in_place});
+      cl_manager.previous_amplitudes()[0].read(photon_amplitude_out.voxels.back(), cl_manager.platform().queues()[0], 0,
+                                              -1, {ev_multiply_matrices_in_place});
 
-      // Be sure that all GPU computations are completed
-      for (const auto& queue : cl_manager.platform().queues()) {
-        queue.finish();
-      }
+      cl_manager.wait();
       // Write to hdf5
       UFW_INFO("Write hdf5");
       auto& score_writer = instance<sand::hdf5::ndarray>("score_writer");
