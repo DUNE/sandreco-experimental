@@ -26,7 +26,7 @@
     "run" : [
       {
         "sand::test::test_grain_mask_weight_computation" : {
-          "voxel_size" : 50.0
+          "voxel_size" : 150.0
         },
         "reqs" : {},
         "prods" : {}
