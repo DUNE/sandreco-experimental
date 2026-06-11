@@ -1,0 +1,5 @@
+sandreco_add_filter(sand_filter_vertex_position)
+
+target_sources(sand_filter_vertex_position PRIVATE vertex_position.cpp)
+
+target_link_libraries(sand_filter_vertex_position PRIVATE sand_edep_reader ROOT::MathCore)
