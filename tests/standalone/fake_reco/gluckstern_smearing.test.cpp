@@ -8,9 +8,6 @@
 #include <TG4Event.h>
 #include <data/common/edep_reader/EDEPTrajectory.h>
 
-#include <cmath>
-#include <iostream>
-
 using namespace sand;
 
 // ====================================================================================

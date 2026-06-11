@@ -7,8 +7,6 @@ namespace sand {
     [[nodiscard]] ::caf::SRVector3D direction_from_momentum(const ::caf::SRTrueParticle& p) {
       return normalize_to_direction(p.p.px, p.p.py, p.p.pz);
     }
-
-    [[nodiscard]] constexpr float gev_to_mev(float E) { return E * 1000.0f; }
   } // namespace
 
   ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true(const ::caf::SRTrueParticle& true_part,
@@ -36,7 +34,8 @@ namespace sand {
   }
 
   ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(
-      const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj, double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude) {
+      const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj,
+      double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude) {
     // start by filling all fields from truth
     auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
     // return from_true for all particle except muons (temporarily)
