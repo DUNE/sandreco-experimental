@@ -8,13 +8,13 @@
 namespace sand::filter {
 
   /**
-   * \class sand::filter::vertex_position
+   * \class sand::filter::track_in_detector
    *
    * This filter accepts events that have a vertex in the required detector(s) and discards those which do not.
    */
-  class vertex_position : public ufw::filter {
+  class track_in_detector : public ufw::filter {
    public:
-    vertex_position() : ufw::filter({}) {}
+    track_in_detector() : ufw::filter({}) {}
 
     void configure(const ufw::config& cfg) override {
       for (auto item : cfg.at("require")) {
@@ -55,5 +55,5 @@ namespace sand::filter {
 
 } // namespace sand::filter
 
-UFW_REGISTER_FILTER(sand::filter::vertex_position)
-UFW_REGISTER_DYNAMIC_FILTER_FACTORY(sand::filter::vertex_position)
+UFW_REGISTER_FILTER(sand::filter::track_in_detector)
+UFW_REGISTER_DYNAMIC_FILTER_FACTORY(sand::filter::track_in_detector)

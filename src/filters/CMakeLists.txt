@@ -13,4 +13,4 @@ function(sandreco_add_filter tgt)
   install(TARGETS ${tgt} EXPORT sandrecoTargets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endfunction()
 
-add_subdirectory(vertex_position)
+add_subdirectory(track_in_detector)
