@@ -90,11 +90,16 @@ namespace sand::grain {
 
     transform_t voxel_transform    = to_ocl_xform(voxels.xform_id_to_fiducial(voxel_sizes));
     const size_t sensor_rects_size = camera_height * camera_width;
-    const size_t solidangle_size   = voxels.size().x() * voxels.size().y() * voxels.size().z() * sensor_rects_size;
+    const size_t fiducial_size     = voxels.size().x() * voxels.size().y() * voxels.size().z();
+    const size_t solidangle_size   = fiducial_size * sensor_rects_size; 
 
     cl::NDRange solidangle_global_size(voxels.size().x(), voxels.size().y(), voxels.size().z());
     UFW_DEBUG("Solidangle global work size: ({},{},{})", solidangle_global_size[0], solidangle_global_size[1],
              solidangle_global_size[2]);
+
+    cl::buffer buf_fiducial;
+    buf_fiducial.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
+        platform.context(), fiducial_size * sizeof(cl_uchar), voxels.data());
 
     // Setup output file
     auto& array = instance<sand::hdf5::ndarray>("angle_writer");
@@ -126,6 +131,7 @@ namespace sand::grain {
 
       cl::buffer buf_frustum;
       buf_frustum.allocate<CL_MEM_READ_WRITE>(platform.context(), frustum_array_size * sizeof(frustum_t));
+      
 
       // set kernel args
       try {
@@ -160,15 +166,16 @@ namespace sand::grain {
       try {
         m_solidangle_kernel.setArg(0, voxel_transform);
         m_solidangle_kernel.setArg(1, camera_transform);
-        m_solidangle_kernel.setArg(2, buf_frustum);
-        m_solidangle_kernel.setArg(3, static_cast<int>(mask_rects_size));
-        m_solidangle_kernel.setArg(4, buf_mask_rects);
-        m_solidangle_kernel.setArg(5, z_mask);
-        m_solidangle_kernel.setArg(6, static_cast<int>(sensor_rects_size));
-        m_solidangle_kernel.setArg(7, buf_sensor_rects);
-        m_solidangle_kernel.setArg(8, z_sensors);
-        m_solidangle_kernel.setArg(9, m_solidangle_cfg);
-        m_solidangle_kernel.setArg(10, buf_solidangles);
+        m_solidangle_kernel.setArg(2, buf_fiducial);
+        m_solidangle_kernel.setArg(3, buf_frustum);
+        m_solidangle_kernel.setArg(4, static_cast<int>(mask_rects_size));
+        m_solidangle_kernel.setArg(5, buf_mask_rects);
+        m_solidangle_kernel.setArg(6, z_mask);
+        m_solidangle_kernel.setArg(7, static_cast<int>(sensor_rects_size));
+        m_solidangle_kernel.setArg(8, buf_sensor_rects);
+        m_solidangle_kernel.setArg(9, z_sensors);
+        m_solidangle_kernel.setArg(10, m_solidangle_cfg);
+        m_solidangle_kernel.setArg(11, buf_solidangles);
       } catch (const cl::Error& e) {
         UFW_WARN("OpenCL solidangle Program Kernel setArg: {} ({})", e.what(), e.err());
         throw;
