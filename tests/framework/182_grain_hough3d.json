@@ -1,0 +1,39 @@
+{
+    "ufw" : {
+      "ufw-loglevel" : "debug",
+      "ufw-basepath" : "/usr/local/share/sandreco/data",
+      "ufw-ldpath" : ["/usr/local/lib64"],
+      "ufw-env" : {}
+    },
+    "globals" : {
+      "sand::cl::platform" : {},
+      "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
+      "sand::geoinfo" : { "grain_geometry" : "gdml-masks" },
+      "sand::grain::geant_gdml_parser" : {
+        "gdml-masks" : { "path" : "geometries/grain/grain-masks/main.gdml" }
+      }
+    },
+    "contexts" : {
+      "keys" :  [10,11,15],
+      "locals" : {}
+    },
+    "run" : [
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/grain_point_cloud.root",
+          "tree" : "point_cloud"
+        },
+        "read" : ["grain_point_cloud"]
+      },
+      {
+        "sand::grain::hough3d" : {
+          "icosahedron_splits" : 4,
+          "xy_plane_step" : 150.0,
+          "min_points_per_track" : 2,
+          "max_tracks_per_event" : 4
+        },
+        "reqs" : {"point_cloud": "grain_point_cloud"},
+        "prods" : {}
+      }
+    ]
+  }
