@@ -23,7 +23,7 @@ namespace sand::grain {
    * |--------------------------|--------|-----------------|------------------|-------------------------------------------------------------------------------------|
    * | `icosahedron_splits`     | uint   |                 | Default: 4       | How many times the icosahedron is split, for direction binning.                     |
    * | `xy_plane_step`          | double | mm              | Required         | Bin size for xy plane in Hough space.                                               |
-   * | `min_points_per_track`   | uint   |                 | Required         | Minimum number of poiints to build a track.                                         |
+   * | `min_points_per_track`   | uint   |                 | Required         | Minimum number of points to build a track.                                         |
    * | `max_tracks_per_event`   | uint   |                 | Default: 4       | Maximum number of tracks to search for in one event.                                |
    */
   class hough3d : public ufw::process {
