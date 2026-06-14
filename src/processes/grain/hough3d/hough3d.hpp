@@ -31,5 +31,21 @@ namespace sand::grain {
         return versors;
     }
 
+    // Remove redundant symmetries
+    std::vector<dir_3d> select_unique_versors(const std::vector<dir_3d>& versors) {
+        std::vector<dir_3d> unique_versors;
+        unique_versors.reserve(versors.size());
+
+        constexpr double eps = 1e-12;
+
+        for (const auto& v : versors) {
+            if (v.z() > 0 || (std::abs(v.z()) < eps && v.y() > 0) || (std::abs(v.z()) < eps && std::abs(v.y()) < eps && v.x() > 0)) {
+                unique_versors.push_back(v);
+            }
+        }
+
+        return unique_versors;
+    }
+
 
 } // namespace sand::grain

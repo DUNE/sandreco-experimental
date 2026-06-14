@@ -38,6 +38,7 @@ namespace sand::grain {
     double m_xy_plane_step;
     uint m_min_points_per_track;
     uint m_max_tracks_per_event;
+    std::vector<dir_3d> m_unique_versors;
   };
 
   void hough3d::configure(const ufw::config& cfg) {
@@ -46,6 +47,14 @@ namespace sand::grain {
     m_xy_plane_step = cfg.at("xy_plane_step");
     m_min_points_per_track = cfg.at("min_points_per_track");
     m_max_tracks_per_event = cfg.value("max_tracks_per_event", 4);
+
+    // Binning versors and x'y' plane
+    const std::vector<dir_3d> versors = fibonacci_sphere_versors(m_n_versors_in_sphere);
+    m_unique_versors = select_unique_versors(versors);
+
+    const auto& gi = ufw::context::current()->instance<geoinfo>();
+    const dir_3d grain_dimensions = gi.grain().fiducial_bbox();
+    const double xy_half_range = grain_dimensions.R();
   }
 
   hough3d::hough3d() : process({{"point_cloud", "sand::grain::point_cloud"}}, {}) {
@@ -55,9 +64,8 @@ namespace sand::grain {
   void hough3d::run() {
     UFW_DEBUG("Running a hough3d process at {}.", fmt::ptr(this));
     auto& platform = instance<cl::platform>();
-    const auto& gi = instance<geoinfo>();
     const auto& point_cloud_in  = get<point_cloud>("point_cloud");
-    const std::vector<dir_3d> versors = fibonacci_sphere_versors(m_n_versors_in_sphere);
+
   }
 } // namespace sand::grain
 
