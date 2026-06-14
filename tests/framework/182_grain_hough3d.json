@@ -27,7 +27,7 @@
       },
       {
         "sand::grain::hough3d" : {
-          "icosahedron_splits" : 4,
+          "n_versors_in_sphere" : 100,
           "xy_plane_step" : 150.0,
           "min_points_per_track" : 2,
           "max_tracks_per_event" : 4
