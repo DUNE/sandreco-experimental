@@ -21,9 +21,9 @@ namespace sand::grain {
    * \subsection Configuration
    * | Parameter Name           | Type   | Unit            | Required/Default | Description                                                                         |
    * |--------------------------|--------|-----------------|------------------|-------------------------------------------------------------------------------------|
-   * | `icosahedron_splits`     | uint   |                 | Default: 4       | How many times the icosahedron is split, for direction binning.                     |
+   * | `n_versors_in_sphere`    | uint   |                 | Default: 100     | How many versors represent Fibonacci's sphere, for direction binning.               |
    * | `xy_plane_step`          | double | mm              | Required         | Bin size for xy plane in Hough space.                                               |
-   * | `min_points_per_track`   | uint   |                 | Required         | Minimum number of points to build a track.                                         |
+   * | `min_points_per_track`   | uint   |                 | Required         | Minimum number of points to build a track.                                          |
    * | `max_tracks_per_event`   | uint   |                 | Default: 4       | Maximum number of tracks to search for in one event.                                |
    */
   class hough3d : public ufw::process {
@@ -34,7 +34,7 @@ namespace sand::grain {
 
    private:
     static constexpr size_t s_max_platforms = 4;
-    uint m_icosahedron_splits;
+    uint m_n_versors_in_sphere;
     double m_xy_plane_step;
     uint m_min_points_per_track;
     uint m_max_tracks_per_event;
@@ -42,7 +42,7 @@ namespace sand::grain {
 
   void hough3d::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_icosahedron_splits = cfg.value("icosahedron_splits", 4);
+    m_n_versors_in_sphere = cfg.value("n_versors_in_sphere", 100);
     m_xy_plane_step = cfg.at("xy_plane_step");
     m_min_points_per_track = cfg.at("min_points_per_track");
     m_max_tracks_per_event = cfg.value("max_tracks_per_event", 4);
@@ -57,6 +57,7 @@ namespace sand::grain {
     auto& platform = instance<cl::platform>();
     const auto& gi = instance<geoinfo>();
     const auto& point_cloud_in  = get<point_cloud>("point_cloud");
+    const std::vector<dir_3d> versors = fibonacci_sphere_versors(m_n_versors_in_sphere);
   }
 } // namespace sand::grain
 
