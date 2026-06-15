@@ -48,12 +48,12 @@ namespace sand::grain {
         return unique_versors;
     }
 
-    // Convert 3d point cloud to cl_float4 for GPU processing
-    std::vector<cl_float4> point_cloud_to_float4(const std::vector<point_cloud::point>& points) {
-        std::vector<cl_float4> converted_points;
+    // Convert 3d point cloud to cl_float3 for GPU processing
+    std::vector<cl_float3> point_cloud_to_float3(const std::vector<point_cloud::point>& points) {
+        std::vector<cl_float3> converted_points;
         converted_points.reserve(points.size());
         for (const auto& p : points) {
-            converted_points.push_back({static_cast<float>(p.position.x()), static_cast<float>(p.position.y()), static_cast<float>(p.position.z()), static_cast<float>(p.amplitude)});
+            converted_points.push_back({static_cast<float>(p.position.x()), static_cast<float>(p.position.y()), static_cast<float>(p.position.z())});
         }
         return converted_points;
     }

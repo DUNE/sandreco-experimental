@@ -89,7 +89,7 @@ namespace sand::grain {
     const auto& point_cloud_in  = get<point_cloud>("point_cloud");
     // Loop on events in a spill
     for (const auto& ev_points : point_cloud_in.points) {
-      std::vector<cl_float4> cl_points = point_cloud_to_float4(ev_points);
+      std::vector<cl_float3> cl_points = point_cloud_to_float3(ev_points);
       UFW_INFO("Processing {} points", cl_points.size());
       cl::buffer buf_points;
       buf_points.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE>(
