@@ -21,8 +21,8 @@ CL_KERNEL(void hough_vote(__global const float3* points, __global const float3* 
        -v.y
     );
 
-    const float x_prime = dot(p.xyz, t_x);
-    const float y_prime = dot(p.xyz, t_y);
+    const float x_prime = dot(p, t_x);
+    const float y_prime = dot(p, t_y);
 
     const int x_index = n_xy_bins / 2 + (int)(x_prime / xy_step);
 
