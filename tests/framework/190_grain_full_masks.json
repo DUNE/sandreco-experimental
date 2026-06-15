@@ -95,7 +95,7 @@
           "uri" : "test/volumereco.root",
           "tree" : "recos"
         },
-        "write" : ["grain_lightmap"]
+        "write" : ["grain_digi", "grain_lightmap"]
       }
   ]
 }
