@@ -92,6 +92,7 @@ namespace sand {
       pos_3d bottom_north;
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
+      dir_3d target_box;
       tracker_info* parent;
       channel_id::link_t daq_link; ///< the daq link number for this station (not 1-1)
       template <typename Func>
@@ -130,7 +131,7 @@ namespace sand {
 
     const station* get_station_by_ID(std::size_t i) const { return m_stations.at(i).get(); }
 
-    target_mass_t target_masses() const;
+    virtual target_mass_t target_masses() const;
 
     virtual const wire& wire_at(channel_id) const;
 

@@ -158,6 +158,11 @@ namespace sand {
 
   geoinfo::tracker_info::target_mass_t geoinfo::tracker_info::target_masses() const {
     target_mass_t map;
+    static const double densities[] = {0.0, 920.0, 2200.0, NAN};
+    for_each_station([&map](const station& stat) {
+      double vol = stat.target_box.x() * stat.target_box.y() * stat.target_box.z() / 1.e9;
+      map[stat.target] += vol * densities[stat.target > 3 ? 3 : stat.target];
+    });
     return map;
   }
 
