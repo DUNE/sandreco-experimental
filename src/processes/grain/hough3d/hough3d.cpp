@@ -132,8 +132,8 @@ namespace sand::grain {
       platform.queues().front().enqueueNDRangeKernel(m_hough_vote_kernel, cl::NullRange, cl::NDRange(cl_points.size(), m_unique_versors.size()), cl::NullRange, nullptr, nullptr);
       platform.queues().front().finish();
 
-      void* tmp_ptr = m_voting_array.data();
-      m_buf_voting_array.read(tmp_ptr, platform.queues().front(), 0, -1, {});
+      void* tmp_voting_ptr = m_voting_array.data();
+      m_buf_voting_array.read(tmp_voting_ptr, platform.queues().front(), 0, -1, {});
       platform.queues().front().finish();
 
       // Find maximum
@@ -168,7 +168,10 @@ namespace sand::grain {
       platform.queues().front().enqueueNDRangeKernel(m_distance_kernel, cl::NullRange, cl::NDRange(cl_points.size()), cl::NullRange, nullptr, nullptr);
       platform.queues().front().finish();
 
-      //std::vector<float> points_distances(cl_points.size(),0);
+      std::vector<float> points_distances(cl_points.size(), 0.0);
+      void* tmp_distances_ptr = points_distances.data();
+      buf_distances.read(tmp_distances_ptr, platform.queues().front(), 0, -1, {});
+      platform.queues().front().finish();
 
     }
 
