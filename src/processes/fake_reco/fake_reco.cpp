@@ -98,6 +98,7 @@ namespace sand {
         }
         else if (m_sec_fill_mode == "dark-neutrino") {
           add_secondaries_recursive(true_ixn, sec_begin, sec_end, ancestor_ids[i],2);
+          true_ixn.nsec = static_cast<int>(true_ixn.sec.size()); // final nsec update             
         }
       }
 
@@ -189,6 +190,8 @@ namespace sand {
                                                             EDEPTree::const_iterator end,
                                                             const ::caf::TrueParticleID& ancestor_id,
                                                             const int depth) const {
+    // add the current depth level                                                          
+    CAFFiller<::caf::SRTrueInteraction>::add_secondaries(ixn, begin, end, ancestor_id);
     if (depth == 0) return;
 
     for (auto it = begin; it != end; ++it) {
@@ -196,8 +199,7 @@ namespace sand {
         auto sec_end     = m_edep->GetTrajectoryEnd(it);
         CAFFiller<::caf::SRTrueInteraction>::add_secondaries(ixn, sec_begin, sec_end, ancestor_id);
         add_secondaries_recursive(ixn, sec_begin, sec_end, ancestor_id, depth - 1);
-    }      
-    ixn.nsec = static_cast<int>(ixn.sec.size()); // final nsec update                   
+    }            
   }
 
   void fake_reco::fill_reco_objects(const ::caf::SRTrueParticle &true_part, const ::caf::TrueParticleID &part_id, 
