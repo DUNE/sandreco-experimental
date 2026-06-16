@@ -1,5 +1,5 @@
-#include <tracker_info.hpp>
 #include <BVH.hpp>
+#include <tracker_info.hpp>
 
 namespace sand {
 
@@ -30,7 +30,8 @@ namespace sand {
     return i;
   }
 
-  geoinfo::tracker_info::tracker_info(const geoinfo& gi, const geo_path& gp, const ufw::config&) : subdetector_info(gi, gp) {}
+  geoinfo::tracker_info::tracker_info(const geoinfo& gi, const geo_path& gp, const ufw::config&)
+    : subdetector_info(gi, gp) {}
 
   geoinfo::tracker_info::~tracker_info() = default;
 
@@ -38,9 +39,10 @@ namespace sand {
 
   void geoinfo::tracker_info::add_volume(const geo_path& p, const gas_volume& v) { m_volumes[p] = v; }
 
-  std::pair<double,double> geoinfo::tracker_info::wire::closest_approach_segment(const pos_3d& seg_start, //TO-DO should always produce a result, even in the parallel case
-                                                                            const pos_3d& seg_stop) const {
-    std::pair<double,double> result;
+  std::pair<double, double> geoinfo::tracker_info::wire::closest_approach_segment(
+      const pos_3d& seg_start, // TO-DO should always produce a result, even in the parallel case
+      const pos_3d& seg_stop) const {
+    std::pair<double, double> result;
 
     dir_3d d = seg_start - head;     // Vector from wire head to point start
     dir_3d s = seg_stop - seg_start; // Vector from point start to point stop
@@ -56,10 +58,10 @@ namespace sand {
 
     if (std::abs(denominator) < 1e-8) {
       // Lines are parallel; choose midpoint of the segment
-      double t = 0.5;
+      double t       = 0.5;
       double t_prime = closest_approach_point(seg_start + s * t);
 
-      result.first = t;
+      result.first  = t;
       result.second = t_prime;
 
       return result;
@@ -71,17 +73,18 @@ namespace sand {
       t       = std::max(0.0, std::min(1.0, t));
       t_prime = std::max(0.0, std::min(1.0, t_prime));
 
-      result.first = t;
+      result.first  = t;
       result.second = t_prime;
 
       return result;
     }
   }
 
-  double geoinfo::tracker_info::wire::closest_approach_segment_distance(const pos_3d& seg_start, const pos_3d& seg_stop) const {
-    auto approach = closest_approach_segment(seg_start, seg_stop);
+  double geoinfo::tracker_info::wire::closest_approach_segment_distance(const pos_3d& seg_start,
+                                                                        const pos_3d& seg_stop) const {
+    auto approach                   = closest_approach_segment(seg_start, seg_stop);
     pos_3d closest_point_on_segment = seg_start + (seg_stop - seg_start) * approach.first;
-    pos_3d closest_point_on_wire = head + direction() * approach.second;
+    pos_3d closest_point_on_wire    = head + direction() * approach.second;
     return sqrt((closest_point_on_segment - closest_point_on_wire).Mag2());
   }
 
@@ -102,22 +105,20 @@ namespace sand {
   }
 
   xform_3d geoinfo::tracker_info::wire::wire_plane_transform() const {
-    double c = std::cos(angle());
-    double s = std::sin(angle());
+    double c      = std::cos(angle());
+    double s      = std::sin(angle());
     pos_3d center = pos_3d(0.5 * (parent->top_north.X() + parent->bottom_south.X()),
-                           0.5 * (parent->top_north.Y() + parent->bottom_south.Y()),
-                           head.Z());
-    xform_3d wire_rot(c, -s, 0., center.X(),
-                      s,  c, 0., center.Y(),
-                      0., 0., 1, center.Z());
+                           0.5 * (parent->top_north.Y() + parent->bottom_south.Y()), head.Z());
+    xform_3d wire_rot(c, -s, 0., center.X(), s, c, 0., center.Y(), 0., 0., 1, center.Z());
     return wire_rot;
   }
 
-  std::pair<const geoinfo::tracker_info::wire*, size_t> geoinfo::tracker_info::closest_wire_in_list(wire_list list, pos_3d point) const {
-    double min_dist = std::numeric_limits<double>::max();
+  std::pair<const geoinfo::tracker_info::wire*, size_t>
+  geoinfo::tracker_info::closest_wire_in_list(wire_list list, pos_3d point) const {
+    double min_dist                                 = std::numeric_limits<double>::max();
     const geoinfo::tracker_info::wire* closest_wire = nullptr;
-    size_t closest_wire_index = 0;
-    size_t current_index = 0;
+    size_t closest_wire_index                       = 0;
+    size_t current_index                            = 0;
 
     for (const auto wire : list) {
       auto closest_point_param = wire->closest_approach_point(point);
@@ -125,8 +126,8 @@ namespace sand {
       double dist = sqrt((pos_3d(wire->head + wire->direction() * closest_point_param) - point).Mag2());
 
       if (dist < min_dist) {
-        min_dist = dist;
-        closest_wire = wire;
+        min_dist           = dist;
+        closest_wire       = wire;
         closest_wire_index = current_index;
       }
       ++current_index;
@@ -137,17 +138,17 @@ namespace sand {
 
   const geoinfo::tracker_info::wire& geoinfo::tracker_info::wire_at(channel_id chid) const {
     const wire* retw = nullptr;
-    for_each_station( [chid, &retw](const station& stat){
+    for_each_station([chid, &retw](const station& stat) {
       if (stat.daq_link != chid.link) {
         return;
       }
-      for (const auto& w: stat.wires) {
+      for (const auto& w : stat.wires) {
         if (w->daq_channel == chid) {
           retw = w.get();
           break;
         }
       }
-    } );
+    });
     if (retw) {
       return *retw;
     } else {
@@ -155,33 +156,34 @@ namespace sand {
     }
   }
 
-bool geoinfo::tracker_info::wire::is_adjacent(const geoinfo::tracker_info::wire* w) const {
-  for (const auto* adj : adjacent_wires) {
-    if (adj == w) {
-      return true;
-    }
+  geoinfo::tracker_info::target_mass_t geoinfo::tracker_info::target_masses() const {
+    target_mass_t map;
+    return map;
   }
-  return false;
-}
+
+  bool geoinfo::tracker_info::wire::is_adjacent(const geoinfo::tracker_info::wire* w) const {
+    for (const auto* adj : adjacent_wires) {
+      if (adj == w) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   void geoinfo::tracker_info::station::set_wire_adjacency() {
-    double dz; 
+    double dz;
     double dy;
     dy = wires[0]->max_radius * sqrt(3) / 2.;
     dz = wires[0]->max_radius * sqrt(3) / 2.;
 
-    double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
+    double max_distance = sqrt(dy * dy + dz * dz) + 0.1;
 
     wire_list wl;
     wl.reserve(wires.size());
     for (const auto& wp : wires)
-        wl.push_back(wp.get());
+      wl.push_back(wp.get());
 
-    BVH bvh(
-      wl,
-      2 * max_distance,
-      2 * max_distance
-    );
+    BVH bvh(wl, 2 * max_distance, 2 * max_distance);
 
     bvh.printTreeInfo();
   }
@@ -189,7 +191,7 @@ bool geoinfo::tracker_info::wire::is_adjacent(const geoinfo::tracker_info::wire*
   geoinfo::tracker_info::wire::AABB::AABB(const geoinfo::tracker_info::wire& w) {
     min_ = pos_3d(1E9, 1E9, 1E9);
     max_ = pos_3d(-1E9, -1E9, -1E9);
-    std::array<pos_3d,4> vertices;
+    std::array<pos_3d, 4> vertices;
     auto p                = w.head;
     const auto& transform = w.wire_plane_transform();
     auto p_rotated        = transform.Inverse() * p;
@@ -239,8 +241,8 @@ bool geoinfo::tracker_info::wire::is_adjacent(const geoinfo::tracker_info::wire*
 
   bool geoinfo::tracker_info::wire::AABB::isOverlapping(const AABB& second_aabb, double epsilon) const {
     return (max_.X() + epsilon >= second_aabb.min_.X() && min_.X() - epsilon <= second_aabb.max_.X()
-        && max_.Y() + epsilon >= second_aabb.min_.Y() && min_.Y() - epsilon <= second_aabb.max_.Y()
-        && max_.Z() + epsilon >= second_aabb.min_.Z() && min_.Z() - epsilon <= second_aabb.max_.Z()); 
+            && max_.Y() + epsilon >= second_aabb.min_.Y() && min_.Y() - epsilon <= second_aabb.max_.Y()
+            && max_.Z() + epsilon >= second_aabb.min_.Z() && min_.Z() - epsilon <= second_aabb.max_.Z());
   }
 
 } // namespace sand

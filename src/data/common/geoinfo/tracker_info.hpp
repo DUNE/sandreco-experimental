@@ -39,7 +39,7 @@ namespace sand {
 
       struct AABB {
         AABB() {};
-        AABB(const wire & wire);
+        AABB(const wire& wire);
         void expand(const AABB& second_aabb);
         bool isOverlapping(const AABB& second_aabb, double epsilon = 0) const;
         pos_3d min_;
@@ -52,15 +52,16 @@ namespace sand {
       using spacer_array   = std::array<double, s_max_wire_spacers>; ///< The position of each spacer in local X
                                                                      ///< coordinate, starting from north.
       const station* parent;                                         ///< The parent station
-      mutable wire_list  adjacent_wires;                             ///< The list of adjacent wires. 
-                                                                     ///< The mutable attribute makes the element of a const object modifiable.
-                                                                     ///< In this case needed because the adjacency can be attributed only once all wires are constructed.
-      bool is_adjacent(const wire * w) const;                         ///< Check if the wire is adjecent                   
-      channel_id daq_channel;                                        ///< The unique daq identifier
-      pos_3d head;                                                   ///< The readout end of the wire
-      pos_3d tail;                                                   ///< The termination end of the wire
-      double hv;                                                     ///< The bias voltage
-      double max_radius;                                             ///< The maximum drift distance
+      mutable wire_list adjacent_wires;                              ///< The list of adjacent wires.
+                                        ///< The mutable attribute makes the element of a const object modifiable.
+                                        ///< In this case needed because the adjacency can be attributed only once all
+                                        ///< wires are constructed.
+      bool is_adjacent(const wire* w) const; ///< Check if the wire is adjecent
+      channel_id daq_channel;                ///< The unique daq identifier
+      pos_3d head;                           ///< The readout end of the wire
+      pos_3d tail;                           ///< The termination end of the wire
+      double hv;                             ///< The bias voltage
+      double max_radius;                     ///< The maximum drift distance
       catenary_array
           catenaries; ///< Maximum deflection downwards at the centre of the segment between two spacers, north to south
       spacer_array spacers; ///< Horizontal coordinates of wire spacers, north to south
@@ -71,7 +72,7 @@ namespace sand {
       double length() const { return std::sqrt(direction().Mag2()); } ///< length of the line between
       pos_3d actual(pos_3d) const;
       std::size_t segment(pos_3d x) const;
-      std::pair<double,double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
+      std::pair<double, double> closest_approach_segment(const pos_3d&, const pos_3d&) const;
       double closest_approach_segment_distance(const pos_3d&, const pos_3d&) const;
       double closest_approach_point(const pos_3d&) const;
       xform_3d wire_plane_transform() const; /// transform from local wire plane to global coordinates
@@ -91,7 +92,7 @@ namespace sand {
       pos_3d bottom_north;
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
-      tracker_info * parent;
+      tracker_info* parent;
       channel_id::link_t daq_link; ///< the daq link number for this station (not 1-1)
       template <typename Func>
       wire_list select(Func&& f) const {
@@ -105,6 +106,8 @@ namespace sand {
       }
       void set_wire_adjacency();
     };
+
+    using target_mass_t = std::map<target_material, double>;
 
    protected:
     using station_ptr = std::unique_ptr<const station>;
@@ -127,6 +130,8 @@ namespace sand {
 
     const station* get_station_by_ID(std::size_t i) const { return m_stations.at(i).get(); }
 
+    target_mass_t target_masses() const;
+
     virtual const wire& wire_at(channel_id) const;
 
     std::pair<const wire*, size_t> closest_wire_in_list(wire_list, pos_3d) const;
@@ -144,6 +149,7 @@ namespace sand {
         std::forward<Func>(f)(*sptr);
       }
     }
+
    private:
     std::vector<station_ptr> m_stations;
     std::map<geo_path, gas_volume> m_volumes;
