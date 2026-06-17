@@ -23,7 +23,7 @@
   },
   "run": [
     {
-      "sand::truth_filler": {},
+      "sand::common::truth_filler": {},
       "reqs": {},
       "prods": {
         "output_caf": "produced_caf"
