@@ -7,7 +7,7 @@
 
 #include <ufw/process.hpp>
 
-namespace sand {
+namespace sand::common {
 
   struct InteractionRange {
     std::size_t first_primary_index;
@@ -24,8 +24,8 @@ namespace sand {
     void run() override;
   };
 
-} // namespace sand
+} // namespace sand::common
 
-UFW_REGISTER_PROCESS(sand::truth_filler);
+UFW_REGISTER_PROCESS(sand::common::truth_filler);
 
 #endif

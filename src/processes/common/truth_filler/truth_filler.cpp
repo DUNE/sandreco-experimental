@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace sand {
+namespace sand::common {
 
   std::vector<InteractionRange> make_interaction_ranges(Primaries const& primaries) {
     std::vector<InteractionRange> output;
@@ -48,10 +48,16 @@ namespace sand {
       const auto& event                 = genie->events_[ixn_idx];
       const auto& stdhep                = genie->stdHeps_[ixn_idx];
 
-      auto& true_ixn = caf->mc.nu.emplace_back(sand::mctruth::true_interaction_from_genie(event, stdhep));
+      // Create and fill SRTrueInteraction from GENIE
+      auto& true_ixn = caf->mc.nu.emplace_back(filler_details::true_interaction_from_genie(event, stdhep));
+
+      // Add pre-FSI hadrons from GENIE StdHep
+      auto prefsi      = filler_details::make_prefsi_particles(stdhep, true_ixn.id);
+      true_ixn.nprefsi = static_cast<int>(prefsi.size());
+      true_ixn.prefsi  = std::move(prefsi);
     }
   }
 
-} // namespace sand
+} // namespace sand::common
 
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::truth_filler);
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::common::truth_filler);
