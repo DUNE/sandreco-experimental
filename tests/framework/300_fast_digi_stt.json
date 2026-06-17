@@ -29,6 +29,11 @@
         "prods" : {"digi": "stt_digi"}
       },
       {
+        "sand::test::test_stt_digi" : {},
+        "reqs" : {"digi": "stt_digi"},
+        "prods" : {}
+      }, 
+      {
         "sand::root::tree_streamer" : { 
           "uri" : "test/stt_fast_digi.root",
           "tree" : "stt_fast_digi"
