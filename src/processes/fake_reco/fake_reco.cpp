@@ -12,15 +12,7 @@ namespace sand {
   fake_reco::fake_reco()
     : process{{}, {{"output_caf", "sand::caf::caf_wrapper"}}}, m_edep{nullptr}, m_genie{nullptr}, m_caf{nullptr} {}
 
-  void fake_reco::configure(const ufw::config& cfg) { 
-    process::configure(cfg); 
-    m_sec_fill_mode = cfg.value("sec_fill_mode", "default");
-    // parse the recursion depth level only if the recursive fill mode is set
-    if (m_sec_fill_mode == "recursive"){
-      m_sec_fill_depth = cfg.value("sec_fill_depth", 2);
-    }
-
-  }
+  void fake_reco::configure(const ufw::config& cfg) { process::configure(cfg); }
 
   void fake_reco::run() {
     // Bind input readers and output writer
@@ -34,13 +26,6 @@ namespace sand {
     if (m_genie == nullptr) {
       UFW_ERROR("GENIE reader not found");
       return;
-    }
-
-    // check the secondary fill option
-    if (m_sec_fill_mode != "default" && m_sec_fill_mode != "recursive"){
-      UFW_ERROR("Unsupported secondaries fill mode: {}", m_sec_fill_mode.c_str());
-    } else {
-      UFW_INFO("Filling secondaries with mode: {}, depth: {}", m_sec_fill_mode.c_str(), m_sec_fill_depth.value_or(-1));
     }
 
     m_caf = &set<sand::caf::caf_wrapper>("output_caf");
@@ -75,15 +60,7 @@ namespace sand {
             auto prim_it   = m_edep->GetTrajectory(prim.GetId());
             auto sec_begin = std::next(prim_it);
             auto sec_end   = m_edep->GetTrajectoryEnd(prim_it);
-            if (m_sec_fill_mode == "default"){
-              acc += static_cast<std::size_t>(std::distance(sec_begin, sec_end));
-            } 
-            else if (m_sec_fill_mode == "recursive") {
-              acc += count_secondaries_recursive(sec_begin, sec_end, m_sec_fill_depth.value()); 
-            } 
-            else { UFW_ERROR("Unsupported secondaries fill mode: {}", m_sec_fill_mode.c_str());}
-            
-            return acc;
+            return acc + static_cast<std::size_t>(std::distance(sec_begin, sec_end));
           });
       true_ixn.sec.reserve(sec_count);
 
@@ -98,13 +75,7 @@ namespace sand {
         auto sec_begin   = std::next(prim_it);
         auto sec_end     = m_edep->GetTrajectoryEnd(prim_it);
 
-        if (m_sec_fill_mode == "default") {
-          CAFFiller<::caf::SRTrueInteraction>::add_secondaries(true_ixn, sec_begin, sec_end, ancestor_ids[i]);
-        }
-        else if (m_sec_fill_mode == "recursive") {
-          add_secondaries_recursive(true_ixn, sec_begin, sec_end, ancestor_ids[i], m_sec_fill_depth.value());
-          true_ixn.nsec = static_cast<int>(true_ixn.sec.size()); // final nsec update             
-        }
+        CAFFiller<::caf::SRTrueInteraction>::add_secondaries(true_ixn, sec_begin, sec_end, ancestor_ids[i]);
       }
 
       // FAKE RECONSTRUCTION
@@ -178,34 +149,6 @@ namespace sand {
     m_caf->nd.sand.ixn.reserve(n_interactions);
   }
 
-  std::size_t fake_reco::count_secondaries_recursive(EDEPTree::const_iterator begin, EDEPTree::const_iterator end, const int depth) const{
-    if (depth == 0){
-      return static_cast<std::size_t>(std::distance(begin, end));
-    }
-    return std::accumulate(begin, end, std::size_t{0}, [this, depth](std::size_t acc, const auto& sec) {
-      auto sec_it = m_edep->GetTrajectory(sec.GetId());
-      auto sec_begin = std::next(sec_it);
-      auto sec_end = m_edep->GetTrajectoryEnd(sec_it);
-      return acc + 1 + count_secondaries_recursive(sec_begin, sec_end, depth - 1);
-    });
-  }
-
-  void fake_reco::add_secondaries_recursive(::caf::SRTrueInteraction& ixn,
-                                                            EDEPTree::const_iterator begin,
-                                                            EDEPTree::const_iterator end,
-                                                            const ::caf::TrueParticleID& ancestor_id,
-                                                            const int depth) const {
-    // add the current depth level                                                          
-    CAFFiller<::caf::SRTrueInteraction>::add_secondaries(ixn, begin, end, ancestor_id);
-    if (depth == 0) return;
-
-    for (auto it = begin; it != end; ++it) {
-        auto sec_begin   = std::next(it);
-        auto sec_end     = m_edep->GetTrajectoryEnd(it);
-        CAFFiller<::caf::SRTrueInteraction>::add_secondaries(ixn, sec_begin, sec_end, ancestor_id);
-        add_secondaries_recursive(ixn, sec_begin, sec_end, ancestor_id, depth - 1);
-    }            
-  }
 
   void fake_reco::fill_reco_objects(const ::caf::SRTrueParticle &true_part, const ::caf::TrueParticleID &part_id, 
                                     const bool is_primary,::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const {
