@@ -1,27 +1,12 @@
 #include "truth_filler.hpp"
 #include "truth_filler_details.hpp"
 
+#include <caf/caf_wrapper.hpp>
+
 #include <ufw/factory.hpp>
 #include <ufw/utils.hpp>
 
-#include <algorithm>
-#include <vector>
-
 namespace sand::common {
-
-  std::vector<InteractionRange> make_interaction_ranges(Primaries const& primaries) {
-    std::vector<InteractionRange> output;
-
-    for (auto it = primaries.begin(); it != primaries.end();) {
-      auto group_end = std::find_if_not(it, primaries.end(), [ixn = it->GetInteractionNumber()](auto const& p) {
-        return p.GetInteractionNumber() == ixn;
-      });
-      output.push_back({static_cast<std::size_t>(it - primaries.begin()), static_cast<std::size_t>(group_end - it)});
-      it = group_end;
-    }
-
-    return output;
-  }
 
   truth_filler::truth_filler() : process{{}, {{"output_caf", "sand::caf::caf_wrapper"}}} {}
 
@@ -33,7 +18,7 @@ namespace sand::common {
     auto* caf         = &set<sand::caf::caf_wrapper>("output_caf");
 
     auto const& primaries   = edep->GetChildrenTrajectories();
-    auto interaction_ranges = make_interaction_ranges(primaries);
+    auto interaction_ranges = filler_details::make_interaction_ranges(primaries);
 
     auto const n_ixn = genie->events_.size();
 

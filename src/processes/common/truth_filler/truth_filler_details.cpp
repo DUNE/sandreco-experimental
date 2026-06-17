@@ -1,9 +1,29 @@
 #include "truth_filler_details.hpp"
 #include "evtcode_parser.hpp"
 
+#include <edep_reader/EDEPTrajectory.h>
+
 #include <TDatabasePDG.h>
 
+#include <algorithm>
+#include <cmath>
+#include <string_view>
+
 namespace sand::common::filler_details {
+
+  std::vector<InteractionRange> make_interaction_ranges(Primaries const& primaries) {
+    std::vector<InteractionRange> output;
+
+    for (auto it = primaries.begin(); it != primaries.end();) {
+      auto group_end = std::find_if_not(it, primaries.end(), [ixn = it->GetInteractionNumber()](auto const& p) {
+        return p.GetInteractionNumber() == ixn;
+      });
+      output.push_back({static_cast<std::size_t>(it - primaries.begin()), static_cast<std::size_t>(group_end - it)});
+      it = group_end;
+    }
+
+    return output;
+  }
 
   [[nodiscard]] bool is_lepton_pdg(int pdg) {
     if (auto* p = TDatabasePDG::Instance()->GetParticle(pdg)) {

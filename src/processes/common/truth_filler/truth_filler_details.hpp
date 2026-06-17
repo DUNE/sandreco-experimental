@@ -1,13 +1,16 @@
 #ifndef SAND_TRUTH_FILLER_DETAILS_HPP
 #define SAND_TRUTH_FILLER_DETAILS_HPP
 
-#include "sand.h"
+#include "types.hpp"
+
+#include <genie_reader/GenieWrapper.h>
+#include <sand.h>
 
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
 
-#include <genie_reader/GenieWrapper.h>
-
 namespace sand::common::filler_details {
+
+  [[nodiscard]] std::vector<InteractionRange> make_interaction_ranges(Primaries const& primaries);
 
   [[nodiscard]] bool is_lepton_pdg(int pdg);
 
@@ -19,15 +22,6 @@ namespace sand::common::filler_details {
   [[nodiscard]] inline bool is_bindino_pdg(int pdg) { return pdg == 2000000101; }
 
   [[nodiscard]] int find_final_lepton(StdHep const& stdhep);
-
-  struct Kinematics {
-    float Q2{};
-    float q0{};
-    float modq{};
-    float W{};
-    float bjorkenX{};
-    float inelasticity{};
-  };
 
   [[nodiscard]] Kinematics calculate_kinematics(sand::mom_4d const& nu_p4, sand::mom_4d const& lep_p4);
 
