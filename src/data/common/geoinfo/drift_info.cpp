@@ -81,6 +81,7 @@ namespace sand {
             if (componentname.find("Target") != std::string::npos) {
               if (auto* target_shape = dynamic_cast<TGeoBBox*>(component->GetVolume()->GetShape())) {
                 stat->target_box = 2.0 * dir_3d(target_shape->GetDX(), target_shape->GetDY(), target_shape->GetDZ());
+                stat->target_density = component->GetVolume()->GetMaterial()->GetDensity() / 6.24e24;
               } else {
                 UFW_ERROR("Target shape is not a Box");
               }

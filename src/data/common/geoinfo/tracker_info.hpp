@@ -93,6 +93,7 @@ namespace sand {
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
       dir_3d target_box;
+      double target_density; ///< in kg/mm^3 !
       tracker_info* parent;
       channel_id::link_t daq_link; ///< the daq link number for this station (not 1-1)
       template <typename Func>
