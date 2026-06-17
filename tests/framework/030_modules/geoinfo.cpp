@@ -1,6 +1,7 @@
 #include <geoinfo/ecal_info.hpp>
 #include <geoinfo/geoinfo.hpp>
 #include <geoinfo/grain_info.hpp>
+#include <geoinfo/tracker_info.hpp>
 
 #include <ufw/config.hpp>
 #include <ufw/factory.hpp>
@@ -17,6 +18,7 @@ namespace sand::test {
    private:
     void test_grain();
     void test_ecal();
+    void test_tracker();
 
    private:
     std::vector<std::string> m_init;
@@ -50,7 +52,7 @@ namespace sand::test {
       } else if (name == "ecal") {
         test_ecal();
       } else if (name == "tracker") {
-        gi.tracker();
+        test_tracker();
       }
     }
   }
@@ -196,6 +198,17 @@ namespace sand::test {
 
     UFW_ASSERT(ecal_side_convention_ok,
                "[ECAL SIDE CHECK] At least one ECAL module has inconsistent begin/end side convention");
+  }
+
+  void geoinfo::test_tracker() {
+    sand::geoinfo& gi                          = instance<sand::geoinfo>();
+    const sand::geoinfo::tracker_info& tracker = gi.tracker();
+    auto targets                               = tracker.target_masses();
+    static const char* target_names[]          = {"None", "Plastic", "Carbon", "Undefined"};
+    UFW_INFO("Target mass report");
+    for (auto& [tgt, mass] : targets) {
+      UFW_INFO(" - {}:\t\t{} kg", target_names[tgt > 3 ? 3 : tgt], mass);
+    }
   }
 
 }; // namespace sand::test
