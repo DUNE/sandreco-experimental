@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <string_view>
 
@@ -31,6 +32,50 @@ namespace sand::common {
     P11_1710    = 16, ///< N(1710) P11
     F17_1970    = 17  ///< N(1970) F17
   };
+
+  inline std::ostream& operator<< (std::ostream& os, GenieResonanceType r) {
+    switch (r) {
+    case GenieResonanceType::NoResonance:
+      return os << "NoResonance";
+    case GenieResonanceType::P33_1232:
+      return os << "P33_1232";
+    case GenieResonanceType::S11_1535:
+      return os << "S11_1535";
+    case GenieResonanceType::D13_1520:
+      return os << "D13_1520";
+    case GenieResonanceType::S11_1650:
+      return os << "S11_1650";
+    case GenieResonanceType::D13_1700:
+      return os << "D13_1700";
+    case GenieResonanceType::D15_1675:
+      return os << "D15_1675";
+    case GenieResonanceType::S31_1620:
+      return os << "S31_1620";
+    case GenieResonanceType::D33_1700:
+      return os << "D33_1700";
+    case GenieResonanceType::P11_1440:
+      return os << "P11_1440";
+    case GenieResonanceType::P33_1600:
+      return os << "P33_1600";
+    case GenieResonanceType::P13_1720:
+      return os << "P13_1720";
+    case GenieResonanceType::F15_1680:
+      return os << "F15_1680";
+    case GenieResonanceType::P31_1910:
+      return os << "P31_1910";
+    case GenieResonanceType::P33_1920:
+      return os << "P33_1920";
+    case GenieResonanceType::F35_1905:
+      return os << "F35_1905";
+    case GenieResonanceType::F37_1950:
+      return os << "F37_1950";
+    case GenieResonanceType::P11_1710:
+      return os << "P11_1710";
+    case GenieResonanceType::F17_1970:
+      return os << "F17_1970";
+    }
+    return os << "GenieResonanceType(" << static_cast<int>(r) << ")";
+  }
 
   struct HadronCounts {
     int n_protons{};
