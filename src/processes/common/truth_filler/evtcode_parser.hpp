@@ -8,9 +8,9 @@
 #include <string>
 #include <string_view>
 
-namespace sand {
+namespace sand::common {
 
-  enum GenieResonanceType : std::int8_t {
+  enum class GenieResonanceType : std::int8_t {
     NoResonance = -1,
     P33_1232    = 0,  ///< Delta(1232) P33
     S11_1535    = 1,  ///< N(1535) S11
@@ -72,6 +72,6 @@ namespace sand {
 
   [[nodiscard]] EventSummary parse_evt_code(std::string_view evt_code);
 
-} // namespace sand
+} // namespace sand::common
 
 #endif // SAND_TRUTH_FILLER_EVTCODE_PARSER_HPP

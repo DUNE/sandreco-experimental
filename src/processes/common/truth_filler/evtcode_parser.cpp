@@ -5,7 +5,7 @@
 #include <charconv>
 #include <unordered_map>
 
-namespace sand {
+namespace sand::common {
 
   namespace {
 
@@ -15,7 +15,6 @@ namespace sand {
       return result;
     }
 
-    // Returns the substring after prefix, or nullopt if prefix not found.
     std::optional<std::string_view> after_prefix(std::string_view str, std::string_view prefix) {
       if (str.size() >= prefix.size() && str.substr(0, prefix.size()) == prefix) {
         return str.substr(prefix.size());
@@ -84,31 +83,29 @@ namespace sand {
     };
 
     ProcessInfo parse_process(std::string_view val) {
-      // clang-format off
-    static const std::unordered_map<std::string, ::caf::ScatteringMode> mode_map{
-      {"QES",               ::caf::kQE},
-      {"RES",               ::caf::kRes},
-      {"DIS",               ::caf::kDIS},
-      {"MEC",               ::caf::kMEC},
-      {"COH",               ::caf::kCoh},
-      {"DFR",               ::caf::kDiffractive},
-      {"1Kaon",             ::caf::kSingleKaon},
-      {"NuEEL",             ::caf::kNuElectronElastic},
-      {"IMD",               ::caf::kInvMuonDecay},
-      {"IMDAnh",            ::caf::kIMDAnnihilation},
-      {"AMNuGamma",         ::caf::kAMNuGamma},
-      {"CEvNS",             ::caf::kCohElastic},
-      {"IBD",               ::caf::kInverseBetaDecay},
-      {"GLR",               ::caf::kGlashowResonance},
-      {"PhotonCOH",         ::caf::kPhotonCoh},
-      {"PhotonRES",         ::caf::kPhotonRes},
-      {"DMEL",              ::caf::kDarkMatterElastic},
-      {"DMDIS",             ::caf::kDarkMatterDIS},
-      {"DME",               ::caf::kDarkMatterElectron},
-      {"Uknown to GENIE",   ::caf::kUnknownMode}, // typo matches GENIE source
-      {"Unknown",           ::caf::kUnknownMode},
-    };
-      // clang-format on
+      static const std::unordered_map<std::string, ::caf::ScatteringMode> mode_map{
+          {"QES", ::caf::kQE},
+          {"RES", ::caf::kRes},
+          {"DIS", ::caf::kDIS},
+          {"MEC", ::caf::kMEC},
+          {"COH", ::caf::kCoh},
+          {"DFR", ::caf::kDiffractive},
+          {"1Kaon", ::caf::kSingleKaon},
+          {"NuEEL", ::caf::kNuElectronElastic},
+          {"IMD", ::caf::kInvMuonDecay},
+          {"IMDAnh", ::caf::kIMDAnnihilation},
+          {"AMNuGamma", ::caf::kAMNuGamma},
+          {"CEvNS", ::caf::kCohElastic},
+          {"IBD", ::caf::kInverseBetaDecay},
+          {"GLR", ::caf::kGlashowResonance},
+          {"PhotonCOH", ::caf::kPhotonCoh},
+          {"PhotonRES", ::caf::kPhotonRes},
+          {"DMEL", ::caf::kDarkMatterElastic},
+          {"DMDIS", ::caf::kDarkMatterDIS},
+          {"DME", ::caf::kDarkMatterElectron},
+          {"Uknown to GENIE", ::caf::kUnknownMode},
+          {"Unknown", ::caf::kUnknownMode},
+      };
 
       const auto comma = val.find(',');
       if (comma == std::string_view::npos) {
@@ -179,4 +176,4 @@ namespace sand {
     return result;
   }
 
-} // namespace sand
+} // namespace sand::common
