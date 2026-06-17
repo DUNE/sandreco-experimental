@@ -70,8 +70,9 @@ namespace sand {
       double t_prime = (A * E - B * D) / denominator; // Parameter along r
 
       // Clamp t to [0, 1] to stay within the segment
-      t       = std::max(0.0, std::min(1.0, t));
-      t_prime = std::max(0.0, std::min(1.0, t_prime));
+      t = std::max(0.0, std::min(1.0, t));
+      pos_3d clamped_point = seg_start + s * t;
+      t_prime = closest_approach_point(clamped_point);
 
       result.first  = t;
       result.second = t_prime;

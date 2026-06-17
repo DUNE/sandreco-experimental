@@ -47,6 +47,7 @@ namespace sand::stt {
     const auto& gi   = get<geoinfo>();
     auto& digi       = set<sand::tracker::digi>("digi");
     auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
+    auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker()); // Ensure STT info is available
 
     UFW_DEBUG(" STT subdetector implementation");
     std::map<geo_id, std::vector<EDEPHit>> hits_by_tube = group_hits_by_tube();
