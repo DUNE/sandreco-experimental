@@ -32,7 +32,7 @@ namespace sand::grain {
         return versors;
     }
 
-    // Remove redundant symmetries
+    // Remove redundant symmetries selecting only upper emishpere
     std::vector<cl_float3> select_unique_versors(const std::vector<cl_float3>& versors) {
         std::vector<cl_float3> unique_versors;
         unique_versors.reserve(versors.size());
@@ -58,5 +58,35 @@ namespace sand::grain {
         return converted_points;
     }
 
+    // Remove and return neighbouring points
+    // NOTE: it modifies the input points vector
+    std::vector<cl_float3> filter_neighbouring_points(std::vector<cl_float3>& points, const std::vector<float>& distances, float max_clustering_distance) {
+        // Safety check: ensure sizes match
+        if (points.size() != distances.size()) {
+            UFW_ERROR("Points size ({}) different from distances size ({})", points.size(), distances.size());
+        }
+
+        std::vector<cl_float3> clustered_points;
+        clustered_points.reserve(points.size());
+
+        size_t write_index = 0;
+        for (size_t read_index = 0; read_index < distances.size(); ++read_index) {
+            
+            if (distances[read_index] <= max_clustering_distance) {
+                clustered_points.push_back(points[read_index]); 
+            }
+            else {
+                points[write_index] = std::move(points[read_index]);
+                write_index++;
+            }
+        }
+
+        // After the loop, truncate the vector points to its new filtered size.
+        if (write_index < points.size()) {
+            points.resize(write_index);
+        }
+
+        return clustered_points;
+    }
 
 } // namespace sand::grain

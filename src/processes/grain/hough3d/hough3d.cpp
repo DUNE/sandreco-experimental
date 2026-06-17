@@ -21,12 +21,13 @@ namespace sand::grain {
    *
    *
    * \subsection Configuration
-   * | Parameter Name           | Type   | Unit  | Required/Default | Description                                                                         |
-   * |--------------------------|--------|-------|------------------|-------------------------------------------------------------------------------------|
-   * | `n_versors_in_sphere`    | uint   |       | Default: 100     | How many versors represent Fibonacci's sphere, for direction binning.               |
-   * | `xy_plane_step`          | double | mm    | Required         | Bin size for xy plane in Hough space.                                               |
-   * | `min_points_per_track`   | uint   |       | Required         | Minimum number of points to build a track.                                          |
-   * | `max_tracks_per_event`   | uint   |       | Default: 4       | Maximum number of tracks to search for in one event.                                |
+   * | Parameter Name                | Type   | Unit  | Required/Default | Description                                                                         |
+   * |-------------------------------|--------|-------|------------------|-------------------------------------------------------------------------------------|
+   * | `n_versors_in_sphere`         | uint   |       | Default: 100     | How many versors represent Fibonacci's sphere, for direction binning.               |
+   * | `xy_plane_step`               | float  | mm    | Required         | Bin size for xy plane in Hough space.                                               |
+   * | `max_clustering_distance`     | float  | mm    | Required         | Max distance between Hough line and points to be clustered together.                |
+   * | `min_points_per_track`        | uint   |       | Required         | Minimum number of points to build a track.                                          |
+   * | `max_tracks_per_event`        | uint   |       | Default: 4       | Maximum number of tracks to search for in one event.                                |
    */
   class hough3d : public ufw::process {
    public:
@@ -40,6 +41,7 @@ namespace sand::grain {
     static constexpr size_t s_max_platforms = 4;
     uint m_n_versors_in_sphere;
     float m_xy_plane_step;
+    float m_max_clustering_distance;
     size_t m_n_xy_bins;
     uint m_min_points_per_track;
     uint m_max_tracks_per_event;
@@ -73,6 +75,7 @@ namespace sand::grain {
     process::configure(cfg);
     m_n_versors_in_sphere = cfg.value("n_versors_in_sphere", 100);
     m_xy_plane_step = cfg.at("xy_plane_step");
+    m_max_clustering_distance = cfg.at("max_clustering_distance");
     m_min_points_per_track = cfg.at("min_points_per_track");
     m_max_tracks_per_event = cfg.value("max_tracks_per_event", 4);
 
@@ -172,6 +175,8 @@ namespace sand::grain {
       void* tmp_distances_ptr = points_distances.data();
       buf_distances.read(tmp_distances_ptr, platform.queues().front(), 0, -1, {});
       platform.queues().front().finish();
+
+      std::vector<cl_float3> clustered_points = filter_neighbouring_points(cl_points, points_distances, m_max_clustering_distance);
 
     }
 
