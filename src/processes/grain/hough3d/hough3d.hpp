@@ -59,6 +59,16 @@ namespace sand::grain {
         return converted_points;
     }
 
+    // Convert cl_float4 to 3d point cloud for writing ouput clusters
+    std::vector<point_cloud::point> point_float4_to_cloud(const std::vector<cl_float4>& points) {
+        std::vector<point_cloud::point> converted_points;
+        converted_points.reserve(points.size());
+        for (const auto& p : points) {
+            converted_points.push_back({pos_3d{p.s[0], p.s[1], p.s[2]}, p.s[3]});
+        }
+        return converted_points;
+    }
+
     // Remove and return neighbouring points
     // NOTE: it modifies the input points vector
     std::vector<cl_float4> filter_neighbouring_points(std::vector<cl_float4>& points, const std::vector<float>& distances, float max_clustering_distance) {

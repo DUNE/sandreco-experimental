@@ -113,6 +113,7 @@ namespace sand::grain {
     for (const auto& ev_points : point_cloud_in.points) {
       std::vector<cl_float4> cl_points = point_cloud_to_float4(ev_points);
       UFW_INFO("Processing {} points", cl_points.size());
+      std::vector<point_clusters::cluster> ev_clusters_out;
       uint n_found_tracks{0};
       while (true) {
         cl::buffer buf_points;
@@ -182,9 +183,14 @@ namespace sand::grain {
 
         std::vector<cl_float4> clustered_points = filter_neighbouring_points(cl_points, points_distances, m_max_clustering_distance);
 
+        if (clustered_points.size() < m_min_points_per_track) {
+          break;
+        }
+
+        ev_clusters_out.emplace_back(point_clusters::cluster{point_float4_to_cloud(clustered_points), dir_3d(max_versor.s[0], max_versor.s[1], max_versor.s[2]), pos_3d(line_point.s[0], line_point.s[1], line_point.s[2])});
         n_found_tracks++;
 
-        if (clustered_points.size() < m_min_points_per_track || n_found_tracks >= m_max_tracks_per_event) {
+        if (n_found_tracks >= m_max_tracks_per_event) {
           break;
         }
 
