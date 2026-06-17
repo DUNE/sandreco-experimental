@@ -1,10 +1,10 @@
-CL_KERNEL(void hough_vote(__global const float3* points, __global const float3* versors, __global uint* voting_array, const float xy_step, const int n_xy_bins)
+CL_KERNEL(void hough_vote(__global const float4* points, __global const float4* versors, __global uint* voting_array, const float xy_step, const int n_xy_bins)
 {
     const int p_id = get_global_id(0);
     const int v_id = get_global_id(1);
 
-    const float3 p = points[p_id];
-    const float3 v = versors[v_id];
+    const float4 p = points[p_id];
+    const float4 v = versors[v_id];
 
     // Since we use the upper hemishpere, v.z > 0 always
     const float inv = 1.0f / (1.0f + v.z);
@@ -21,8 +21,8 @@ CL_KERNEL(void hough_vote(__global const float3* points, __global const float3* 
        -v.y
     );
 
-    const float x_prime = dot(p, t_x);
-    const float y_prime = dot(p, t_y);
+    const float y_prime = dot(p.xyz, t_y);
+    const float x_prime = dot(p.xyz, t_x);
 
     const int x_index = n_xy_bins / 2 + (int)(x_prime / xy_step);
 

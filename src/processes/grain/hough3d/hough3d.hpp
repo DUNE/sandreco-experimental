@@ -9,8 +9,9 @@
 namespace sand::grain {
 
     // Evenly distribute point across sphere surface using golden spiral method (Fibonacci's sphere)
-    std::vector<cl_float3> fibonacci_sphere_versors(size_t n_versors) {
-        std::vector<cl_float3> versors;
+    // Using float4 in to be consistent with points
+    std::vector<cl_float4> fibonacci_sphere_versors(size_t n_versors) {
+        std::vector<cl_float4> versors;
         versors.reserve(n_versors);
 
         if (n_versors == 0) {
@@ -26,15 +27,15 @@ namespace sand::grain {
             const float r = std::sqrt(1.0 - z * z);
             const float theta = golden_angle * i;
 
-            versors.push_back({r * std::cos(theta), r * std::sin(theta), z});
+            versors.push_back({r * std::cos(theta), r * std::sin(theta), z, 0.0});
         }
 
         return versors;
     }
 
     // Remove redundant symmetries selecting only upper emishpere
-    std::vector<cl_float3> select_unique_versors(const std::vector<cl_float3>& versors) {
-        std::vector<cl_float3> unique_versors;
+    std::vector<cl_float4> select_unique_versors(const std::vector<cl_float4>& versors) {
+        std::vector<cl_float4> unique_versors;
         unique_versors.reserve(versors.size());
 
         constexpr double eps = 1e-12;
@@ -48,25 +49,25 @@ namespace sand::grain {
         return unique_versors;
     }
 
-    // Convert 3d point cloud to cl_float3 for GPU processing
-    std::vector<cl_float3> point_cloud_to_float3(const std::vector<point_cloud::point>& points) {
-        std::vector<cl_float3> converted_points;
+    // Convert 3d point cloud to cl_float4 for GPU processing
+    std::vector<cl_float4> point_cloud_to_float4(const std::vector<point_cloud::point>& points) {
+        std::vector<cl_float4> converted_points;
         converted_points.reserve(points.size());
         for (const auto& p : points) {
-            converted_points.push_back({static_cast<float>(p.position.x()), static_cast<float>(p.position.y()), static_cast<float>(p.position.z())});
+            converted_points.push_back({static_cast<float>(p.position.x()), static_cast<float>(p.position.y()), static_cast<float>(p.position.z()), static_cast<float>(p.amplitude)});
         }
         return converted_points;
     }
 
     // Remove and return neighbouring points
     // NOTE: it modifies the input points vector
-    std::vector<cl_float3> filter_neighbouring_points(std::vector<cl_float3>& points, const std::vector<float>& distances, float max_clustering_distance) {
+    std::vector<cl_float4> filter_neighbouring_points(std::vector<cl_float4>& points, const std::vector<float>& distances, float max_clustering_distance) {
         // Safety check: ensure sizes match
         if (points.size() != distances.size()) {
             UFW_ERROR("Points size ({}) different from distances size ({})", points.size(), distances.size());
         }
 
-        std::vector<cl_float3> clustered_points;
+        std::vector<cl_float4> clustered_points;
         clustered_points.reserve(points.size());
 
         size_t write_index = 0;
