@@ -3,7 +3,7 @@
 
 #include <TDatabasePDG.h>
 
-namespace sand::mctruth {
+namespace sand::common::filler_details {
 
   [[nodiscard]] bool is_lepton_pdg(int pdg) {
     if (auto* p = TDatabasePDG::Instance()->GetParticle(pdg)) {
@@ -11,11 +11,6 @@ namespace sand::mctruth {
       return pclass && std::string_view{pclass} == "Lepton";
     }
     return false;
-  }
-
-  bool is_darkneutrino_pdg(int pdg) {
-    const int abs_pdg = std::abs(pdg);
-    return abs_pdg == 2000030000;
   }
 
   int find_final_lepton(StdHep const& stdhep) {
@@ -98,4 +93,37 @@ namespace sand::mctruth {
     return ixn;
   }
 
-} // namespace sand::mctruth
+  ::caf::SRTrueParticle true_particle_from_genie(std::size_t index, StdHep const& stdhep, long int ixn_id) {
+    ::caf::SRTrueParticle p{};
+
+    p.pdg            = stdhep.Pdg_[index];
+    p.G4ID           = -1;
+    p.interaction_id = ixn_id;
+
+    const auto& p4 = stdhep.P4_[index];
+    p.p.px         = p4.Px();
+    p.p.py         = p4.Py();
+    p.p.pz         = p4.Pz();
+    p.p.E          = p4.E();
+
+    return p;
+  }
+
+  std::vector<::caf::SRTrueParticle> make_prefsi_particles(StdHep const& stdhep, long int ixn_id) {
+    std::vector<::caf::SRTrueParticle> particles;
+    particles.reserve(stdhep.N_);
+
+    for (int i{}; i != stdhep.N_; ++i) {
+      if (stdhep.Status_[i] != genie::kIStHadronInTheNucleus) {
+        continue;
+      }
+      if (is_bindino_pdg(stdhep.Pdg_[i])) {
+        continue;
+      }
+      particles.push_back(true_particle_from_genie(static_cast<std::size_t>(i), stdhep, ixn_id));
+    }
+
+    return particles;
+  }
+
+} // namespace sand::common::filler_details
