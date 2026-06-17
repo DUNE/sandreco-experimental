@@ -25,7 +25,8 @@ namespace sand {
     const genie_reader* m_genie;   ///< Pointer to the genie reader providing MC truth data
     sand::caf::caf_wrapper* m_caf; ///< Pointer to the CAF output wrapper (non-const for writing)
 
-    std::string m_sec_fill_mode; ///< Mode for secondary particle filling (default or dark-neutrino)
+    std::string m_sec_fill_mode; ///< Mode for secondary particle filling (default or recursive)
+    std::optional<int> m_sec_fill_depth; ///< Depth level down to which save particles  in the interaction tree (0 for secondaries)
     /// @brief Build map of edep-sim primaries grouped by interaction
     [[nodiscard]] std::vector<EdepInteractionRange> make_edep_interaction_map() const;
 

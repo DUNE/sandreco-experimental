@@ -15,6 +15,11 @@ namespace sand {
   void fake_reco::configure(const ufw::config& cfg) { 
     process::configure(cfg); 
     m_sec_fill_mode = cfg.value("sec_fill_mode", "default");
+    // parse the recursion depth level only if the recursive fill mode is set
+    if (m_sec_fill_mode == "recursive"){
+      m_sec_fill_depth = cfg.value("sec_fill_depth", 2);
+    }
+
   }
 
   void fake_reco::run() {
@@ -32,10 +37,10 @@ namespace sand {
     }
 
     // check the secondary fill option
-    if (m_sec_fill_mode != "default" && m_sec_fill_mode != "dark-neutrino"){
+    if (m_sec_fill_mode != "default" && m_sec_fill_mode != "recursive"){
       UFW_ERROR("Unsupported secondaries fill mode: {}", m_sec_fill_mode.c_str());
     } else {
-      UFW_INFO("Filling secondaries with mode: {}", m_sec_fill_mode.c_str());
+      UFW_INFO("Filling secondaries with mode: {}, depth: {}", m_sec_fill_mode.c_str(), m_sec_fill_depth.value_or(-1));
     }
 
     m_caf = &set<sand::caf::caf_wrapper>("output_caf");
@@ -73,8 +78,8 @@ namespace sand {
             if (m_sec_fill_mode == "default"){
               acc += static_cast<std::size_t>(std::distance(sec_begin, sec_end));
             } 
-            else if (m_sec_fill_mode == "dark-neutrino") {
-              acc += count_secondaries_recursive(sec_begin, sec_end, 2); 
+            else if (m_sec_fill_mode == "recursive") {
+              acc += count_secondaries_recursive(sec_begin, sec_end, m_sec_fill_depth.value()); 
             } 
             else { UFW_ERROR("Unsupported secondaries fill mode: {}", m_sec_fill_mode.c_str());}
             
@@ -96,8 +101,8 @@ namespace sand {
         if (m_sec_fill_mode == "default") {
           CAFFiller<::caf::SRTrueInteraction>::add_secondaries(true_ixn, sec_begin, sec_end, ancestor_ids[i]);
         }
-        else if (m_sec_fill_mode == "dark-neutrino") {
-          add_secondaries_recursive(true_ixn, sec_begin, sec_end, ancestor_ids[i],2);
+        else if (m_sec_fill_mode == "recursive") {
+          add_secondaries_recursive(true_ixn, sec_begin, sec_end, ancestor_ids[i], m_sec_fill_depth.value());
           true_ixn.nsec = static_cast<int>(true_ixn.sec.size()); // final nsec update             
         }
       }
