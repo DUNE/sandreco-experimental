@@ -37,8 +37,9 @@ namespace sand {
     void initialize_spill_capacities();
 
     /// @brief Fill the reco caf objects for a particle
-    void fill_reco_objects(const ::caf::SRTrueParticle &true_part, const ::caf::TrueParticleID &part_id, 
-                            const bool is_primary, ::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const;
+    void fill_reco_objects(const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
+                          const ::caf::SRTrueParticle &true_part, const ::caf::TrueParticleID &part_id, 
+                          const bool is_primary, ::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const;
 
     /// @brief Process all particles for one interaction
     void process_interaction_particles(::caf::SRTrueInteraction& true_ixn, ::caf::SRInteraction& reco_ixn,
