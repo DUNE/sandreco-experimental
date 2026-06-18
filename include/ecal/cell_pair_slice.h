@@ -8,16 +8,16 @@
 namespace sand::ecal {
 
   /// @brief Managed container for collections of slices of cell_pair objects.
+  ///
+  /// Each slice contains the cell-pair hypotheses reconstructed from the
+  /// corresponding digit slice.
   struct cell_pair_slices_container : managed_data_base {
-    using cell_pair_slice = std::vector<cell_pair>;
-    using cell_pair_slice_collection = std::vector<cell_pair_slice>;
+    using slice = std::vector<cell_pair>;
+    using slice_collection = std::vector<slice>;
 
-    cell_pair_slice_collection collection;
+    slice_collection collection;
   };
 
 } // namespace sand::ecal
 
 UFW_DECLARE_MANAGED_DATA(sand::ecal::cell_pair_slices_container);
-
-// For dictionaries
-UFW_DECLARE_UNMANAGED_DATA(sand::ecal::cell_pair_slices_container::cell_pair_slice);
