@@ -52,13 +52,13 @@
           "tree": "ecal_fast_digi"
         },
         "read": [
-          "sand_ecal_digits_container"
+          "ecal_digits"
         ]
       },
       {
         "sand::ecal::spill_slicer_placeholder": {},
         "reqs": {
-          "digi": "sand_ecal_digits_container"
+          "digi": "ecal_digits"
         },
         "prods": {
           "digit_slices": "digit_ecal_slices"
