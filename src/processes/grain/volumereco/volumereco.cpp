@@ -31,6 +31,7 @@ namespace sand::grain {
     size_t m_n_devices;
     size_t m_max_iterations;
     float m_pde;
+    bool m_write_to_hdf5;
     std::vector<cl::buffer> m_image_buffers; // One per camera
   };
 
@@ -38,6 +39,7 @@ namespace sand::grain {
     process::configure(cfg);
     m_max_iterations = cfg.at("max_iterations");
     m_pde            = cfg.at("pde");
+    m_write_to_hdf5  = cfg.value("write_to_hdf5", true);
     auto& cl_manager = instance<volumereco_cl_manager>();
     m_n_devices      = cl_manager.platform().devices().size();
     auto& array      = instance<sand::hdf5::ndarray>("angle_reader");
@@ -72,10 +74,9 @@ namespace sand::grain {
     for (const auto& images_in : spill_images_in.images) {
       if (!images_in.empty()) {
         for (const auto& image : images_in) {
-          UFW_DEBUG("Image id: {}", image.camera_id);
           // Sharing load evenly among GPUs, assuming camera ids range [0, n_cameras -1]
           const size_t idev = image.camera_id % m_n_devices;
-          UFW_DEBUG("Processing on device {}", idev);
+          UFW_DEBUG("Image id: {}, processing on device {}", image.camera_id, idev);
           // Copy data to device buffer
           m_image_buffers[image.camera_id].write(image.amplitude_array<float>().Array(),
                                                  cl_manager.platform().queues()[image.camera_id % m_n_devices]);
@@ -84,7 +85,7 @@ namespace sand::grain {
               starting_score.data(), cl_manager.platform().queues()[image.camera_id % m_n_devices]);
         }
         for (int iteration = 0; iteration < m_max_iterations; ++iteration) {
-          UFW_INFO("Iteration: {}", iteration);
+          UFW_DEBUG("Iteration: {}", iteration);
           // Fill maximization buffers with 0
           for (size_t idev = 0; idev < m_n_devices; ++idev) {
             cl_manager.maximization_buffers()[idev].write(starting_maximization, cl_manager.platform().queues()[idev]);
@@ -145,13 +146,17 @@ namespace sand::grain {
       }
 
       // Write to hdf5
-      UFW_INFO("Write hdf5 for event {} slice {}", ufw::context::current()->id(), i_event_in_spill);
-      auto& score_writer = instance<sand::hdf5::ndarray>("score_writer");
-      sand::hdf5::ndarray::ndrange range({voxels.size().x(), voxels.size().y(), voxels.size().z()});
-      range.set_type(H5::PredType::NATIVE_FLOAT);
-      score_writer.write(std::to_string(ufw::context::current()->id()) + std::string("_")
-                             + std::to_string(i_event_in_spill),
-                         range, photon_amplitude_out.voxels.back().data());
+      if (m_write_to_hdf5) {
+        UFW_INFO("Write hdf5 for event {} slice {}", ufw::context::current()->id(), i_event_in_spill);
+        auto& score_writer = instance<sand::hdf5::ndarray>("score_writer");
+        sand::hdf5::ndarray::ndrange range({voxels.size().x(), voxels.size().y(), voxels.size().z()});
+        range.set_type(H5::PredType::NATIVE_FLOAT);
+        score_writer.write(std::to_string(ufw::context::current()->id()) + std::string("_")
+                               + std::to_string(i_event_in_spill),
+                           range, photon_amplitude_out.voxels.back().data());
+      } else {
+        UFW_INFO("Processed event {} slice {}", ufw::context::current()->id(), i_event_in_spill);
+      }
       i_event_in_spill++;
     }
   }
