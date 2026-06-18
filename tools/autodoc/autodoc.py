@@ -59,10 +59,13 @@ def extract_doxygen_tags(comment_text, clean_output=True):
         "brief": re.compile(r"\\brief\s+(.*)", re.DOTALL),
         "class": re.compile(r"\\class\s+(.*)", re.DOTALL),
         "configuration": re.compile(r"\\subsection\s+Configuration\s+(.*)", re.DOTALL),
+        "dependencies": re.compile(r"\\subsection\s+Dependencies\s+(.*)", re.DOTALL),
+        "inputs": re.compile(r"\\subsection\s+Requirements\s+(.*)", re.DOTALL),
+        "outputs": re.compile(r"\\subsection\s+Products\s+(.*)", re.DOTALL),
         # Add more patterns as needed
     }
 
-    multiline = ["configuration"]
+    multiline = ["configuration", "dependencies", "inputs", "outputs"]
 
     # Initialize the result dictionary
     sections = {
@@ -151,6 +154,12 @@ def process_source(name, source):
                 print_yellow(f"class `{cc[0]}` lacks an appropriate brief")
             if "text" not in tags or len(tags["text"]) < 200:
                 print_yellow(f"class `{cc[0]}` lacks an appropriate description")
+            if "inputs" not in tags:
+                print_red(f"class `{cc[0]}` does not have an input section")
+            if "outputs" not in tags:
+                print_red(f"class `{cc[0]}` does not have an output section")
+            if "dependencies" not in tags:
+                print_red(f"class `{cc[0]}` does not have a dependencies section")
             if "configuration" not in tags:
                 print_red(f"class `{cc[0]}` does not have a configuration section")
             else:
