@@ -1,3 +1,4 @@
+#include <common/version.h>
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
 #include <ufw/factory.hpp>
