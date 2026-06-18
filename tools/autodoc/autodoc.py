@@ -1,4 +1,28 @@
 import re
+import sys
+import argparse
+import os
+
+# ANSI Color Codes (Foreground)
+ANSI_RED = "\033[31m"
+ANSI_GREEN = "\033[32m"
+ANSI_YELLOW = "\033[33m"
+ANSI_RESET = "\033[0m"  # Reset to default
+
+
+def print_red(text):
+    """Print text in red."""
+    print(ANSI_RED + text + ANSI_RESET)
+
+
+def print_green(text):
+    """Print text in green."""
+    print(ANSI_GREEN + text + ANSI_RESET)
+
+
+def print_yellow(text):
+    """Print text in yellow."""
+    print(ANSI_YELLOW + text + ANSI_RESET)
 
 
 def find_class(source):
@@ -107,23 +131,19 @@ def examine_configuration(source):
 
 
 def match_configuration(doxy, src):
-    pattern = r"\^|\s*`([^`]+)`\s*\|"
-    matches = re.findall(pattern, doxy)
+    pattern = r"^\|\s*`([^`]+)`\s*\|"
+    matches = re.findall(pattern, doxy, re.MULTILINE)
     doxy = set(matches)
     flat = sum(src.values(), [])
     src = set(flat)
     return list(doxy ^ src)
 
 
-# Example usage
-if __name__ == "__main__":
-    import sys
-
-    cpp_file = sys.argv[1]
-    with open(cpp_file, "r", encoding="utf-8") as file:
-        source = file.read()
+def process_source(name, source):
+    print(f"Opening {name}")
     cc = find_class(source)
     if cc is not None:
+        print_green(f"Processing class {cc[0]}")
         if cc[1] is not None:
             tags = extract_doxygen_tags(cc[1].group(1))
             # print("# class", cc[0])
@@ -133,9 +153,35 @@ if __name__ == "__main__":
             parameters = examine_configuration(source)
             missing = match_configuration(tags["configuration"], parameters)
             if missing:
-                print("Mismatch in documentation for configuration parameters", missing)
-                sys.exit(-3)
+                print_red(
+                    f"Mismatch in documentation for configuration parameters: {missing}"
+                )
         else:
-            print("No Doxygen comment found for class", cc[0])
-            sys.exit(-2)
-    sys.exit(0)
+            print_red(f"No Doxygen comment found for class {cc[0]}")
+
+
+# Example usage
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process files with given function")
+    parser.add_argument("files", nargs="+", help="Files or directories to process")
+    args = parser.parse_args()
+    file_paths = []
+    for file_path in args.files:
+        if os.path.isdir(file_path):
+            for dirpath, _, filenames in os.walk(file_path):
+                for filename in filenames:
+                    file_paths.append(os.path.join(dirpath, filename))
+        else:
+            file_paths.append(file_path)
+    contents = {}
+    for fname in file_paths:
+        name, ext = os.path.splitext(fname)
+        if ext.lower() in [".cc", ".cpp", ".cxx"]:
+            with open(fname, "r", encoding="utf-8") as f:
+                contents[fname] = f.read()
+            for hext in [".h", ".hpp", ".hxx"]:
+                if os.path.exists(name + hext):
+                    with open(name + hext, "r", encoding="utf-8") as f:
+                        contents[fname] = f.read() + "\n\n" + contents[fname]
+    for source in contents:
+        process_source(source, contents[source])
