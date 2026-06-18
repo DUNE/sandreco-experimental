@@ -20,8 +20,7 @@ namespace sand::ecal {
     /// complete begin/end pair.
     ///
     /// This allows downstream reconstruction to identify cells with ambiguous
-    /// complete-pair candidates while preserving the same cell-level flag on
-    /// incomplete recovery hypotheses.
+    /// complete-pair candidates.
     bool cell_has_competing_complete_pairs = false;
 
     /// Number of physically valid complete begin/end pairs found in the same
