@@ -39,7 +39,7 @@
       ]
     },
     {
-      "sand::ecal::digit_spill_slicer_placeholder": {},
+      "sand::ecal::spill_slicer_placeholder": {},
       "reqs": {
         "digi": "ecal_digits"
       },
