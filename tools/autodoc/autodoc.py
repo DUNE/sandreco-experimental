@@ -140,29 +140,32 @@ def match_configuration(doxy, src):
 
 
 def process_source(name, source):
-    print(f"Opening {name}")
+    print(f"{name}:")
     cc = find_class(source)
     if cc is not None:
-        print_green(f"Processing class {cc[0]}")
+        print_green(f"Processing class `{cc[0]}`")
         if cc[1] is not None:
             tags = extract_doxygen_tags(cc[1].group(1))
-            # print("# class", cc[0])
-            # for k, v in tags.items():
-            #    print(f"## Section {k}:")
-            #    print(v)
             parameters = examine_configuration(source)
-            missing = match_configuration(tags["configuration"], parameters)
-            if missing:
-                print_red(
-                    f"Mismatch in documentation for configuration parameters: {missing}"
-                )
+            if "brief" not in tags or len(tags["brief"]) < 20:
+                print_yellow(f"class `{cc[0]}` lacks an appropriate brief")
+            if "text" not in tags or len(tags["text"]) < 200:
+                print_yellow(f"class `{cc[0]}` lacks an appropriate description")
+            if "configuration" not in tags:
+                print_red(f"class `{cc[0]}` does not have a configuration section")
+            else:
+                missing = match_configuration(tags["configuration"], parameters)
+                if missing:
+                    print_red(
+                        f"class `{cc[0]}` has undocumented configuration parameters: {missing}"
+                    )
         else:
-            print_red(f"No Doxygen comment found for class {cc[0]}")
+            print_red(f"class `{cc[0]}` has no documentation")
 
 
 # Example usage
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process files with given function")
+    parser = argparse.ArgumentParser(description="Examine sources for documentation")
     parser.add_argument("files", nargs="+", help="Files or directories to process")
     args = parser.parse_args()
     file_paths = []
