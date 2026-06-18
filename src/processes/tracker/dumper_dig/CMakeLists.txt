@@ -1,0 +1,5 @@
+sandreco_add_process(sand_tracker_dumper_dig)
+
+target_sources(sand_tracker_dumper_dig PRIVATE dumper_dig.cpp)
+
+target_link_libraries(sand_tracker_dumper_dig PRIVATE sand_root_tgeomanager sand_geoinfo)

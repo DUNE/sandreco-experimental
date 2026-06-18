@@ -1,1 +1,2 @@
 add_subdirectory(clustering)
+add_subdirectory(dumper_dig)
