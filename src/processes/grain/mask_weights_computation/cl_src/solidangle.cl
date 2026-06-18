@@ -1,4 +1,4 @@
-CL_KERNEL(void solidangle(const transform_t voxel_id_to_grain, const transform_t camera_transform,
+CL_KERNEL(void solidangle(const transform_t voxel_id_to_grain, const transform_t camera_transform, __global const uchar* fiducial,
                           __global const frustum_t* frustums, const int n_holes, __global const rect_f* mask_rects,
                           const float z_mask, const int n_sensors, __global const rect_f* sensor_rects,
                           const float z_sensors, const solidangle_cfg cfg, __global float* solid_angles) {
@@ -7,6 +7,16 @@ CL_KERNEL(void solidangle(const transform_t voxel_id_to_grain, const transform_t
   const int k         = get_global_id(2);
   const int voxel_idx = (i * get_global_size(1) + j) * get_global_size(2) + k;
 
+  if (!fiducial[voxel_idx]) {
+    for (int sens_id = 0; sens_id < n_sensors; ++sens_id){
+      const int out_id = voxel_idx * n_sensors + sens_id; 
+      solid_angles[out_id] = 0.f;
+    }
+    return;
+  }
+
+  
+  
   // voxel center in fiducial frame
   const float4 self_f         = transform4(voxel_id_to_grain, convert_float4((int4)(i, j, k, 1)));
   const float half_voxel_diag = cfg.voxel_size * 0.5; // cfg.voxel_size * sqrt(3.f) * 0.5;

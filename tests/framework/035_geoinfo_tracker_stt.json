@@ -15,7 +15,10 @@
   },
   "run" : [
     {
-      "sand::test::geoinfo" : { "init" : ["tracker"] },
+      "sand::test::geoinfo" : {
+        "init" : ["tracker"],
+        "test" : ["tracker"]
+        },
       "reqs" : {}
     }
   ]
