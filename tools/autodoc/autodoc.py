@@ -1,13 +1,7 @@
 import re
 
 
-def find_class_comments(cpp_file_path):
-    """
-    Scans a C++ file for classes inheriting from 'ufw::process' and extracts their Doxygen comments.
-    Returns a dictionary: {class_name: comment_text}
-    """
-    with open(cpp_file_path, "r", encoding="utf-8") as file:
-        content = file.read()
+def find_class(source):
 
     # Regex to match class definitions (including inheritance)
     class_match = re.compile(
@@ -18,15 +12,16 @@ def find_class_comments(cpp_file_path):
 
     doxygen_comment_match = re.compile(r"/\*\*(.*?)\*/", re.MULTILINE | re.DOTALL)
 
-    classes_found = {}
-    for match in class_match.finditer(content):
-        class_name = match.group(1)
-        class_tag_match = re.compile(r"\\class (?:[\w:]+::)*" + re.escape(class_name))
-        for comment in doxygen_comment_match.finditer(content):
-            if class_tag_match.search(comment.group(1)):
-                classes_found[class_name] = comment
-
-    return classes_found
+    match = class_match.search(source)
+    if match is None:
+        return None
+    class_name = match.group(1)
+    class_tag_match = re.compile(r"\\class (?:[\w:]+::)*" + re.escape(class_name))
+    for comment in doxygen_comment_match.finditer(source):
+        if class_tag_match.search(comment.group(1)):
+            return (class_name, comment)
+        else:
+            return (class_name, None)
 
 
 def extract_doxygen_tags(comment_text, clean_output=True):
@@ -94,18 +89,53 @@ def extract_doxygen_tags(comment_text, clean_output=True):
     return sections
 
 
+def examine_configuration(source):
+    parameters = {"paths": [], "required": [], "optional": []}
+    pattern = r"cfg\.at\(\"(.*?)\"\)"
+    matches = re.findall(pattern, source)
+    for match in matches:
+        parameters["optional"].append(match)
+    pattern = r"cfg\.value\(\"(.*?)\"(?:,|\s*)?(.*?)\)"
+    matches = re.findall(pattern, source)
+    for match in matches:
+        parameters["required"].append(match[0])
+    pattern = r"cfg\.path_at\(\"(.*?)\"\)"
+    matches = re.findall(pattern, source)
+    for match in matches:
+        parameters["paths"].append(match)
+    return parameters
+
+
+def match_configuration(doxy, src):
+    pattern = r"\^|\s*`([^`]+)`\s*\|"
+    matches = re.findall(pattern, doxy)
+    doxy = set(matches)
+    flat = sum(src.values(), [])
+    src = set(flat)
+    return list(doxy ^ src)
+
+
 # Example usage
 if __name__ == "__main__":
     import sys
 
     cpp_file = sys.argv[1]
-    class_comments = find_class_comments(cpp_file)
-    for class_name, comment in class_comments.items():
-        if comment:
-            tags = extract_doxygen_tags(comment.group(1))
-            for k, v in tags.items():
-                print(f"Section {k}:")
-                print(v)
+    with open(cpp_file, "r", encoding="utf-8") as file:
+        source = file.read()
+    cc = find_class(source)
+    if cc is not None:
+        if cc[1] is not None:
+            tags = extract_doxygen_tags(cc[1].group(1))
+            # print("# class", cc[0])
+            # for k, v in tags.items():
+            #    print(f"## Section {k}:")
+            #    print(v)
+            parameters = examine_configuration(source)
+            missing = match_configuration(tags["configuration"], parameters)
+            if missing:
+                print("Mismatch in documentation for configuration parameters", missing)
+                sys.exit(-3)
         else:
-            print("No Doxygen comment found.")
-        print("---")
+            print("No Doxygen comment found for class", cc[0])
+            sys.exit(-2)
+    sys.exit(0)
