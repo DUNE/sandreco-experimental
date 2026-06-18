@@ -12,6 +12,7 @@
 #include <hough3d.hpp>
 
 #include <cmath>
+#include <iostream>
 
 namespace sand::grain {
 
@@ -111,6 +112,13 @@ namespace sand::grain {
     auto& point_clusters_out = set<point_clusters>("point_clusters").clusters;
     // Loop on events in a spill
     for (const auto& ev_points : point_cloud_in.points) {
+      if (ev_points.size() == 0) {
+        UFW_DEBUG("Skipping event with 0 points");
+        continue;
+      }
+      // for (const auto& p : ev_points) {
+      //   std::cout << p.position.x() << "," << p.position.y() << "," << p.position.z() << "\n";
+      // }
       std::vector<cl_float4> cl_points = point_cloud_to_float4(ev_points);
       UFW_INFO("Processing {} points", cl_points.size());
       std::vector<point_clusters::cluster> ev_clusters_out;
@@ -144,6 +152,12 @@ namespace sand::grain {
         m_buf_voting_array.read(tmp_voting_ptr, platform.queues().front(), 0, -1, {});
         platform.queues().front().finish();
 
+        // for (size_t i{0}; i < m_voting_array.size(); ++i) {
+        //   if (m_voting_array[i] > 0) {
+        //     std::cout << i << " : " << m_voting_array[i] << "\t";
+        //   }
+        // }
+        // std::cout << "\n";
         // Find maximum
         const size_t max_votes_index =  std::distance(m_voting_array.begin(),  std::max_element(m_voting_array.begin(), m_voting_array.end()));
         const uint vote_count = m_voting_array[max_votes_index];
@@ -187,8 +201,12 @@ namespace sand::grain {
           break;
         }
 
-        ev_clusters_out.emplace_back(point_clusters::cluster{point_float4_to_cloud(clustered_points), dir_3d(max_versor.s[0], max_versor.s[1], max_versor.s[2]), pos_3d(line_point.s[0], line_point.s[1], line_point.s[2])});
+        const pos_3d out_line_point{line_point.s[0], line_point.s[1], line_point.s[2]};
+        const dir_3d out_line_dir{max_versor.s[0], max_versor.s[1], max_versor.s[2]};
+        ev_clusters_out.emplace_back(point_clusters::cluster{point_float4_to_cloud(clustered_points), out_line_dir, out_line_point});
         n_found_tracks++;
+
+        UFW_INFO("Added track: point {} direction {} n_points {}", out_line_point, out_line_dir, clustered_points.size());
 
         if (n_found_tracks >= m_max_tracks_per_event) {
           break;

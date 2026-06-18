@@ -35,6 +35,13 @@
         },
         "reqs" : {"point_cloud" : "grain_point_cloud"},
         "prods" : {"point_clusters" : "grain_point_clusters"}
+      },
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/grain_point_clusters.root",
+          "tree" : "point_clusters"
+        },
+        "write" : ["grain_point_clusters"]
       }
     ]
   }
