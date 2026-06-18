@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_test_grain_optical_simulation)
+
+target_sources(sand_test_test_grain_optical_simulation PRIVATE test_grain_optical_simulation.cpp)
+
+target_link_libraries(sand_test_test_grain_optical_simulation PRIVATE ROOT::MathCore sand_edep_reader sand_geoinfo) 

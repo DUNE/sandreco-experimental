@@ -8,7 +8,8 @@
 
 namespace sand {
 
-  geoinfo::stt_info::stt_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg) : tracker_info(gi, gp, cfg) {
+  geoinfo::stt_info::stt_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg)
+    : tracker_info(gi, gp, cfg) {
     auto& tgm    = ufw::context::current()->instance<root_tgeomanager>();
     auto nav     = tgm.navigator();
     auto sttpath = gi.root_path() / path();
@@ -45,43 +46,49 @@ namespace sand {
       boxcorner.SetX(-boxcorner.x());
       stat->top_south    = centre + boxcorner;
       stat->bottom_north = centre - boxcorner;
-      stat->parent = this;
-      
+      stat->parent       = this;
+
       nav->for_each_node([&](auto plane) {
         // The plane does not carry useful information for us.
         std::string plname = plane->GetName();
-        if (plname.find("plane") == std::string::npos) { // other stuff, targets, ...
-          return;
-        }
-        nav->cd(sttpath / smodname / plname);
-        nav->for_each_node([&](auto tube) {
-          std::string tname = tube->GetName();
-          nav->cd(sttpath / smodname / plname / tname);
-          if (auto* tube_shape = dynamic_cast<TGeoTube*>(tube->GetVolume()->GetShape())) {
-            auto matrix  = nav->get_hmatrix();
-            double* tran = matrix.GetTranslation();
-            double* rot  = matrix.GetRotationMatrix();
-            pos_3d centre;
-            centre.SetCoordinates(tran);
-            dir_3d halfsize(0, 0, tube_shape->GetDZ());
-            dir_3d globalhalfsize = nav->to_master(halfsize);
-            auto w                = std::make_unique<wire>();
-            w->parent             = stat.get();
-            w->head               = centre + globalhalfsize;
-            w->tail               = centre - globalhalfsize;
-            w->max_radius         = tube_shape->GetRmax();
-            w->geo                = id(geo_path(smodname.c_str()) / plname / tname);
-            // FIXME temporary implementation of w->channel
-            w->daq_channel.subdetector = STT;
-            w->daq_channel.link = w->geo.stt.supermodule;
-            w->daq_channel.channel = (uint32_t(w->geo.stt.plane) << 16) | uint32_t(w->geo.stt.tube);
-            w->aabb = geoinfo::tracker_info::wire::AABB(*w);
-            stat->daq_link = w->geo.stt.supermodule;
-            stat->wires.emplace_back(std::move(w));
+        if (plname.find("target") != std::string::npos) {
+          if (auto* target_shape = dynamic_cast<TGeoBBox*>(plane->GetVolume()->GetShape())) {
+            stat->target_box     = 2.0 * dir_3d(target_shape->GetDX(), target_shape->GetDY(), target_shape->GetDZ());
+            stat->target_density = plane->GetVolume()->GetMaterial()->GetDensity() / 6.24e24;
           } else {
-            UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
+            UFW_ERROR("Target shape is not a Box");
           }
-        });
+        } else if (plname.find("plane") != std::string::npos) {
+          nav->cd(sttpath / smodname / plname);
+          nav->for_each_node([&](auto tube) {
+            std::string tname = tube->GetName();
+            nav->cd(sttpath / smodname / plname / tname);
+            if (auto* tube_shape = dynamic_cast<TGeoTube*>(tube->GetVolume()->GetShape())) {
+              auto matrix  = nav->get_hmatrix();
+              double* tran = matrix.GetTranslation();
+              double* rot  = matrix.GetRotationMatrix();
+              pos_3d centre;
+              centre.SetCoordinates(tran);
+              dir_3d halfsize(0, 0, tube_shape->GetDZ());
+              dir_3d globalhalfsize = nav->to_master(halfsize);
+              auto w                = std::make_unique<wire>();
+              w->parent             = stat.get();
+              w->head               = centre + globalhalfsize;
+              w->tail               = centre - globalhalfsize;
+              w->max_radius         = tube_shape->GetRmax();
+              w->geo                = id(geo_path(smodname.c_str()) / plname / tname);
+              // FIXME temporary implementation of w->channel
+              w->daq_channel.subdetector = STT;
+              w->daq_channel.link        = w->geo.stt.supermodule;
+              w->daq_channel.channel     = (uint32_t(w->geo.stt.plane) << 16) | uint32_t(w->geo.stt.tube);
+              w->aabb                    = geoinfo::tracker_info::wire::AABB(*w);
+              stat->daq_link             = w->geo.stt.supermodule;
+              stat->wires.emplace_back(std::move(w));
+            } else {
+              UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
+            }
+          });
+        }
       });
 
       stat->set_wire_adjacency();
@@ -110,7 +117,7 @@ namespace sand {
         gi.stt.plane = 2;
       }
       gi.stt.tube = std::stoi(straw.substr(i5 + 1));
-      
+
     } else {
       UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
     }

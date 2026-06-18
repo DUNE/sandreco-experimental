@@ -42,6 +42,11 @@
       "prods" : {"hits" : "grain_hits"}
     },
     {
+      "sand::test::test_grain_optical_simulation" : {},
+      "reqs" : {"hits": "grain_hits"},
+      "prods" : {}
+    },   
+    {
       "sand::root::tree_streamer" : { 
         "uri" : "test/sensors_masks.root",
         "tree" : "cameras"

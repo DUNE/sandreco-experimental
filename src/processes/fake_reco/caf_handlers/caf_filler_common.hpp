@@ -4,6 +4,8 @@
 /// @file caf_filler_common.hpp
 /// @brief Utilities for CAF fillers: PDG classification, vector math, truth matching
 
+#include <ufw/utils.hpp>
+#include <ufw/context.hpp>
 
 #include <duneanaobj/StandardRecord/SREnums.h>
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
@@ -42,6 +44,12 @@ namespace sand {
       return pclass && std::string_view{pclass} == "Lepton";
     }
     return false;
+  }
+
+  [[nodiscard]] inline bool is_darkneutrino_pdg(int pdg){
+    // DarkNeutrinos have a GENIE-only PDG and do not appear in TDatabasePDG
+    const int abs_pdg = std::abs(pdg);
+    return abs_pdg == 2000030000;
   }
 
   [[nodiscard]] inline bool is_charged_lepton_pdg(int pdg) { return is_lepton_pdg(pdg) && charge_from_pdg(pdg) != 0; }

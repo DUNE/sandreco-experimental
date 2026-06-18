@@ -12,7 +12,14 @@ namespace sand {
   fake_reco::fake_reco()
     : process{{}, {{"output_caf", "sand::caf::caf_wrapper"}}}, m_edep{nullptr}, m_genie{nullptr}, m_caf{nullptr} {}
 
-  void fake_reco::configure(const ufw::config& cfg) { process::configure(cfg); }
+  void fake_reco::configure(const ufw::config& cfg) {
+    process::configure(cfg);
+    m_reco_mode = cfg.value("mode", "truth");
+    m_intrinsic_pos_res_t = cfg.value("intrinsic_pos_res_t", 0.);
+    m_intrinsic_pos_res_l = cfg.value("intrinsic_pos_res_l", 0.);
+    m_hit_energy_thr = cfg.value("hit_energy_thr", 0.);
+    m_b_field_magnitude = cfg.value("b_field_magnitude", 0.);
+  }
 
   void fake_reco::run() {
     // Bind input readers and output writer
@@ -156,13 +163,31 @@ namespace sand {
     // Reserve space for reco objects
     reco_ixn.part.sandreco.reserve(edep_count);
 
+    std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)> make_reco;
+
+    // Fill reco particle from truth or adding a smearing to muons momentum
+    if (m_reco_mode == "truth") {
+      UFW_INFO("Using reconstruction from truth");
+      make_reco = [](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        return CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
+      };
+    } else if (m_reco_mode == "smearing") {
+      UFW_INFO("Using reconstruction from truth with smearing");
+      make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
+        return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj, m_intrinsic_pos_res_t, m_intrinsic_pos_res_l, m_hit_energy_thr, m_b_field_magnitude);
+      };
+    } else {
+      UFW_ERROR("You need to specify which reco mode you want to use");
+    }
+
     // Loop over primary particles
     for (std::size_t i{}; i != edep_count; ++i) {
       const auto& true_prim = true_ixn.prim[i];
       const auto& prim_id   = true_prim.ancestor_id;
 
       // Create SRRecoParticle from truth
-      auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
+      auto reco_part = make_reco(true_prim, prim_id);
       reco_ixn.part.sandreco.push_back(std::move(reco_part));
       reco_ixn.part.nsandreco++;
 
