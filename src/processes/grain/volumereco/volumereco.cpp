@@ -98,7 +98,7 @@ namespace sand::grain {
                 cl_manager.expectation(), idev, cl::NullRange, sensors_shape, cl::NullRange,
                 /*kernel args*/
                 cl_manager.system_matrix(image.camera_id), cl_manager.inverted_sensitivity()[idev],
-                static_cast<int>(n_voxels), m_pde, cl_manager.previous_amplitudes()[idev],
+                static_cast<int>(n_voxels), cl_manager.previous_amplitudes()[idev],
                 cl_manager.expectation_buffers()[idev]);
 
             // Maximization step
@@ -107,7 +107,7 @@ namespace sand::grain {
                 cl_manager.maximization(), idev, cl::NullRange, voxel_shape, cl::NullRange, maximization_wait_for,
                 /*kernel args*/
                 cl_manager.system_matrix(image.camera_id), cl_manager.inverted_sensitivity()[idev],
-                static_cast<int>(n_sensors), m_pde, cl_manager.expectation_buffers()[idev],
+                static_cast<int>(n_sensors), cl_manager.expectation_buffers()[idev],
                 m_image_buffers[image.camera_id], cl_manager.maximization_buffers()[idev]);
           }
           // Be sure that all GPU computations are completed
@@ -125,7 +125,7 @@ namespace sand::grain {
             cl::Event ev_multiply_matrices_in_place = cl_manager.enqueue_on_device_with_args(
                 cl_manager.multiply_matrices_in_place(), idev, cl::NullRange, voxel_shape, cl::NullRange,
                 /*kernel args*/
-                cl_manager.previous_amplitudes()[idev], cl_manager.maximization_buffers()[0]);
+                cl_manager.previous_amplitudes()[idev], cl_manager.maximization_buffers()[0], 1.0f);
           }
           cl_manager.wait();
         }
@@ -133,7 +133,7 @@ namespace sand::grain {
         cl::Event ev_multiply_matrices_in_place = cl_manager.enqueue_on_device_with_args(
             cl_manager.multiply_matrices_in_place(), 0, cl::NullRange, voxel_shape, cl::NullRange,
             /*kernel args*/
-            cl_manager.previous_amplitudes()[0], cl_manager.inverted_sensitivity()[0]);
+            cl_manager.previous_amplitudes()[0], cl_manager.inverted_sensitivity()[0], 1.0f/m_pde);
         // Retrieve voxel score
         photon_amplitude_out.voxels.emplace_back(voxels.size());
         cl_manager.previous_amplitudes()[0].read(photon_amplitude_out.voxels.back(), cl_manager.platform().queues()[0],
