@@ -13,12 +13,12 @@ namespace sand::caf {
   /**
    * @brief Streamer for CAF (Common Analysis Format) ROOT files.
    *
-   * Manages reading/writing caf_wrapper data to/from TTree branches.
+   * Manages reading/writing standard_record_wrapper data to/from TTree branches.
    */
   class caf_streamer : public ufw::streamer {
     std::unique_ptr<TFile> m_file;
     TTree* m_tree                                    = nullptr; // owned by m_file (ROOT ownership)
-    caf_wrapper* m_data                              = nullptr; // non-owning, points to external data
+    standard_record_wrapper* m_data                              = nullptr; // non-owning, points to external data
     ::caf::StandardRecord* m_caf_ptr                 = nullptr; // upcast pointer passed to ROOT branch
     ufw::context_id m_context_id                     = {};
     long m_last_entry                                = 0;

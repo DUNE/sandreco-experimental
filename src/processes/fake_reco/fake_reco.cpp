@@ -10,7 +10,7 @@
 namespace sand {
 
   fake_reco::fake_reco()
-    : process{{}, {{"output_caf", "sand::caf::caf_wrapper"}}}, m_edep{nullptr}, m_genie{nullptr}, m_caf{nullptr} {}
+    : process{{}, {{"output_caf", "sand::caf::standard_record_wrapper"}}}, m_edep{nullptr}, m_genie{nullptr}, m_caf{nullptr} {}
 
   void fake_reco::configure(const ufw::config& cfg) { process::configure(cfg); }
 
@@ -28,7 +28,7 @@ namespace sand {
       return;
     }
 
-    m_caf = &set<sand::caf::caf_wrapper>("output_caf");
+    m_caf = &set<sand::caf::standard_record_wrapper>("output_caf");
 
     const auto& primaries = m_edep->GetChildrenTrajectories();
     const auto edep_map   = make_edep_interaction_map();

@@ -64,7 +64,7 @@ namespace sand::caf {
   void caf_streamer::attach(ufw::data::data_base& data, const ufw::public_id& id) {
     streamer::attach(data, id);
 
-    m_data    = static_cast<caf_wrapper*>(&data);
+    m_data    = static_cast<standard_record_wrapper*>(&data);
     m_caf_ptr = m_data; // upcast: ROOT serializes via "caf::StandardRecord" class name
 
     TBranch* id_branch   = nullptr;
