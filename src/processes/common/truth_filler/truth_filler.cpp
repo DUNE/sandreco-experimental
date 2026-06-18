@@ -8,38 +8,63 @@
 
 namespace sand::common {
 
-  truth_filler::truth_filler() : process{{}, {{"output_caf", "sand::caf::truth_branch_wrapper"}}} {}
+  truth_filler::truth_filler() : process{{}, {{"out_truth_branch", "sand::caf::truth_branch_wrapper"}}} {}
 
   void truth_filler::configure(ufw::config const& cfg) { process::configure(cfg); }
 
   void truth_filler::run() {
-    auto const* genie  = &get<genie_reader>();
-    auto const* edep   = &get<edep_reader>();
-    auto* truth_branch = &set<sand::caf::truth_branch_wrapper>("output_caf");
+    auto const& genie  = instance<genie_reader>();
+    auto const& edep   = instance<edep_reader>();
+    auto& truth_branch = set<sand::caf::truth_branch_wrapper>("out_truth_branch");
 
-    auto const& primaries   = edep->GetChildrenTrajectories();
+    auto const& primaries   = edep.GetChildrenTrajectories();
     auto interaction_ranges = filler_details::make_interaction_ranges(primaries);
 
-    auto const n_ixn = genie->events_.size();
+    auto const n_ixn = genie.events_.size();
 
     UFW_ASSERT(interaction_ranges.size() == n_ixn, "Mismatch between edep-sim interactions ({}) and GENIE events ({})",
                interaction_ranges.size(), n_ixn);
 
-    truth_branch->nnu = static_cast<int>(n_ixn);
-    truth_branch->nu.reserve(n_ixn);
+    truth_branch.nnu = static_cast<int>(n_ixn);
+    truth_branch.nu.reserve(n_ixn);
 
     for (std::size_t ixn_idx{}; ixn_idx != interaction_ranges.size(); ++ixn_idx) {
       auto [first_prim_idx, prim_count] = interaction_ranges[ixn_idx];
-      const auto& event                 = genie->events_[ixn_idx];
-      const auto& stdhep                = genie->stdHeps_[ixn_idx];
+      auto const& event                 = genie.events_[ixn_idx];
+      auto const& stdhep                = genie.stdHeps_[ixn_idx];
 
       // Create and fill SRTrueInteraction from GENIE
-      auto& true_ixn = truth_branch->nu.emplace_back(filler_details::true_interaction_from_genie(event, stdhep));
+      auto& true_ixn = truth_branch.nu.emplace_back(filler_details::true_interaction_from_genie(event, stdhep));
 
       // Add pre-FSI hadrons from GENIE StdHep
       auto prefsi      = filler_details::make_prefsi_particles(stdhep, true_ixn.id);
       true_ixn.nprefsi = static_cast<int>(prefsi.size());
       true_ixn.prefsi  = std::move(prefsi);
+
+      // Count secondaries for reservation
+      auto const* first_prim_ptr = primaries.data() + first_prim_idx;
+      auto const* last_prim_ptr  = primaries.data() + first_prim_idx + prim_count;
+      auto const sec_count =
+          std::accumulate(first_prim_ptr, last_prim_ptr, std::size_t{}, [&](std::size_t acc, const auto& prim) {
+            auto prim_it   = edep.GetTrajectory(prim.GetId());
+            auto sec_begin = std::next(prim_it);
+            auto sec_end   = edep.GetTrajectoryEnd(prim_it);
+            return acc + static_cast<std::size_t>(std::distance(sec_begin, sec_end));
+          });
+
+      // Reserve capacity for secondaries
+      true_ixn.sec.reserve(sec_count);
+
+      // Add primaries from edep-sim
+      auto [particles, ancestor_ids, nproton, nneutron, npip, npim, npi0] =
+          filler_details::make_primaries(primaries, first_prim_idx, prim_count, true_ixn.id);
+      true_ixn.prim     = std::move(particles);
+      true_ixn.nprim    = static_cast<int>(true_ixn.prim.size());
+      true_ixn.nproton  = nproton;
+      true_ixn.nneutron = nneutron;
+      true_ixn.npip     = npip;
+      true_ixn.npim     = npim;
+      true_ixn.npi0     = npi0;
     }
   }
 
