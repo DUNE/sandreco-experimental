@@ -20,8 +20,9 @@ namespace sand {
     auto driftpath = gi.root_path() / path();
 
     m_view_angle   = cfg.value("view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
-    m_view_offset  = cfg.value("view_offset", std::array<double, 3>{10.0, 10.0, 10.0});
-    m_view_spacing = cfg.value("view_spacing", std::array<double, 3>{10.0, 10.0, 10.0});
+    m_view_offset  = cfg.value("view_offset", std::array<double, 3>{20.0, 20.0, 20.0});
+    m_view_spacing = cfg.value("view_spacing", std::array<double, 3>{20.0, 20.0, 20.0});
+    m_distance_between_views = cfg.value("distance_between_views", 10.0);
 
     nav->cd(driftpath);
     nav->for_each_node([&](auto supermod) {
@@ -344,7 +345,7 @@ namespace sand {
                                                                                     : intersections_global[0];
         w->tail       = (intersections_global[1].x() < intersections_global[0].x()) ? intersections_global[0]
                                                                                     : intersections_global[1];
-        w->max_radius = drift->view_spacing()[view_ID] / 2.0;
+        w->max_radius = sqrt(std::pow(drift->view_spacing()[view_ID] / 2.0, 2) + std::pow(drift->distance_between_views() / 2.0, 2));
         w->daq_channel.subdetector = DRIFT;
         w->daq_channel.link        = daq_link;
         w->daq_channel.channel     = (uint32_t(view_ID) << 16) | uint32_t(wire_index);
