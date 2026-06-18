@@ -26,15 +26,8 @@
       "sand::common::truth_filler": {},
       "reqs": {},
       "prods": {
-        "output_caf": "produced_caf"
+        "out_truth_branch": "produced_truth"
       }
-    },
-    {
-      "sand::caf::caf_streamer": {
-        "uri": "test/output_truth.caf.root",
-        "tree": "cafTree"
-      },
-      "write": ["produced_caf"]
     }
   ]
 }
