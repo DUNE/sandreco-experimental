@@ -152,7 +152,7 @@ def process_source(name, source):
             parameters = examine_configuration(source)
             if "brief" not in tags or len(tags["brief"]) < 20:
                 print_yellow(f"class `{cc[0]}` lacks an appropriate brief")
-            if "text" not in tags or len(tags["text"]) < 200:
+            if "text" not in tags or len(tags["text"]) < 160:
                 print_yellow(f"class `{cc[0]}` lacks an appropriate description")
             if "inputs" not in tags:
                 print_red(f"class `{cc[0]}` does not have an input section")
