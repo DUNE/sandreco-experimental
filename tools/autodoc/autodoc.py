@@ -28,11 +28,9 @@ def print_blue(text):
 
 
 def find_class(source):
-
-    # Regex to match class definitions (including inheritance)
     class_match = re.compile(
-        r"^\s*(?:class|struct)\s+(\w+)\s*(?:[:>]\s*|\s*:\s*)"  # Match class name followed by optional ':' or '>'
-        r"\s*public\s+ufw::process\s*(\s*(?:,?\s*\w+\s*=>\s*\w+\s*)*)?\s*\{",  # Match public inheritance
+        r"^\s*(?:class|struct)\s+(\w+)\s*(?:[:>]\s*|\s*:\s*)"
+        r"\s*public\s+ufw::process\s*(\s*(?:,?\s*\w+\s*=>\s*\w+\s*)*)?\s*\{",
         re.MULTILINE | re.DOTALL,
     )
 
@@ -56,7 +54,6 @@ def extract_doxygen_tags(comment_text, clean_output=True):
         lines = comment_text.split("\n")[1:-1] if comment_text.count("\n") > 1 else []
     else:
         lines = comment_text.split("\n")
-    # Define patterns for Doxygen sections
     patterns = {
         "brief": re.compile(r"\\brief\s+(.*)", re.DOTALL),
         "class": re.compile(r"\\class\s+(.*)", re.DOTALL),
@@ -66,14 +63,9 @@ def extract_doxygen_tags(comment_text, clean_output=True):
         "outputs": re.compile(r"\\subsection\s+Products\s+(.*)", re.DOTALL),
         # Add more patterns as needed
     }
-
     multiline = ["configuration", "dependencies", "inputs", "outputs"]
 
-    # Initialize the result dictionary
-    sections = {
-        "text": "",  # Regular paragraphs without Doxygen tags
-    }
-
+    sections = {"text": ""}
     current_section = None
     current_content = ""
 
@@ -84,7 +76,6 @@ def extract_doxygen_tags(comment_text, clean_output=True):
         line += "\n"
         match = None
 
-        # Check for section matches
         for section_name, pattern in patterns.items():
             match = pattern.search(line)
             if match:
@@ -102,7 +93,7 @@ def extract_doxygen_tags(comment_text, clean_output=True):
 
         if match is None:
             # No tag found, add as regular text or to current section
-            if line.strip():  # Only if line isn't empty
+            if line.strip():
                 if (current_section is not None) and (current_section in multiline):
                     sections[current_section] = sections.get(current_section, "") + line
                 else:
@@ -208,6 +199,21 @@ def match_ios(doxy, src):
     return list(doxy ^ src)
 
 
+def match_section(clname, section, tags, deps):
+    if section not in tags:
+        print_red(f"class `{clname}` does not have an {section} section")
+    else:
+        tag = tags[section]
+        if section in ["inputs", "outputs"]:
+            missing = match_ios(tag, deps[section])
+        elif section == "dependencies":
+            missing = match_dependencies(tag, deps["globals"] | deps["instanced"])
+        elif section == "configuration":
+            missing = match_configuration(tag, deps)
+        if missing:
+            print_red(f"class `{clname}` has undocumented {section}: {missing}")
+
+
 def process_source(name, source):
     print(f"{name}:")
     cc = find_class(source)
@@ -215,49 +221,25 @@ def process_source(name, source):
         print_green(f"Processing class `{cc[0]}`")
         if cc[1] is not None:
             tags = extract_doxygen_tags(cc[1].group(1))
-            parameters = examine_configuration(source)
+            if "brief" not in tags or len(tags["brief"]) < 20:
+                print_yellow(f"class `{cc[0]}` lacks an adequate brief")
+            if "text" not in tags or len(tags["text"]) < 160:
+                print_yellow(f"class `{cc[0]}` lacks an adequate description")
             deps = examine_dependencies(source)
             if deps["bad_globals"]:
                 print_yellow(
-                    f"class `{cc[0]}` is accessing globals using get/set instead of instance: {[x[0] for x in deps['bad_globals']]}"
+                    f"class `{cc[0]}` is accessing globals using `get`/`set` "
+                    f"instead of `instance`: {[x[0] for x in deps['bad_globals']]}"
                 )
-            if "brief" not in tags or len(tags["brief"]) < 20:
-                print_yellow(f"class `{cc[0]}` lacks an appropriate brief")
-            if "text" not in tags or len(tags["text"]) < 160:
-                print_yellow(f"class `{cc[0]}` lacks an appropriate description")
-            if "inputs" not in tags:
-                print_red(f"class `{cc[0]}` does not have an input section")
-            else:
-                missing = match_ios(tags["inputs"], deps["inputs"])
-                if missing:
-                    print_red(f"class `{cc[0]}` has undocumented inputs: {missing}")
-            if "outputs" not in tags:
-                print_red(f"class `{cc[0]}` does not have an output section")
-            else:
-                missing = match_ios(tags["outputs"], deps["outputs"])
-                if missing:
-                    print_red(f"class `{cc[0]}` has undocumented outputs: {missing}")
-            if "dependencies" not in tags:
-                print_red(f"class `{cc[0]}` does not have a dependencies section")
-            else:
-                missing = match_dependencies(tags["dependencies"], deps["globals"])
-                if missing:
-                    print_red(
-                        f"class `{cc[0]}` has undocumented dependencies: {missing}"
-                    )
-            if "configuration" not in tags:
-                print_red(f"class `{cc[0]}` does not have a configuration section")
-            else:
-                missing = match_configuration(tags["configuration"], parameters)
-                if missing:
-                    print_red(
-                        f"class `{cc[0]}` has undocumented configuration parameters: {missing}"
-                    )
+            match_section(cc[0], "inputs", tags, deps)
+            match_section(cc[0], "outputs", tags, deps)
+            match_section(cc[0], "dependencies", tags, deps)
+            parameters = examine_configuration(source)
+            match_section(cc[0], "configuration", tags, parameters)
         else:
             print_red(f"class `{cc[0]}` has no documentation")
 
 
-# Example usage
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Examine sources for documentation")
     parser.add_argument("files", nargs="+", help="Files or directories to process")
