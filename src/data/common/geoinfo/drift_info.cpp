@@ -1,3 +1,9 @@
+/**
+ * @file
+ * @brief Implementation of the drift-chamber geometry (@ref sand::geoinfo::drift_info):
+ *        geometry-tree parsing, view/wire generation and path/id mapping.
+ */
+
 #include <drift_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <ufw/context.hpp>
@@ -9,9 +15,16 @@
 namespace sand {
 
   /**
-   * @brief Construct a new geoinfo::drift info::drift info object
+   * @brief Builds the drift-chamber geometry by walking the ROOT geometry tree.
    *
-   * @param gi
+   * Reads the per-view configuration (angles, offsets, spacings and the distance
+   * between views), then navigates supermodules and modules, classifies target
+   * material, records each station envelope and target box, and generates the
+   * drift views and their wires. Wire adjacency is computed per station.
+   *
+   * @param gi  The parent geometry description.
+   * @param gp  The geometry path of the drift-chamber volume.
+   * @param cfg The tracker configuration (merged with drift-specific parameters).
    */
   geoinfo::drift_info::drift_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg)
     : tracker_info(gi, gp, cfg) {
@@ -106,8 +119,19 @@ namespace sand {
     });
   }
 
+  /// @brief Default destructor.
   geoinfo::drift_info::~drift_info() = default;
 
+  /**
+   * @brief Decodes a drift geometry path into a geometry identifier.
+   *
+   * Combines the supermodule (a target-plus-module encoding) and plane indices
+   * parsed from the path tokens; non-sensitive elements (frames, mylar foils)
+   * map to an invalid plane/supermodule (255).
+   *
+   * @param gp The drift geometry path.
+   * @return The decoded geo_id.
+   */
   geo_id geoinfo::drift_info::id(const geo_path& gp) const {
     UFW_INFO("Searching for path {}.", gp);
     geo_id gi;
@@ -184,6 +208,11 @@ namespace sand {
     }
   }
 
+  /**
+   * @brief Builds the drift geometry path for a geometry identifier.
+   * @param gi The drift geometry identifier.
+   * @return The corresponding geometry path.
+   */
   geo_path geoinfo::drift_info::path(geo_id gi) const {
     UFW_ASSERT(gi.subdetector == DRIFT, "Subdetector must be DRIFT");
     geo_path gp           = path();
@@ -260,6 +289,11 @@ namespace sand {
     return gp;
   }
 
+  /**
+   * @brief Records the view (X/U/V) of a drift module and generates its wires.
+   * @param driftmod_path The geometry path of the drift module.
+   * @param id            The geometry id associated with the module's view.
+   */
   void geoinfo::drift_info::station::generate_drift_view(const geo_path& driftmod_path, const geo_id& id) {
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav  = tgm.navigator();
@@ -286,6 +320,15 @@ namespace sand {
     generate_wire_list(plane_ID);
   }
 
+  /**
+   * @brief Generates the wires of one view by intersecting wire lines with the station frame.
+   *
+   * Steps across the view at the configured spacing, rotates into the wire frame
+   * by the view angle, intersects each wire line with the station polygon and
+   * keeps the lines with exactly two crossings as wires, assigning their DAQ channel.
+   *
+   * @param view_ID The view index (0 = X, 1 = U, 2 = V).
+   */
   void geoinfo::drift_info::station::generate_wire_list(const size_t& view_ID) {
     /////Get gas volume properties
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
@@ -361,6 +404,10 @@ namespace sand {
     }
   }
 
+  /**
+   * @brief The wires belonging to the X view of this station.
+   * @return The list of X-view wires.
+   */
   geoinfo::drift_info::wire_list geoinfo::drift_info::station::x_view() const {
     auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
     wire_list wl =
@@ -368,6 +415,10 @@ namespace sand {
     return wl;
   }
 
+  /**
+   * @brief The wires belonging to the U view of this station.
+   * @return The list of U-view wires.
+   */
   geoinfo::drift_info::wire_list geoinfo::drift_info::station::u_view() const {
     auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
     wire_list wl =
@@ -375,6 +426,10 @@ namespace sand {
     return wl;
   }
 
+  /**
+   * @brief The wires belonging to the V view of this station.
+   * @return The list of V-view wires.
+   */
   geoinfo::drift_info::wire_list geoinfo::drift_info::station::v_view() const {
     auto drift = dynamic_cast<const sand::geoinfo::drift_info*>(this->parent);
     wire_list wl =

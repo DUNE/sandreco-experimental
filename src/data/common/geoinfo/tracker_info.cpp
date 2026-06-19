@@ -1,13 +1,22 @@
+/**
+ * @file
+ * @brief Implementation of the common tracker geometry (@ref sand::geoinfo::tracker_info)
+ *        together with its wire, station and bounding-box helpers.
+ */
+
 #include <BVH.hpp>
 #include <tracker_info.hpp>
 
 namespace sand {
 
   /**
-   * Calculates the y-offset correction due to wire sag from a @p measured point what is referenced to this wire.
-   * The correction is applied as a compensation i.e. the return value is vertically higher than the input.
+   * @brief Corrects a measured point for wire sag (catenary) along this wire.
    *
-   * @returns The corrected position of the point in global coordinates
+   * Applies the catenary of the relevant wire segment as a vertical compensation,
+   * so the returned point sits slightly higher than the input.
+   *
+   * @param measured Point referenced to this wire, in global coordinates.
+   * @return The sag-corrected position in global coordinates.
    */
   pos_3d geoinfo::tracker_info::wire::actual(pos_3d measured) const {
     auto seg     = segment(measured);
@@ -19,7 +28,9 @@ namespace sand {
   }
 
   /**
-   * @returns the index of the segment of wire that this point is closest to, guaranteed to be <= s_max_wire_spacers
+   * @brief Index of the wire segment (between spacers) closest to a point.
+   * @param x A point along the wire.
+   * @return The segment index, guaranteed to be <= s_max_wire_spacers.
    */
   std::size_t geoinfo::tracker_info::wire::segment(pos_3d x) const {
     double t      = x.x() - std::min(head.x(), tail.x());
@@ -30,15 +41,40 @@ namespace sand {
     return i;
   }
 
+  /**
+   * @brief Constructs the common tracker geometry from its geometry sub-tree.
+   * @param gi The parent geometry description.
+   * @param gp The geometry path of the tracker volume.
+   */
   geoinfo::tracker_info::tracker_info(const geoinfo& gi, const geo_path& gp, const ufw::config&)
     : subdetector_info(gi, gp) {}
 
+  /// @brief Default destructor.
   geoinfo::tracker_info::~tracker_info() = default;
 
+  /**
+   * @brief Appends a station to the tracker, taking ownership of it.
+   * @param p The station to move in.
+   */
   void geoinfo::tracker_info::add_station(station_ptr&& p) { m_stations.emplace_back(std::move(p)); }
 
+  /**
+   * @brief Registers a gas volume at a geometry path.
+   * @param p The geometry path of the volume.
+   * @param v The gas volume.
+   */
   void geoinfo::tracker_info::add_volume(const geo_path& p, const gas_volume& v) { m_volumes[p] = v; }
 
+  /**
+   * @brief Closest-approach parameters between a segment and this wire.
+   *
+   * Solves for the mutually closest points of the segment and the finite wire,
+   * falling back to the segment midpoint when the two are parallel.
+   *
+   * @param seg_start Start of the segment.
+   * @param seg_stop  End of the segment.
+   * @return {t along the segment in [0,1], t' along the wire in [0,1]}.
+   */
   std::pair<double, double> geoinfo::tracker_info::wire::closest_approach_segment(
       const pos_3d& seg_start, // TO-DO should always produce a result, even in the parallel case
       const pos_3d& seg_stop) const {
@@ -81,6 +117,12 @@ namespace sand {
     }
   }
 
+  /**
+   * @brief Distance of closest approach between a segment and this wire.
+   * @param seg_start Start of the segment.
+   * @param seg_stop  End of the segment.
+   * @return The minimum distance between the segment and the wire.
+   */
   double geoinfo::tracker_info::wire::closest_approach_segment_distance(const pos_3d& seg_start,
                                                                         const pos_3d& seg_stop) const {
     auto approach                   = closest_approach_segment(seg_start, seg_stop);
@@ -89,6 +131,11 @@ namespace sand {
     return sqrt((closest_point_on_segment - closest_point_on_wire).Mag2());
   }
 
+  /**
+   * @brief Parameter of the point on this wire closest to a given point.
+   * @param point A point in global coordinates.
+   * @return The parameter t' along the wire, clamped to [0,1].
+   */
   double geoinfo::tracker_info::wire::closest_approach_point(const pos_3d& point) const {
     dir_3d d = point - head; // Vector from wire head to the point
     dir_3d r = direction();  // Wire direction vector (should be normalized or not depending on convention)
@@ -105,6 +152,10 @@ namespace sand {
     return t_prime;
   }
 
+  /**
+   * @brief Transform from the wire-plane local frame to global coordinates.
+   * @return The transform built from the wire angle and the station centre.
+   */
   xform_3d geoinfo::tracker_info::wire::wire_plane_transform() const {
     double c      = std::cos(angle());
     double s      = std::sin(angle());
@@ -114,6 +165,12 @@ namespace sand {
     return wire_rot;
   }
 
+  /**
+   * @brief Finds the wire of a list closest to a point.
+   * @param list  The candidate wires.
+   * @param point The reference point.
+   * @return {pointer to the closest wire (nullptr if the list is empty), its index in the list}.
+   */
   std::pair<const geoinfo::tracker_info::wire*, size_t>
   geoinfo::tracker_info::closest_wire_in_list(wire_list list, pos_3d point) const {
     double min_dist                                 = std::numeric_limits<double>::max();
@@ -137,6 +194,11 @@ namespace sand {
     return {closest_wire, closest_wire_index};
   }
 
+  /**
+   * @brief Returns the wire connected to a given DAQ channel.
+   * @param chid The DAQ channel identifier.
+   * @return The matching wire; raises UFW_ERROR if no wire matches.
+   */
   const geoinfo::tracker_info::wire& geoinfo::tracker_info::wire_at(channel_id chid) const {
     const wire* retw = nullptr;
     for_each_station([chid, &retw](const station& stat) {
@@ -157,6 +219,10 @@ namespace sand {
     }
   }
 
+  /**
+   * @brief Total target mass per material, summed over all stations.
+   * @return A map from target material to its mass.
+   */
   geoinfo::tracker_info::target_mass_t geoinfo::tracker_info::target_masses() const {
     target_mass_t map;
     for_each_station([&map](const station& stat) {
@@ -166,6 +232,11 @@ namespace sand {
     return map;
   }
 
+  /**
+   * @brief Whether a wire is among this wire's precomputed neighbours.
+   * @param w The candidate neighbour.
+   * @return true if @p w is adjacent to this wire.
+   */
   bool geoinfo::tracker_info::wire::is_adjacent(const geoinfo::tracker_info::wire* w) const {
     for (const auto* adj : adjacent_wires) {
       if (adj == w) {
@@ -175,6 +246,9 @@ namespace sand {
     return false;
   }
 
+  /**
+   * @brief Builds the wire adjacency of the station using a bounding-volume hierarchy.
+   */
   void geoinfo::tracker_info::station::set_wire_adjacency() {
     double dz;
     double dy;
@@ -193,6 +267,10 @@ namespace sand {
     bvh.printTreeInfo();
   }
 
+  /**
+   * @brief Builds the axis-aligned bounding box that encloses a wire.
+   * @param w The wire to bound.
+   */
   geoinfo::tracker_info::wire::AABB::AABB(const geoinfo::tracker_info::wire& w) {
     min_ = pos_3d(1E9, 1E9, 1E9);
     max_ = pos_3d(-1E9, -1E9, -1E9);
@@ -235,6 +313,10 @@ namespace sand {
     }
   }
 
+  /**
+   * @brief Grows this box so that it also contains another box.
+   * @param second_aabb The box to merge in.
+   */
   void geoinfo::tracker_info::wire::AABB::expand(const AABB& second_aabb) {
     min_.SetX(std::min(min_.X(), second_aabb.min_.X()));
     max_.SetX(std::max(max_.X(), second_aabb.max_.X()));
@@ -244,6 +326,12 @@ namespace sand {
     max_.SetZ(std::max(max_.Z(), second_aabb.max_.Z()));
   }
 
+  /**
+   * @brief Tests whether two boxes overlap within a tolerance.
+   * @param second_aabb The other box.
+   * @param epsilon     Tolerance added to the overlap test.
+   * @return true if the boxes overlap.
+   */
   bool geoinfo::tracker_info::wire::AABB::isOverlapping(const AABB& second_aabb, double epsilon) const {
     return (max_.X() + epsilon >= second_aabb.min_.X() && min_.X() - epsilon <= second_aabb.max_.X()
             && max_.Y() + epsilon >= second_aabb.min_.Y() && min_.Y() - epsilon <= second_aabb.max_.Y()
