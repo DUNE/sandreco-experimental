@@ -28,19 +28,19 @@ namespace sand::grain {
    * | `pde`          | double | ratio [0.0-1.0] | Required         | Photodetector efficiency. |
    *
    * \subsection Dependencies
-   * |      Name       |
-   * |-----------------|
-   * | `sand::geoinfo` |
+   * |      Name       | Comment  |
+   * |-----------------|----------|
+   * | `sand::geoinfo` | Geometry |
    *
    * \subsection Requirements
-   * |  Name  |        Type         |
-   * |--------|---------------------|
-   * | `hits` | `sand::grain::hits` |
+   * |  Name  |        Type         |    Comment    |
+   * |--------|---------------------|---------------|
+   * | `hits` | `sand::grain::hits` |  Photon Hits  |
    *
    * \subsection Products
-   * |  Name  |        Type         |
-   * |--------|---------------------|
-   * | `digi` | `sand::grain::digi` |
+   * |  Name  |        Type         |    Comment    |
+   * |--------|---------------------|---------------|
+   * | `digi` | `sand::grain::digi` | DAQ-like data |
    */
 
   detector_response_fast::detector_response_fast()
