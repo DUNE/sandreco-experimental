@@ -24,7 +24,22 @@ namespace sand::ecal {
    * | `dead_time_window`  | `double` | nanoseconds     | Required         | Electronics dead time after pulse detection.                  |
    * | `pe_threshold`      | `double` | photo-electrons | Required         | Minimum photo-electrons required to trigger a pulse output.   |
    * | `constant_fraction` | `double` | ratio [0.0-1.0] | Required         | CFD Threshold Fraction.                                       |
-   * 
+   *
+   * \subsection Dependencies
+   * | Type | Comment |
+   * |------|---------|
+   * | `geoinfo` | ECAL geometry information |
+   *
+   * \subsection Requirements
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `pes` | `sand::ecal::pes_container` | Input photo-electron data from PMTs |
+   *
+   * \subsection Products
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `digi` | `sand::ecal::digits_container` | Digitized signals after processing |
+   *
    */
 
   /// Configure digitization parameters from configuration file
@@ -81,18 +96,19 @@ namespace sand::ecal {
           auto tdc = std::next(start_pe, int(m_constant_fraction * pe_count))->arrival_time;
 
           // Create digitized signal with PMT channel, timing window, and measurements
-          digits_container::digit signal(pmt,
-          // timing window for particle crossing is conservatively estimated taking into
-          // account a maximal path length for scintillation photons of 5 m, a velocity of
-          // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
-                                         {tdc - 35., tdc, tdc + 5.},
-          // Calculate ADC value proportional to collected photo-electrons
-          // for now, we just use the number of PEs as the ADC value.
-          // This can be improved by using a more realistic response function.
-                                         static_cast<double>(pe_count),
-          // We don't have a good way to estimate the TOT value, so we set it to NAN for now. This can
-          // be improved by using a more realistic response function that includes the pulse shape.
-                                         NAN);
+          digits_container::digit signal(
+              pmt,
+              // timing window for particle crossing is conservatively estimated taking into
+              // account a maximal path length for scintillation photons of 5 m, a velocity of
+              // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
+              {tdc - 35., tdc, tdc + 5.},
+              // Calculate ADC value proportional to collected photo-electrons
+              // for now, we just use the number of PEs as the ADC value.
+              // This can be improved by using a more realistic response function.
+              static_cast<double>(pe_count),
+              // We don't have a good way to estimate the TOT value, so we set it to NAN for now. This can
+              // be improved by using a more realistic response function that includes the pulse shape.
+              NAN);
           // Collect all truth hits from photo-electrons in this pulse
           auto it = start_pe;
 
@@ -131,4 +147,5 @@ namespace sand::ecal {
     }
   }
 } // namespace sand::ecal
+
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::fast_digi)
