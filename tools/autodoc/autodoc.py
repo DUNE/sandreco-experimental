@@ -7,22 +7,24 @@ import os
 ANSI_RED = "\033[31m"
 ANSI_GREEN = "\033[32m"
 ANSI_YELLOW = "\033[33m"
+ANSI_BLUE = "\033[34m"
 ANSI_RESET = "\033[0m"  # Reset to default
 
 
 def print_red(text):
-    """Print text in red."""
     print(ANSI_RED + text + ANSI_RESET)
 
 
 def print_green(text):
-    """Print text in green."""
     print(ANSI_GREEN + text + ANSI_RESET)
 
 
 def print_yellow(text):
-    """Print text in yellow."""
     print(ANSI_YELLOW + text + ANSI_RESET)
+
+
+def print_blue(text):
+    print(ANSI_BLUE + text + ANSI_RESET)
 
 
 def find_class(source):
@@ -74,9 +76,6 @@ def extract_doxygen_tags(comment_text, clean_output=True):
 
     current_section = None
     current_content = ""
-
-    def daoi(k, v):
-        sections[k] = sections.get(k, "") + v
 
     for line in lines:
         line = line.strip()
@@ -133,12 +132,79 @@ def examine_configuration(source):
     return parameters
 
 
+def examine_dependencies(source):
+
+    pattern = r"namespace\s+([a-zA-Z_]\w*(?:\s*::\s*[a-zA-Z_]\w*)*)\s*\{"
+    namespaces = set(re.findall(pattern, source))
+
+    dependencies = {
+        "inputs": set(),
+        "bad_globals": set(),
+        "globals": set(),
+        "instanced": set(),
+        "outputs": set(),
+    }
+
+    def add_ns(tp, ns):
+        if tp[0].startswith("sand::") or "::" in tp[0]:
+            # Most likely already a fully qualified name
+            return (tp[0], tp[1], "")
+        ns = ns | set(["sand"])
+        return (tp[0], tp[1], ";".join(ns))
+
+    pattern = r"get<([^>]+)>\((?:\"([^\"]+)\")?\)"
+    matches = re.findall(pattern, source)
+    for match in matches:
+        if match[1]:
+            dependencies["inputs"].add(add_ns(match, namespaces))
+        else:
+            dependencies["bad_globals"].add(add_ns(match, namespaces))
+    pattern = r"set<([^>]+)>\((?:\"([^\"]+)\")?\)"
+    matches = re.findall(pattern, source)
+    for match in matches:
+        if match[1]:
+            dependencies["outputs"].add(add_ns(match, namespaces))
+        else:
+            dependencies["bad_globals"].add(add_ns(match, namespaces))
+    pattern = r"instance<([^>]+)>\((?:\"([^\"]+)\")?\)"
+    matches = re.findall(pattern, source)
+    for match in matches:
+        if match[1]:
+            dependencies["instanced"].add(add_ns(match, namespaces))
+        else:
+            dependencies["globals"].add(add_ns(match, namespaces))
+    return dependencies
+
+
 def match_configuration(doxy, src):
     pattern = r"^\|\s*`([^`]+)`\s*\|"
     matches = re.findall(pattern, doxy, re.MULTILINE)
     doxy = set(matches)
-    flat = sum(src.values(), [])
-    src = set(flat)
+    src = set(sum(src.values(), []))
+    return list(doxy ^ src)
+
+
+def match_dependencies(doxy, src):
+    pattern = r"^\|\s*`([^`]+)`\s*\|"
+    types = re.findall(pattern, doxy, re.MULTILINE)
+    doxy = set(types)
+    missing = []
+    for tp, name, ns in src:
+        if tp in doxy:
+            continue
+        found = False
+        for namespace in ns.split(";"):
+            found = found or ((namespace + "::" + tp) in doxy)
+        if not found:
+            missing.append(tp)
+    return missing
+
+
+def match_ios(doxy, src):
+    pattern = r"^\|\s*`([^`]+)`\s*\|"
+    names = re.findall(pattern, doxy, re.MULTILINE)
+    doxy = set(names)
+    src = set([tp[1] for tp in src])
     return list(doxy ^ src)
 
 
@@ -150,16 +216,35 @@ def process_source(name, source):
         if cc[1] is not None:
             tags = extract_doxygen_tags(cc[1].group(1))
             parameters = examine_configuration(source)
+            deps = examine_dependencies(source)
+            if deps["bad_globals"]:
+                print_yellow(
+                    f"class `{cc[0]}` is accessing globals using get/set instead of instance: {[x[0] for x in deps['bad_globals']]}"
+                )
             if "brief" not in tags or len(tags["brief"]) < 20:
                 print_yellow(f"class `{cc[0]}` lacks an appropriate brief")
             if "text" not in tags or len(tags["text"]) < 160:
                 print_yellow(f"class `{cc[0]}` lacks an appropriate description")
             if "inputs" not in tags:
                 print_red(f"class `{cc[0]}` does not have an input section")
+            else:
+                missing = match_ios(tags["inputs"], deps["inputs"])
+                if missing:
+                    print_red(f"class `{cc[0]}` has undocumented inputs: {missing}")
             if "outputs" not in tags:
                 print_red(f"class `{cc[0]}` does not have an output section")
+            else:
+                missing = match_ios(tags["outputs"], deps["outputs"])
+                if missing:
+                    print_red(f"class `{cc[0]}` has undocumented outputs: {missing}")
             if "dependencies" not in tags:
                 print_red(f"class `{cc[0]}` does not have a dependencies section")
+            else:
+                missing = match_dependencies(tags["dependencies"], deps["globals"])
+                if missing:
+                    print_red(
+                        f"class `{cc[0]}` has undocumented dependencies: {missing}"
+                    )
             if "configuration" not in tags:
                 print_red(f"class `{cc[0]}` does not have a configuration section")
             else:
