@@ -10,7 +10,6 @@
 #include <ufw/context.hpp>
 #include <ufw/factory.hpp>
 
-
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::detector_response_fast)
 
 namespace sand::grain {
@@ -20,13 +19,28 @@ namespace sand::grain {
    *
    * \brief SiPM and electronics response for GRAIN.
    *
-   * Given photon hits (`hits` input), this process finds the correct SiPM pixel,
-   * simulates detector electronics, and generates digitized output (`digi`).
+   * Given photon hits (`hits` input), this process finds the SIPM pixel which the photon hit;
+   * it then simulates trivial detector electronics, and generates digitized output (`digi`).
    *
    * \subsection Configuration
    * | Parameter Name | Type   | Unit            | Required/Default | Description               |
    * |----------------|--------|-----------------|------------------|---------------------------|
    * | `pde`          | double | ratio [0.0-1.0] | Required         | Photodetector efficiency. |
+   *
+   * \subsection Dependencies
+   * |      Name       |
+   * |-----------------|
+   * | `sand::geoinfo` |
+   *
+   * \subsection Requirements
+   * |  Name  |        Type         |
+   * |--------|---------------------|
+   * | `hits` | `sand::grain::hits` |
+   *
+   * \subsection Products
+   * |  Name  |        Type         |
+   * |--------|---------------------|
+   * | `digi` | `sand::grain::digi` |
    */
 
   detector_response_fast::detector_response_fast()
@@ -48,7 +62,7 @@ namespace sand::grain {
     m_stat_photons_discarded = 0;
     const auto& hits_in      = get<hits>("hits");
     UFW_DEBUG("Processing {} photon hits.", hits_in.photons.size());
-    auto& digi_out                        = set<digi>("digi");
+    auto& digi_out = set<digi>("digi");
     for (const auto& photon : hits_in.photons) {
       double interaction_probability = m_uniform(random_engine());
       m_stat_photons_processed++;
