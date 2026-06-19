@@ -33,13 +33,21 @@ namespace sand::test {
    *
    * The checks are designed around that behaviour:
    * - every contributing hit lies within the maximum drift radius of the wire;
-   * - the signal time is compatible with the expected drift-plus-propagation window;
+   * - the signal time is causal and bounded: the TDC never precedes the earliest
+   *   energy deposit (beyond the TDC smearing) and never lags it by more than the
+   *   maximum drift-plus-propagation time;
    * - a signal's ADC never exceeds the full energy of the hits it references (it
    *   may be smaller, because a hit's energy can be shared with neighbouring wires);
    * - globally, the total ADC equals the summed energy of the *unique* set of hits
    *   referenced by the signals. Hits the digitization discards (invalid plane,
    *   view-spanning, no wire found) are never referenced, so they drop out of both
    *   sides; split hits are counted once on both sides.
+   * - The TDC window is computed per signal based on the wire's maximum drift radius 
+   *   and length, the configured drift and wire velocities, and the TDC resolution as 
+   *   a guard margin. The time window is a physically motivated expectation for when 
+   *   a signal should arrive, and while the digitization may produce signals outside it
+   *   due to unmodeled effects or bugs, such signals are suspicious and so are flagged 
+   *   as errors.
    *
    * Any inconsistency is reported with \c UFW_ERROR so that the continuous
    * integration flags a regression.
@@ -48,11 +56,11 @@ namespace sand::test {
    * - \c digi (\ref sand::tracker::digi) : the digitized signals to validate.
    *
    * @par Configuration
-   * | Parameter Name   | Type   | Unit  | Required/Default | Description                                |
-   * |------------------|--------|-------|------------------|--------------------------------------------|
-   * | `drift_velocity` | double | mm/ns | Required         | Drift velocity, used for the time window.  |
-   * | `wire_velocity`  | double | mm/ns | Required         | In-wire signal speed, used for the window. |
-   * | `sigma_tdc`      | double | ns    | Required         | TDC resolution, used for the window.       |
+   * | Parameter Name   | Type   | Unit  | Required/Default | Description                                  |
+   * |------------------|--------|-------|------------------|----------------------------------------------|
+   * | `drift_velocity` | double | mm/ns | Required         | Drift velocity, used for the time window.    |
+   * | `wire_velocity`  | double | mm/ns | Required         | In-wire signal speed, used for the window.   |
+   * | `sigma_tdc`      | double | ns    | Required         | TDC resolution; sets the causal-window margin. |
    */
   class test_drift_digi : public ufw::process {
     public:
@@ -135,7 +143,7 @@ namespace sand::test {
     return all_drift_hits;
   }
 
-  /// @brief Get the maximum time range for signal formation on a given wire
+  /// @brief Get the maximum signal-formation time relative to the hit, used as the late edge of the causal TDC window.
   /// @param wire The wire whose drift radius and length define the time window.
   /// @return Maximum time range for signal formation on the wire, considering drift time, wire propagation time, and TDC resolution.
   double test_drift_digi::get_time_range(const sand::geoinfo::tracker_info::wire& wire) {
@@ -146,11 +154,12 @@ namespace sand::test {
 
   /// @brief Cross-check each signal against the simulated truth.
   ///
-  /// Per signal: every referenced hit must be within the wire's maximum drift radius, the
-  /// earliest hit time must fall inside the signal-formation window, and the ADC must not
-  /// exceed the full energy of the referenced hits (it may be smaller when a hit's energy is
-  /// shared with neighbouring wires). Globally: the total ADC must equal the summed energy of
-  /// the unique set of hits referenced by all signals (energy conservation through the
+  /// Per signal: every referenced hit must be within the wire's maximum drift radius; the signal
+  /// TDC must fall inside the expected time window (no earlier than the first energy deposit up to
+  /// the TDC smearing, no later than the maximum drift-plus-propagation time); and the ADC must
+  /// not exceed the full energy of the referenced hits (it may be smaller when a hit's energy is
+  /// shared with neighbouring wires). Globally: the total ADC must equal the summed energy of the
+  /// unique set of hits referenced by all signals (energy conservation through the
   /// split-and-digitize chain).
   /// @param all_drift_hits Map of every drift hit id to its EDEPHit, used to resolve the true-hit indices carried by each signal.
   void test_drift_digi::check_truth_matching(const std::unordered_map<int, const EDEPHit*>& all_drift_hits) {
@@ -204,11 +213,15 @@ namespace sand::test {
       else
         UFW_DEBUG("ADC is within the referenced hit energy");
 
-      // Time window: the earliest true-hit time must be within the maximum signal-formation window.
-      if (std::abs(smallest_time - signal.tdc()) > get_time_range(channel_wire))
-        UFW_ERROR("Smallest time is outside the expected range");
+      // Check time window: the signal cannot arrive before the earliest energy deposit (up to the
+      // TDC smearing), and cannot lag it by more than the maximum drift-plus-propagation time. The
+      // lower edge is the physically meaningful one; the upper edge keeps the late-arrival guard.
+      const double tdc_lower = smallest_time - 5 * m_sigma_tdc;
+      const double tdc_upper = smallest_time + get_time_range(channel_wire);
+      if (signal.tdc() < tdc_lower || signal.tdc() > tdc_upper)
+        UFW_ERROR("TDC {} is outside the expected window [{}, {}]", signal.tdc(), tdc_lower, tdc_upper);
       else
-        UFW_DEBUG("Smallest time is within the expected range");
+        UFW_DEBUG("TDC is within the expected window");
 
       total_adc += signal.adc();
     }
