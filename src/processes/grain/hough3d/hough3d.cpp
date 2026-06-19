@@ -111,14 +111,20 @@ namespace sand::grain {
     const auto& point_cloud_in  = get<point_cloud>("point_cloud");
     auto& point_clusters_out = set<point_clusters>("point_clusters").clusters;
     // Loop on events in a spill
+    // size_t fake_index{500};
     for (const auto& ev_points : point_cloud_in.points) {
+      // UFW_INFO("Faking versor index {}, coords ({},{},{})", fake_index, m_unique_versors[fake_index].s[0], m_unique_versors[fake_index].s[1], m_unique_versors[fake_index].s[2]);
+      // std::vector<point_cloud::point> fake_points;
+      // for (size_t i{0}; i < 20; ++i) {
+      //   fake_points.emplace_back(point_cloud::point{{0.0 + 15*i*m_unique_versors[fake_index].s[0], 0.0 + 15*i*m_unique_versors[fake_index].s[1], 0.0 + 15*i*m_unique_versors[fake_index].s[2]}, 0.0});
+      // }
       if (ev_points.size() == 0) {
         UFW_DEBUG("Skipping event with 0 points");
         continue;
       }
-      // for (const auto& p : ev_points) {
-      //   std::cout << p.position.x() << "," << p.position.y() << "," << p.position.z() << "\n";
-      // }
+      for (const auto& p : ev_points) {
+        std::cout << p.position.x() << "," << p.position.y() << "," << p.position.z() << "\n";
+      }
       std::vector<cl_float4> cl_points = point_cloud_to_float4(ev_points);
       UFW_INFO("Processing {} points", cl_points.size());
       std::vector<point_clusters::cluster> ev_clusters_out;
@@ -152,12 +158,6 @@ namespace sand::grain {
         m_buf_voting_array.read(tmp_voting_ptr, platform.queues().front(), 0, -1, {});
         platform.queues().front().finish();
 
-        // for (size_t i{0}; i < m_voting_array.size(); ++i) {
-        //   if (m_voting_array[i] > 0) {
-        //     std::cout << i << " : " << m_voting_array[i] << "\t";
-        //   }
-        // }
-        // std::cout << "\n";
         // Find maximum
         const size_t max_votes_index =  std::distance(m_voting_array.begin(),  std::max_element(m_voting_array.begin(), m_voting_array.end()));
         const uint vote_count = m_voting_array[max_votes_index];
@@ -208,7 +208,7 @@ namespace sand::grain {
 
         UFW_INFO("Added track: point {} direction {} n_points {}", out_line_point, out_line_dir, clustered_points.size());
 
-        if (n_found_tracks >= m_max_tracks_per_event) {
+        if (n_found_tracks >= m_max_tracks_per_event || cl_points.size() == 0) {
           break;
         }
 
