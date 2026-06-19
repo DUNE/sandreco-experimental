@@ -57,23 +57,16 @@ namespace sand::test {
       UFW_DEBUG("camera name {}", camera);
       float camera_w_sum = 0;
       voxels.for_each([&camera_weights, &camera_w_sum](const sand::grain::index_3d idx, auto fid_val) {
-        for (float w : camera_weights.at(idx)) {
-          camera_w_sum += w;
-             if (fid_val > 0) {
-               for (float w : camera_weights.at(idx)) {
-                 if (w < 0 || w >= 1) {
-                   UFW_WARN("Invalid weight {} in fiducial, at index {}", w, idx);
-                 }
-               }
-             } else {
-               for (float w : camera_weights.at(idx)) {
-                 if (w != 0) {
-                   UFW_WARN("Invalid weight {} outside of fiducial, at index {}", w, idx);
-                 }
-               }
-             }
-           }  
-        
+        if (fid_val > 0) {
+          for (float w : camera_weights.at(idx)) {
+            camera_w_sum += w;
+            if (w < 0 || w >= 1) {
+              UFW_WARN("Invalid weight {} in fiducial, at index {}", w, idx);
+            } else if (w != 0) {
+              UFW_WARN("Invalid weight {} outside of fiducial, at index {}", w, idx);
+            }
+          }
+        }
       });
       UFW_INFO("camera {} weights sum = {}", camera, camera_w_sum);
     }
