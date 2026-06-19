@@ -24,7 +24,22 @@ namespace sand::ecal {
    * | `dead_time_window`  | `double` | nanoseconds     | Required         | Electronics dead time after pulse detection.                  |
    * | `pe_threshold`      | `double` | photo-electrons | Required         | Minimum photo-electrons required to trigger a pulse output.   |
    * | `constant_fraction` | `double` | ratio [0.0-1.0] | Required         | CFD Threshold Fraction.                                       |
-   * 
+   *
+   * \subsection Dependencies
+   * | Type | Comment |
+   * |------|---------|
+   * | `geoinfo` | ECAL geometry information |
+   *
+   * \subsection Requirements
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `pes` | `sand::ecal::pes_container` | Input photo-electron data from PMTs |
+   *
+   * \subsection Products
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `digi` | `sand::ecal::digits_container` | Digitized signals after processing |
+   *
    */
 
   /// Configure digitization parameters from configuration file
@@ -132,4 +147,5 @@ namespace sand::ecal {
     }
   }
 } // namespace sand::ecal
+
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::fast_digi)
