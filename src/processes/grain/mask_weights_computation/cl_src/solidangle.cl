@@ -303,6 +303,6 @@ CL_KERNEL(void solidangle(const transform_t voxel_id_to_grain, const transform_t
       }
     }
     float mean_angle     = angle / (float)tot_minivoxels;
-    solid_angles[out_id] = mean_angle * attenuation_coeff * cfg.pde;
+    solid_angles[out_id] = mean_angle * attenuation_coeff;
   }
 })

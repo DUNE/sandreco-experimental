@@ -1,4 +1,4 @@
-CL_KERNEL(void maximization(__global const float* system_matrix, __global const float* inverted_sensitivity_matrix, const int n_sensors, const float pde,
+CL_KERNEL(void maximization(__global const float* system_matrix, __global const float* inverted_sensitivity_matrix, const int n_sensors, 
                             __global const float* expectation_input, __global const float* image, __global float* maximization_result)
  {
   const int i = get_global_id(0);
@@ -15,8 +15,8 @@ CL_KERNEL(void maximization(__global const float* system_matrix, __global const 
     const float npe = image[s_idx];
     const float estep = expectation_input[s_idx];
     const int sm_idx = i * jsize * ksize * n_sensors + j * ksize * n_sensors + k * n_sensors + s_idx; //sysmat idx
-    const float w = pde * system_matrix[sm_idx] * inverted_sensitivity_matrix[v_idx];    
-    vscore += (npe * w * estep);    
+    const float w = system_matrix[sm_idx] * inverted_sensitivity_matrix[v_idx];    
+    vscore += (w * estep);    
    }   
   // Add to result comung from other cameras (same GPU queue)
   maximization_result[v_idx] += (float)vscore ;
