@@ -100,4 +100,11 @@ namespace sand::grain {
         return clustered_points;
     }
 
+    cl_float3 get_line_point(const cl_float4& versor, float x_prime, float y_prime) {
+        const float inv = 1.0f / (1.0f + versor.s[2]);
+        return cl_float3{x_prime * (1.0f - versor.s[0] * versor.s[0] * inv) - y_prime * versor.s[0] * versor.s[1] * inv,
+                        - x_prime * versor.s[0] * versor.s[1] * inv + y_prime * (1.0f - versor.s[1] * versor.s[1] * inv),
+                        - x_prime * versor.s[0] - y_prime * versor.s[1]};
+    }
+
 } // namespace sand::grain

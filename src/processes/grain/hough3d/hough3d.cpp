@@ -169,7 +169,7 @@ namespace sand::grain {
         const auto& max_versor = m_unique_versors[max_versor_index];
         const float max_x = (0.5 + max_x_index - m_n_xy_bins / 2) * m_xy_plane_step;
         const float max_y = (0.5 + max_y_index - m_n_xy_bins / 2) * m_xy_plane_step;
-        const cl_float3 line_point{max_x, max_y, 0.0};
+        const cl_float3 line_point = get_line_point(max_versor, max_x, max_y);
 
         UFW_DEBUG("Index of voting array maximum: {}, votes: {}, (versor,x,y): (({},{},{}),{},{})", max_votes_index, vote_count, max_versor.s[0], max_versor.s[1], max_versor.s[2], max_x, max_y);
 
