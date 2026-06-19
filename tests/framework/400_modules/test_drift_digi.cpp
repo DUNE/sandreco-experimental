@@ -1,5 +1,3 @@
-#include <unordered_set>
-
 #include <common/version.h>
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -13,6 +11,7 @@
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
 
+#include <unordered_set>
 
 namespace sand::test {
 
@@ -71,6 +70,10 @@ namespace sand::test {
       double m_sigma_tdc;
   };
 
+  /**
+   * @brief Reads and stores the configuration parameters.
+   * @param cfg The JSON configuration fragment for this process.
+   */
   void test_drift_digi::configure(const ufw::config& cfg) {
     UFW_DEBUG("test_drift_digi configured at: {}", fmt::ptr(this));
     m_drift_velocity = cfg.at("drift_velocity");
@@ -78,10 +81,12 @@ namespace sand::test {
     m_sigma_tdc      = cfg.at("sigma_tdc");
   }
 
+  /// @brief Declares the process I/O: \c digi as the only requirement and no products.
   test_drift_digi::test_drift_digi() : process({{"digi", "sand::tracker::digi"}}, {}) {
     UFW_INFO("Creating a test_drift_digi process at {}", fmt::ptr(this));
   }
 
+  /// @brief Runs the validation for the current context (event).
   void test_drift_digi::run() {
     UFW_DEBUG("test_drift_digi run called with context_id: {}", ufw::context::current()->id());
     analyze_drift_digi();
@@ -166,7 +171,7 @@ namespace sand::test {
       UFW_DEBUG("Wire: Head = {}, Tail = {}, HV = {}, Max Radius = {}", channel_wire.head, channel_wire.tail,
                 channel_wire.hv, channel_wire.max_radius);
 
-      double referenced_energy = 0.0; 
+      double referenced_energy = 0.0;
       double smallest_time     = std::numeric_limits<double>::max();
 
       for (const auto& true_hit : signal.true_hits()) {
@@ -191,9 +196,9 @@ namespace sand::test {
         referenced_hit_ids.insert(true_hit.get());
       }
 
-      // The ADC is the sum of the per-wire  segment energies, so it can be
+      // The ADC is the sum of the per-wire segment energies, so it can be
       // smaller than the full energy of the referenced hits when a hit is shared across
-      // neighbouring wires. It must never exceedit.
+      // neighbouring wires. It must never exceed it.
       if (signal.adc() > referenced_energy + 1e-7)
         UFW_ERROR("ADC {} exceeds the full energy of the referenced hits {}", signal.adc(), referenced_energy);
       else
@@ -224,7 +229,6 @@ namespace sand::test {
     UFW_DEBUG("Energy totals: all hits = {}, referenced = {}, discarded = {}, total ADC = {}",
               all_hits_energy, referenced_total_energy, all_hits_energy - referenced_total_energy, total_adc);
 
-    // Tolerance scaled with the accumulated magnitude to absorb floating-point accumulation error.
     const double global_tol = 1e-7 + 1e-9 * std::abs(referenced_total_energy);
     if (std::abs(referenced_total_energy - total_adc) > global_tol)
       UFW_ERROR("Global energy mismatch: referenced hits sum = {}, total ADC = {}", referenced_total_energy,
