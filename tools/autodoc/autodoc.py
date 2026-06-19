@@ -201,7 +201,23 @@ def match_ios(doxy, src):
 
 def match_section(clname, section, tags, deps):
     if section not in tags:
-        print_red(f"class `{clname}` does not have an {section} section")
+        headers = {
+            "configuration": "\\subsection Configuration\n"
+            "| Parameter Name | Type | Unit | Required/Default | Description |\n"
+            "|----------------|------|------|------------------|-------------|\n",
+            "dependencies": "\\subsection Dependencies\n"
+            "| Type | Comment |\n"
+            "|------|---------|\n",
+            "inputs": "\\subsection Requirements\n"
+            "| Name | Type | Comment |\n"
+            "|------|------|---------|\n",
+            "outputs": "\\subsection Products\n"
+            "| Name | Type | Comment |\n"
+            "|------|------|---------|\n",
+        }
+        print_red(f"class `{clname}` is missing the {section} section")
+        print_blue(f"Suggested correction: Add the {section} section:")
+        print_blue(headers[section])
     else:
         tag = tags[section]
         if section in ["inputs", "outputs"]:
@@ -212,6 +228,18 @@ def match_section(clname, section, tags, deps):
             missing = match_configuration(tag, deps)
         if missing:
             print_red(f"class `{clname}` has undocumented {section}: {missing}")
+            print_blue(f"Suggested correction: Add to the {section} section:")
+            if section in ["inputs", "outputs"]:
+                for line in missing:
+                    print_blue(f"| `{line}` | `<type>` | <description> |")
+            elif section == "dependencies":
+                for line in missing:
+                    print_blue(f"| `{line}` | <description> |")
+            elif section == "configuration":
+                for line in missing:
+                    print_blue(
+                        f"| `{line}` | `<type>` | <unit> | <req> | <description> |"
+                    )
 
 
 def process_source(name, source):
