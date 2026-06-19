@@ -23,22 +23,22 @@ namespace sand::grain {
    * it then simulates trivial detector electronics, and generates digitized output (`digi`).
    *
    * \subsection Configuration
-   * | Parameter Name | Type   | Unit            | Required/Default | Description               |
-   * |----------------|--------|-----------------|------------------|---------------------------|
-   * | `pde`          | double | ratio [0.0-1.0] | Required         | Photodetector efficiency. |
+   * | Parameter Name | Type     | Unit            | Required/Default | Description               |
+   * |----------------|----------|-----------------|------------------|---------------------------|
+   * | `pde`          | `double` | ratio [0.0-1.0] | Required         | Photodetector efficiency. |
    *
    * \subsection Dependencies
-   * |      Name       | Comment  |
+   * | Type            | Comment  |
    * |-----------------|----------|
    * | `sand::geoinfo` | Geometry |
    *
    * \subsection Requirements
-   * |  Name  |        Type         |    Comment    |
+   * |  Name  | Type                | Comment       |
    * |--------|---------------------|---------------|
    * | `hits` | `sand::grain::hits` |  Photon Hits  |
    *
    * \subsection Products
-   * |  Name  |        Type         |    Comment    |
+   * |  Name  | Type                | Comment       |
    * |--------|---------------------|---------------|
    * | `digi` | `sand::grain::digi` | DAQ-like data |
    */
