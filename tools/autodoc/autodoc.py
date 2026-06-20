@@ -29,8 +29,7 @@ def print_blue(text):
 
 def find_class(source):
     class_match = re.compile(
-        r"^\s*(?:class|struct)\s+(\w+)\s*(?:[:>]\s*|\s*:\s*)"
-        r"\s*public\s+ufw::process\s*(\s*(?:,?\s*\w+\s*=>\s*\w+\s*)*)?\s*\{",
+        r"^\s*(?:class|struct)\s+(\w+)\s*:(?:\s*public\s+|\s*)ufw::process\s*{",
         re.MULTILINE | re.DOTALL,
     )
 
@@ -44,8 +43,7 @@ def find_class(source):
     for comment in doxygen_comment_match.finditer(source):
         if class_tag_match.search(comment.group(1)):
             return (class_name, comment)
-        else:
-            return (class_name, None)
+    return (class_name, None)
 
 
 def extract_doxygen_tags(comment_text, clean_output=True):
@@ -149,14 +147,18 @@ def examine_dependencies(source):
         if match[1]:
             dependencies["inputs"].add(add_ns(match, namespaces))
         else:
-            dependencies["bad_globals"].add(add_ns(match, namespaces))
+            with_ns = add_ns(match, namespaces)
+            dependencies["globals"].add(with_ns)
+            dependencies["bad_globals"].add(with_ns)
     pattern = r"set<([^>]+)>\((?:\"([^\"]+)\")?\)"
     matches = re.findall(pattern, source)
     for match in matches:
         if match[1]:
             dependencies["outputs"].add(add_ns(match, namespaces))
         else:
-            dependencies["bad_globals"].add(add_ns(match, namespaces))
+            with_ns = add_ns(match, namespaces)
+            dependencies["globals"].add(with_ns)
+            dependencies["bad_globals"].add(with_ns)
     pattern = r"instance<([^>]+)>\((?:\"([^\"]+)\")?\)"
     matches = re.findall(pattern, source)
     for match in matches:
@@ -199,47 +201,75 @@ def match_ios(doxy, src):
     return list(doxy ^ src)
 
 
+def suggestion(section, content, header=False):
+    headers = {
+        "configuration": "\\subsection Configuration\n"
+        "| Parameter Name | Type | Unit | Required/Default | Description |\n"
+        "|----------------|------|------|------------------|-------------|\n",
+        "dependencies": "\\subsection Dependencies\n"
+        "| Type | Comment |\n"
+        "|------|---------|\n",
+        "inputs": "\\subsection Requirements\n"
+        "| Name | Type | Comment |\n"
+        "|------|------|---------|\n",
+        "outputs": "\\subsection Products\n"
+        "| Name | Type | Comment |\n"
+        "|------|------|---------|\n",
+    }
+    if header:
+        suggest = headers[section]
+    else:
+        suggest = ""
+
+    def add_ns(tp, ns):
+        if "::" in tp:
+            return [tp]
+        else:
+            return [n + "::" + tp for n in ns.split(";")]
+
+    if section in ["inputs", "outputs"]:
+        for tp, name, ns in content:
+            for variant in add_ns(tp, ns):
+                suggest += f"| `{name}` | `{variant}` | <description> |\n"
+    elif section == "dependencies":
+        for tp, name, ns in content:
+            for variant in add_ns(tp, ns):
+                suggest += f"| `{variant}` | <purpose of {name}> |\n"
+    elif section == "configuration":
+        for line in content:
+            suggest += f"| `{line}` | `<type>` | <unit> | <req> | <description> |\n"
+    return suggest[:-1]  # strip final neline
+
+
 def match_section(clname, section, tags, deps):
     if section not in tags:
-        headers = {
-            "configuration": "\\subsection Configuration\n"
-            "| Parameter Name | Type | Unit | Required/Default | Description |\n"
-            "|----------------|------|------|------------------|-------------|\n",
-            "dependencies": "\\subsection Dependencies\n"
-            "| Type | Comment |\n"
-            "|------|---------|\n",
-            "inputs": "\\subsection Requirements\n"
-            "| Name | Type | Comment |\n"
-            "|------|------|---------|\n",
-            "outputs": "\\subsection Products\n"
-            "| Name | Type | Comment |\n"
-            "|------|------|---------|\n",
-        }
-        print_red(f"class `{clname}` is missing the {section} section")
-        print_blue(f"Suggested correction: Add the {section} section:")
-        print_blue(headers[section])
+        tag = ""
     else:
         tag = tags[section]
-        if section in ["inputs", "outputs"]:
-            missing = match_ios(tag, deps[section])
-        elif section == "dependencies":
-            missing = match_dependencies(tag, deps["globals"] | deps["instanced"])
-        elif section == "configuration":
-            missing = match_configuration(tag, deps)
-        if missing:
+    suggestitems = []
+    if section in ["inputs", "outputs"]:
+        missing = match_ios(tag, deps[section])
+        for item in missing:
+            for tp, name, ns in deps[section]:
+                if item == name:
+                    suggestitems.append((tp, name, ns))
+    elif section == "dependencies":
+        fullset = deps["globals"] | deps["instanced"]
+        missing = match_dependencies(tag, fullset)
+        for item in missing:
+            for tp, name, ns in fullset:
+                if item == tp:
+                    suggestitems.append((tp, name, ns))
+    elif section == "configuration":
+        missing = match_configuration(tag, deps)
+    if suggestitems:
+        if section not in tags:
+            print_red(f"class `{clname}` is missing the {section} section")
+            print_blue(f"Suggested correction: Add the {section} section:")
+        else:
             print_red(f"class `{clname}` has undocumented {section}: {missing}")
             print_blue(f"Suggested correction: Add to the {section} section:")
-            if section in ["inputs", "outputs"]:
-                for line in missing:
-                    print_blue(f"| `{line}` | `<type>` | <description> |")
-            elif section == "dependencies":
-                for line in missing:
-                    print_blue(f"| `{line}` | <description> |")
-            elif section == "configuration":
-                for line in missing:
-                    print_blue(
-                        f"| `{line}` | `<type>` | <unit> | <req> | <description> |"
-                    )
+        print_blue(suggestion(section, suggestitems, section not in tags))
 
 
 def process_source(name, source):
