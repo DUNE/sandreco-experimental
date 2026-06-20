@@ -1,7 +1,13 @@
 import re
-import sys
 import argparse
 import os
+
+from source_parsing import (
+    extract_configuration,
+    extract_dependencies,
+    extract_doxygen_tags,
+    find_class,
+)
 
 # ANSI Color Codes (Foreground)
 ANSI_RED = "\033[31m"
@@ -25,148 +31,6 @@ def print_yellow(text):
 
 def print_blue(text):
     print(ANSI_BLUE + text + ANSI_RESET)
-
-
-def find_class(source):
-    class_match = re.compile(
-        r"^\s*(?:class|struct)\s+(\w+)\s*:(?:\s*public\s+|\s*)ufw::process\s*{",
-        re.MULTILINE | re.DOTALL,
-    )
-
-    doxygen_comment_match = re.compile(r"/\*\*(.*?)\*/", re.MULTILINE | re.DOTALL)
-
-    match = class_match.search(source)
-    if match is None:
-        return None
-    class_name = match.group(1)
-    class_tag_match = re.compile(r"\\class (?:[\w:]+::)*" + re.escape(class_name))
-    for comment in doxygen_comment_match.finditer(source):
-        if class_tag_match.search(comment.group(1)):
-            return (class_name, comment)
-    return (class_name, None)
-
-
-def extract_doxygen_tags(comment_text, clean_output=True):
-    if comment_text.strip().startswith("/**") or comment_text.strip().startswith("/*"):
-        # Remove the first and last lines if they are comment delimiters
-        lines = comment_text.split("\n")[1:-1] if comment_text.count("\n") > 1 else []
-    else:
-        lines = comment_text.split("\n")
-    patterns = {
-        "brief": re.compile(r"\\brief\s+(.*)", re.DOTALL),
-        "class": re.compile(r"\\class\s+(.*)", re.DOTALL),
-        "configuration": re.compile(r"\\subsection\s+Configuration\s+(.*)", re.DOTALL),
-        "dependencies": re.compile(r"\\subsection\s+Dependencies\s+(.*)", re.DOTALL),
-        "inputs": re.compile(r"\\subsection\s+Requirements\s+(.*)", re.DOTALL),
-        "outputs": re.compile(r"\\subsection\s+Products\s+(.*)", re.DOTALL),
-        # Add more patterns as needed
-    }
-    multiline = ["configuration", "dependencies", "inputs", "outputs"]
-
-    sections = {"text": ""}
-    current_section = None
-    current_content = ""
-
-    for line in lines:
-        line = line.strip()
-        if line.startswith("*"):
-            line = line[2:].strip()
-        line += "\n"
-        match = None
-
-        for section_name, pattern in patterns.items():
-            match = pattern.search(line)
-            if match:
-                # If we had content for the previous section, add it
-                if current_section:
-                    sections[current_section] = (
-                        sections.get(current_section, "") + current_content
-                    )
-                    current_content = ""
-                current_section = section_name
-                content_after_tag = match.group(1).strip()
-                # Handle multi-line content for this tag
-                current_content += content_after_tag
-                break
-
-        if match is None:
-            # No tag found, add as regular text or to current section
-            if line.strip():
-                if (current_section is not None) and (current_section in multiline):
-                    sections[current_section] = sections.get(current_section, "") + line
-                else:
-                    sections["text"] += line
-
-    # Add the last section if it exists
-    if current_section:
-        sections[current_section] = sections.get(current_section, "") + current_content
-
-    return sections
-
-
-def examine_configuration(source):
-    parameters = {"paths": [], "required": [], "optional": []}
-    pattern = r"cfg\.at\(\"(.*?)\"\)"
-    matches = re.findall(pattern, source)
-    for match in matches:
-        parameters["optional"].append(match)
-    pattern = r"cfg\.value\(\"(.*?)\"(?:,|\s*)?(.*?)\)"
-    matches = re.findall(pattern, source)
-    for match in matches:
-        parameters["required"].append(match[0])
-    pattern = r"cfg\.path_at\(\"(.*?)\"\)"
-    matches = re.findall(pattern, source)
-    for match in matches:
-        parameters["paths"].append(match)
-    return parameters
-
-
-def examine_dependencies(source):
-
-    pattern = r"namespace\s+([a-zA-Z_]\w*(?:\s*::\s*[a-zA-Z_]\w*)*)\s*\{"
-    namespaces = set(re.findall(pattern, source))
-
-    dependencies = {
-        "inputs": set(),
-        "bad_globals": set(),
-        "globals": set(),
-        "instanced": set(),
-        "outputs": set(),
-    }
-
-    def add_ns(tp, ns):
-        if tp[0].startswith("sand::") or "::" in tp[0]:
-            # Most likely already a fully qualified name
-            return (tp[0], tp[1], "")
-        ns = ns | set(["sand"])
-        return (tp[0], tp[1], ";".join(ns))
-
-    pattern = r"get<([^>]+)>\((?:\"([^\"]+)\")?\)"
-    matches = re.findall(pattern, source)
-    for match in matches:
-        if match[1]:
-            dependencies["inputs"].add(add_ns(match, namespaces))
-        else:
-            with_ns = add_ns(match, namespaces)
-            dependencies["globals"].add(with_ns)
-            dependencies["bad_globals"].add(with_ns)
-    pattern = r"set<([^>]+)>\((?:\"([^\"]+)\")?\)"
-    matches = re.findall(pattern, source)
-    for match in matches:
-        if match[1]:
-            dependencies["outputs"].add(add_ns(match, namespaces))
-        else:
-            with_ns = add_ns(match, namespaces)
-            dependencies["globals"].add(with_ns)
-            dependencies["bad_globals"].add(with_ns)
-    pattern = r"instance<([^>]+)>\((?:\"([^\"]+)\")?\)"
-    matches = re.findall(pattern, source)
-    for match in matches:
-        if match[1]:
-            dependencies["instanced"].add(add_ns(match, namespaces))
-        else:
-            dependencies["globals"].add(add_ns(match, namespaces))
-    return dependencies
 
 
 def match_configuration(doxy, src):
@@ -272,7 +136,7 @@ def match_section(clname, section, tags, deps):
         print_blue(suggestion(section, suggestitems, section not in tags))
 
 
-def process_source(name, source):
+def missing_docs(name, source):
     print(f"{name}:")
     cc = find_class(source)
     if cc is not None:
@@ -283,7 +147,7 @@ def process_source(name, source):
                 print_yellow(f"class `{cc[0]}` lacks an adequate brief")
             if "text" not in tags or len(tags["text"]) < 160:
                 print_yellow(f"class `{cc[0]}` lacks an adequate description")
-            deps = examine_dependencies(source)
+            deps = extract_dependencies(source)
             if deps["bad_globals"]:
                 print_yellow(
                     f"class `{cc[0]}` is accessing globals using `get`/`set` "
@@ -292,14 +156,74 @@ def process_source(name, source):
             match_section(cc[0], "inputs", tags, deps)
             match_section(cc[0], "outputs", tags, deps)
             match_section(cc[0], "dependencies", tags, deps)
-            parameters = examine_configuration(source)
+            parameters = extract_configuration(source)
             match_section(cc[0], "configuration", tags, parameters)
         else:
             print_red(f"class `{cc[0]}` has no documentation")
 
 
+def list_modules(name, source):
+    cc = find_class(source)
+    if cc is not None:
+        print_green(f"Processing class `{cc[0]}`")
+        if cc[1] is not None:
+            tags = extract_doxygen_tags(cc[1].group(1))
+            if "brief" not in tags:
+                print_yellow(f"class `{cc[0]}` lacks a brief")
+                return (cc[0], None, cc[2][0])
+            else:
+                return (cc[0], tags["brief"], cc[2][0])
+        else:
+            print_red(f"class `{cc[0]}` has no documentation")
+            return (cc[0], None, cc[2][0])
+    return None
+
+
+def md_table(header, lines):
+    ticks = [s.startswith("`") and s.startswith("`") for s in header]
+    fixedheader = [s.strip("`") for s in header]
+    ncols = len(header)
+    assert min(map(len, lines)) >= ncols
+    lengths = list(
+        max(len(s) for s in col) + 4 for col in zip(*([fixedheader] + lines))
+    )
+    table = []
+    ln = "|"
+    for i, head in enumerate(fixedheader):
+        ln += f" {head:<{lengths[i] - 1}}|"
+    table.append(ln)
+    ln = "|"
+    for i in range(ncols):
+        ln += "-" * lengths[i] + "|"
+    table.append(ln)
+    for line in lines:
+        ln = "|"
+        for i in range(ncols):
+            if ticks[i]:
+                s = f"`{line[i]}`"
+            else:
+                s = line[i]
+            ln += f" {s:<{lengths[i] - 1}}|"
+        table.append(ln)
+    return "\n".join(table)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Examine sources for documentation")
+    action = parser.add_mutually_exclusive_group(required=True)
+
+    action.add_argument(
+        "-m", "--missing", action="store_true", help="Find missing documentation"
+    )
+    action.add_argument(
+        "-l",
+        "--list",
+        type=str,
+        nargs="?",
+        const="docs/modules.md",
+        metavar="<.md file>",
+        help="List modules",
+    )
     parser.add_argument("files", nargs="+", help="Files or directories to process")
     args = parser.parse_args()
     file_paths = []
@@ -320,5 +244,21 @@ if __name__ == "__main__":
                 if os.path.exists(name + hext):
                     with open(name + hext, "r", encoding="utf-8") as f:
                         contents[fname] = f.read() + "\n\n" + contents[fname]
-    for source in contents:
-        process_source(source, contents[source])
+    if args.missing:
+        for source in contents:
+            missing_docs(source, contents[source])
+    elif args.list:
+        lines = [list_modules(source, contents[source]) for source in contents]
+        lines = [
+            (
+                line[2] + "::" + line[0],
+                line[1] if line[1] is not None else "not available",
+            )
+            for line in lines
+            if line is not None
+        ]
+        table = md_table(("`Module Name`", "Description"), lines)
+        print_blue(table)
+        with open(args.list, "w") as fout:
+            fout.write("# Module list\n\n")
+            fout.write(table + "\n")
