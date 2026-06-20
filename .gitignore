@@ -12,3 +12,5 @@ src/streamers/**/*_types.hpp
 .vs/
 docs/html
 docs/latex
+*.pyc
+
