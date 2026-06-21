@@ -14,7 +14,7 @@ set(MODULES_LIST_FILE "${CMAKE_CURRENT_SOURCE_DIR}/modules.md")
 
 add_custom_command(
     OUTPUT ${MODULES_LIST_FILE}
-    COMMAND python "${CMAKE_SOURCE_DIR}/tools/autodoc/cli.py" "${CMAKE_SOURCE_DIR}/src/processes/" "-q" "-l" "${MODULES_LIST_FILE}"
+    COMMAND "python3" "${CMAKE_SOURCE_DIR}/tools/autodoc/cli.py" "${CMAKE_SOURCE_DIR}/src/processes/" "-q" "-l" "${MODULES_LIST_FILE}"
     DEPENDS ${all_sources}
     COMMENT "Generating ${MODULES_LIST_FILE}"
 )
