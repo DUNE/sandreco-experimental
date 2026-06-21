@@ -18,19 +18,23 @@ ANSI_RESET = "\033[0m"  # Reset to default
 
 
 def print_red(text):
-    print(ANSI_RED + text + ANSI_RESET)
+    if not quiet:
+        print(ANSI_RED + text + ANSI_RESET)
 
 
 def print_green(text):
-    print(ANSI_GREEN + text + ANSI_RESET)
+    if not quiet:
+        print(ANSI_GREEN + text + ANSI_RESET)
 
 
 def print_yellow(text):
-    print(ANSI_YELLOW + text + ANSI_RESET)
+    if not quiet:
+        print(ANSI_YELLOW + text + ANSI_RESET)
 
 
 def print_blue(text):
-    print(ANSI_BLUE + text + ANSI_RESET)
+    if not quiet:
+        print(ANSI_BLUE + text + ANSI_RESET)
 
 
 def match_configuration(doxy, src):
@@ -210,6 +214,9 @@ def md_table(header, lines):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Examine sources for documentation")
+    parser.add_argument(
+        "-q", "--quiet", action="store_true", help="Suppress all outputs"
+    )
     action = parser.add_mutually_exclusive_group(required=True)
 
     action.add_argument(
@@ -226,6 +233,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("files", nargs="+", help="Files or directories to process")
     args = parser.parse_args()
+    global quiet
+    quiet = args.quiet
     file_paths = []
     for file_path in args.files:
         if os.path.isdir(file_path):
