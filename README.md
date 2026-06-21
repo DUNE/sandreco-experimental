@@ -4,7 +4,7 @@ This is the current development branch of the sandreco software. The previous, n
 
 This software is based on [ufw](https://baltig.infn.it/dune/ufw), and it is meant to be developed and deployed inside a [containerized environment](https://baltig.infn.it/dune/sand-ci).
 
-A sandreco job is based on a `.json` configuration that specifies what modules to run and their configuration.
+A sandreco job is based on a `.json` configuration that specifies what [modules](docs/modules.md) to run and their configuration.
 
 The typical goal of a "production" job is to produce a CAF-like file, an analysis-oriented `.root` file whose content matches the SAND portion of [the full CAF format](https://github.com/DUNE/duneanaobj).
 You can find a description of the data fields filled at present [here](src/processes/fake_reco/fields.md).
