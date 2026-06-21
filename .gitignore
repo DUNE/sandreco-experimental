@@ -10,6 +10,7 @@ compile_commands.json
 src/streamers/**/*_linkdef.h
 src/streamers/**/*_types.hpp
 .vs/
+docs/modules.md
 docs/html
 docs/latex
 *.pyc
