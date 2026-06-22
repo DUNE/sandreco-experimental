@@ -29,7 +29,7 @@ namespace sand {
     const std::array<double, 3> & view_angle() const { return m_view_angle; }
     const std::array<double, 3> & view_offset() const { return m_view_offset; }
     const std::array<double, 3> & view_spacing() const { return m_view_spacing; }
-    double & distance_between_views() const { return m_distance_between_views; }
+    double distance_between_views() const { return m_distance_between_views; }
 
   private:
 
