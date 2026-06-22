@@ -1,8 +1,8 @@
-#include <common/version.h>
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
+#include <common/version.h>
 
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/drift_info.hpp>
@@ -12,11 +12,12 @@
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
 
-
 namespace sand::test {
 
   /**
-   * @brief Validation test for the STT fast digitization (\ref sand::stt::stt_fast_digi).
+   * \class sand::test::test_stt_digi
+   *
+   * \brief Validation test for the STT fast digitization (\ref sand::stt::stt_fast_digi).
    *
    * Unlike a digitization process, this module takes the \c digi collection as a
    * requirement and produces nothing: it reads the signals written by the STT
@@ -29,30 +30,42 @@ namespace sand::test {
    * Any inconsistency is reported with \c UFW_ERROR so that the continuous
    * integration flags a regression.
    *
-   * @par Input
-   * - \c digi (\ref sand::tracker::digi) : the digitized signals to validate.
+   * \subsection Configuration
+   * | Parameter Name   | Type     | Unit  | Required/Default | Description                                |
+   * |------------------|----------|-------|------------------|--------------------------------------------|
+   * | `drift_velocity` | `double` | mm/ns | Required         | Drift velocity, used for the time window.  |
+   * | `wire_velocity`  | `double` | mm/ns | Required         | In-wire signal speed, used for the window. |
+   * | `sigma_tdc`      | `double` | ns    | Required         | TDC resolution, used for the window.       |
    *
-   * @par Configuration
-   * | Parameter Name   | Type   | Unit  | Required/Default | Description                                |
-   * |------------------|--------|-------|------------------|--------------------------------------------|
-   * | `drift_velocity` | double | mm/ns | Required         | Drift velocity, used for the time window.  |
-   * | `wire_velocity`  | double | mm/ns | Required         | In-wire signal speed, used for the window. |
-   * | `sigma_tdc`      | double | ns    | Required         | TDC resolution, used for the window.       |
+   * \subsection Dependencies
+   * | Type                | Comment                                     |
+   * |---------------------|---------------------------------------------|
+   * | `sand::geoinfo`     | Geometry                                    |
+   * | `sand::edep_reader` | Simulated energy deposits of the event      |
+   *
+   * \subsection Requirements
+   * |  Name  | Type                  | Comment                           |
+   * |--------|-----------------------|-----------------------------------|
+   * | `digi` | `sand::tracker::digi` | The digitized signals to validate |
+   *
+   * \subsection Products
+   * None; this process only validates and produces no data.
    */
-  class test_stt_digi : public ufw::process {
-    public:
-      test_stt_digi();
-      void configure(const ufw::config& cfg) override;
-      void run() override;
-      void analyze_stt_digi();
-      std::unordered_map<int, const EDEPHit*> get_hit_id_map_in_straws();
-      double get_time_range(const sand::geoinfo::tracker_info::wire& wire);
-      void check_truth_matching(const std::unordered_map<int, const EDEPHit*>& all_straw_hits);
 
-    private:
-      double m_drift_velocity;
-      double m_wire_velocity;
-      double m_sigma_tdc;
+  class test_stt_digi : public ufw::process {
+   public:
+    test_stt_digi();
+    void configure(const ufw::config& cfg) override;
+    void run() override;
+    void analyze_stt_digi();
+    std::unordered_map<int, const EDEPHit*> get_hit_id_map_in_straws();
+    double get_time_range(const sand::geoinfo::tracker_info::wire& wire);
+    void check_truth_matching(const std::unordered_map<int, const EDEPHit*>& all_straw_hits);
+
+   private:
+    double m_drift_velocity;
+    double m_wire_velocity;
+    double m_sigma_tdc;
   };
 
   /**
@@ -77,14 +90,14 @@ namespace sand::test {
     analyze_stt_digi();
   }
 
-  /// @brief Analyze the tracker digi signals and check their truth matching with the EDEPHit information.
+  /// @brief Analyze the STT digi signals and check their truth matching with the EDEPHit information.
   void test_stt_digi::analyze_stt_digi() {
     const auto& digi = get<sand::tracker::digi>("digi");
     const auto& gi   = get<geoinfo>();
     const auto* stt  = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
 
     if (!stt) {
-      UFW_ERROR("Failed to cast tracker to stt_info");
+      UFW_ERROR("The tracker info object is not STT");
       return;
     }
 
@@ -122,18 +135,20 @@ namespace sand::test {
 
   /// @brief Get the maximum time range for signal formation on a given wire
   /// @param wire The wire whose drift radius and length define the time window.
-  /// @return Maximum time range for signal formation on the wire, considering drift time, wire propagation time, and TDC resolution.
-  double test_stt_digi::get_time_range(const sand::geoinfo::tracker_info::wire& wire){
+  /// @return Maximum time range for signal formation on the wire, considering drift time, wire propagation time, and
+  /// TDC resolution.
+  double test_stt_digi::get_time_range(const sand::geoinfo::tracker_info::wire& wire) {
     double max_drift_time = wire.max_radius / m_drift_velocity;
-    double max_wire_time = wire.length() / m_wire_velocity;
+    double max_wire_time  = wire.length() / m_wire_velocity;
     return max_drift_time + max_wire_time + 5 * m_sigma_tdc;
   }
 
   /// @brief Check that the true hits associated with each tracker signal match the expected energy deposit,
-  ///        the time matches the maximum signal formation time range and are within the maximum drift radius of the corresponding wire.
-  /// @param all_straw_hits Map of every STRAW hit id to its EDEPHit, used to resolve the true-hit indices carried by each signal.
+  ///        the time matches the maximum signal formation time range and are within the maximum drift radius of the
+  ///        corresponding wire.
+  /// @param all_straw_hits Map of every STRAW hit id to its EDEPHit, used to resolve the true-hit indices carried by
+  /// each signal.
   void test_stt_digi::check_truth_matching(const std::unordered_map<int, const EDEPHit*>& all_straw_hits) {
-
     const auto& digi = get<sand::tracker::digi>("digi");
     const auto& gi   = get<geoinfo>();
     const auto* stt  = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
@@ -148,7 +163,7 @@ namespace sand::test {
                 channel_wire.hv, channel_wire.max_radius);
 
       double total_energy_deposit = 0.0;
-      double smallest_time = std::numeric_limits<double>::max();
+      double smallest_time        = std::numeric_limits<double>::max();
 
       for (const auto& true_hit : signal.true_hits()) {
         UFW_DEBUG("  True hit index: {}", true_hit.get());

@@ -1,8 +1,8 @@
-#include <common/version.h>
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
+#include <common/version.h>
 
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/drift_info.hpp>
@@ -16,7 +16,9 @@
 namespace sand::test {
 
   /**
-   * @brief Validation test for the drift-chamber fast digitization
+   * \class sand::test::test_drift_digi
+   *
+   * \brief Validation test for the drift-chamber fast digitization
    *        (\ref sand::drift::drift_fast_digi).
    *
    * Takes the \c digi collection as a requirement and produces nothing: it reads
@@ -42,40 +44,52 @@ namespace sand::test {
    *   referenced by the signals. Hits the digitization discards (invalid plane,
    *   view-spanning, no wire found) are never referenced, so they drop out of both
    *   sides; split hits are counted once on both sides.
-   * - The TDC window is computed per signal based on the wire's maximum drift radius 
-   *   and length, the configured drift and wire velocities, and the TDC resolution as 
-   *   a guard margin. The time window is a physically motivated expectation for when 
+   * - The TDC window is computed per signal based on the wire's maximum drift radius
+   *   and length, the configured drift and wire velocities, and the TDC resolution as
+   *   a guard margin. The time window is a physically motivated expectation for when
    *   a signal should arrive, and while the digitization may produce signals outside it
-   *   due to unmodeled effects or bugs, such signals are suspicious and so are flagged 
+   *   due to unmodeled effects or bugs, such signals are suspicious and so are flagged
    *   as errors.
    *
    * Any inconsistency is reported with \c UFW_ERROR so that the continuous
    * integration flags a regression.
    *
-   * @par Input
-   * - \c digi (\ref sand::tracker::digi) : the digitized signals to validate.
+   * \subsection Configuration
+   * | Parameter Name   | Type     | Unit  | Required/Default | Description                                    |
+   * |------------------|----------|-------|------------------|------------------------------------------------|
+   * | `drift_velocity` | `double` | mm/ns | Required         | Drift velocity, used for the time window.      |
+   * | `wire_velocity`  | `double` | mm/ns | Required         | In-wire signal speed, used for the window.     |
+   * | `sigma_tdc`      | `double` | ns    | Required         | TDC resolution; sets the causal-window margin. |
    *
-   * @par Configuration
-   * | Parameter Name   | Type   | Unit  | Required/Default | Description                                  |
-   * |------------------|--------|-------|------------------|----------------------------------------------|
-   * | `drift_velocity` | double | mm/ns | Required         | Drift velocity, used for the time window.    |
-   * | `wire_velocity`  | double | mm/ns | Required         | In-wire signal speed, used for the window.   |
-   * | `sigma_tdc`      | double | ns    | Required         | TDC resolution; sets the causal-window margin. |
+   * \subsection Dependencies
+   * | Type                | Comment                                     |
+   * |---------------------|---------------------------------------------|
+   * | `sand::geoinfo`     | Geometry                                    |
+   * | `sand::edep_reader` | Simulated energy deposits of the event      |
+   *
+   * \subsection Requirements
+   * |  Name  | Type                  | Comment                           |
+   * |--------|-----------------------|-----------------------------------|
+   * | `digi` | `sand::tracker::digi` | The digitized signals to validate |
+   *
+   * \subsection Products
+   * None; this process only validates and produces no data.
    */
-  class test_drift_digi : public ufw::process {
-    public:
-      test_drift_digi();
-      void configure(const ufw::config& cfg) override;
-      void run() override;
-      void analyze_drift_digi();
-      std::unordered_map<int, const EDEPHit*> get_hit_id_map_in_drift();
-      double get_time_range(const sand::geoinfo::tracker_info::wire& wire);
-      void check_truth_matching(const std::unordered_map<int, const EDEPHit*>& all_drift_hits);
 
-    private:
-      double m_drift_velocity;
-      double m_wire_velocity;
-      double m_sigma_tdc;
+  class test_drift_digi : public ufw::process {
+   public:
+    test_drift_digi();
+    void configure(const ufw::config& cfg) override;
+    void run() override;
+    void analyze_drift_digi();
+    std::unordered_map<int, const EDEPHit*> get_hit_id_map_in_drift();
+    double get_time_range(const sand::geoinfo::tracker_info::wire& wire);
+    void check_truth_matching(const std::unordered_map<int, const EDEPHit*>& all_drift_hits);
+
+   private:
+    double m_drift_velocity;
+    double m_wire_velocity;
+    double m_sigma_tdc;
   };
 
   /**
@@ -107,7 +121,7 @@ namespace sand::test {
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
 
     if (!drift) {
-      UFW_ERROR("Failed to cast tracker to drift_info");
+      UFW_ERROR("The tracker info object is not DRIFT");
       return;
     }
 
@@ -145,7 +159,8 @@ namespace sand::test {
 
   /// @brief Get the maximum signal-formation time relative to the hit, used as the late edge of the causal TDC window.
   /// @param wire The wire whose drift radius and length define the time window.
-  /// @return Maximum time range for signal formation on the wire, considering drift time, wire propagation time, and TDC resolution.
+  /// @return Maximum time range for signal formation on the wire, considering drift time, wire propagation time, and
+  /// TDC resolution.
   double test_drift_digi::get_time_range(const sand::geoinfo::tracker_info::wire& wire) {
     double max_drift_time = wire.max_radius / m_drift_velocity;
     double max_wire_time  = wire.length() / m_wire_velocity;
@@ -161,14 +176,14 @@ namespace sand::test {
   /// shared with neighbouring wires). Globally: the total ADC must equal the summed energy of the
   /// unique set of hits referenced by all signals (energy conservation through the
   /// split-and-digitize chain).
-  /// @param all_drift_hits Map of every drift hit id to its EDEPHit, used to resolve the true-hit indices carried by each signal.
+  /// @param all_drift_hits Map of every drift hit id to its EDEPHit, used to resolve the true-hit indices carried by
+  /// each signal.
   void test_drift_digi::check_truth_matching(const std::unordered_map<int, const EDEPHit*>& all_drift_hits) {
-
     const auto& digi  = get<sand::tracker::digi>("digi");
     const auto& gi    = get<geoinfo>();
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
 
-    double total_adc = 0.0;                    // sum of every signal ADC
+    double total_adc = 0.0;                     // sum of every signal ADC
     std::unordered_set<int> referenced_hit_ids; // distinct hit ids touched by any signal
 
     for (const auto& signal : digi.signals) {
@@ -239,13 +254,12 @@ namespace sand::test {
     for (const auto& [id, hit] : all_drift_hits)
       all_hits_energy += hit->GetEnergyDeposit();
 
-    UFW_DEBUG("Energy totals: all hits = {}, referenced = {}, discarded = {}, total ADC = {}",
-              all_hits_energy, referenced_total_energy, all_hits_energy - referenced_total_energy, total_adc);
+    UFW_DEBUG("Energy totals: all hits = {}, referenced = {}, discarded = {}, total ADC = {}", all_hits_energy,
+              referenced_total_energy, all_hits_energy - referenced_total_energy, total_adc);
 
     const double global_tol = 1e-7 + 1e-9 * std::abs(referenced_total_energy);
     if (std::abs(referenced_total_energy - total_adc) > global_tol)
-      UFW_ERROR("Global energy mismatch: referenced hits sum = {}, total ADC = {}", referenced_total_energy,
-                total_adc);
+      UFW_ERROR("Global energy mismatch: referenced hits sum = {}, total ADC = {}", referenced_total_energy, total_adc);
     else
       UFW_DEBUG("Global energy is conserved (referenced hits sum matches total ADC)");
   }

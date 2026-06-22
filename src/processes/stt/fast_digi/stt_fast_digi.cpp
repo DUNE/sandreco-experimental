@@ -30,36 +30,39 @@ namespace sand::stt {
    *
    * \brief Fast digitization of STT straw-tube energy deposits into wire signals.
    *
-   * This process reads the simulated energy deposits of the current event from
-   * the \ref sand::edep_reader, assigns each hit to the straw tube it
-   * belongs to using the detector geometry (\ref sand::geoinfo, navigated through
-   * \ref sand::root_tgeomanager and accessed via its STT geometry
-   * \ref sand::geoinfo::stt_info), and turns the hits collected on each fired
-   * tube into a single digitized signal. The signal carries a TDC time built
-   * from the earliest drift-plus-propagation time (smeared with a Gaussian of
-   * width \c sigma_tdc) and an ADC value equal to the total deposited energy.
-   * The identifiers of the contributing simulated hits are attached to each
-   * signal for Monte Carlo truth matching.
+   * Groups the STRAW energy deposits of the event per straw tube and turns the hits
+   * collected on each fired tube into one digitized signal: a TDC built from the earliest
+   * drift-plus-propagation time (Gaussian-smeared by `sigma_tdc`) and an ADC equal to the
+   * total deposited energy. The contributing simulated-hit ids are kept on every signal
+   * for Monte Carlo truth matching.
    *
-   * \par Inputs 
-   * - \ref sand::edep_reader : per-context (per-event) simulated hits.
-   * - \ref sand::geoinfo : detector geometry, dynamically cast to \ref sand::geoinfo::stt_info.
-   * - \ref sand::root_tgeomanager : ROOT geometry navigator, accessed through the context \c instance.
+   * \subsection Configuration
+   * | Parameter Name   | Type     | Unit  | Required/Default | Description                          |
+   * |------------------|----------|-------|------------------|--------------------------------------|
+   * | `drift_velocity` | `double` | mm/ns | Required         | Drift velocity of ionized particles. |
+   * | `wire_velocity`  | `double` | mm/ns | Required         | Signal transit speed along the wire. |
+   * | `sigma_tdc`      | `double` | ns    | Required         | Gaussian time resolution of the TDC. |
    *
-   * \par Outputs
-   * - \c digi (\ref sand::tracker::digi) : the collection of digitized wire signals.
+   * \subsection Dependencies
+   * | Type                     | Comment                                |
+   * |--------------------------|----------------------------------------|
+   * | `sand::geoinfo`          | Geometry                        |
+   * | `sand::edep_reader`      | Simulated energy deposits of the event |
+   * | `sand::root_tgeomanager` | ROOT geometry navigator                |
    *
-   * \par Configuration
-   * | Parameter Name   | Type   | Unit  | Required/Default | Description                          |
-   * |------------------|--------|-------|------------------|--------------------------------------|
-   * | `drift_velocity` | double | mm/ns | Required         | Drift velocity of ionized particles. |
-   * | `wire_velocity`  | double | mm/ns | Required         | Signal transit speed along the wire. |
-   * | `sigma_tdc`      | double | ns    | Required         | Gaussian time resolution of the TDC. |
+   * \subsection Requirements
+   * None; the inputs are unique objects fetched by type (see Dependencies).
+   *
+   * \subsection Products
+   * |  Name  | Type                  | Comment                |
+   * |--------|-----------------------|------------------------|
+   * | `digi` | `sand::tracker::digi` | Digitized wire signals |
    */
   /**
    * \brief Reads and stores the configuration parameters.
    * \param cfg The JSON configuration fragment for this process.
    */
+
   void stt_fast_digi::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_drift_velocity = cfg.at("drift_velocity");
@@ -84,7 +87,7 @@ namespace sand::stt {
     const auto& gi   = get<geoinfo>();
     auto& digi       = set<sand::tracker::digi>("digi");
     auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
-    auto* stt = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker()); // Ensure STT info is available
+    auto* stt        = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker()); // Ensure STT info is available
 
     UFW_DEBUG(" STT subdetector implementation");
     // Two phases: first assign every STRAW hit to its straw tube, then turn the
@@ -181,9 +184,9 @@ namespace sand::stt {
    * \return The digitized signal.
    */
   tracker::digi::signal stt_fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
-    std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc); //FIXME should be member
+    std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc); // FIXME should be member
     auto ran = gaussian_error(random_engine());
-    //FIXME replace 200 with maximum drift + signal time
+    // FIXME replace 200 with maximum drift + signal time
     reco::digi<>::time trange{wire_time - 200., wire_time + ran, wire_time + 5. * m_sigma_tdc};
     tracker::digi::signal signal(channel, trange, edep_total);
 
@@ -207,7 +210,7 @@ namespace sand::stt {
    * \return The resulting signal, or \c std::nullopt if no valid time was found.
    */
   std::optional<tracker::digi::signal> stt_fast_digi::process_hits_for_wire(const std::vector<EDEPHit>& hits,
-                                                                        const sand::geoinfo::stt_info::wire& wire) {
+                                                                            const sand::geoinfo::stt_info::wire& wire) {
     const auto& gi     = get<geoinfo>();
     const auto* stt    = dynamic_cast<const sand::geoinfo::stt_info*>(&gi.tracker());
     double wire_time   = std::numeric_limits<double>::max();
@@ -264,9 +267,11 @@ namespace sand::stt {
    * \param w         The wire geometry.
    * \return A pair {closest point on the hit, closest point on the wire}.
    */
-  std::pair<vec_4d,vec_4d> stt_fast_digi::closest_points_hit_wire(const vec_4d& hit_start, const vec_4d& hit_stop,  //TO-DO move to fast_digi
-                                                            double v_drift, const geoinfo::tracker_info::wire& w) const {
-    std::pair<vec_4d,vec_4d> closest_points;
+  std::pair<vec_4d, vec_4d> stt_fast_digi::closest_points_hit_wire(const vec_4d& hit_start,
+                                                                   const vec_4d& hit_stop, // TO-DO move to fast_digi
+                                                                   double v_drift,
+                                                                   const geoinfo::tracker_info::wire& w) const {
+    std::pair<vec_4d, vec_4d> closest_points;
 
     pos_3d start(hit_start.X(), hit_start.Y(), hit_start.Z());
     pos_3d stop(hit_stop.X(), hit_stop.Y(), hit_stop.Z());
@@ -275,7 +280,7 @@ namespace sand::stt {
 
     std::vector<vec_4d> result;
 
-    double& t       = seg_params.first; // Parameter along s
+    double& t       = seg_params.first;  // Parameter along s
     double& t_prime = seg_params.second; // Parameter along r
 
     // Calculate the closest point on the line segment
@@ -292,7 +297,7 @@ namespace sand::stt {
 
     double fraction = sqrt((closest_point_hit - start).Mag2() / (stop - start).Mag2());
     vec_4d closest_point_hit_l(closest_point_hit.X(), closest_point_hit.Y(), closest_point_hit.Z(),
-                                hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
+                               hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
 
     closest_points.first = closest_point_hit_l;
 
@@ -312,7 +317,8 @@ namespace sand::stt {
    * \param w               The wire geometry; its \c head is the readout end.
    * \return The arrival time at the readout end [ns].
    */
-  double stt_fast_digi::get_min_time(const vec_4d& point, double v_signal_inwire, const geoinfo::tracker_info::wire& w) const {
+  double stt_fast_digi::get_min_time(const vec_4d& point, double v_signal_inwire,
+                                     const geoinfo::tracker_info::wire& w) const {
     return point.T() + sqrt((pos_3d(point.Vect()) - w.head).Mag2()) / v_signal_inwire;
   }
 

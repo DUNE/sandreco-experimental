@@ -31,43 +31,40 @@ namespace sand::drift {
    *
    * \brief Fast digitization of drift-chamber energy deposits into wire signals.
    *
-   * This process reads the simulated energy deposits of the current event from
-   * the \ref sand::edep_reader and digitizes the hits of the drift chamber,
-   * whose geometry is accessed through the drift specialization
-   * \ref sand::geoinfo::drift_info of \ref sand::geoinfo.
+   * Assigns the DRIFT energy deposits of the event to readout views and wires — splitting
+   * a hit that crosses a cell boundary into one sub-hit per wire, with the energy shared by
+   * segment length — and turns the hits collected on each fired wire into one digitized
+   * signal: a TDC built from the earliest drift-plus-propagation time (Gaussian-smeared by
+   * `sigma_tdc`) and an ADC equal to the deposited energy. The contributing simulated-hit
+   * ids are kept on every signal for Monte Carlo truth matching.
    *
-   * For every DRIFT hit the start and stop points are located in the geometry to
-   * find the readout view they belong to (X, U or V, i.e. plane id 0, 1 or 2).
-   * Hits that fall on an invalid plane or that span two different views are
-   * discarded. Within a view the closest wire to each hit end is found: if both
-   * ends share the same wire the hit is assigned to it as is, otherwise the hit
-   * is split with \ref split_hit into one sub-hit per crossed wire, the deposited
-   * quantities being shared proportionally to the segment lengths. The hits
-   * collected on each wire are then turned into a single signal, exactly as in
-   * the STT digitization: a TDC time built from the earliest drift-plus-propagation
-   * time (smeared with a Gaussian of width \c sigma_tdc) and an ADC value equal to
-   * the total deposited energy, with the contributing hit identifiers attached for
-   * Monte Carlo truth matching.
+   * \subsection Configuration
+   * | Parameter Name   | Type     | Unit  | Required/Default | Description                          |
+   * |------------------|----------|-------|------------------|--------------------------------------|
+   * | `drift_velocity` | `double` | mm/ns | Required         | Drift velocity of ionized particles. |
+   * | `wire_velocity`  | `double` | mm/ns | Required         | Signal transit speed along the wire. |
+   * | `sigma_tdc`      | `double` | ns    | Required         | Gaussian time resolution of the TDC. |
    *
-   * \par Inputs 
-   * - \ref sand::edep_reader : per-context (per-event) simulated hits.
-   * - \ref sand::geoinfo : detector geometry, dynamically cast to \ref sand::geoinfo::drift_info.
-   * - \ref sand::root_tgeomanager : ROOT geometry navigator, accessed through the context \c instance.
+   * \subsection Dependencies
+   * | Type                     | Comment                                |
+   * |--------------------------|----------------------------------------|
+   * | `sand::geoinfo`          | Geometry                               |
+   * | `sand::edep_reader`      | Simulated energy deposits of the event |
+   * | `sand::root_tgeomanager` | ROOT geometry navigator                |
    *
-   * \par Outputs
-   * - \c digi (\ref sand::tracker::digi) : the collection of digitized wire signals.
+   * \subsection Requirements
+   * None; the inputs are unique objects fetched by type (see Dependencies).
    *
-   * \par Configuration
-   * | Parameter Name   | Type   | Unit  | Required/Default | Description                          |
-   * |------------------|--------|-------|------------------|--------------------------------------|
-   * | `drift_velocity` | double | mm/ns | Required         | Drift velocity of ionized particles. |
-   * | `wire_velocity`  | double | mm/ns | Required         | Signal transit speed along the wire. |
-   * | `sigma_tdc`      | double | ns    | Required         | Gaussian time resolution of the TDC. |
+   * \subsection Products
+   * |  Name  | Type                  | Comment                |
+   * |--------|-----------------------|------------------------|
+   * | `digi` | `sand::tracker::digi` | Digitized wire signals |
    */
   /**
    * \brief Reads and stores the configuration parameters.
    * \param cfg The JSON configuration fragment for this process.
    */
+
   void drift_fast_digi::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_drift_velocity = cfg.at("drift_velocity");
@@ -95,7 +92,7 @@ namespace sand::drift {
     // Two phases: first assign every DRIFT hit (splitting it across wires when
     // needed) to its wire, then turn the hits collected on each wire into one
     // digitized signal.
-    std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>> hits_by_wire = group_hits_by_wire();
+    std::map<const geoinfo::tracker_info::wire*, std::vector<EDEPHit>> hits_by_wire = group_hits_by_wire();
     digitize_hits_in_wires(hits_by_wire);
   }
 
@@ -109,82 +106,84 @@ namespace sand::drift {
    *
    * \return A map from wire to the hits (whole or split) collected on that wire.
    */
-  std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>> drift_fast_digi::group_hits_by_wire() {
+  std::map<const geoinfo::tracker_info::wire*, std::vector<EDEPHit>> drift_fast_digi::group_hits_by_wire() {
     const auto& gi   = get<geoinfo>();
     const auto& tree = get<sand::edep_reader>();
     auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
-    std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>> hits_by_wire;
+    std::map<const geoinfo::tracker_info::wire*, std::vector<EDEPHit>> hits_by_wire;
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
 
     for (const auto& trj : tree) {
       const auto& hit_map = trj.GetHitMap(); // pointer, not value
-      if (!trj.HasHitInDetector(component::DRIFT)) 
+      if (!trj.HasHitInDetector(component::DRIFT))
         continue;
 
       UFW_INFO("Found {} DRIFT hits for trajectory with ID {}", hit_map.at(component::DRIFT).size(), trj.GetId());
 
-      for(const auto& hit : hit_map.at(component::DRIFT)) {
-
+      for (const auto& hit : hit_map.at(component::DRIFT)) {
         tgm.navigator()->FindNode(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
         geo_path start_path(tgm.navigator()->GetPath());
         geo_path start_partial_path = drift->partial_path(start_path, gi);
-        geo_id start_ID = drift->id(start_partial_path);
+        geo_id start_ID             = drift->id(start_partial_path);
 
         tgm.navigator()->FindNode(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
         geo_path stop_path(tgm.navigator()->GetPath());
         geo_path stop_partial_path = drift->partial_path(stop_path, gi);
-        geo_id stop_ID = drift->id(stop_partial_path);
+        geo_id stop_ID             = drift->id(stop_partial_path);
 
-        if(start_ID.drift.plane == 255 || stop_ID.drift.plane == 255) {
+        if (start_ID.drift.plane == 255 || stop_ID.drift.plane == 255) {
           UFW_DEBUG(" One of two hit_segment ends has invalid plane ID, skipping.");
           continue;
         }
-        if(start_ID.raw != stop_ID.raw) {
-          UFW_DEBUG(" Hit spans multiple views: start view ID ({},{},{}), stop view ID ({},{},{}). Skipping.", 
-                                start_ID.drift.subdetector, start_ID.drift.supermodule, start_ID.drift.plane, 
-                                stop_ID.drift.subdetector, stop_ID.drift.supermodule, stop_ID.drift.plane);
+        if (start_ID.raw != stop_ID.raw) {
+          UFW_DEBUG(" Hit spans multiple views: start view ID ({},{},{}), stop view ID ({},{},{}). Skipping.",
+                    start_ID.drift.subdetector, start_ID.drift.supermodule, start_ID.drift.plane,
+                    stop_ID.drift.subdetector, stop_ID.drift.supermodule, stop_ID.drift.plane);
           continue;
         }
 
-        const auto* drift_station = static_cast<const sand::geoinfo::drift_info::station*>(drift->get_station_by_ID(start_ID.drift.supermodule));
+        const auto* drift_station = static_cast<const sand::geoinfo::drift_info::station*>(
+            drift->get_station_by_ID(start_ID.drift.supermodule));
         // Pick the wire list of the view the hit belongs to: plane 0 -> X, 1 -> U, 2 -> V.
         geoinfo::tracker_info::wire_list wires_in_view;
-        if(start_ID.drift.plane == 0) {
+        if (start_ID.drift.plane == 0) {
           wires_in_view = drift_station->x_view();
         } else if (start_ID.drift.plane == 1) {
           wires_in_view = drift_station->u_view();
         } else if (start_ID.drift.plane == 2) {
           wires_in_view = drift_station->v_view();
-        } 
+        }
 
-        const auto [closest_wire_start, closest_wire_start_index] = drift->closest_wire_in_list(wires_in_view, pos_3d(hit.GetStart().Vect()));
-        const auto [closest_wire_stop, closest_wire_stop_index] = drift->closest_wire_in_list(wires_in_view, pos_3d(hit.GetStop().Vect()));
-        
-        if(closest_wire_start_index == SIZE_MAX || closest_wire_stop_index == SIZE_MAX) {
+        const auto [closest_wire_start, closest_wire_start_index] =
+            drift->closest_wire_in_list(wires_in_view, pos_3d(hit.GetStart().Vect()));
+        const auto [closest_wire_stop, closest_wire_stop_index] =
+            drift->closest_wire_in_list(wires_in_view, pos_3d(hit.GetStop().Vect()));
+
+        if (closest_wire_start_index == SIZE_MAX || closest_wire_stop_index == SIZE_MAX) {
           UFW_DEBUG(" Could not find closest wire index for one end of the hit, skipping.");
           continue;
         }
-        if(closest_wire_start==nullptr || closest_wire_stop==nullptr) {
+        if (closest_wire_start == nullptr || closest_wire_stop == nullptr) {
           UFW_DEBUG(" Could not find closest wire for one end of the hit, skipping.");
           continue;
-        }    
+        }
 
-        if(closest_wire_start==closest_wire_stop) {
+        if (closest_wire_start == closest_wire_stop) {
           // Both ends fall on the same wire: keep the hit whole.
-          UFW_DEBUG(" For hit ID ({}) closest wire start and stop are the same wire: wire ID: ({}).", hit.GetId(), closest_wire_start_index);
+          UFW_DEBUG(" For hit ID ({}) closest wire start and stop are the same wire: wire ID: ({}).", hit.GetId(),
+                    closest_wire_start_index);
           hits_by_wire[closest_wire_start].emplace_back(hit);
         } else {
           // The hit crosses several wires: split it into one sub-hit per wire.
-          UFW_DEBUG(" For hit ID ({}) closest wire start and stop are different wires: wire ID: ({},{}).", hit.GetId(), closest_wire_start_index, closest_wire_stop_index);
+          UFW_DEBUG(" For hit ID ({}) closest wire start and stop are different wires: wire ID: ({},{}).", hit.GetId(),
+                    closest_wire_start_index, closest_wire_stop_index);
           auto split_hits = split_hit(closest_wire_start_index, closest_wire_stop_index, wires_in_view, hit);
           UFW_DEBUG(" Split hit between {} wires.", split_hits.size());
           for (const auto& [wire, split_hit] : split_hits) {
             hits_by_wire[wire].emplace_back(split_hit);
           }
         }
-
       }
-      
     }
 
     UFW_INFO("Hits have been grouped associated to {} wires.", hits_by_wire.size());
@@ -208,23 +207,22 @@ namespace sand::drift {
    * \return The transverse coordinate of the segment end.
    */
   double drift_fast_digi::calculate_wire_boundary_transverse(const geoinfo::tracker_info::wire* current_wire,
-                                                       const geoinfo::tracker_info::wire* next_wire,
-                                                       const xform_3d& wire_plane_transform,
-                                                       double transverse_start,
-                                                       double transverse_end,
-                                                       size_t wire_index) const {
+                                                             const geoinfo::tracker_info::wire* next_wire,
+                                                             const xform_3d& wire_plane_transform,
+                                                             double transverse_start, double transverse_end,
+                                                             size_t wire_index) const {
     if (next_wire == nullptr) {
       return transverse_end;
     }
 
     // Calculate wire centers in local coordinates
     const pos_3d wire1_center_global = (current_wire->head + dir_3d(current_wire->tail)) * 0.5;
-    const pos_3d wire1_center_local = wire_plane_transform.Inverse() * wire1_center_global;
-    const double wire1_transverse = wire1_center_local.Y();
+    const pos_3d wire1_center_local  = wire_plane_transform.Inverse() * wire1_center_global;
+    const double wire1_transverse    = wire1_center_local.Y();
 
     const pos_3d wire2_center_global = (next_wire->head + dir_3d(next_wire->tail)) * 0.5;
-    const pos_3d wire2_center_local = wire_plane_transform.Inverse() * wire2_center_global;
-    const double wire2_transverse = wire2_center_local.Y();
+    const pos_3d wire2_center_local  = wire_plane_transform.Inverse() * wire2_center_global;
+    const double wire2_transverse    = wire2_center_local.Y();
 
     // Midpoint between adjacent wires defines the boundary
     const double boundary_transverse = 0.5 * (wire1_transverse + wire2_transverse);
@@ -235,7 +233,7 @@ namespace sand::drift {
 
     // Check if boundary is between start and end, otherwise use end
     const double distance_to_boundary = fabs(boundary_transverse - transverse_start);
-    const double distance_to_end = fabs(transverse_end - transverse_start);
+    const double distance_to_end      = fabs(transverse_end - transverse_start);
 
     return (distance_to_boundary < distance_to_end) ? boundary_transverse : transverse_end;
   }
@@ -249,12 +247,9 @@ namespace sand::drift {
    * \param segment_fraction     Fraction of the total hit length carried by this segment.
    * \param wire_index           Index of the wire the segment belongs to.
    */
-  void drift_fast_digi::log_segment_debug(const pos_3d& segment_start_global,
-                                    const pos_3d& segment_end_global,
-                                    const pos_3d& segment_end_local,
-                                    double segment_length,
-                                    double segment_fraction,
-                                    size_t wire_index) const {
+  void drift_fast_digi::log_segment_debug(const pos_3d& segment_start_global, const pos_3d& segment_end_global,
+                                          const pos_3d& segment_end_local, double segment_length,
+                                          double segment_fraction, size_t wire_index) const {
     UFW_DEBUG(" ===== Segment {} Debug Info =====", wire_index);
     UFW_DEBUG("   Start global: {}", segment_start_global);
     UFW_DEBUG("   End global:   {}", segment_end_global);
@@ -276,18 +271,17 @@ namespace sand::drift {
    * \param transform              Transform from local wire-plane coordinates to global coordinates.
    * \return A pair {endpoint in local coordinates, endpoint in global coordinates}.
    */
-  std::pair<pos_3d, pos_3d> drift_fast_digi::interpolate_segment_endpoint(const pos_3d& start_local,
-                                                 double dx_local, double dy_local, double dz_local,
-                                                 double segment_end_transverse,
-                                                 const xform_3d& transform) const {
+  std::pair<pos_3d, pos_3d> drift_fast_digi::interpolate_segment_endpoint(const pos_3d& start_local, double dx_local,
+                                                                          double dy_local, double dz_local,
+                                                                          double segment_end_transverse,
+                                                                          const xform_3d& transform) const {
     // Linear interpolation parameter: fraction along hit segment
     const double interpolation_param = fabs((segment_end_transverse - start_local.Y()) / dy_local);
 
     // Calculate segment endpoint in local coordinates
-    const pos_3d segment_end_local(
-        start_local.X() + dx_local * interpolation_param,
-        start_local.Y() + dy_local * interpolation_param,
-        start_local.Z() + dz_local * interpolation_param);
+    const pos_3d segment_end_local(start_local.X() + dx_local * interpolation_param,
+                                   start_local.Y() + dy_local * interpolation_param,
+                                   start_local.Z() + dz_local * interpolation_param);
 
     // Transform to global coordinates
     const pos_3d segment_end_global = transform * segment_end_local;
@@ -312,26 +306,20 @@ namespace sand::drift {
    * \param original_hit         The hit being split.
    * \return The sub-hit for this segment.
    */
-  EDEPHit drift_fast_digi::create_segment_hit(const pos_3d& segment_start_global,
-                                        const pos_3d& segment_end_global,
-                                        double segment_start_time,
-                                        double time_direction,
-                                        double total_time_span,
-                                        double segment_fraction,
-                                        const EDEPHit& original_hit) const {
-    const vec_4d segment_start_4d(segment_start_global.X(), segment_start_global.Y(),
-                                          segment_start_global.Z(), segment_start_time);
-    const vec_4d segment_end_4d(segment_end_global.X(), segment_end_global.Y(),
-                                        segment_end_global.Z(),
-                                        segment_start_time + time_direction * total_time_span * segment_fraction);
+  EDEPHit drift_fast_digi::create_segment_hit(const pos_3d& segment_start_global, const pos_3d& segment_end_global,
+                                              double segment_start_time, double time_direction, double total_time_span,
+                                              double segment_fraction, const EDEPHit& original_hit) const {
+    const vec_4d segment_start_4d(segment_start_global.X(), segment_start_global.Y(), segment_start_global.Z(),
+                                  segment_start_time);
+    const vec_4d segment_end_4d(segment_end_global.X(), segment_end_global.Y(), segment_end_global.Z(),
+                                segment_start_time + time_direction * total_time_span * segment_fraction);
 
-    const double scaled_energy = original_hit.GetEnergyDeposit() * segment_fraction;
-    const double scaled_secondary = original_hit.GetSecondaryDeposit() * segment_fraction;
+    const double scaled_energy       = original_hit.GetEnergyDeposit() * segment_fraction;
+    const double scaled_secondary    = original_hit.GetSecondaryDeposit() * segment_fraction;
     const double scaled_track_length = original_hit.GetTrackLength() * segment_fraction;
 
-    return EDEPHit(segment_start_4d, segment_end_4d,
-                   scaled_energy, scaled_secondary,
-                   scaled_track_length, original_hit.GetContrib(),  // TO-DO: How to split contributor?
+    return EDEPHit(segment_start_4d, segment_end_4d, scaled_energy, scaled_secondary, scaled_track_length,
+                   original_hit.GetContrib(), // TO-DO: How to split contributor?
                    original_hit.GetPrimaryId(), original_hit.GetId());
   }
 
@@ -350,15 +338,12 @@ namespace sand::drift {
    * \param hit                      The hit to be split.
    * \return A map from wire to the sub-hit assigned to it.
    */
-  std::map<const geoinfo::tracker_info::wire *, EDEPHit> drift_fast_digi::split_hit(
-                                          size_t closest_wire_start_index,
-                                          size_t closest_wire_stop_index,
-                                          const geoinfo::tracker_info::wire_list& wires_in_view,
-                                          const EDEPHit& hit) {
-    
-    const auto& gi   = get<geoinfo>();
+  std::map<const geoinfo::tracker_info::wire*, EDEPHit>
+  drift_fast_digi::split_hit(size_t closest_wire_start_index, size_t closest_wire_stop_index,
+                             const geoinfo::tracker_info::wire_list& wires_in_view, const EDEPHit& hit) {
+    const auto& gi    = get<geoinfo>();
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
-    std::map<const geoinfo::tracker_info::wire *, EDEPHit> split_hit;
+    std::map<const geoinfo::tracker_info::wire*, EDEPHit> split_hit;
 
     // Strategy: work in the wire-plane local frame, walk the crossed wires from
     // first to last, and at each inter-wire boundary cut a segment whose
@@ -366,72 +351,70 @@ namespace sand::drift {
 
     // Extract hit segment properties
     const double total_hit_length = sqrt((hit.GetStop().Vect() - hit.GetStart().Vect()).Mag2());
-    const double total_time_span = (hit.GetStop() - hit.GetStart()).T();
-    const double hit_start_time = hit.GetStart().T();
+    const double total_time_span  = (hit.GetStop() - hit.GetStart()).T();
+    const double hit_start_time   = hit.GetStart().T();
 
     // Get coordinate transformation for wire plane
     const xform_3d wire_plane_transform = wires_in_view.at(closest_wire_start_index)->wire_plane_transform();
 
     // Transform hit endpoints from global to local rotated coordinates
     const pos_3d hit_start_global = pos_3d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
-    const pos_3d hit_start_local = wire_plane_transform.Inverse() * hit_start_global;
+    const pos_3d hit_start_local  = wire_plane_transform.Inverse() * hit_start_global;
 
     const pos_3d hit_stop_global = pos_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
-    const pos_3d hit_stop_local = wire_plane_transform.Inverse() * hit_stop_global;
+    const pos_3d hit_stop_local  = wire_plane_transform.Inverse() * hit_stop_global;
 
-    UFW_DEBUG(" Total hit key properties: Start {}, Stop {}, EnergyDeposit: {}, SecondaryDeposit: {}, TrackLength: {}, Contrib: {}, PrimaryId: {}, Id: {}", 
-              vec_4d(hit.GetStart()), vec_4d(hit.GetStop()), hit.GetEnergyDeposit(), hit.GetSecondaryDeposit(), hit.GetTrackLength(), hit.GetContrib(), hit.GetPrimaryId(), hit.GetId());
+    UFW_DEBUG(" Total hit key properties: Start {}, Stop {}, EnergyDeposit: {}, SecondaryDeposit: {}, TrackLength: {}, "
+              "Contrib: {}, PrimaryId: {}, Id: {}",
+              vec_4d(hit.GetStart()), vec_4d(hit.GetStop()), hit.GetEnergyDeposit(), hit.GetSecondaryDeposit(),
+              hit.GetTrackLength(), hit.GetContrib(), hit.GetPrimaryId(), hit.GetId());
 
     // Setup iteration parameters: ensure we iterate from first to last wire
     const bool need_to_reverse = (closest_wire_start_index > closest_wire_stop_index);
-    
+
     size_t first_wire_index = need_to_reverse ? closest_wire_stop_index : closest_wire_start_index;
     size_t last_wire_index  = need_to_reverse ? closest_wire_start_index : closest_wire_stop_index;
-    
+
     // Starting point for iteration (may be swapped if reversing)
     pos_3d segment_start_global = need_to_reverse ? hit_stop_global : hit_start_global;
-    pos_3d segment_start_local = need_to_reverse ? hit_stop_local : hit_start_local;
-    double segment_start_time = need_to_reverse ? (hit_start_time + total_time_span) : hit_start_time;
-    double time_direction = need_to_reverse ? -1.0 : 1.0;
-    
+    pos_3d segment_start_local  = need_to_reverse ? hit_stop_local : hit_start_local;
+    double segment_start_time   = need_to_reverse ? (hit_start_time + total_time_span) : hit_start_time;
+    double time_direction       = need_to_reverse ? -1.0 : 1.0;
+
     // Transverse coordinates (Y in local frame) for interpolation
     const double transverse_start = segment_start_local.Y();
-    const double transverse_end = need_to_reverse ? hit_start_local.Y() : hit_stop_local.Y();
-    
+    const double transverse_end   = need_to_reverse ? hit_start_local.Y() : hit_stop_local.Y();
+
     // Local coordinate deltas for linear interpolation
     const double dx_local = (need_to_reverse ? -1.0 : 1.0) * (hit_stop_local.X() - hit_start_local.X());
     const double dy_local = (need_to_reverse ? -1.0 : 1.0) * (hit_stop_local.Y() - hit_start_local.Y());
     const double dz_local = (need_to_reverse ? -1.0 : 1.0) * (hit_stop_local.Z() - hit_start_local.Z());
-    
-    if(need_to_reverse) {
+
+    if (need_to_reverse) {
       UFW_DEBUG(" Swapping closest wire start and stop to maintain order.");
     }
 
-
-
     // Iterate through wires, splitting hit into segments
-    for(size_t wire_index = first_wire_index; wire_index <= last_wire_index; ++wire_index) {
+    for (size_t wire_index = first_wire_index; wire_index <= last_wire_index; ++wire_index) {
       const auto* current_wire = wires_in_view.at(wire_index);
-      const bool is_last_wire = (wire_index + 1 >= wires_in_view.size());
-      const auto* next_wire = is_last_wire ? nullptr : wires_in_view.at(wire_index + 1);
+      const bool is_last_wire  = (wire_index + 1 >= wires_in_view.size());
+      const auto* next_wire    = is_last_wire ? nullptr : wires_in_view.at(wire_index + 1);
 
-      if(next_wire == nullptr) {
+      if (next_wire == nullptr) {
         UFW_DEBUG(" Reached last wire in view during hit splitting.");
         break;
       }
 
       // Determine the transverse coordinate where this segment ends
       const double segment_end_transverse = calculate_wire_boundary_transverse(
-          current_wire, next_wire, wire_plane_transform,
-          segment_start_local.Y(), transverse_end, wire_index);
+          current_wire, next_wire, wire_plane_transform, segment_start_local.Y(), transverse_end, wire_index);
 
       // Calculate segment endpoint in both local and global coordinates
       const auto [segment_end_local, segment_end_global] = interpolate_segment_endpoint(
-          segment_start_local, dx_local, dy_local, dz_local,
-          segment_end_transverse, wire_plane_transform);
+          segment_start_local, dx_local, dy_local, dz_local, segment_end_transverse, wire_plane_transform);
 
       // Calculate what fraction of the total hit this segment represents
-      const double segment_length = sqrt((segment_end_global - segment_start_global).Mag2());
+      const double segment_length   = sqrt((segment_end_global - segment_start_global).Mag2());
       const double segment_fraction = segment_length / total_hit_length;
 
       // Validate segment fraction is reasonable
@@ -439,24 +422,22 @@ namespace sand::drift {
         UFW_WARN(" Segment fraction out of range [0,1]: {} for wire index {}", segment_fraction, wire_index);
       }
 
-      log_segment_debug(segment_start_global, segment_end_global, segment_end_local,
-                       segment_length, segment_fraction, wire_index);
+      log_segment_debug(segment_start_global, segment_end_global, segment_end_local, segment_length, segment_fraction,
+                        wire_index);
 
       // Build split hit for this segment
-      const EDEPHit segment_hit = create_segment_hit(
-          segment_start_global, segment_end_global,
-          segment_start_time, time_direction, total_time_span,
-          segment_fraction, hit);
+      const EDEPHit segment_hit = create_segment_hit(segment_start_global, segment_end_global, segment_start_time,
+                                                     time_direction, total_time_span, segment_fraction, hit);
 
       split_hit[current_wire] = segment_hit;
 
       // Move to next segment
       segment_start_global = segment_end_global;
-      segment_start_local = segment_end_local;
+      segment_start_local  = segment_end_local;
       segment_start_time += time_direction * total_time_span * segment_fraction;
     }
     UFW_DEBUG(" Finished splitting hit into {} parts.", split_hit.size());
-    return split_hit; 
+    return split_hit;
   }
 
   // TO-DO: For now identical to stt implementation, need to modify for drift specifics
@@ -465,22 +446,22 @@ namespace sand::drift {
    * \param hits_by_wire The hits of the event grouped per wire.
    * \todo Currently identical to the STT implementation; to be specialized for the drift chamber.
    */
-  void drift_fast_digi::digitize_hits_in_wires(const std::map<const geoinfo::tracker_info::wire *, std::vector<EDEPHit>>& hits_by_wire) {
-    const auto& gi  = get<geoinfo>();
-    auto& digi      = set<sand::tracker::digi>("digi");
+  void drift_fast_digi::digitize_hits_in_wires(
+      const std::map<const geoinfo::tracker_info::wire*, std::vector<EDEPHit>>& hits_by_wire) {
+    const auto& gi    = get<geoinfo>();
+    auto& digi        = set<sand::tracker::digi>("digi");
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
 
-    for (auto [wire, hits] : hits_by_wire) { 
+    for (auto [wire, hits] : hits_by_wire) {
       UFW_DEBUG("Station target: {}, station top north corner: {}", wire->parent->target, wire->parent->top_north);
       UFW_DEBUG(" Wire properties: Head {}, Tail {}", wire->head, wire->tail);
       UFW_DEBUG(" Number of hits in wire: {}", hits.size());
-      
+
       auto signal = process_hits_for_wire(hits, *wire);
       if (signal) {
         std::for_each(hits.begin(), hits.end(), [&signal](const auto& hit) { signal->insert(hit.GetId()); });
         digi.signals.emplace_back(std::move(*signal));
       }
-      
     }
     UFW_INFO("Digitization complete. Total number of signals created: {}", digi.signals.size());
   }
@@ -497,9 +478,9 @@ namespace sand::drift {
    * \return The digitized signal.
    */
   tracker::digi::signal drift_fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
-    std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc); //FIXME should be member
+    std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc); // FIXME should be member
     auto ran = gaussian_error(random_engine());
-    //FIXME replace 200 with maximum drift + signal time
+    // FIXME replace 200 with maximum drift + signal time
     reco::digi<>::time trange{wire_time - 200., wire_time + ran, wire_time + 5. * m_sigma_tdc};
     tracker::digi::signal signal(channel, trange, edep_total);
 
@@ -522,10 +503,11 @@ namespace sand::drift {
    * \param wire The geometry of the wire.
    * \return The resulting signal, or \c std::nullopt if no valid time was found.
    */
-  std::optional<tracker::digi::signal> drift_fast_digi::process_hits_for_wire(const std::vector<EDEPHit>& hits,
-                                                                        const sand::geoinfo::drift_info::wire& wire) {
+  std::optional<tracker::digi::signal>
+  drift_fast_digi::process_hits_for_wire(const std::vector<EDEPHit>& hits,
+                                         const sand::geoinfo::drift_info::wire& wire) {
     const auto& gi     = get<geoinfo>();
-    const auto* drift    = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
+    const auto* drift  = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
     double wire_time   = std::numeric_limits<double>::max();
     double drift_time  = std::numeric_limits<double>::max();
     double signal_time = std::numeric_limits<double>::max();
@@ -533,7 +515,6 @@ namespace sand::drift {
     double edep_total  = 0.0;
 
     for (const auto& hit : hits) {
-
       auto closest_points = closest_points_hit_wire(
           vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()),
           vec_4d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z(), hit.GetStop().T()), m_drift_velocity, wire);
@@ -578,9 +559,11 @@ namespace sand::drift {
    * \return A pair {closest point on the hit, closest point on the wire}.
    * \todo Currently identical to the STT implementation; to be specialized for the drift chamber.
    */
-  std::pair<vec_4d,vec_4d> drift_fast_digi::closest_points_hit_wire(const vec_4d& hit_start, const vec_4d& hit_stop,  //TO-DO move to fast_digi
-                                                            double v_drift, const geoinfo::tracker_info::wire& w) const {
-    std::pair<vec_4d,vec_4d> closest_points;
+  std::pair<vec_4d, vec_4d> drift_fast_digi::closest_points_hit_wire(const vec_4d& hit_start,
+                                                                     const vec_4d& hit_stop, // TO-DO move to fast_digi
+                                                                     double v_drift,
+                                                                     const geoinfo::tracker_info::wire& w) const {
+    std::pair<vec_4d, vec_4d> closest_points;
 
     pos_3d start(hit_start.X(), hit_start.Y(), hit_start.Z());
     pos_3d stop(hit_stop.X(), hit_stop.Y(), hit_stop.Z());
@@ -589,7 +572,7 @@ namespace sand::drift {
 
     std::vector<vec_4d> result;
 
-    double& t       = seg_params.first; // Parameter along s
+    double& t       = seg_params.first;  // Parameter along s
     double& t_prime = seg_params.second; // Parameter along r
 
     // Calculate the closest point on the line segment
@@ -606,7 +589,7 @@ namespace sand::drift {
 
     double fraction = sqrt((closest_point_hit - start).Mag2() / (stop - start).Mag2());
     vec_4d closest_point_hit_l(closest_point_hit.X(), closest_point_hit.Y(), closest_point_hit.Z(),
-                                hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
+                               hit_start.T() + fraction * (hit_stop.T() - hit_start.T()));
 
     closest_points.first = closest_point_hit_l;
 
@@ -626,7 +609,8 @@ namespace sand::drift {
    * \param w               The wire geometry; its \c head is the readout end.
    * \return The arrival time at the readout end [ns].
    */
-  double drift_fast_digi::get_min_time(const vec_4d& point, double v_signal_inwire, const geoinfo::tracker_info::wire& w) const {
+  double drift_fast_digi::get_min_time(const vec_4d& point, double v_signal_inwire,
+                                       const geoinfo::tracker_info::wire& w) const {
     return point.T() + sqrt((pos_3d(point.Vect()) - w.head).Mag2()) / v_signal_inwire;
   }
 } // namespace sand::drift
