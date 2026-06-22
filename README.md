@@ -30,6 +30,7 @@ A module should have its own folder, placed according to these indications in th
    should be under `include/.../`
  - Complex data can go in `src/data/.../`
  - Algorithms go in `src/processes/.../`
+ - Filters go in `src/filters/.../`
  - Streamers go in `src/streamers/.../`  You will probably never write one of these.
 
 The ... in the path indicated above may be either your subdetector folder, or a subfolder, if applicable.

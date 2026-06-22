@@ -50,9 +50,7 @@ namespace sand {
       std::vector<rect_f> holes;
     };
 
-    using size_3d = dir_3d;
-    using size_3i = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<size_t>>;
-
+   
    public:
     grain_info(const geoinfo&, const geo_path&, const ufw::config&);
 
