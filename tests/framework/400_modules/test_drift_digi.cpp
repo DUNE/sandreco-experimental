@@ -1,15 +1,14 @@
-#include <ufw/config.hpp>
-#include <ufw/context.hpp>
-#include <ufw/factory.hpp>
-#include <ufw/process.hpp>
-#include <common/version.h>
-
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/drift_info.hpp>
 #include <geoinfo/geoinfo.hpp>
 #include <geoinfo/tracker_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
+
+#include <ufw/config.hpp>
+#include <ufw/context.hpp>
+#include <ufw/factory.hpp>
+#include <ufw/process.hpp>
 
 #include <unordered_set>
 
