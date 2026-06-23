@@ -111,19 +111,10 @@ namespace sand::grain {
     const auto& point_cloud_in  = get<point_cloud>("point_cloud");
     auto& point_clusters_out = set<point_clusters>("point_clusters").clusters;
     // Loop on events in a spill
-    // size_t fake_index{500};
     for (const auto& ev_points : point_cloud_in.points) {
-      // UFW_INFO("Faking versor index {}, coords ({},{},{})", fake_index, m_unique_versors[fake_index].s[0], m_unique_versors[fake_index].s[1], m_unique_versors[fake_index].s[2]);
-      // std::vector<point_cloud::point> fake_points;
-      // for (size_t i{0}; i < 20; ++i) {
-      //   fake_points.emplace_back(point_cloud::point{{0.0 + 15*i*m_unique_versors[fake_index].s[0], 0.0 + 15*i*m_unique_versors[fake_index].s[1], 0.0 + 15*i*m_unique_versors[fake_index].s[2]}, 0.0});
-      // }
       if (ev_points.size() == 0) {
         UFW_DEBUG("Skipping event with 0 points");
         continue;
-      }
-      for (const auto& p : ev_points) {
-        std::cout << p.position.x() << "," << p.position.y() << "," << p.position.z() << "\n";
       }
       std::vector<cl_float4> cl_points = point_cloud_to_float4(ev_points);
       UFW_INFO("Processing {} points", cl_points.size());
