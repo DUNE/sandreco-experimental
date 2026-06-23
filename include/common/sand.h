@@ -173,7 +173,7 @@ namespace sand {
   /**
    * Subdetector type enumeration
    */
-  enum subdetector_t : uint8_t { DRIFT = 0, ECAL = 1, GRAIN = 2, STT = 3, TRACKER = STT, MUON = 4, NONE = 255 };
+  enum subdetector_t : uint8_t { DRIFT = 0, ECAL = 1, GRAIN = 2, STT = 3, TRACKER = STT, MUON = 4, GENERIC_DRIFT = 5,NONE = 255 };
   /**
    * Unique identifier for elements of the detector geometry as known by Geant.
    * There is a 1-1 correspondence between the geo_path of a sensitive detector and a geo_id.

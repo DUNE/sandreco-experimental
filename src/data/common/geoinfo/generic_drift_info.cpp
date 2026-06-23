@@ -43,19 +43,16 @@ namespace sand {
    *
    * @param gi
    */
-  geoinfo::generic_drift_info::generic_drift_info(const geoinfo& gi, 
-                                  const std::array<double, 3>& view_angle, 
-                                  const std::array<double, 3>& view_offset, 
-                                  const std::array<double, 3>& view_spacing) : tracker_info(gi, s_drift_path) {
-    // UFW_FATAL("drift");
+  geoinfo::generic_drift_info::generic_drift_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg) 
+    : tracker_info(gi, gp, cfg) {
     auto& tgm      = ufw::context::current()->instance<root_tgeomanager>();
     auto nav       = tgm.navigator();
     auto driftpath = gi.root_path() / path();
 
-    m_view_angle = view_angle;
-    m_view_offset = view_offset;
-    m_view_spacing =  view_spacing;
-     
+    m_view_angle   = cfg.value("view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
+    m_view_offset  = cfg.value("view_offset", std::array<double, 3>{10.0, 10.0, 10.0});
+    m_view_spacing = cfg.value("view_spacing", std::array<double, 3>{10.0, 10.0, 10.0});
+
     nav->cd(driftpath);
     nav->for_each_node([&](auto station_node) {
       std::string stname = station_node->GetName();
@@ -104,24 +101,33 @@ namespace sand {
       nav->cd(driftpath / stname); 
       nav->for_each_node([&](auto subunit){
         std::string subuname = subunit->GetName();
+        UFW_DEBUG("Subunit name: {}", subuname);
         if (subuname.find("ch") == std::string::npos){
-          return; // since they are subunits with only targets
+          if (auto* target_shape = dynamic_cast<TGeoBBox*>(subunit->GetVolume()->GetShape())) {
+            stat->target_box = 2.0 * dir_3d(target_shape->GetDX(), target_shape->GetDY(), target_shape->GetDZ());
+            stat->target_density = subunit->GetVolume()->GetMaterial()->GetDensity() / 6.24e24;
+          } else {
+            UFW_ERROR("Target shape is not a Box");
+          } 
+          // return; // since they are subunits with only targets
+        } else if (subuname.find("ch") != std::string::npos){
+          geo_path chamber_path = driftpath / stname / subuname; 
+          nav->cd(chamber_path);
+          nav->for_each_node([&](auto plane){
+            std::string planename = plane->GetName();
+            if (planename.find("m") != std::string::npos){
+              return; // mylar plane
+            }
+            geo_path full_path = driftpath / stname / subuname / planename;
+            nav->cd(full_path);
+            auto ID = id(partial_path(full_path, gi));
+            stat->daq_link = ID.drift.supermodule;
+            stat->generate_drift_view(full_path, ID);
+          });
         }
-        geo_path chamber_path = driftpath / stname / subuname; 
-        nav->cd(chamber_path);
-        nav->for_each_node([&](auto plane){
-          std::string planename = plane->GetName();
-          if (planename.find("m") != std::string::npos){
-            return; // mylar plane
-          }
-          geo_path full_path = driftpath / stname / subuname / planename;
-          nav->cd(full_path);
-          auto ID = id(partial_path(full_path, gi));
-          stat->daq_link = ID.drift.supermodule;
-          stat->set_drift_view(full_path, ID);
-        });
       });
 
+      stat->set_wire_adjacency();
       // UFW_DEBUG("Adding station {} ", stname);
       add_station(station_ptr(std::move(stat)));
     });
@@ -200,11 +206,15 @@ namespace sand {
   }
 
 
-  void geoinfo::generic_drift_info::station::set_drift_view(const geo_path & ch_path, const geo_id& id) {
+  void geoinfo::generic_drift_info::station::generate_drift_view(const geo_path & ch_path, const geo_id& id) {
 
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav = tgm.navigator();
     std::string ch_name(nav->GetCurrentNode()->GetName());
+
+    if (ch_name.find("ch") == std::string::npos) {
+      return; // not a drift module
+    }
 
     UFW_DEBUG("Setting drift view for path: {}", ch_path);
     auto v_index = ch_name.find('v');
@@ -221,13 +231,13 @@ namespace sand {
     } else {
         UFW_ERROR("DriftChamber '{}' has unrecognized plane '{}'.", ch_name, plane_ID);
     }
-    set_wire_list(plane_ID % 3);
+    generate_wire_list(plane_ID % 3);
 
   }
 
-  void geoinfo::generic_drift_info::station::set_wire_list(const size_t & view_ID) {
+  void geoinfo::generic_drift_info::station::generate_wire_list(const size_t & view_ID) {
 
-    UFW_DEBUG("Set wire list ");
+    UFW_DEBUG("Generate wire list ");
 
     /////Get gas volume properties
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
@@ -292,6 +302,7 @@ namespace sand {
         w->daq_channel.subdetector = DRIFT;
         w->daq_channel.link = daq_link;
         w->daq_channel.channel = (view_ID << 16) | wires.size();
+        w->aabb                    = geoinfo::tracker_info::wire::AABB(*w);
         wires.emplace_back(std::move(w));
       } else {
         UFW_DEBUG("Transverse position {} has {} intersections, skipping.", transverse_position, intersections_global.size());
