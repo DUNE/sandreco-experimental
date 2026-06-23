@@ -1,5 +1,6 @@
 #include "caf_filler.hpp"
 #include "utils/GlucksternSmearing.hpp"
+#include "utils/smearer.hpp"
 
 #include<random>
 
@@ -41,6 +42,7 @@ namespace sand {
       double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude) {
     // start by filling all fields from truth
     auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
+    smearer::EnergySmearer::E_smearing(reco);
     // return from_true for all particle except muons (temporarily)
     if (std::abs(true_part.pdg) != 13) {
       return reco;

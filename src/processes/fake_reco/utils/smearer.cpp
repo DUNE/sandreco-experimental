@@ -15,6 +15,7 @@ namespace smearer {
     part.E           = std::max(0.0f, static_cast<float>(part.E + sigma));
     return;
   }
+  /*
   namespace Gluckstern {
     template<Mode M>
     double get_L_over_x0(const std::vector<sand::vec_4d> hit_points){
@@ -109,5 +110,5 @@ namespace smearer {
       }
 
   } // namespace Gluckstern
-
+*/
 } // namespace smearer

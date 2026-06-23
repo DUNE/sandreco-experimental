@@ -177,7 +177,7 @@ namespace sand {
       sand_ixn.showers.push_back(std::move(shower));
       sand_ixn.nshowers++;
     } else {
-      UFW_DEBUG("Particle PDG {} is neither track-like nor shower-like, skipping reco object", true_part.pdg);
+      //UFW_DEBUG("Particle PDG {} is neither track-like nor shower-like, skipping reco object", true_part.pdg);
     }
   }
 
@@ -192,12 +192,12 @@ namespace sand {
 
     // Fill reco particle from truth or adding a smearing to muons momentum
     if (m_reco_mode == "truth") {
-      UFW_INFO("Using reconstruction from truth");
+      //UFW_INFO("Using reconstruction from truth");
       make_reco = [](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
         return CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
       };
     } else if (m_reco_mode == "smearing") {
-      UFW_INFO("Using reconstruction from truth with smearing");
+      //UFW_INFO("Using reconstruction from truth with smearing");
       make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
         const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
         return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj, m_intrinsic_pos_res_t, m_intrinsic_pos_res_l, m_hit_energy_thr, m_b_field_magnitude);

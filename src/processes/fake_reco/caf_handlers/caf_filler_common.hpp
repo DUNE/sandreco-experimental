@@ -114,7 +114,7 @@ namespace sand {
       ++ixn.npi0;
       break;
     default:
-      UFW_DEBUG("Particle PDG {} not counted", pdg);
+      //UFW_DEBUG("Particle PDG {} not counted", pdg);
       break;
     }
   }

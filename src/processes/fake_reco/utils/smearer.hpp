@@ -23,7 +23,7 @@ namespace smearer {
     void E_smearing(::caf::SRRecoParticle& part);
     float sum_quad(float E);
   };
-
+/*
   namespace Gluckstern {
     const double k_edepsim_density_to_g_cm3 = 6.42E18;
     const double k_single_hit_sigma  = 200e-6;    // [m]
@@ -71,5 +71,5 @@ namespace smearer {
 
     };
   } // namespace Gluckstern
-
+*/
 } // namespace smearer
