@@ -15,7 +15,11 @@ namespace sand {
 
   void fake_reco::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_reco_mode = cfg.at("mode");
+    m_reco_mode = cfg.value("mode", "truth");
+    m_intrinsic_pos_res_t = cfg.value("intrinsic_pos_res_t", 0.);
+    m_intrinsic_pos_res_l = cfg.value("intrinsic_pos_res_l", 0.);
+    m_hit_energy_thr = cfg.value("hit_energy_thr", 0.);
+    m_b_field_magnitude = cfg.value("b_field_magnitude", 0.);
   }
 
   void fake_reco::run() {
@@ -93,7 +97,7 @@ namespace sand {
       m_caf->nd.sand.nixn++;
 
       // Process particles: create SRRecoParticle, SRTrack, SRShower
-      process_interaction_particles(true_ixn, reco_ixn, sand_ixn, ixn_idx, first_prim_idx, prim_count);
+      process_interaction_particles(true_ixn, reco_ixn, sand_ixn);
 
       // Compute direction from sum of particle momenta
       auto sum_mom = std::accumulate(reco_ixn.part.sandreco.begin(), reco_ixn.part.sandreco.end(),
@@ -153,55 +157,69 @@ namespace sand {
     m_caf->nd.sand.ixn.reserve(n_interactions);
   }
 
+
+  void fake_reco::fill_reco_objects(const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
+                                    const ::caf::SRTrueParticle &true_part, const ::caf::TrueParticleID &part_id, 
+                                    const bool is_primary,::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const {
+    // Create SRRecoParticle from truth
+    auto reco_part = make_reco(true_part, part_id);
+    reco_part.primary = is_primary;
+    reco_ixn.part.sandreco.push_back(std::move(reco_part));
+    reco_ixn.part.nsandreco++;
+
+    // Create SRTrack or SRShower based on particle type
+    if (is_track_like(true_part.pdg)) {
+      auto track = CAFFiller<::caf::SRTrack>::from_true(true_part, part_id);
+      sand_ixn.tracks.push_back(std::move(track));
+      sand_ixn.ntracks++;
+    } else if (is_shower_like(true_part.pdg)) {
+      auto shower = CAFFiller<::caf::SRShower>::from_true(true_part, part_id);
+      sand_ixn.showers.push_back(std::move(shower));
+      sand_ixn.nshowers++;
+    } else {
+      UFW_DEBUG("Particle PDG {} is neither track-like nor shower-like, skipping reco object", true_part.pdg);
+    }
+  }
+
   void fake_reco::process_interaction_particles(::caf::SRTrueInteraction& true_ixn, ::caf::SRInteraction& reco_ixn,
-                                                ::caf::SRSANDInt& sand_ixn,
-                                                [[maybe_unused]] std::size_t interaction_index,
-                                                std::size_t edep_first_index, std::size_t edep_count) const {
+                                                ::caf::SRSANDInt& sand_ixn) const {
     // Reserve space for reco objects
-    reco_ixn.part.sandreco.reserve(edep_count);
+    const std::size_t prim_count = true_ixn.prim.size();
+    const std::size_t sec_count = true_ixn.sec.size();
+    reco_ixn.part.sandreco.reserve((prim_count+sec_count));
+
+    std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle&, const ::caf::TrueParticleID&)> make_reco;
+
+    // Fill reco particle from truth or adding a smearing to muons momentum
+    if (m_reco_mode == "truth") {
+      UFW_INFO("Using reconstruction from truth");
+      make_reco = [](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        return CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
+      };
+    } else if (m_reco_mode == "smearing") {
+      UFW_INFO("Using reconstruction from truth with smearing");
+      make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
+        return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj, m_intrinsic_pos_res_t, m_intrinsic_pos_res_l, m_hit_energy_thr, m_b_field_magnitude);
+      };
+    } else {
+      UFW_ERROR("You need to specify which reco mode you want to use");
+    }
 
     // Loop over primary particles
-    for (std::size_t i{}; i != edep_count; ++i) {
+    for (std::size_t i{}; i != prim_count; ++i) {
       const auto& true_prim = true_ixn.prim[i];
       const auto& prim_id   = true_prim.ancestor_id;
 
-      // Create SRRecoParticle from truth
-      auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
-      if (m_reco_mode == "smearing") {
-        UFW_INFO("Reco with smearing");
-        auto true_prim_traj  = *m_edep->GetTrajectory(true_prim.G4ID);
-        const auto& hit_map  = true_prim_traj.GetHitMap();
-        const auto& it       = hit_map.find(component::DRIFT);
-        if (it != hit_map.end()) {
-          const auto& hit_vec    = it->second;
-          auto momentum_smearing = smearer::Gluckstern::Gluckstern_smearer(hit_vec);
-          smearer::EnergySmearer::E_smearing(reco_part);
-          momentum_smearing.p_smearing(reco_part);
-        }
-        reco_ixn.part.sandreco.push_back(std::move(reco_part));
-        reco_ixn.part.nsandreco++;
-      } else if (m_reco_mode == "truth") {
-        UFW_INFO("Reco with only truth");
-        reco_ixn.part.sandreco.push_back(std::move(reco_part));
-        reco_ixn.part.nsandreco++;
-      } else {
-        UFW_FATAL("input correct reco mode");
-      }
-      //reco_ixn.part.sandreco.push_back(std::move(reco_part));
-      //reco_ixn.part.nsandreco++;
+      fill_reco_objects(make_reco, true_prim, prim_id, true, reco_ixn, sand_ixn);
+    }
 
-      // Create SRTrack or SRShower based on particle type
-      if (is_track_like(true_prim.pdg)) {
-        auto track = CAFFiller<::caf::SRTrack>::from_true(true_prim, prim_id);
-        sand_ixn.tracks.push_back(std::move(track));
-        sand_ixn.ntracks++;
-      } else if (is_shower_like(true_prim.pdg)) {
-        auto shower = CAFFiller<::caf::SRShower>::from_true(true_prim, prim_id);
-        sand_ixn.showers.push_back(std::move(shower));
-        sand_ixn.nshowers++;
-      } else {
-        UFW_DEBUG("Particle PDG {} is neither track-like nor shower-like, skipping reco object", true_prim.pdg);
-      }
+    // Loop over secondary particles
+    for(std::size_t i{}; i !=sec_count; ++i){
+      const auto& true_sec  = true_ixn.sec[i];
+      const auto& sec_id    = true_sec.ancestor_id;
+      
+      fill_reco_objects(make_reco, true_sec, sec_id, false, reco_ixn, sand_ixn);
     }
   }
 

@@ -1,2 +1,3 @@
 add_subdirectory(geant_gdml_parser)
 add_subdirectory(geant_run_manager)
+add_subdirectory(volumereco_cl_manager)
