@@ -8,31 +8,6 @@
 
 namespace sand::grain {
 
-    // Evenly distribute point across sphere surface using golden spiral method (Fibonacci's sphere)
-    // Using float4 in to be consistent with points
-    std::vector<cl_float4> fibonacci_sphere_versors(size_t n_versors) {
-        std::vector<cl_float4> versors;
-        versors.reserve(n_versors);
-
-        if (n_versors == 0) {
-            UFW_ERROR("n_versors must be greater than 0");
-            return versors;
-        } 
-
-        const float golden_angle = M_PI * (3.0 - std::sqrt(5.0));
-
-        for (size_t i = 0; i < n_versors; ++i)
-        {
-            const float z = 1.0 - 2.0 * (i + 0.5) / n_versors;
-            const float r = std::sqrt(1.0 - z * z);
-            const float theta = golden_angle * i;
-
-            versors.push_back({r * std::cos(theta), r * std::sin(theta), z, 0.0});
-        }
-
-        return versors;
-    }
-
     // Remove redundant symmetries selecting only upper emishpere
     std::vector<cl_float4> select_unique_versors(const std::vector<cl_float4>& versors) {
         std::vector<cl_float4> unique_versors;

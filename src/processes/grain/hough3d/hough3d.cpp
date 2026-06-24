@@ -28,7 +28,7 @@ namespace sand::grain {
    * \subsection Configuration
    * | Parameter Name                | Type   | Unit  | Required/Default | Description                                                                         |
    * |-------------------------------|--------|-------|------------------|-------------------------------------------------------------------------------------|
-   * | `n_versors_in_sphere`         | uint   |       | Default: 1000    | How many versors represent Fibonacci's sphere, for direction binning.               |
+   * | `n_normals_in_sphere`         | uint   |       | Default: 1000    | How many normals represent Fibonacci's sphere, for direction binning.               |
    * | `xy_plane_step`               | float  | mm    | Required         | Bin size for xy plane in Hough space.                                               |
    * | `max_clustering_distance`     | float  | mm    | Required         | Max distance between Hough line and points to be clustered together.                |
    * | `min_points_per_track`        | uint   |       | Default: 2       | Minimum number of points to build a track.                                          |
@@ -56,11 +56,12 @@ namespace sand::grain {
     void configure(const ufw::config& cfg) override;
     void configure_hough_vote(cl::platform& platform);
     void configure_distance(cl::platform& platform);
+    void generate_fibonacci_sphere_versors();
     void run() override;
 
    private:
     static constexpr size_t s_max_platforms = 4;
-    uint m_n_versors_in_sphere;
+    uint m_n_normals_in_sphere;
     float m_xy_plane_step;
     float m_max_clustering_distance;
     size_t m_n_xy_bins;
@@ -92,17 +93,42 @@ namespace sand::grain {
     m_distance_kernel = cl::Kernel(m_distance_program, "hough_distance");
   }
 
+  // Evenly distribute point across sphere surface using golden spiral method (Fibonacci's sphere)
+  // Using float4 in to be consistent with points
+  std::vector<cl_float4> fibonacci_sphere_normals(size_t n_normals) {
+      std::vector<cl_float4> normals;
+      normals.reserve(n_normals);
+
+      if (n_normals == 0) {
+          UFW_ERROR("n_normals must be greater than 0");
+          return normals;
+      } 
+
+      const float golden_angle = M_PI * (3.0 - std::sqrt(5.0));
+
+      for (size_t i = 0; i < n_normals; ++i)
+      {
+          const float z = 1.0 - 2.0 * (i + 0.5) / n_normals;
+          const float r = std::sqrt(1.0 - z * z);
+          const float theta = golden_angle * i;
+
+          normals.push_back({r * std::cos(theta), r * std::sin(theta), z, 0.0});
+      }
+
+      return normals;
+  }
+
   void hough3d::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_n_versors_in_sphere = cfg.value("n_versors_in_sphere", 1000);
+    m_n_normals_in_sphere = cfg.value("n_normals_in_sphere", 1000);
     m_xy_plane_step = cfg.at("xy_plane_step");
     m_max_clustering_distance = cfg.at("max_clustering_distance");
     m_min_points_per_track = cfg.value("min_points_per_track", 2);
     m_max_tracks_per_event = cfg.value("max_tracks_per_event", 4);
 
     // Binning versors and x'y' plane
-    const std::vector<cl_float4> versors = fibonacci_sphere_versors(m_n_versors_in_sphere);
-    m_unique_versors = select_unique_versors(versors);
+    const std::vector<cl_float4> normals = fibonacci_sphere_normals(m_n_normals_in_sphere);
+    m_unique_versors = select_unique_versors(normals);
     const auto& gi = ufw::context::current()->instance<geoinfo>();
     const dir_3d grain_dimensions = gi.grain().fiducial_bbox();
     const double xy_half_range = grain_dimensions.R();
