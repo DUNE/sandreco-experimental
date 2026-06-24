@@ -24,11 +24,10 @@
   "run": [
     {
       "sand::fake_reco": {
-        "mode" : "smearing",
-        "intrinsic_pos_res_t" : 200e-3,
-        "intrinsic_pos_res_l" : 2,
-        "hit_energy_thr" : 250e-6,
-        "b_field_magnitude" : 0.6
+        "mode" : "gauss_smearing",
+        "energy_resolution" : 0.057,
+        "momentum_resolution" : 0.03,
+        "position_resolution" : 200e-3
       },
       "reqs": {},
       "prods": {

@@ -1,5 +1,6 @@
 #include "caf_filler.hpp"
 #include "utils/GlucksternSmearing.hpp"
+#include "utils/GaussSmearing.hpp"
 
 namespace sand {
 
@@ -21,6 +22,30 @@ namespace sand {
     reco.p        = ::caf::SRVector3D{true_part.p.px, true_part.p.py, true_part.p.pz};
     reco.start    = true_part.start_pos;
     reco.end      = true_part.end_pos;
+
+    if (is_track_like(true_part.pdg)) {
+      reco.origRecoObjType = ::caf::RecoObjType::kTrack;
+    } else if (is_shower_like(true_part.pdg)) {
+      reco.origRecoObjType = ::caf::RecoObjType::kShower;
+    }
+    // else the particle is neutral cannot be reconstructed
+
+    add_truth_match(reco, id);
+    return reco;
+  }
+
+  ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_gauss_smearing(const ::caf::SRTrueParticle& true_part,
+                                                                    const ::caf::TrueParticleID& id, const double en_res, const double p_res, const double pos_res) {
+
+    auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
+
+    auto gauss_helper = GaussSmearing();
+    const ::caf::SRVector3D true_part_mom_vec{true_part.p.px, true_part.p.py, true_part.p.pz};
+    
+    reco.E        = gauss_helper.apply_smearing<double, Var::energy>(en_res, true_part.p.E);
+    reco.p        = gauss_helper.apply_smearing<::caf::SRVector3D, Var::momentum>(p_res, true_part_mom_vec);
+    reco.start    = gauss_helper.apply_smearing<::caf::SRVector3D, Var::position>(pos_res, true_part.start_pos);
+    reco.end      = gauss_helper.apply_smearing<::caf::SRVector3D, Var::position>(pos_res, true_part.end_pos);
 
     if (is_track_like(true_part.pdg)) {
       reco.origRecoObjType = ::caf::RecoObjType::kTrack;

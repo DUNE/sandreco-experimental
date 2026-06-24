@@ -25,10 +25,13 @@ namespace sand {
     const genie_reader* m_genie;   ///< Pointer to the genie reader providing MC truth data
     sand::caf::caf_wrapper* m_caf; ///< Pointer to the CAF output wrapper (non-const for writing)
     std::string m_reco_mode;       ///< Reconstruction mode (from truth or with smearing)
-    double m_intrinsic_pos_res_t;          ///< Single hit resolution for smearing (in meters)
-    double m_intrinsic_pos_res_l;          ///< Longitudinal hit resolution for smearing (in meters)
+    double m_intrinsic_pos_res_t;  ///< Single hit resolution for smearing (in meters)
+    double m_intrinsic_pos_res_l;  ///< Longitudinal hit resolution for smearing (in meters)
     double m_hit_energy_thr;       ///< Energy threshold for hits to be included in smearing (in MeV)
     double m_b_field_magnitude;    ///< Magnitude of the magnetic field (in Tesla)
+    double m_energy_res;    ///< Energy resolution
+    double m_momentum_res;  ///< Magnitude of the magnetic field (in Tesla)
+    double m_position_res;  ///< Magnitude of the magnetic field (in Tesla)
 
     /// @brief Build map of edep-sim primaries grouped by interaction
     [[nodiscard]] std::vector<EdepInteractionRange> make_edep_interaction_map() const;

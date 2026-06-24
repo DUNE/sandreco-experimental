@@ -73,6 +73,9 @@ namespace sand {
     [[nodiscard]] static ::caf::SRRecoParticle from_true(const ::caf::SRTrueParticle& true_part,
                                                          const ::caf::TrueParticleID& id);
 
+    [[nodiscard]] static ::caf::SRRecoParticle from_true_with_gauss_smearing(const ::caf::SRTrueParticle& true_part,
+                                                         const ::caf::TrueParticleID& id, const double en_res, const double p_res, const double pos_res);                                                     
+
     [[nodiscard]] static ::caf::SRRecoParticle from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part,
                                                                           const ::caf::TrueParticleID& id, 
                                                                           const EDEPTrajectory& true_part_trj,
