@@ -28,6 +28,13 @@
       "prods": {
         "out_truth_branch": "produced_truth"
       }
+    },
+    {
+      "sand::caf::caf_streamer": {
+        "uri": "test/output.truth.caf.root",
+        "tree": "cafTree"
+      },
+      "write": ["produced_truth"]
     }
   ]
 }
