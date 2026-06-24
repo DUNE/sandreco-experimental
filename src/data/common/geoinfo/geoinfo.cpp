@@ -1,3 +1,9 @@
+/**
+ * @file
+ * @brief Implementation of @ref sand::geoinfo: top-level geometry, tracker-type
+ *        detection and lazy construction of the subdetector descriptions.
+ */
+
 #include <common/sand.h>
 
 #include <ufw/config.hpp>
@@ -30,8 +36,14 @@ namespace sand {
   }
 
   /**
-   * Parameters for subdetectors are passed with a json object for that specific subdetector, whereas global paramters are
-   * passed as top level keys. Drift or STT specific parameters will be merged with the tracker ones.
+   * @brief Builds the top-level geometry description and detects the tracker type.
+   *
+   * Reads the per-subdetector configuration (each passed as its own JSON object,
+   * with global parameters as top-level keys) and, by inspecting the geometry
+   * tree, decides whether the tracker is an STT or a drift chamber, merging the
+   * matching subdetector parameters into the tracker configuration.
+   *
+   * @param cfg The geoinfo configuration object.
    */
   geoinfo::geoinfo(const ufw::config& cfg) {
     m_root_path            = cfg.value("basepath", sand::root_path);
@@ -89,16 +101,20 @@ namespace sand {
     }
   }
 
+  /// @brief Default destructor.
   geoinfo::~geoinfo() = default;
 
+  /// @brief Lazily constructs the ECAL geometry description.
   void geoinfo::init_ecal() const {
     m_ecal.reset(new ecal_info(*this, ecal_path, m_ecal_cfg));
   }
 
+  /// @brief Lazily constructs the GRAIN geometry description.
   void geoinfo::init_grain() const {
     m_grain.reset(new grain_info(*this, geo_path(inner_path) / grain_path, m_grain_cfg));
   }
 
+  /// @brief constructs the tracker geometry (STT or drift) for the detected type.
   void geoinfo::init_tracker() const {
     switch (m_tracker_type) {
       case DRIFT:
@@ -115,11 +131,21 @@ namespace sand {
     }
   }
 
+  /**
+   * @brief Maps a geometry path to a geometry identifier.
+   * @param gp The geometry path.
+   * @return The corresponding geo_id (currently a default-constructed placeholder).
+   */
   geo_id geoinfo::id(const geo_path& gp) const {
     geo_id gi;
     return gi;
   }
 
+  /**
+   * @brief Maps a geometry identifier back to its full geometry path.
+   * @param gi The geometry identifier.
+   * @return The full geometry path, dispatched to the relevant subdetector.
+   */
   geo_path geoinfo::path(geo_id gi) const {
     geo_path gp(m_root_path);
     switch (gi.subdetector) {
@@ -142,6 +168,19 @@ namespace sand {
   }
 
   // Solve  p+t*dir = v1 + s*(v2-v1)
+  /**
+   * @brief Intersection of an infinite line with a segment, in the XY plane.
+   *
+   * Solves p + t*dir = v1 + s*(v2 - v1) and accepts the solution only when it
+   * lies on the segment (s in [0,1]); the Z of the result is taken from @p p.
+   *
+   * @param v1 First endpoint of the segment.
+   * @param v2 Second endpoint of the segment.
+   * @param p   A point on the line.
+   * @param dir Direction of the line.
+   * @param[out] intersection_point The intersection, set only when the function returns true.
+   * @return true if the line meets the segment.
+   */
   bool geoinfo::getXYLineSegmentIntersection(
     const pos_3d& v1,
     const pos_3d& v2,
@@ -183,6 +222,13 @@ namespace sand {
         return true;
     }
 
+  /**
+   * @brief All intersections of an infinite line with a polygon, in the XY plane.
+   * @param v   The polygon vertices, in order.
+   * @param p   A point on the line.
+   * @param dir Direction of the line.
+   * @return The intersection points with the polygon edges.
+   */
   std::vector<pos_3d> geoinfo::getXYLinePolygonIntersections(
     const std::vector<pos_3d>& v,
     const pos_3d& p,

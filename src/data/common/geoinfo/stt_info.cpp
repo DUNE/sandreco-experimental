@@ -1,3 +1,9 @@
+/**
+ * @file
+ * @brief Implementation of the STT geometry (@ref sand::geoinfo::stt_info):
+ *        geometry-tree parsing and path/id mapping.
+ */
+
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <stt_info.hpp>
 #include <ufw/context.hpp>
@@ -8,6 +14,18 @@
 
 namespace sand {
 
+  /**
+   * @brief Builds the STT geometry by walking the ROOT geometry tree.
+   *
+   * Navigates each supermodule, classifies its target material, records the
+   * station envelope and (for target planes) the target box and density, then
+   * descends to every straw tube to create a wire with its endpoints, radius,
+   * geometry id and DAQ channel. Wire adjacency is computed per station.
+   *
+   * @param gi  The parent geometry description.
+   * @param gp  The geometry path of the STT volume.
+   * @param cfg The tracker configuration (merged with STT-specific parameters).
+   */
   geoinfo::stt_info::stt_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg)
     : tracker_info(gi, gp, cfg) {
     auto& tgm    = ufw::context::current()->instance<root_tgeomanager>();
@@ -96,8 +114,18 @@ namespace sand {
     });
   }
 
+  /// @brief Default destructor.
   geoinfo::stt_info::~stt_info() = default;
 
+  /**
+   * @brief Decodes an STT geometry path into a geometry identifier.
+   *
+   * Parses the supermodule, plane (X, Y, or the second X of tracker-only
+   * modules) and tube indices out of the path tokens.
+   *
+   * @param gp The STT geometry path.
+   * @return The decoded geo_id.
+   */
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;
     auto path      = gp;
@@ -124,6 +152,11 @@ namespace sand {
     return gi;
   }
 
+  /**
+   * @brief Builds the STT geometry path for a geometry identifier.
+   * @param gi The STT geometry identifier.
+   * @return The corresponding geometry path.
+   */
   geo_path geoinfo::stt_info::path(geo_id gi) const {
     // TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
@@ -164,6 +197,11 @@ namespace sand {
     return gp;
   }
 
+  /**
+   * @brief Looks up the STT wire with a given geometry id.
+   * @param id The wire geometry id.
+   * @return Pointer to the matching wire, or nullptr if none is found.
+   */
   const geoinfo::stt_info::wire* geoinfo::stt_info::get_wire_by_id(const geo_id& id) const {
     for (const auto& station_ptr : stations()) {
       for (const auto& wire_ptr : station_ptr->wires) {
