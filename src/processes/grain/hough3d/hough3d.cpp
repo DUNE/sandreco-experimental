@@ -13,7 +13,6 @@
 #include <hough3d.hpp>
 
 #include <cmath>
-#include <iostream>
 
 namespace sand::grain {
 
@@ -22,17 +21,17 @@ namespace sand::grain {
    *
    * \brief 3D Hough transform to perform clustering and tracking in a 3D point cloud.
    *
-   * Given a 3D point cloud (`point_cloud` input), this process finds all clusters satisfying the requirements (`point_clusters` output) using Hough transform;
-   * most of the computations are performed on GPU (if available).
+   * Given a 3D point cloud (`point_cloud` input), this process finds all clusters satisfying the requirements
+   * (`point_clusters` output) using Hough transform; most of the computations are performed on GPU (if available).
    *
    * \subsection Configuration
-   * | Parameter Name                | Type   | Unit  | Required/Default | Description                                                                         |
-   * |-------------------------------|--------|-------|------------------|-------------------------------------------------------------------------------------|
-   * | `n_normals_in_sphere`         | uint   |       | Default: 1000    | How many normals represent Fibonacci's sphere, for direction binning.               |
-   * | `xy_plane_step`               | float  | mm    | Required         | Bin size for xy plane in Hough space.                                               |
-   * | `max_clustering_distance`     | float  | mm    | Required         | Max distance between Hough line and points to be clustered together.                |
-   * | `min_points_per_track`        | uint   |       | Default: 2       | Minimum number of points to build a track.                                          |
-   * | `max_tracks_per_event`        | uint   |       | Default: 4       | Maximum number of tracks to search for in one event.                                |
+   * | Parameter Name            | Type   | Unit  | Required/Default | Description                                                           |
+   * |---------------------------|--------|-------|------------------|-----------------------------------------------------------------------|
+   * | `n_normals_in_sphere`     | uint   |       | Default: 1000    | How many normals represent Fibonacci's sphere, for direction binning. |
+   * | `xy_plane_step`           | float  | mm    | Required         | Bin size for xy plane in Hough space.                                 |
+   * | `max_clustering_distance` | float  | mm    | Required         | Max distance between Hough line and points to be clustered together.  |
+   * | `min_points_per_track`    | uint   |       | Default: 2       | Minimum number of points to build a track.                            |
+   * | `max_tracks_per_event`    | uint   |       | Default: 4       | Maximum number of tracks to search for in one event.                  |
    *
    * \subsection Dependencies
    * | Type            | Comment  |
@@ -96,26 +95,25 @@ namespace sand::grain {
   // Evenly distribute point across sphere surface using golden spiral method (Fibonacci's sphere)
   // Using float4 in to be consistent with points
   std::vector<cl_float4> fibonacci_sphere_normals(size_t n_normals) {
-      std::vector<cl_float4> normals;
-      normals.reserve(n_normals);
+    std::vector<cl_float4> normals;
+    normals.reserve(n_normals);
 
-      if (n_normals == 0) {
-          UFW_ERROR("n_normals must be greater than 0");
-          return normals;
-      } 
-
-      const float golden_angle = M_PI * (3.0 - std::sqrt(5.0));
-
-      for (size_t i = 0; i < n_normals; ++i)
-      {
-          const float z = 1.0 - 2.0 * (i + 0.5) / n_normals;
-          const float r = std::sqrt(1.0 - z * z);
-          const float theta = golden_angle * i;
-
-          normals.push_back({r * std::cos(theta), r * std::sin(theta), z, 0.0});
-      }
-
+    if (n_normals == 0) {
+      UFW_ERROR("n_normals must be greater than 0");
       return normals;
+    }
+
+    const float golden_angle = M_PI * (3.0 - std::sqrt(5.0));
+
+    for (size_t i = 0; i < n_normals; ++i) {
+      const float z = 1.0 - 2.0 * (i + 0.5) / n_normals;
+      const float r = std::sqrt(1.0 - z * z);
+      const float theta = golden_angle * i;
+
+      normals.push_back({r * std::cos(theta), r * std::sin(theta), z, 0.0});
+    }
+
+    return normals;
   }
 
   void hough3d::configure(const ufw::config& cfg) {
@@ -142,11 +140,15 @@ namespace sand::grain {
     configure_hough_vote(platform);
     configure_distance(platform);
 
-    m_buf_unique_versors.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(platform.context(), m_unique_versors.size() * sizeof(cl_float4), m_unique_versors.data());
-    m_buf_voting_array.allocate<CL_MEM_READ_WRITE>(platform.context(), m_voting_array.size() * sizeof(uint));
+    m_buf_unique_versors.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(platform.context(),
+                                                                           m_unique_versors.size() * sizeof(cl_float4),
+                                                                           m_unique_versors.data());
+    m_buf_voting_array.allocate<CL_MEM_READ_WRITE>(platform.context(),
+                                                   m_voting_array.size() * sizeof(uint));
   }
 
-  hough3d::hough3d() : process({{"point_cloud", "sand::grain::point_cloud"}}, {{"point_clusters", "sand::grain::point_clusters"}}) {
+  hough3d::hough3d() : process({{"point_cloud", "sand::grain::point_cloud"}},
+                               {{"point_clusters", "sand::grain::point_clusters"}}) {
     UFW_DEBUG("Creating a hough3d process at {}.", fmt::ptr(this));
   }
 
@@ -162,12 +164,14 @@ namespace sand::grain {
         continue;
       }
       std::vector<cl_float4> cl_points = point_cloud_to_float4(ev_points);
-      UFW_INFO("Processing {} points", cl_points.size());
+      UFW_DEBUG("Processing {} points", cl_points.size());
       std::vector<point_clusters::cluster> ev_clusters_out;
       uint n_found_tracks{0};
       while (true) {
         cl::buffer buf_points;
-        buf_points.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE>(platform.context(), cl_points.size() * sizeof(cl_float4), cl_points.data());
+        buf_points.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE>(platform.context(),
+                                                                      cl_points.size() * sizeof(cl_float4),
+                                                                      cl_points.data());
 
         // Reset voting array
         std::fill(m_voting_array.begin(), m_voting_array.end(), 0);
@@ -187,7 +191,9 @@ namespace sand::grain {
           throw;
         }
 
-        platform.queues().front().enqueueNDRangeKernel(m_hough_vote_kernel, cl::NullRange, cl::NDRange(cl_points.size(), m_unique_versors.size()), cl::NullRange, nullptr, nullptr);
+        platform.queues().front().enqueueNDRangeKernel(m_hough_vote_kernel, cl::NullRange,
+                                                       cl::NDRange(cl_points.size(), m_unique_versors.size()),
+                                                       cl::NullRange, nullptr, nullptr);
         platform.queues().front().finish();
 
         void* tmp_voting_ptr = m_voting_array.data();
@@ -195,7 +201,8 @@ namespace sand::grain {
         platform.queues().front().finish();
 
         // Find maximum
-        const size_t max_votes_index =  std::distance(m_voting_array.begin(),  std::max_element(m_voting_array.begin(), m_voting_array.end()));
+        const size_t max_votes_index =  std::distance(m_voting_array.begin(),
+                                                      std::max_element(m_voting_array.begin(), m_voting_array.end()));
         const uint vote_count = m_voting_array[max_votes_index];
         const size_t max_versor_index = max_votes_index / (m_n_xy_bins * m_n_xy_bins);
         const size_t remainder = max_votes_index % (m_n_xy_bins * m_n_xy_bins);
@@ -207,7 +214,8 @@ namespace sand::grain {
         const float max_y = (0.5 + max_y_index - m_n_xy_bins / 2) * m_xy_plane_step;
         const cl_float3 line_point = get_line_point(max_versor, max_x, max_y);
 
-        UFW_DEBUG("Index of voting array maximum: {}, votes: {}, (versor,x,y): (({},{},{}),{},{})", max_votes_index, vote_count, max_versor.s[0], max_versor.s[1], max_versor.s[2], max_x, max_y);
+        UFW_DEBUG("Index of voting array maximum: {}, votes: {}, (versor,x,y): (({},{},{}),{},{})", max_votes_index,
+                  vote_count, max_versor.s[0], max_versor.s[1], max_versor.s[2], max_x, max_y);
 
         // Find points close to line
         cl::buffer buf_distances;
@@ -223,7 +231,8 @@ namespace sand::grain {
           throw;
         }
 
-        platform.queues().front().enqueueNDRangeKernel(m_distance_kernel, cl::NullRange, cl::NDRange(cl_points.size()), cl::NullRange, nullptr, nullptr);
+        platform.queues().front().enqueueNDRangeKernel(m_distance_kernel, cl::NullRange, cl::NDRange(cl_points.size()),
+                                                       cl::NullRange, nullptr, nullptr);
         platform.queues().front().finish();
 
         std::vector<float> points_distances(cl_points.size(), 0.0);
@@ -231,7 +240,8 @@ namespace sand::grain {
         buf_distances.read(tmp_distances_ptr, platform.queues().front(), 0, -1, {});
         platform.queues().front().finish();
 
-        std::vector<cl_float4> clustered_points = filter_neighbouring_points(cl_points, points_distances, m_max_clustering_distance);
+        std::vector<cl_float4> clustered_points = filter_neighbouring_points(cl_points, points_distances,
+                                                                             m_max_clustering_distance);
 
         if (clustered_points.size() < m_min_points_per_track) {
           break;
@@ -240,10 +250,12 @@ namespace sand::grain {
         const pos_3d out_line_point{line_point.s[0], line_point.s[1], line_point.s[2]};
         const dir_3d out_line_dir{max_versor.s[0], max_versor.s[1], max_versor.s[2]};
         // Using placeholder time
-        ev_clusters_out.emplace_back(out_line_point, out_line_dir, reco::timerange(0.0, 0.0), point_float4_to_cloud(clustered_points));
+        ev_clusters_out.emplace_back(out_line_point, out_line_dir, reco::timerange(0.0, 0.0), 0.0,
+                                     point_float4_to_cloud(clustered_points));
         n_found_tracks++;
 
-        UFW_INFO("Added track: point {} direction {} n_points {}", out_line_point, out_line_dir, clustered_points.size());
+        UFW_DEBUG("Added track: point {} direction {} n_points {}", out_line_point, out_line_dir,
+                  clustered_points.size());
 
         if (n_found_tracks >= m_max_tracks_per_event || cl_points.size() == 0) {
           break;
@@ -254,6 +266,7 @@ namespace sand::grain {
     }
 
   }
+
 } // namespace sand::grain
 
 UFW_REGISTER_PROCESS(sand::grain::hough3d)
