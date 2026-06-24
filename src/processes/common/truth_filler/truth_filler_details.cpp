@@ -2,6 +2,7 @@
 #include "evtcode_parser.hpp"
 
 #include <edep_reader/EDEPTrajectory.h>
+#include <edep_reader/EDEPTree.h>
 
 #include <TDatabasePDG.h>
 
@@ -230,6 +231,25 @@ namespace sand::common::filler_details {
     }
 
     return result;
+  }
+
+  std::vector<::caf::SRTrueParticle> make_secondaries(EDEPTree const& edep_tree, Primaries const& primaries,
+                                                      std::size_t first_idx, std::size_t count,
+                                                      AncestorIds const& ancestor_ids, long int ixn_id) {
+    std::vector<::caf::SRTrueParticle> particles;
+
+    for (std::size_t i{}; i != count; ++i) {
+      auto const& prim     = primaries[first_idx + i];
+      auto const prim_it   = edep_tree.GetTrajectory(prim.GetId());
+      auto const sec_begin = std::next(prim_it);
+      auto const sec_end   = edep_tree.GetTrajectoryEnd(prim_it);
+
+      for (auto sec_it = sec_begin; sec_it != sec_end; ++sec_it) {
+        particles.push_back(true_particle_from_edep(*sec_it, ixn_id, ancestor_ids[i]));
+      }
+    }
+
+    return particles;
   }
 
 } // namespace sand::common::filler_details

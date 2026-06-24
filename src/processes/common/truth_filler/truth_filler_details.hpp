@@ -9,6 +9,7 @@
 
 #include <vector>
 
+class EDEPTree;
 class EDEPTrajectory;
 
 namespace sand::common::filler_details {
@@ -58,6 +59,11 @@ namespace sand::common::filler_details {
 
   [[nodiscard]] PrimariesResult make_primaries(Primaries const& primaries, std::size_t first_idx, std::size_t count,
                                                long int ixn_id);
+
+  [[nodiscard]] std::vector<::caf::SRTrueParticle> make_secondaries(EDEPTree const& edep_tree,
+                                                                    Primaries const& primaries, std::size_t first_idx,
+                                                                    std::size_t count, AncestorIds const& ancestor_ids,
+                                                                    long int ixn_id);
 
 } // namespace sand::common::filler_details
 
