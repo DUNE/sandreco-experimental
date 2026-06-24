@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <vector>
+#include <iterator>
 
 #include <common/sand.h>
 #include <ocl/ocl.hpp>
@@ -25,20 +26,28 @@ namespace sand::grain {
     // Convert 3d point cloud to cl_float4 for GPU processing
     std::vector<cl_float4> point_cloud_to_float4(const std::vector<point_cloud::point>& points) {
         std::vector<cl_float4> converted_points;
-        converted_points.reserve(points.size());
-        for (const auto& p : points) {
-            converted_points.push_back({static_cast<float>(p.position.x()), static_cast<float>(p.position.y()), static_cast<float>(p.position.z()), static_cast<float>(p.amplitude)});
-        }
+        converted_points.resize(points.size());
+
+        auto convert_to_float4 = [](const point_cloud::point& p) {
+            return cl_float4{static_cast<float>(p.position.x()), static_cast<float>(p.position.y()), static_cast<float>(p.position.z()), static_cast<float>(p.amplitude)};
+        };
+
+        std::transform(points.begin(), points.end(), converted_points.begin(), convert_to_float4);
+
         return converted_points;
     }
 
     // Convert cl_float4 to 3d point cloud for writing ouput clusters
     std::vector<point_cloud::point> point_float4_to_cloud(const std::vector<cl_float4>& points) {
         std::vector<point_cloud::point> converted_points;
-        converted_points.reserve(points.size());
-        for (const auto& p : points) {
-            converted_points.push_back({pos_3d{p.s[0], p.s[1], p.s[2]}, p.s[3]});
-        }
+        converted_points.resize(points.size());
+
+        auto convert_to_point = [](const cl_float4& p) {
+            return point_cloud::point{pos_3d{p.s[0], p.s[1], p.s[2]}, p.s[3]};
+        };
+
+        std::transform(points.begin(), points.end(), converted_points.begin(), convert_to_point);
+
         return converted_points;
     }
 
