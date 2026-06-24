@@ -1,0 +1,5 @@
+sandreco_add_process(sand_drift_drift_fast_generic_digi)
+
+target_sources(sand_drift_drift_fast_generic_digi PRIVATE drift_fast_generic_digi.cpp)
+
+target_link_libraries(sand_drift_drift_fast_generic_digi PRIVATE sand_edep_reader sand_root_tgeomanager sand_geoinfo)

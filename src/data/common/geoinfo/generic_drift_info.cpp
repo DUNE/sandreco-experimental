@@ -52,6 +52,7 @@ namespace sand {
     m_view_angle   = cfg.value("view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
     m_view_offset  = cfg.value("view_offset", std::array<double, 3>{10.0, 10.0, 10.0});
     m_view_spacing = cfg.value("view_spacing", std::array<double, 3>{10.0, 10.0, 10.0});
+    m_distance_between_views = cfg.value("distance_between_views", 10.0);
 
     nav->cd(driftpath);
     nav->for_each_node([&](auto station_node) {
@@ -278,6 +279,7 @@ namespace sand {
 
     /// Find intersections of wires with frame
     double transverse_position = max_wire_plane_y - drift->view_offset()[view_ID];
+    size_t wire_index          = 0;
     while (transverse_position > -max_wire_plane_y) {
       pos_3d wire_centre_rot(0., transverse_position, 0.); // origin of the vector in rotated frame
 
@@ -294,18 +296,22 @@ namespace sand {
 
       // Need exactly two intersections to define a wire
       if (intersections_global.size() == 2) {
-        auto w                = std::make_unique<wire>();
-        w->parent             = this;
-        w->head               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[1] : intersections_global[0];
-        w->tail               = (intersections_global[1].x()<intersections_global[0].x()) ? intersections_global[0] : intersections_global[1];
-        w->max_radius         = drift->view_spacing()[view_ID] / 2.0;
+        auto w        = std::make_unique<wire>();
+        w->parent     = this;
+        w->head       = (intersections_global[1].x() < intersections_global[0].x()) ? intersections_global[1]
+                                                                                    : intersections_global[0];
+        w->tail       = (intersections_global[1].x() < intersections_global[0].x()) ? intersections_global[0]
+                                                                                    : intersections_global[1];
+        w->max_radius = sqrt(std::pow(drift->view_spacing()[view_ID] / 2.0, 2) + std::pow(drift->distance_between_views() / 2.0, 2));
         w->daq_channel.subdetector = DRIFT;
-        w->daq_channel.link = daq_link;
-        w->daq_channel.channel = (view_ID << 16) | wires.size();
+        w->daq_channel.link        = daq_link;
+        w->daq_channel.channel     = (uint32_t(view_ID) << 16) | uint32_t(wire_index);
         w->aabb                    = geoinfo::tracker_info::wire::AABB(*w);
         wires.emplace_back(std::move(w));
+        ++wire_index;
       } else {
-        UFW_DEBUG("Transverse position {} has {} intersections, skipping.", transverse_position, intersections_global.size());
+        UFW_DEBUG("Transverse position {} has {} intersections, skipping.", transverse_position,
+                  intersections_global.size());
       }
 
       transverse_position -= drift->view_spacing()[view_ID];

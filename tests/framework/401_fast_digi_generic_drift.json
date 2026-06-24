@@ -1,0 +1,47 @@
+{
+    "ufw" : {
+      "ufw-loglevel" : "debug",
+      "ufw-basepath" : "/usr/local/share/sandreco/data",
+      "ufw-ldpath" : ["/usr/local/lib64"]
+    },
+    "globals" : {
+        "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_flex_DRIFT.inner-volume.spills.8.root" },
+        "sand::geoinfo" : { "generic_drift" : { "view_angle" : [0.0, -0.087266463, 0.087266463],
+                                                "view_offset" : [10.0, 10.0, 10.0],
+                                                "view_spacing" : [10.0, 10.0, 10.0],
+                                                "distance_between_views" : 12 } }
+    },
+    "contexts" : {
+        "keys" : 3,
+        "locals" : {
+        "sand::edep_reader" : {"uri" : "test/SAND_opt3_flex_DRIFT.inner-volume.spills.8.root"}
+        }
+    },
+    "run" : [
+      {
+        "sand::drift::drift_fast_generic_digi" : {
+            "drift_velocity": 0.05,
+            "wire_velocity": 200.0, 
+            "sigma_tdc": 3.5 
+        },
+        "reqs" : {},
+        "prods" : {"digi": "drift_digi"}
+      },
+      {
+        "sand::test::test_drift_digi" : {
+            "drift_velocity": 0.05,
+            "wire_velocity": 200.0, 
+            "sigma_tdc": 3.5 
+        },
+        "reqs" : {"digi": "drift_digi"},
+        "prods" : {}
+      }, 
+      {
+        "sand::root::tree_streamer" : { 
+          "uri" : "test/drift_fast_generic_digi.root",
+          "tree" : "drift_fast_generic_digi"
+        },
+        "write" : ["drift_digi"]
+      }
+    ]
+  }

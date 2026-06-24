@@ -1,5 +1,5 @@
 #include <edep_reader/edep_reader.hpp>
-#include <geoinfo/drift_info.hpp>
+#include <geoinfo/generic_drift_info.hpp>
 #include <geoinfo/geoinfo.hpp>
 #include <geoinfo/tracker_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
@@ -117,7 +117,7 @@ namespace sand::test {
   void test_drift_digi::analyze_drift_digi() {
     const auto& digi  = get<sand::tracker::digi>("digi");
     const auto& gi    = get<geoinfo>();
-    const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
+    const auto* drift = dynamic_cast<const sand::geoinfo::generic_drift_info*>(&gi.tracker());
 
     if (!drift) {
       UFW_ERROR("The tracker info object is not DRIFT");
@@ -180,7 +180,7 @@ namespace sand::test {
   void test_drift_digi::check_truth_matching(const std::unordered_map<int, const EDEPHit*>& all_drift_hits) {
     const auto& digi  = get<sand::tracker::digi>("digi");
     const auto& gi    = get<geoinfo>();
-    const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
+    const auto* drift = dynamic_cast<const sand::geoinfo::generic_drift_info*>(&gi.tracker());
 
     double total_adc = 0.0;                     // sum of every signal ADC
     std::unordered_set<int> referenced_hit_ids; // distinct hit ids touched by any signal
