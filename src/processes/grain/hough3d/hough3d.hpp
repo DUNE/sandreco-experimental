@@ -11,15 +11,13 @@ namespace sand::grain {
     // Remove redundant symmetries selecting only upper emishpere
     std::vector<cl_float4> select_unique_versors(const std::vector<cl_float4>& versors) {
         std::vector<cl_float4> unique_versors;
-        unique_versors.reserve(versors.size());
 
         constexpr double eps = 1e-12;
-
-        for (const auto& v : versors) {
-            if (v.s[2] > 0 || (std::abs(v.s[2]) < eps && v.s[1] > 0) || (std::abs(v.s[2]) < eps && std::abs(v.s[1]) < eps && v.s[0] > 0)) {
-                unique_versors.push_back(v);
-            }
-        }
+        auto is_unique = [eps](const cl_float4& v) {
+            return (v.s[2] > 0 || (std::abs(v.s[2]) < eps && v.s[1] > 0) || (std::abs(v.s[2]) < eps && std::abs(v.s[1]) < eps && v.s[0] > 0));
+        };
+        
+        std::copy_if(versors.begin(), versors.end(), std::back_inserter(unique_versors), is_unique);
 
         return unique_versors;
     }
