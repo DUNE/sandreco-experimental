@@ -10,8 +10,6 @@ namespace sand::common {
 
   truth_filler::truth_filler() : process{{}, {{"out_truth_branch", "sand::caf::truth_branch_wrapper"}}} {}
 
-  void truth_filler::configure(ufw::config const& cfg) { process::configure(cfg); }
-
   void truth_filler::run() {
     auto const& genie  = instance<genie_reader>();
     auto const& edep   = instance<edep_reader>();
@@ -41,20 +39,6 @@ namespace sand::common {
       true_ixn.nprefsi = static_cast<int>(prefsi.size());
       true_ixn.prefsi  = std::move(prefsi);
 
-      // Count secondaries for reservation
-      auto const* first_prim_ptr = primaries.data() + first_prim_idx;
-      auto const* last_prim_ptr  = primaries.data() + first_prim_idx + prim_count;
-      auto const sec_count =
-          std::accumulate(first_prim_ptr, last_prim_ptr, std::size_t{}, [&](std::size_t acc, const auto& prim) {
-            auto prim_it   = edep.GetTrajectory(prim.GetId());
-            auto sec_begin = std::next(prim_it);
-            auto sec_end   = edep.GetTrajectoryEnd(prim_it);
-            return acc + static_cast<std::size_t>(std::distance(sec_begin, sec_end));
-          });
-
-      // Reserve capacity for secondaries
-      true_ixn.sec.reserve(sec_count);
-
       // Add primaries from edep-sim
       auto [particles, ancestor_ids, nproton, nneutron, npip, npim, npi0] =
           filler_details::make_primaries(primaries, first_prim_idx, prim_count, true_ixn.id);
@@ -65,6 +49,11 @@ namespace sand::common {
       true_ixn.npip     = npip;
       true_ixn.npim     = npim;
       true_ixn.npi0     = npi0;
+
+      // Add secondaries from edep-sim
+      true_ixn.sec =
+          filler_details::make_secondaries(edep, primaries, first_prim_idx, prim_count, ancestor_ids, true_ixn.id);
+      true_ixn.nsec = static_cast<int>(true_ixn.sec.size());
     }
   }
 

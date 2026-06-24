@@ -10,7 +10,6 @@ namespace sand::common {
 
   struct truth_filler : public ufw::process {
     truth_filler();
-    void configure(ufw::config const& cfg) override;
     void run() override;
   };
 
