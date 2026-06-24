@@ -20,8 +20,10 @@ namespace sand::grain {
   /**
    * \class sand::grain::hough3d
    *
-   * \brief Uses a 3D Hough transform to perform clustering and tracking in a 3D point cloud.
+   * \brief 3D Hough transform to perform clustering and tracking in a 3D point cloud.
    *
+   * Given a 3D point cloud (`point_cloud` input), this process finds all clusters satisfying the requirements (`point_clusters` output) using Hough transform;
+   * most of the computations are performed on GPU (if available).
    *
    * \subsection Configuration
    * | Parameter Name                | Type   | Unit  | Required/Default | Description                                                                         |
@@ -31,7 +33,23 @@ namespace sand::grain {
    * | `max_clustering_distance`     | float  | mm    | Required         | Max distance between Hough line and points to be clustered together.                |
    * | `min_points_per_track`        | uint   |       | Required         | Minimum number of points to build a track.                                          |
    * | `max_tracks_per_event`        | uint   |       | Default: 4       | Maximum number of tracks to search for in one event.                                |
+   *
+   * \subsection Dependencies
+   * | Type            | Comment  |
+   * |-----------------|----------|
+   * | `sand::geoinfo` | Geometry |
+   *
+   * \subsection Requirements
+   * |  Name         | Type                       | Comment          |
+   * |---------------|----------------------------|------------------|
+   * | `point_cloud` | `sand::grain::point_cloud` |  3D point cloud  |
+   *
+   * \subsection Products
+   * |  Name            | Type                          | Comment                           |
+   * |------------------|-------------------------------|-----------------------------------|
+   * | `point_clusters` | `sand::grain::point_clusters` | Clusters found by Hough transform |
    */
+
   class hough3d : public ufw::process {
    public:
     hough3d();
