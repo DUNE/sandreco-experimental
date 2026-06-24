@@ -27,7 +27,7 @@
       },
       {
         "sand::grain::hough3d" : {
-          "n_versors_in_sphere" : 2000,
+          "n_versors_in_sphere" : 1000,
           "xy_plane_step" : 15.0,
           "max_clustering_distance" : 50.0,
           "min_points_per_track" : 2,
