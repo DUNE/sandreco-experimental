@@ -212,7 +212,7 @@ namespace sand {
     auto nav = tgm.navigator();
     std::string ch_name(nav->GetCurrentNode()->GetName());
 
-    if (ch_name.find("ch") == std::string::npos) {
+    if (ch_name.find("_v_") == std::string::npos) {
       return; // not a drift module
     }
 
