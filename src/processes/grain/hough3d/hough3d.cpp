@@ -1,4 +1,5 @@
 #include <common/sand.h>
+#include <common/timerange.h>
 #include <geoinfo/grain_info.hpp>
 #include <grain/point_cloud.h>
 #include <grain/point_clusters.h>
@@ -194,7 +195,8 @@ namespace sand::grain {
 
         const pos_3d out_line_point{line_point.s[0], line_point.s[1], line_point.s[2]};
         const dir_3d out_line_dir{max_versor.s[0], max_versor.s[1], max_versor.s[2]};
-        ev_clusters_out.emplace_back(point_clusters::cluster{point_float4_to_cloud(clustered_points), out_line_dir, out_line_point});
+        // Using placeholder time
+        ev_clusters_out.emplace_back(out_line_point, out_line_dir, reco::timerange(0.0, 0.0), point_float4_to_cloud(clustered_points));
         n_found_tracks++;
 
         UFW_INFO("Added track: point {} direction {} n_points {}", out_line_point, out_line_dir, clustered_points.size());
@@ -202,9 +204,9 @@ namespace sand::grain {
         if (n_found_tracks >= m_max_tracks_per_event || cl_points.size() == 0) {
           break;
         }
-
       }
       UFW_INFO("Found {} tracks", n_found_tracks);
+      point_clusters_out.push_back(ev_clusters_out);
     }
 
   }
