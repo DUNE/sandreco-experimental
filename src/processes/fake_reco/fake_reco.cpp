@@ -5,83 +5,31 @@
 #include <ufw/factory.hpp>
 
 #include <numeric>
-#include <vector>
 
 namespace sand {
 
   fake_reco::fake_reco()
-    : process{{}, {{"output_caf", "sand::caf::standard_record_wrapper"}}}, m_edep{nullptr}, m_genie{nullptr}, m_caf{nullptr} {}
+    : process{{{"in_truth", "sand::caf::truth_branch_wrapper"}}, {{"output_caf", "sand::caf::standard_record_wrapper"}}} {}
 
   void fake_reco::configure(const ufw::config& cfg) { process::configure(cfg); }
 
   void fake_reco::run() {
-    // Bind input readers and output writer
-    m_edep = &get<edep_reader>();
-    if (m_edep == nullptr) {
-      UFW_ERROR("EDepSim reader not found");
-      return;
-    }
+    auto const& truth_branch = get<sand::caf::truth_branch_wrapper>("in_truth");
+    m_caf                    = &set<sand::caf::standard_record_wrapper>("output_caf");
 
-    m_genie = &get<genie_reader>();
-    if (m_genie == nullptr) {
-      UFW_ERROR("GENIE reader not found");
-      return;
-    }
+    // Copy truth branch into output StandardRecord
+    m_caf->mc = truth_branch;
 
-    m_caf = &set<sand::caf::standard_record_wrapper>("output_caf");
+    // Reserve reco capacities to match truth
+    m_caf->common.ixn.sandreco.reserve(truth_branch.nu.size());
+    m_caf->nd.sand.ixn.reserve(truth_branch.nu.size());
 
-    const auto& primaries = m_edep->GetChildrenTrajectories();
-    const auto edep_map   = make_edep_interaction_map();
+    for (std::size_t ixn_idx{}, n_nu = truth_branch.nu.size(); ixn_idx != n_nu; ++ixn_idx) {
+      auto& true_ixn = m_caf->mc.nu[ixn_idx];
 
-    // Initialize spill-level structures
-    initialize_spill_capacities();
-
-    // Loop over interactions (neutrino vertices)
-    for (std::size_t ixn_idx{}, edep_map_size = edep_map.size(); ixn_idx != edep_map_size; ++ixn_idx) {
-      const auto& [first_prim_idx, prim_count] = edep_map[ixn_idx];
-      const auto& event                        = m_genie->events_[ixn_idx];
-      const auto& stdhep                       = m_genie->stdHeps_[ixn_idx];
-
-      // TRUTH
-      // Create and fill SRTrueInteraction from GENIE
-      auto& true_ixn = m_caf->mc.nu.emplace_back(CAFFiller<::caf::SRTrueInteraction>::from_genie(event, stdhep));
-
-      // Add pre-FSI hadrons from GENIE StdHep
-      CAFFiller<::caf::SRTrueInteraction>::add_prefsi(true_ixn, stdhep);
-
-      // Reserve capacity for particles based on edep-sim data
-      true_ixn.prim.reserve(prim_count);
-
-      // Count secondaries for reservation
-      const auto* first_prim_ptr = primaries.data() + first_prim_idx;
-      const auto* last_prim_ptr  = primaries.data() + first_prim_idx + prim_count;
-      const std::size_t sec_count =
-          std::accumulate(first_prim_ptr, last_prim_ptr, std::size_t{0}, [this](std::size_t acc, const auto& prim) {
-            auto prim_it   = m_edep->GetTrajectory(prim.GetId());
-            auto sec_begin = std::next(prim_it);
-            auto sec_end   = m_edep->GetTrajectoryEnd(prim_it);
-            return acc + static_cast<std::size_t>(std::distance(sec_begin, sec_end));
-          });
-      true_ixn.sec.reserve(sec_count);
-
-      // Add primaries from edep-sim (returns ancestor IDs for secondaries)
-      auto ancestor_ids =
-          CAFFiller<::caf::SRTrueInteraction>::add_primaries(true_ixn, primaries, first_prim_idx, prim_count);
-
-      // Add secondaries for each primary
-      for (std::size_t i{}; i != prim_count; ++i) {
-        const auto& prim = primaries[first_prim_idx + i];
-        auto prim_it     = m_edep->GetTrajectory(prim.GetId());
-        auto sec_begin   = std::next(prim_it);
-        auto sec_end     = m_edep->GetTrajectoryEnd(prim_it);
-
-        CAFFiller<::caf::SRTrueInteraction>::add_secondaries(true_ixn, sec_begin, sec_end, ancestor_ids[i]);
-      }
-
-      // FAKE RECONSTRUCTION
       // Create fake reco interaction (common branch)
-      auto& reco_ixn =
-          m_caf->common.ixn.sandreco.emplace_back(CAFFiller<::caf::SRInteraction>::from_true(true_ixn, ixn_idx));
+      auto& reco_ixn = m_caf->common.ixn.sandreco.emplace_back(
+          CAFFiller<::caf::SRInteraction>::from_true(true_ixn, static_cast<int>(ixn_idx)));
       m_caf->common.ixn.nsandreco++;
 
       // Create SAND-specific reco interaction
@@ -89,75 +37,29 @@ namespace sand {
       m_caf->nd.sand.nixn++;
 
       // Process particles: create SRRecoParticle, SRTrack, SRShower
-      process_interaction_particles(true_ixn, reco_ixn, sand_ixn, ixn_idx, first_prim_idx, prim_count);
+      process_interaction_particles(true_ixn, reco_ixn, sand_ixn);
 
       // Compute direction from sum of particle momenta
-      auto sum_mom = std::accumulate(reco_ixn.part.sandreco.begin(), reco_ixn.part.sandreco.end(),
-                                     std::make_tuple(0.f, 0.f, 0.f), [](auto acc, const auto& part) {
-                                       auto [px, py, pz] = acc;
-                                       return std::make_tuple(px + part.p.x, py + part.p.y, pz + part.p.z);
-                                     });
+      auto sum_mom =
+          std::accumulate(reco_ixn.part.sandreco.begin(), reco_ixn.part.sandreco.end(), std::make_tuple(0.f, 0.f, 0.f),
+                          [](auto acc, const auto& part) {
+                            auto [px, py, pz] = acc;
+                            return std::make_tuple(px + part.p.x, py + part.p.y, pz + part.p.z);
+                          });
 
       auto [sum_px, sum_py, sum_pz] = sum_mom;
-
-      reco_ixn.dir.part_mom_sum = normalize_to_direction(sum_px, sum_py, sum_pz);
+      reco_ixn.dir.part_mom_sum     = normalize_to_direction(sum_px, sum_py, sum_pz);
     }
 
     assert_sizes();
   }
 
-  std::vector<EdepInteractionRange> fake_reco::make_edep_interaction_map() const {
-    const auto& primaries = m_edep->GetChildrenTrajectories();
-    if (primaries.empty()) {
-      UFW_WARN("No primary trajectories found in EDepSim event");
-      return {};
-    }
-
-    std::vector<EdepInteractionRange> output;
-    output.reserve(m_genie->events_.size());
-
-    std::size_t current_ixn = primaries[0].GetInteractionNumber();
-    std::size_t range_begin{};
-
-    for (std::size_t i{1}, primaries_size = primaries.size(); i != primaries_size; ++i) {
-      if (primaries[i].GetInteractionNumber() != current_ixn) {
-        output.push_back({range_begin, i - range_begin});
-        current_ixn = primaries[i].GetInteractionNumber();
-        range_begin = i;
-      }
-    }
-    output.push_back({range_begin, primaries.size() - range_begin});
-
-    UFW_ASSERT(output.size() == m_genie->events_.size(),
-               "Mismatch between edep-sim interactions ({}) and GENIE events ({})", output.size(),
-               m_genie->events_.size());
-
-    return output;
-  }
-
-  void fake_reco::initialize_spill_capacities() {
-    const std::size_t n_interactions = m_genie->events_.size();
-
-    // Truth branch
-    m_caf->mc.nnu = static_cast<int>(n_interactions);
-    m_caf->mc.nu.reserve(n_interactions);
-
-    // Common reco branch
-    m_caf->common.ixn.sandreco.reserve(n_interactions);
-
-    // SAND-specific reco branch
-    m_caf->nd.sand.ixn.reserve(n_interactions);
-  }
-
   void fake_reco::process_interaction_particles(::caf::SRTrueInteraction& true_ixn, ::caf::SRInteraction& reco_ixn,
-                                                ::caf::SRSANDInt& sand_ixn,
-                                                [[maybe_unused]] std::size_t interaction_index,
-                                                std::size_t edep_first_index, std::size_t edep_count) const {
-    // Reserve space for reco objects
-    reco_ixn.part.sandreco.reserve(edep_count);
+                                                ::caf::SRSANDInt& sand_ixn) const {
+    const auto nprim = static_cast<std::size_t>(true_ixn.nprim);
+    reco_ixn.part.sandreco.reserve(nprim);
 
-    // Loop over primary particles
-    for (std::size_t i{}; i != edep_count; ++i) {
+    for (std::size_t i{}; i != nprim; ++i) {
       const auto& true_prim = true_ixn.prim[i];
       const auto& prim_id   = true_prim.ancestor_id;
 
@@ -183,7 +85,7 @@ namespace sand {
 
   void fake_reco::assert_sizes() const {
     // Truth branch
-    UFW_ASSERT(m_caf->mc.nu.size() == static_cast<std::size_t>(m_caf->mc.nnu),
+    UFW_ASSERT(m_caf->mc.nu.size() == m_caf->mc.nnu,
                "mc.nnu ({}) doesn't match mc.nu.size() ({})", m_caf->mc.nnu, m_caf->mc.nu.size());
 
     // Common reco branch
