@@ -11,13 +11,6 @@
 
 namespace sand {
 
-    // namespace resolution {
-    //     constexpr double energy_smearing   = 0.057;  // relative energy smearing
-    //     constexpr double position_smearing = 200e-3; // position smearing in mm
-    //     constexpr double momentum_smearing = 0.03;   // relative momentum smearing
-    // } // namespace resolution
-
-    // namespace res = resolution;
     enum class Var { energy, momentum, position };
 
     struct GaussSmearing{

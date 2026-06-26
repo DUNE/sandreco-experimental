@@ -6,24 +6,28 @@ namespace sand {
 
     template <typename T, Var V>
     T GaussSmearing::apply_smearing(const double resolution, const T& value) {
+
+        auto smear_scalar = [&](double v, double sigma){
+            return v + std::normal_distribution<double>(0.0, sigma)(m_random_engine());
+        };
+
+        auto smear_vect = [&](T& in, T& out v, double sigma){
+            out.x = smear_scalar(in.x, sigma);
+            out.y = smear_scalar(in.y, sigma);
+            out.z = smear_scalar(in.z, sigma);
+        };
+
         T smeared_value;
+
         if constexpr (V == Var::energy){
             const double sigma_en = resolution * std::sqrt(value);
-            std::normal_distribution<double> absolute_error(0.0, sigma_en);
-            double ran_value = absolute_error(m_random_engine());
-            smeared_value = value + ran_value;
+            smeared_value = smear_scalar(value, sigma_en);
         } else if constexpr (V == Var::momentum){
             const double true_momentum = std::hypot(value.x, value.y, value.z);
             const double sigma_mom = resolution * true_momentum;
-            std::normal_distribution<double> absolute_error(0.0, sigma_mom);
-            smeared_value.x = value.x + absolute_error(m_random_engine());
-            smeared_value.y = value.y + absolute_error(m_random_engine());
-            smeared_value.z = value.z + absolute_error(m_random_engine());
+            smeared_value = smear_vect(value, sigma_mom);
         } else if constexpr (V == Var::position){
-            std::normal_distribution<double> absolute_error(0.0, resolution);
-            smeared_value.x = value.x + absolute_error(m_random_engine());
-            smeared_value.y = value.y + absolute_error(m_random_engine());
-            smeared_value.z = value.z + absolute_error(m_random_engine());
+            smeared_value = smear_vect(value, resolution);
         } else {
             UFW_ERROR("Smearing not applied");
         }

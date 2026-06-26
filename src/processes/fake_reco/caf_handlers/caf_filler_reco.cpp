@@ -40,6 +40,7 @@ namespace sand {
     auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
 
     auto gauss_helper = GaussSmearing();
+    // needed since reco.p is a SRVector3D instead true_part.p is a SRLorenztVector
     const ::caf::SRVector3D true_part_mom_vec{true_part.p.px, true_part.p.py, true_part.p.pz};
     
     reco.E        = gauss_helper.apply_smearing<double, Var::energy>(en_res, true_part.p.E);
