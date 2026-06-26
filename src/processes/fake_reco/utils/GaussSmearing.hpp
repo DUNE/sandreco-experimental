@@ -21,9 +21,9 @@ namespace sand {
         GaussSmearing();
 
         template <typename T, Var V>
-        T apply_smearing(const double resolution, const T& value);
+        T apply_smearing(const T& value, const double resolution);
     
-        ufw::context::random_engine& m_random_engine() { return ufw::context::current()->engine(); };
+        ufw::context::random_engine& random_engine() { return ufw::context::current()->engine(); };
 
     };
 

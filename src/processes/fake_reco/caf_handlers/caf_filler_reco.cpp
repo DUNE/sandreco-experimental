@@ -43,10 +43,10 @@ namespace sand {
     // needed since reco.p is a SRVector3D instead true_part.p is a SRLorenztVector
     const ::caf::SRVector3D true_part_mom_vec{true_part.p.px, true_part.p.py, true_part.p.pz};
     
-    reco.E        = gauss_helper.apply_smearing<double, Var::energy>(en_res, true_part.p.E);
-    reco.p        = gauss_helper.apply_smearing<::caf::SRVector3D, Var::momentum>(p_res, true_part_mom_vec);
-    reco.start    = gauss_helper.apply_smearing<::caf::SRVector3D, Var::position>(pos_res, true_part.start_pos);
-    reco.end      = gauss_helper.apply_smearing<::caf::SRVector3D, Var::position>(pos_res, true_part.end_pos);
+    reco.E        = gauss_helper.apply_smearing<double, Var::energy>(true_part.p.E, en_res);
+    reco.p        = gauss_helper.apply_smearing<::caf::SRVector3D, Var::momentum>(true_part_mom_vec, p_res);
+    reco.start    = gauss_helper.apply_smearing<::caf::SRVector3D, Var::position>(true_part.start_pos, pos_res);
+    reco.end      = gauss_helper.apply_smearing<::caf::SRVector3D, Var::position>(true_part.end_pos, pos_res);
 
     if (is_track_like(true_part.pdg)) {
       reco.origRecoObjType = ::caf::RecoObjType::kTrack;

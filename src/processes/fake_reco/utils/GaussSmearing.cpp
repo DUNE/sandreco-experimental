@@ -4,37 +4,39 @@ namespace sand {
 
     GaussSmearing::GaussSmearing() = default;
 
+    static double smear_component(double v, double sigma, ufw::context::random_engine& rng) {
+        return v + std::normal_distribution<double>(0.0, sigma)(rng);
+    }
+
+    static double smear_value(double value, double sigma, ufw::context::random_engine& rng){
+        return smear_component(value, sigma, rng);
+    }
+
+    static ::caf::SRVector3D smear_value(const ::caf::SRVector3D& value, const double sigma, ufw::context::random_engine& rng){
+        ::caf::SRVector3D out;
+        out.x = smear_component(value.x, sigma, rng);
+        out.y = smear_component(value.y, sigma, rng);
+        out.z = smear_component(value.z, sigma, rng);
+    };
+
     template <typename T, Var V>
-    T GaussSmearing::apply_smearing(const double resolution, const T& value) {
-
-        auto smear_scalar = [&](double v, double sigma){
-            return v + std::normal_distribution<double>(0.0, sigma)(m_random_engine());
-        };
-
-        auto smear_vect = [&](T& in, T& out v, double sigma){
-            out.x = smear_scalar(in.x, sigma);
-            out.y = smear_scalar(in.y, sigma);
-            out.z = smear_scalar(in.z, sigma);
-        };
-
-        T smeared_value;
+    T GaussSmearing::apply_smearing(const T& value, const double resolution) {
+        double sigma;
 
         if constexpr (V == Var::energy){
-            const double sigma_en = resolution * std::sqrt(value);
-            smeared_value = smear_scalar(value, sigma_en);
+            sigma = resolution * std::sqrt(value);
         } else if constexpr (V == Var::momentum){
             const double true_momentum = std::hypot(value.x, value.y, value.z);
-            const double sigma_mom = resolution * true_momentum;
-            smeared_value = smear_vect(value, sigma_mom);
+            sigma = resolution * true_momentum;
         } else if constexpr (V == Var::position){
-            smeared_value = smear_vect(value, resolution);
+            sigma = resolution;
         } else {
             UFW_ERROR("Smearing not applied");
         }
-        return smeared_value;
+        return smear_value(value, sigma, random_engine());
     };
 
-  template double GaussSmearing::apply_smearing<double, Var::energy>(const double resolution, const double& value);
-  template ::caf::SRVector3D GaussSmearing::apply_smearing<::caf::SRVector3D, Var::momentum>(const double resolution, const ::caf::SRVector3D& value);
-  template ::caf::SRVector3D GaussSmearing::apply_smearing<::caf::SRVector3D, Var::position>(const double resolution, const ::caf::SRVector3D& value);
+  template double GaussSmearing::apply_smearing<double, Var::energy>(const double& value, const double resolution);
+  template ::caf::SRVector3D GaussSmearing::apply_smearing<::caf::SRVector3D, Var::momentum>(const ::caf::SRVector3D& value, const double resolution);
+  template ::caf::SRVector3D GaussSmearing::apply_smearing<::caf::SRVector3D, Var::position>(const ::caf::SRVector3D& value, const double resolution);
 }
