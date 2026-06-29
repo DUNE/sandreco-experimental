@@ -11,11 +11,22 @@ namespace sand {
   fake_reco::fake_reco()
     : process{{{"in_truth", "sand::caf::truth_branch_wrapper"}}, {{"output_caf", "sand::caf::standard_record_wrapper"}}} {}
 
-  void fake_reco::configure(const ufw::config& cfg) { process::configure(cfg); }
+  void fake_reco::configure(const ufw::config& cfg) {
+    process::configure(cfg);
+    m_reco_mode           = cfg.value("mode", "truth");
+    m_intrinsic_pos_res_t = cfg.value("intrinsic_pos_res_t", 0.);
+    m_intrinsic_pos_res_l = cfg.value("intrinsic_pos_res_l", 0.);
+    m_hit_energy_thr      = cfg.value("hit_energy_thr", 0.);
+    m_b_field_magnitude   = cfg.value("b_field_magnitude", 0.);
+  }
 
   void fake_reco::run() {
     auto const& truth_branch = get<sand::caf::truth_branch_wrapper>("in_truth");
     m_caf                    = &set<sand::caf::standard_record_wrapper>("output_caf");
+
+    if (m_reco_mode == "smearing") {
+      m_edep = &get<edep_reader>();
+    }
 
     // Copy truth branch into output StandardRecord
     m_caf->mc = truth_branch;
@@ -54,51 +65,75 @@ namespace sand {
     assert_sizes();
   }
 
+  void fake_reco::fill_reco_objects(const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
+                                    const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& part_id,
+                                    bool is_primary, ::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const {
+    auto reco_part    = make_reco(true_part, part_id);
+    reco_part.primary = is_primary;
+    reco_ixn.part.sandreco.push_back(std::move(reco_part));
+    reco_ixn.part.nsandreco++;
+
+    if (is_track_like(true_part.pdg)) {
+      auto track = CAFFiller<::caf::SRTrack>::from_true(true_part, part_id);
+      sand_ixn.tracks.push_back(std::move(track));
+      sand_ixn.ntracks++;
+    } else if (is_shower_like(true_part.pdg)) {
+      auto shower = CAFFiller<::caf::SRShower>::from_true(true_part, part_id);
+      sand_ixn.showers.push_back(std::move(shower));
+      sand_ixn.nshowers++;
+    } else {
+      UFW_DEBUG("Particle PDG {} is neither track-like nor shower-like, skipping reco object", true_part.pdg);
+    }
+  }
+
   void fake_reco::process_interaction_particles(::caf::SRTrueInteraction& true_ixn, ::caf::SRInteraction& reco_ixn,
                                                 ::caf::SRSANDInt& sand_ixn) const {
-    const auto nprim = static_cast<std::size_t>(true_ixn.nprim);
-    reco_ixn.part.sandreco.reserve(nprim);
+    const std::size_t prim_count = true_ixn.prim.size();
+    const std::size_t sec_count  = true_ixn.sec.size();
+    reco_ixn.part.sandreco.reserve(prim_count + sec_count);
 
-    for (std::size_t i{}; i != nprim; ++i) {
+    std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle&, const ::caf::TrueParticleID&)> make_reco;
+
+    if (m_reco_mode == "truth") {
+      UFW_INFO("Using reconstruction from truth");
+      make_reco = [](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        return CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
+      };
+    } else if (m_reco_mode == "smearing") {
+      UFW_INFO("Using reconstruction from truth with smearing");
+      make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
+        return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(
+            true_prim, prim_id, true_prim_trj, m_intrinsic_pos_res_t, m_intrinsic_pos_res_l,
+            m_hit_energy_thr, m_b_field_magnitude);
+      };
+    } else {
+      UFW_ERROR("You need to specify which reco mode you want to use");
+    }
+
+    for (std::size_t i{}; i != prim_count; ++i) {
       const auto& true_prim = true_ixn.prim[i];
-      const auto& prim_id   = true_prim.ancestor_id;
+      fill_reco_objects(make_reco, true_prim, true_prim.ancestor_id, true, reco_ixn, sand_ixn);
+    }
 
-      // Create SRRecoParticle from truth
-      auto reco_part = CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
-      reco_ixn.part.sandreco.push_back(std::move(reco_part));
-      reco_ixn.part.nsandreco++;
-
-      // Create SRTrack or SRShower based on particle type
-      if (is_track_like(true_prim.pdg)) {
-        auto track = CAFFiller<::caf::SRTrack>::from_true(true_prim, prim_id);
-        sand_ixn.tracks.push_back(std::move(track));
-        sand_ixn.ntracks++;
-      } else if (is_shower_like(true_prim.pdg)) {
-        auto shower = CAFFiller<::caf::SRShower>::from_true(true_prim, prim_id);
-        sand_ixn.showers.push_back(std::move(shower));
-        sand_ixn.nshowers++;
-      } else {
-        UFW_DEBUG("Particle PDG {} is neither track-like nor shower-like, skipping reco object", true_prim.pdg);
-      }
+    for (std::size_t i{}; i != sec_count; ++i) {
+      const auto& true_sec = true_ixn.sec[i];
+      fill_reco_objects(make_reco, true_sec, true_sec.ancestor_id, false, reco_ixn, sand_ixn);
     }
   }
 
   void fake_reco::assert_sizes() const {
-    // Truth branch
     UFW_ASSERT(m_caf->mc.nu.size() == m_caf->mc.nnu,
                "mc.nnu ({}) doesn't match mc.nu.size() ({})", m_caf->mc.nnu, m_caf->mc.nu.size());
 
-    // Common reco branch
     UFW_ASSERT(m_caf->common.ixn.sandreco.size() == static_cast<std::size_t>(m_caf->common.ixn.nsandreco),
                "common.ixn.nsandreco ({}) doesn't match common.ixn.sandreco.size() ({})", m_caf->common.ixn.nsandreco,
                m_caf->common.ixn.sandreco.size());
 
-    // SAND reco branch
     UFW_ASSERT(m_caf->nd.sand.ixn.size() == static_cast<std::size_t>(m_caf->nd.sand.nixn),
                "nd.sand.nixn ({}) doesn't match nd.sand.ixn.size() ({})", m_caf->nd.sand.nixn,
                m_caf->nd.sand.ixn.size());
 
-    // Per-interaction checks
     for (std::size_t i{}, mc_nu_size = m_caf->mc.nu.size(); i != mc_nu_size; ++i) {
       const auto& true_ixn = m_caf->mc.nu[i];
       UFW_ASSERT(true_ixn.prim.size() == static_cast<std::size_t>(true_ixn.nprim),

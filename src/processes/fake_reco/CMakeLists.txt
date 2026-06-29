@@ -4,8 +4,9 @@ target_sources(sand_fake_reco
     PRIVATE
     fake_reco.cpp
     caf_handlers/caf_filler_reco.cpp
+    utils/GlucksternSmearing.cpp
 )
 
-add_dependencies(sand_fake_reco sand_caf_caf_streamer)
+add_dependencies(sand_fake_reco sand_edep_reader sand_caf_caf_streamer)
 
-target_link_libraries(sand_fake_reco PRIVATE ROOT::Core ROOT::EG sand_caf_caf_streamer duneanaobj::StandardRecord)
+target_link_libraries(sand_fake_reco PRIVATE ROOT::Core ROOT::EG sand_edep_reader sand_caf_caf_streamer duneanaobj::StandardRecord)

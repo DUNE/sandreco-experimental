@@ -1,3 +1,9 @@
+/**
+ * @file
+ * @brief Implementation of the STT geometry (@ref sand::geoinfo::stt_info):
+ *        geometry-tree parsing and path/id mapping.
+ */
+
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <stt_info.hpp>
 #include <ufw/context.hpp>
@@ -8,7 +14,20 @@
 
 namespace sand {
 
-  geoinfo::stt_info::stt_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg) : tracker_info(gi, gp, cfg) {
+  /**
+   * @brief Builds the STT geometry by walking the ROOT geometry tree.
+   *
+   * Navigates each supermodule, classifies its target material, records the
+   * station envelope and (for target planes) the target box and density, then
+   * descends to every straw tube to create a wire with its endpoints, radius,
+   * geometry id and DAQ channel. Wire adjacency is computed per station.
+   *
+   * @param gi  The parent geometry description.
+   * @param gp  The geometry path of the STT volume.
+   * @param cfg The tracker configuration (merged with STT-specific parameters).
+   */
+  geoinfo::stt_info::stt_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg)
+    : tracker_info(gi, gp, cfg) {
     auto& tgm    = ufw::context::current()->instance<root_tgeomanager>();
     auto nav     = tgm.navigator();
     auto sttpath = gi.root_path() / path();
@@ -45,43 +64,49 @@ namespace sand {
       boxcorner.SetX(-boxcorner.x());
       stat->top_south    = centre + boxcorner;
       stat->bottom_north = centre - boxcorner;
-      stat->parent = this;
-      
+      stat->parent       = this;
+
       nav->for_each_node([&](auto plane) {
         // The plane does not carry useful information for us.
         std::string plname = plane->GetName();
-        if (plname.find("plane") == std::string::npos) { // other stuff, targets, ...
-          return;
-        }
-        nav->cd(sttpath / smodname / plname);
-        nav->for_each_node([&](auto tube) {
-          std::string tname = tube->GetName();
-          nav->cd(sttpath / smodname / plname / tname);
-          if (auto* tube_shape = dynamic_cast<TGeoTube*>(tube->GetVolume()->GetShape())) {
-            auto matrix  = nav->get_hmatrix();
-            double* tran = matrix.GetTranslation();
-            double* rot  = matrix.GetRotationMatrix();
-            pos_3d centre;
-            centre.SetCoordinates(tran);
-            dir_3d halfsize(0, 0, tube_shape->GetDZ());
-            dir_3d globalhalfsize = nav->to_master(halfsize);
-            auto w                = std::make_unique<wire>();
-            w->parent             = stat.get();
-            w->head               = centre + globalhalfsize;
-            w->tail               = centre - globalhalfsize;
-            w->max_radius         = tube_shape->GetRmax();
-            w->geo                = id(geo_path(smodname.c_str()) / plname / tname);
-            // FIXME temporary implementation of w->channel
-            w->daq_channel.subdetector = STT;
-            w->daq_channel.link = w->geo.stt.supermodule;
-            w->daq_channel.channel = (uint32_t(w->geo.stt.plane) << 16) | uint32_t(w->geo.stt.tube);
-            w->aabb = geoinfo::tracker_info::wire::AABB(*w);
-            stat->daq_link = w->geo.stt.supermodule;
-            stat->wires.emplace_back(std::move(w));
+        if (plname.find("target") != std::string::npos) {
+          if (auto* target_shape = dynamic_cast<TGeoBBox*>(plane->GetVolume()->GetShape())) {
+            stat->target_box     = 2.0 * dir_3d(target_shape->GetDX(), target_shape->GetDY(), target_shape->GetDZ());
+            stat->target_density = plane->GetVolume()->GetMaterial()->GetDensity() / 6.24e24;
           } else {
-            UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
+            UFW_ERROR("Target shape is not a Box");
           }
-        });
+        } else if (plname.find("plane") != std::string::npos) {
+          nav->cd(sttpath / smodname / plname);
+          nav->for_each_node([&](auto tube) {
+            std::string tname = tube->GetName();
+            nav->cd(sttpath / smodname / plname / tname);
+            if (auto* tube_shape = dynamic_cast<TGeoTube*>(tube->GetVolume()->GetShape())) {
+              auto matrix  = nav->get_hmatrix();
+              double* tran = matrix.GetTranslation();
+              double* rot  = matrix.GetRotationMatrix();
+              pos_3d centre;
+              centre.SetCoordinates(tran);
+              dir_3d halfsize(0, 0, tube_shape->GetDZ());
+              dir_3d globalhalfsize = nav->to_master(halfsize);
+              auto w                = std::make_unique<wire>();
+              w->parent             = stat.get();
+              w->head               = centre + globalhalfsize;
+              w->tail               = centre - globalhalfsize;
+              w->max_radius         = tube_shape->GetRmax();
+              w->geo                = id(geo_path(smodname.c_str()) / plname / tname);
+              // FIXME temporary implementation of w->channel
+              w->daq_channel.subdetector = STT;
+              w->daq_channel.link        = w->geo.stt.supermodule;
+              w->daq_channel.channel     = (uint32_t(w->geo.stt.plane) << 16) | uint32_t(w->geo.stt.tube);
+              w->aabb                    = geoinfo::tracker_info::wire::AABB(*w);
+              stat->daq_link             = w->geo.stt.supermodule;
+              stat->wires.emplace_back(std::move(w));
+            } else {
+              UFW_ERROR("STT tube '{}' has unsupported shape type.", tname);
+            }
+          });
+        }
       });
 
       stat->set_wire_adjacency();
@@ -89,8 +114,18 @@ namespace sand {
     });
   }
 
+  /// @brief Default destructor.
   geoinfo::stt_info::~stt_info() = default;
 
+  /**
+   * @brief Decodes an STT geometry path into a geometry identifier.
+   *
+   * Parses the supermodule, plane (X, Y, or the second X of tracker-only
+   * modules) and tube indices out of the path tokens.
+   *
+   * @param gp The STT geometry path.
+   * @return The decoded geo_id.
+   */
   geo_id geoinfo::stt_info::id(const geo_path& gp) const {
     geo_id gi;
     auto path      = gp;
@@ -110,13 +145,18 @@ namespace sand {
         gi.stt.plane = 2;
       }
       gi.stt.tube = std::stoi(straw.substr(i5 + 1));
-      
+
     } else {
       UFW_ERROR("Path '{}' is incorrectly formatted for STT.", gp);
     }
     return gi;
   }
 
+  /**
+   * @brief Builds the STT geometry path for a geometry identifier.
+   * @param gi The STT geometry identifier.
+   * @return The corresponding geometry path.
+   */
   geo_path geoinfo::stt_info::path(geo_id gi) const {
     // TODO these path names are quite poor choices, heavy repetitions etc... they should be changed in gegede
     UFW_ASSERT(gi.subdetector == STT, "Subdetector must be STT");
@@ -157,6 +197,11 @@ namespace sand {
     return gp;
   }
 
+  /**
+   * @brief Looks up the STT wire with a given geometry id.
+   * @param id The wire geometry id.
+   * @return Pointer to the matching wire, or nullptr if none is found.
+   */
   const geoinfo::stt_info::wire* geoinfo::stt_info::get_wire_by_id(const geo_id& id) const {
     for (const auto& station_ptr : stations()) {
       for (const auto& wire_ptr : station_ptr->wires) {

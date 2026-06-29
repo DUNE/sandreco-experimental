@@ -1,0 +1,5 @@
+sandreco_add_filter(sand_filter_track_in_detector)
+
+target_sources(sand_filter_track_in_detector PRIVATE track_in_detector.cpp)
+
+target_link_libraries(sand_filter_track_in_detector PRIVATE sand_edep_reader ROOT::MathCore)
