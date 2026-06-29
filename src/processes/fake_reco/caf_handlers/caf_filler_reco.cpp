@@ -35,7 +35,8 @@ namespace sand {
   }
 
   ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_gauss_smearing(const ::caf::SRTrueParticle& true_part,
-                                                                    const ::caf::TrueParticleID& id, const double en_res, const double p_res, const double pos_res) {
+                                                                    const ::caf::TrueParticleID& id, const double en_res, const double p_res, 
+                                                                    const double x_res, const double y_res, const double z_res) {
 
     auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
 
@@ -43,10 +44,10 @@ namespace sand {
     // needed since reco.p is a SRVector3D instead true_part.p is a SRLorenztVector
     const ::caf::SRVector3D true_part_mom_vec{true_part.p.px, true_part.p.py, true_part.p.pz};
     
-    reco.E        = gauss_helper.apply_smearing<double, Var::energy>(true_part.p.E, en_res);
-    reco.p        = gauss_helper.apply_smearing<::caf::SRVector3D, Var::momentum>(true_part_mom_vec, p_res);
-    reco.start    = gauss_helper.apply_smearing<::caf::SRVector3D, Var::position>(true_part.start_pos, pos_res);
-    reco.end      = gauss_helper.apply_smearing<::caf::SRVector3D, Var::position>(true_part.end_pos, pos_res);
+    reco.E        = gauss_helper.apply_energy_smearing(true_part.p.E, en_res);
+    reco.p        = gauss_helper.apply_momentum_smearing(true_part.p, p_res);
+    reco.start    = gauss_helper.apply_pos_smearing(true_part.start_pos, x_res, y_res, z_res);
+    reco.end      = gauss_helper.apply_pos_smearing(true_part.end_pos, x_res, y_res, z_res);
 
     if (is_track_like(true_part.pdg)) {
       reco.origRecoObjType = ::caf::RecoObjType::kTrack;

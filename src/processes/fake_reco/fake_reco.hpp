@@ -29,9 +29,11 @@ namespace sand {
     double m_intrinsic_pos_res_l;  ///< Longitudinal hit resolution for smearing (in meters)
     double m_hit_energy_thr;       ///< Energy threshold for hits to be included in smearing (in MeV)
     double m_b_field_magnitude;    ///< Magnitude of the magnetic field (in Tesla)
-    double m_energy_res;    ///< Energy resolution
-    double m_momentum_res;  ///< Magnitude of the magnetic field (in Tesla)
-    double m_position_res;  ///< Magnitude of the magnetic field (in Tesla)
+    double m_energy_res;           ///< Energy resolution (%)
+    double m_momentum_res;         ///< Momentum resolution (%)
+    double m_x_res;                ///< x coordinate resolution
+    double m_y_res;                ///< y coordinate resolution
+    double m_z_res;                ///< z coordinate resolution
 
     /// @brief Build map of edep-sim primaries grouped by interaction
     [[nodiscard]] std::vector<EdepInteractionRange> make_edep_interaction_map() const;

@@ -27,7 +27,9 @@
         "mode" : "gauss_smearing",
         "energy_resolution" : 0.057,
         "momentum_resolution" : 0.03,
-        "position_resolution" : 200e-3
+        "x_resolution" : 200e-3,
+        "y_resolution" : 200e-3,
+        "z_resolution" : 200e-3
       },
       "reqs": {},
       "prods": {

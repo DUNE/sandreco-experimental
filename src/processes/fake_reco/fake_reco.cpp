@@ -19,9 +19,11 @@ namespace sand {
     m_intrinsic_pos_res_l = cfg.value("intrinsic_pos_res_l", 0.);
     m_hit_energy_thr = cfg.value("hit_energy_thr", 0.);
     m_b_field_magnitude = cfg.value("b_field_magnitude", 0.);
-    m_energy_res = cfg.value("energy_res", 0.);
-    m_momentum_res = cfg.value("momentum_res", 0.);
-    m_position_res = cfg.value("position_res", 0.);
+    m_energy_res = cfg.value("energy_resolution", 0.);
+    m_momentum_res = cfg.value("momentum_resolution", 0.);
+    m_x_res = cfg.value("x_resolution", 0.);
+    m_y_res = cfg.value("y_resolution", 0.);
+    m_z_res = cfg.value("z_resolution", 0.);
   }
 
   void fake_reco::run() {
@@ -207,7 +209,7 @@ namespace sand {
     } else if (m_reco_mode == "gauss_smearing") {
       UFW_INFO("Using reconstruction from truth with fast smearing");
       make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
-        return CAFFiller<::caf::SRRecoParticle>::from_true_with_gauss_smearing(true_prim, prim_id, m_energy_res, m_position_res, m_momentum_res);
+        return CAFFiller<::caf::SRRecoParticle>::from_true_with_gauss_smearing(true_prim, prim_id, m_energy_res, m_momentum_res, m_x_res, m_y_res, m_z_res);
       };
     } else {
         UFW_ERROR("You need to specify which reco mode you want to use");
