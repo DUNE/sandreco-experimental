@@ -107,6 +107,9 @@ namespace sand {
 
     [[nodiscard]] static ::caf::SRInteraction from_true(const ::caf::SRTrueInteraction& true_ixn,
                                                         std::size_t truth_index);
+
+    [[nodiscard]] static ::caf::SRInteraction from_true_with_gauss_smearing(const ::caf::SRTrueInteraction& true_ixn,
+                                                        std::size_t truth_index, const double en_res, const double x_res, const double y_res, const double z_res);
   };
 
 } // namespace sand

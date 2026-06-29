@@ -41,22 +41,12 @@ namespace sand {
     auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
 
     auto gauss_helper = GaussSmearing();
-    // needed since reco.p is a SRVector3D instead true_part.p is a SRLorenztVector
-    const ::caf::SRVector3D true_part_mom_vec{true_part.p.px, true_part.p.py, true_part.p.pz};
     
     reco.E        = gauss_helper.apply_energy_smearing(true_part.p.E, en_res);
     reco.p        = gauss_helper.apply_momentum_smearing(true_part.p, p_res);
     reco.start    = gauss_helper.apply_pos_smearing(true_part.start_pos, x_res, y_res, z_res);
     reco.end      = gauss_helper.apply_pos_smearing(true_part.end_pos, x_res, y_res, z_res);
 
-    if (is_track_like(true_part.pdg)) {
-      reco.origRecoObjType = ::caf::RecoObjType::kTrack;
-    } else if (is_shower_like(true_part.pdg)) {
-      reco.origRecoObjType = ::caf::RecoObjType::kShower;
-    }
-    // else the particle is neutral cannot be reconstructed
-
-    add_truth_match(reco, id);
     return reco;
   }
 
@@ -131,6 +121,18 @@ namespace sand {
 
     reco.truth.push_back(truth_index);
     reco.truthOverlap.push_back(1.0f);
+
+    return reco;
+  }
+
+  ::caf::SRInteraction CAFFiller<::caf::SRInteraction>::from_true_with_gauss_smearing(const ::caf::SRTrueInteraction& true_ixn,
+                                                                std::size_t truth_index, const double en_res, const double x_res, 
+                                                                const double y_res, const double z_res) {
+    auto reco = CAFFiller<::caf::SRInteraction>::from_true(true_ixn, truth_index);
+
+    auto gauss_helper = GaussSmearing();
+    reco.vtx          = gauss_helper.apply_pos_smearing(true_ixn.vtx, x_res, y_res, z_res);
+    reco.Enu.calo     = gauss_helper.apply_energy_smearing(true_ixn.E, en_res);
 
     return reco;
   }
