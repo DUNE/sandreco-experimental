@@ -8,53 +8,63 @@ an `SRTruthBranch` (`truth_branch_wrapper`) for downstream CAF consumers (`fake_
 ```mermaid
 flowchart TB
     subgraph genie_reader["genie_reader"]
-        events["events_[i]<br/>GRooTrackerEvent"]
-        stdhep["stdHeps_[i]<br/>StdHep"]
-        flux["nuParents_[i]<br/>NumiFlux<br/>(non ancora wired)"]
+        events["events_[i]
+GRooTrackerEvent"]
+        stdhep["stdHeps_[i]
+StdHep"]
+        flux["nuParents_[i]
+NumiFlux
+(non ancora wired)"]
     end
 
     subgraph edep_reader["edep_reader (EDEPTree)"]
-        children["GetChildrenTrajectories()<br/>primaries post-FSI"]
-        traj["GetTrajectory(id)<br/>+ GetTrajectoryEnd()<br/>secondaries"]
+        children["GetChildrenTrajectories()
+tutte le primarie"]
+        traj["GetTrajectory(id)
++ GetTrajectoryEnd()
+secondarie"]
     end
 
     subgraph truth_filler["truth_filler"]
-        parse["evtcode_parser<br/>EventSummary"]
+        mir["make_interaction_ranges()"]
+        parse["evtcode_parser
+EventSummary"]
         kin["calculate_kinematics()"]
         tif["true_interaction_from_genie()"]
         tpf["true_particle_from_genie()"]
-        tpe["true_particle_from_edep()"]
         mp["make_primaries()"]
         mpp["make_prefsi_particles()"]
         ms["make_secondaries()"]
     end
 
     subgraph output["output"]
-        tb["truth_branch<br/>(SRTruthBranch)"]
+        tb["truth_branch
+(SRTruthBranch)"]
     end
 
-    events -->|"EvtNum_, EvtCode_,<br/>EvtVtx_, EvtXSec_,<br/>EvtWght_"| tif
+    children --> mir
     events -->|"EvtCode_"| parse
-    stdhep -->|"P4_, Pdg_, Status_"| tif
+    events -->|"EvtNum_, EvtCode_,
+EvtVtx_, EvtXSec_, EvtWght_"| tif
+    stdhep -->|"P4_, daughters"| tif
     stdhep -->|"P4_, Pdg_"| tpf
     stdhep -->|"Pdg_, Status_"| mpp
-    children -->|"EDEPTrajectory"| mp
-    children -->|"EDEPTrajectory"| ms
-    parse -->|"probe_pdg, target_pdg,<br/>iscc, mode..."| tif
+    mir -->|"interaction_ranges"| tif
+    parse -->|"probe_pdg, target_pdg,
+iscc, mode..."| tif
     kin -->|"Q2, q0, W, x, y"| tif
 
-    tif --> tb
+    tif -->|"SRTrueInteraction"| tb
     tpf --> mpp
     mpp -->|"prefsi"| tb
-    mp -->|"prim, nproton,<br/>nneutron, npip,<br/>npim, npi0"| tb
+    mp -->|"prim, nproton,
+nneutron, npip,
+npim, npi0"| tb
     mp -->|"ancestor_ids"| ms
+    children --> mp
+    children --> ms
     traj --> ms
     ms -->|"sec"| tb
-
-    classDef avail fill:#2d5a27,stroke:#4a9,color:#eee
-    classDef todo fill:#5a4a27,stroke:#a94,color:#eee
-    class events,stdhep,children,traj,tb avail
-    class flux todo
 ```
 ---
 
