@@ -158,7 +158,7 @@ namespace sand {
 
 
   void fake_reco::fill_reco_objects(const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
-                                    const ::caf::SRTrueParticle &true_part, const ::caf::TrueParticleID &part_id, 
+                                    const ::caf::SRTrueParticle &true_part, const ::caf::TrueParticleID &part_id,
                                     const bool is_primary,::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const {
     // Create SRRecoParticle from truth
     auto reco_part = make_reco(true_part, part_id);
@@ -169,12 +169,12 @@ namespace sand {
     // Create SRTrack or SRShower based on particle type
     if (is_track_like(true_part.pdg)) {
       auto track = CAFFiller<::caf::SRTrack>::from_true(true_part, part_id);
-      sand_ixn.tracks.push_back(std::move(track));
-      sand_ixn.ntracks++;
+      sand_ixn.tracker.tracks.push_back(std::move(track));
+      sand_ixn.tracker.ntracks++;
     } else if (is_shower_like(true_part.pdg)) {
       auto shower = CAFFiller<::caf::SRShower>::from_true(true_part, part_id);
-      sand_ixn.showers.push_back(std::move(shower));
-      sand_ixn.nshowers++;
+      sand_ixn.tracker.showers.push_back(std::move(shower));
+      sand_ixn.tracker.nshowers++;
     } else {
       UFW_DEBUG("Particle PDG {} is neither track-like nor shower-like, skipping reco object", true_part.pdg);
     }
@@ -217,7 +217,7 @@ namespace sand {
     for(std::size_t i{}; i !=sec_count; ++i){
       const auto& true_sec  = true_ixn.sec[i];
       const auto& sec_id    = true_sec.ancestor_id;
-      
+
       fill_reco_objects(make_reco, true_sec, sec_id, false, reco_ixn, sand_ixn);
     }
   }
@@ -258,12 +258,12 @@ namespace sand {
 
     for (std::size_t i{}, nd_ixn_size = m_caf->nd.sand.ixn.size(); i != nd_ixn_size; ++i) {
       const auto& sand_ixn = m_caf->nd.sand.ixn[i];
-      UFW_ASSERT(sand_ixn.tracks.size() == sand_ixn.ntracks,
-                 "Interaction {}: ntracks ({}) doesn't match tracks.size() ({})", i, sand_ixn.ntracks,
-                 sand_ixn.tracks.size());
-      UFW_ASSERT(sand_ixn.showers.size() == sand_ixn.nshowers,
-                 "Interaction {}: nshowers ({}) doesn't match showers.size() ({})", i, sand_ixn.nshowers,
-                 sand_ixn.showers.size());
+      UFW_ASSERT(sand_ixn.tracker.tracks.size() == sand_ixn.tracker.ntracks,
+                 "Interaction {}: ntracks ({}) doesn't match tracks.size() ({})", i, sand_ixn.tracker.ntracks,
+                 sand_ixn.tracker.tracks.size());
+      UFW_ASSERT(sand_ixn.tracker.showers.size() == sand_ixn.tracker.nshowers,
+                 "Interaction {}: nshowers ({}) doesn't match showers.size() ({})", i, sand_ixn.tracker.nshowers,
+                 sand_ixn.tracker.showers.size());
     }
   }
 
