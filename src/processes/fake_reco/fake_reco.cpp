@@ -9,7 +9,8 @@
 namespace sand {
 
   fake_reco::fake_reco()
-    : process{{{"in_truth", "sand::caf::truth_branch_wrapper"}}, {{"output_caf", "sand::caf::standard_record_wrapper"}}} {}
+    : process{{{"in_truth", "sand::caf::truth_branch_wrapper"}},
+              {{"output_caf", "sand::caf::standard_record_wrapper"}}} {}
 
   void fake_reco::configure(const ufw::config& cfg) {
     process::configure(cfg);
@@ -51,12 +52,11 @@ namespace sand {
       process_interaction_particles(true_ixn, reco_ixn, sand_ixn);
 
       // Compute direction from sum of particle momenta
-      auto sum_mom =
-          std::accumulate(reco_ixn.part.sandreco.begin(), reco_ixn.part.sandreco.end(), std::make_tuple(0.f, 0.f, 0.f),
-                          [](auto acc, const auto& part) {
-                            auto [px, py, pz] = acc;
-                            return std::make_tuple(px + part.p.x, py + part.p.y, pz + part.p.z);
-                          });
+      auto sum_mom = std::accumulate(reco_ixn.part.sandreco.begin(), reco_ixn.part.sandreco.end(),
+                                     std::make_tuple(0.f, 0.f, 0.f), [](auto acc, const auto& part) {
+                                       auto [px, py, pz] = acc;
+                                       return std::make_tuple(px + part.p.x, py + part.p.y, pz + part.p.z);
+                                     });
 
       auto [sum_px, sum_py, sum_pz] = sum_mom;
       reco_ixn.dir.part_mom_sum     = normalize_to_direction(sum_px, sum_py, sum_pz);
@@ -65,9 +65,10 @@ namespace sand {
     assert_sizes();
   }
 
-  void fake_reco::fill_reco_objects(const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
-                                    const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& part_id,
-                                    bool is_primary, ::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const {
+  void fake_reco::fill_reco_objects(
+      const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
+      const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& part_id, bool is_primary,
+      ::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const {
     auto reco_part    = make_reco(true_part, part_id);
     reco_part.primary = is_primary;
     reco_ixn.part.sandreco.push_back(std::move(reco_part));
@@ -75,12 +76,12 @@ namespace sand {
 
     if (is_track_like(true_part.pdg)) {
       auto track = CAFFiller<::caf::SRTrack>::from_true(true_part, part_id);
-      sand_ixn.tracks.push_back(std::move(track));
-      sand_ixn.ntracks++;
+      sand_ixn.tracker.tracks.push_back(std::move(track));
+      sand_ixn.tracker.ntracks++;
     } else if (is_shower_like(true_part.pdg)) {
       auto shower = CAFFiller<::caf::SRShower>::from_true(true_part, part_id);
-      sand_ixn.showers.push_back(std::move(shower));
-      sand_ixn.nshowers++;
+      sand_ixn.tracker.showers.push_back(std::move(shower));
+      sand_ixn.tracker.nshowers++;
     } else {
       UFW_DEBUG("Particle PDG {} is neither track-like nor shower-like, skipping reco object", true_part.pdg);
     }
@@ -104,8 +105,8 @@ namespace sand {
       make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
         const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
         return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(
-            true_prim, prim_id, true_prim_trj, m_intrinsic_pos_res_t, m_intrinsic_pos_res_l,
-            m_hit_energy_thr, m_b_field_magnitude);
+            true_prim, prim_id, true_prim_trj, m_intrinsic_pos_res_t, m_intrinsic_pos_res_l, m_hit_energy_thr,
+            m_b_field_magnitude);
       };
     } else {
       UFW_ERROR("You need to specify which reco mode you want to use");
@@ -123,8 +124,8 @@ namespace sand {
   }
 
   void fake_reco::assert_sizes() const {
-    UFW_ASSERT(m_caf->mc.nu.size() == m_caf->mc.nnu,
-               "mc.nnu ({}) doesn't match mc.nu.size() ({})", m_caf->mc.nnu, m_caf->mc.nu.size());
+    UFW_ASSERT(m_caf->mc.nu.size() == m_caf->mc.nnu, "mc.nnu ({}) doesn't match mc.nu.size() ({})", m_caf->mc.nnu,
+               m_caf->mc.nu.size());
 
     UFW_ASSERT(m_caf->common.ixn.sandreco.size() == static_cast<std::size_t>(m_caf->common.ixn.nsandreco),
                "common.ixn.nsandreco ({}) doesn't match common.ixn.sandreco.size() ({})", m_caf->common.ixn.nsandreco,
@@ -154,12 +155,12 @@ namespace sand {
 
     for (std::size_t i{}, nd_ixn_size = m_caf->nd.sand.ixn.size(); i != nd_ixn_size; ++i) {
       const auto& sand_ixn = m_caf->nd.sand.ixn[i];
-      UFW_ASSERT(sand_ixn.tracks.size() == sand_ixn.ntracks,
-                 "Interaction {}: ntracks ({}) doesn't match tracks.size() ({})", i, sand_ixn.ntracks,
-                 sand_ixn.tracks.size());
-      UFW_ASSERT(sand_ixn.showers.size() == sand_ixn.nshowers,
-                 "Interaction {}: nshowers ({}) doesn't match showers.size() ({})", i, sand_ixn.nshowers,
-                 sand_ixn.showers.size());
+      UFW_ASSERT(sand_ixn.tracker.tracks.size() == sand_ixn.tracker.ntracks,
+                 "Interaction {}: ntracks ({}) doesn't match tracks.size() ({})", i, sand_ixn.tracker.ntracks,
+                 sand_ixn.tracker.tracks.size());
+      UFW_ASSERT(sand_ixn.tracker.showers.size() == sand_ixn.tracker.nshowers,
+                 "Interaction {}: nshowers ({}) doesn't match showers.size() ({})", i, sand_ixn.tracker.nshowers,
+                 sand_ixn.tracker.showers.size());
     }
   }
 
