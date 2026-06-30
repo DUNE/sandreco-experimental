@@ -19,6 +19,8 @@
 
 #include "caf_filler_common.hpp"
 
+class EDEPTrajectory;
+
 namespace sand {
 
   /// @brief Primary template for CAF structure fillers (specializations only)
@@ -30,7 +32,6 @@ namespace sand {
   /// @brief Fills SRRecoParticle from truth (fake reconstruction)
   template <>
   struct CAFFiller<::caf::SRRecoParticle> {
-
     static ufw::context::random_engine& random_engine() { return ufw::context::current()->engine(); };
 
     CAFFiller() = delete;
@@ -38,10 +39,10 @@ namespace sand {
     [[nodiscard]] static ::caf::SRRecoParticle from_true(const ::caf::SRTrueParticle& true_part,
                                                          const ::caf::TrueParticleID& id);
 
-    [[nodiscard]] static ::caf::SRRecoParticle from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part,
-                                                                          const ::caf::TrueParticleID& id, 
-                                                                          const EDEPTrajectory& true_part_trj,
-                                                                          double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude);
+    [[nodiscard]] static ::caf::SRRecoParticle
+    from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& id,
+                               const EDEPTrajectory& true_part_trj, double intrinsic_pos_res_t,
+                               double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude);
   };
 
   /// @brief Fills SRTrack from truth (fake reconstruction)
