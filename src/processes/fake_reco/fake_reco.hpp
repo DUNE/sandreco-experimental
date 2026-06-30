@@ -43,6 +43,7 @@ namespace sand {
 
     /// @brief Fill the reco caf objects for a particle
     void fill_reco_objects(const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
+                          const std::function<::caf::SRTrack(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco_track,
                           const ::caf::SRTrueParticle &true_part, const ::caf::TrueParticleID &part_id, 
                           const bool is_primary, ::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const;
 
