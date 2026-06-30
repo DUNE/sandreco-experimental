@@ -1,8 +1,7 @@
 #ifndef SAND_COMMON_TRUTH_FILLER_HPP
 #define SAND_COMMON_TRUTH_FILLER_HPP
 
-#include <edep_reader/edep_reader.hpp>
-#include <genie_reader/genie_reader.hpp>
+#include <common/version.h>
 
 #include <ufw/process.hpp>
 

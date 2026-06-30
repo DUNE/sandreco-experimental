@@ -2,6 +2,8 @@
 #include "truth_filler_details.hpp"
 
 #include <caf/caf_wrapper.hpp>
+#include <edep_reader/edep_reader.hpp>
+#include <genie_reader/genie_reader.hpp>
 
 #include <ufw/factory.hpp>
 #include <ufw/utils.hpp>

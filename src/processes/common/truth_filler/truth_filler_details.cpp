@@ -1,8 +1,14 @@
 #include "truth_filler_details.hpp"
 #include "evtcode_parser.hpp"
 
+#include <sand.h>
+
 #include <edep_reader/EDEPTrajectory.h>
 #include <edep_reader/EDEPTree.h>
+#include <genie_reader/GenieWrapper.h>
+
+#include <duneanaobj/StandardRecord/SRTrueInteraction.h>
+#include <duneanaobj/StandardRecord/SRTrueParticle.h>
 
 #include <TDatabasePDG.h>
 
@@ -43,6 +49,11 @@ namespace sand::common::filler_details {
       return k;
     }
   } // namespace
+
+  bool is_darkneutrino_pdg(int pdg) {
+    const int abs_pdg = std::abs(pdg);
+    return abs_pdg == 2000030000;
+  }
 
   std::vector<InteractionRange> make_interaction_ranges(Primaries const& primaries) {
     std::vector<InteractionRange> output;

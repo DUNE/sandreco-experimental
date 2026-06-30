@@ -1,13 +1,16 @@
 #ifndef SAND_TRUTH_FILLER_DETAILS_HPP
 #define SAND_TRUTH_FILLER_DETAILS_HPP
 
-#include <genie_reader/GenieWrapper.h>
-#include <sand.h>
-
-#include <duneanaobj/StandardRecord/SRTrueInteraction.h>
-#include <duneanaobj/StandardRecord/SRTrueParticle.h>
-
 #include <vector>
+
+namespace caf {
+  class SRTrueInteraction;
+  class SRTrueParticle;
+  class TrueParticleID;
+} // namespace caf
+
+class StdHep;
+class GRooTrackerEvent;
 
 class EDEPTree;
 class EDEPTrajectory;
@@ -37,10 +40,7 @@ namespace sand::common::filler_details {
 
   [[nodiscard]] bool is_lepton_pdg(int pdg);
 
-  [[nodiscard]] inline bool is_darkneutrino_pdg(int pdg) {
-    const int abs_pdg = std::abs(pdg);
-    return abs_pdg == 2000030000;
-  }
+  [[nodiscard]] bool is_darkneutrino_pdg(int pdg);
 
   [[nodiscard]] inline bool is_bindino_pdg(int pdg) { return pdg == 2000000101; }
 
