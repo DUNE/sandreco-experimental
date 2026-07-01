@@ -25,6 +25,7 @@ namespace sand::reco {
     struct segment {
       dir_3d ds;       //< segment [mm]
       double sigma_xs; //< one sigma uncertainty radius around ds [mm]
+      dir_3d q_r;      //< charge-curvature [e/mm]
       double dE;       //< visible energy [MeV]
       timerange dT;    //< time span of the segment [ns]
     };
