@@ -24,7 +24,7 @@
   "run": [
     {
       "sand::fake_reco": {
-        "mode" : "gluck_smearing",
+        "mode" : "total_smearing",
         "intrinsic_pos_res_t" : 200e-3,
         "intrinsic_pos_res_l" : 2,
         "hit_energy_thr" : 250e-6,
