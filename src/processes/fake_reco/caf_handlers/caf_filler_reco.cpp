@@ -74,7 +74,6 @@ namespace sand {
       double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude) {
     
     // start by filling all fields from truth
-    // auto reco       = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
     auto reco_track = CAFFiller<::caf::SRTrack>::from_true(true_part, id);
 
     // return from_true for all particle except muons (temporarily)
