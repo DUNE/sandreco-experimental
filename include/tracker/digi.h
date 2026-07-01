@@ -12,16 +12,14 @@ namespace sand::tracker {
      * @brief A signal recorded by a tracker channel.
      */
     struct signal : reco::digi<sand::truth_index> {
-
       signal() {}
 
-      signal(channel_id ch, time t, double q) :
-        reco::digi<sand::truth_index>(ch, t, source::sim), m_adc(q) {}
+      signal(channel_id ch, time t, double q) : reco::digi<sand::truth_index>(ch, t, source::sim), m_adc(q) {}
       /**
        * @brief Time-to-digital converter (TDC) value.
        * @unit ns
        */
-      double tdc() const { return t().best(); }
+      double tdc() const { return t(); }
 
       /**
        * @brief Analog-to-digital converter (ADC) value.
@@ -29,7 +27,7 @@ namespace sand::tracker {
        */
       double adc() const { return m_adc; }
 
-    private:
+     private:
       double m_adc = NAN;
     };
 

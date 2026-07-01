@@ -13,17 +13,12 @@ namespace sand::reco {
    */
   template <typename T = sand::truth_index>
   class digi : public sand::truth<T> {
-
-  public:
-    using time = timerange;
-    using truth_type = typename sand::truth<T>;
+   public:
+    using time          = double;
+    using truth_type    = typename sand::truth<T>;
     using true_hit_type = typename truth_type::true_hit_type;
 
-    enum class source {
-      unknown,
-      sim,
-      det
-    };
+    enum class source { unknown, sim, det };
 
    public:
     digi() : m_channel(), m_time(NAN), m_source(source::unknown) {}
@@ -32,7 +27,8 @@ namespace sand::reco {
 
     digi(channel_id c, const time& t, source src) : m_channel(c), m_time(t), m_source(src) {}
 
-    digi(truth_type&& mc, channel_id c, const time& t) : truth_type(mc), m_channel(c), m_time(t), m_source(source::sim) {}
+    digi(truth_type&& mc, channel_id c, const time& t)
+      : truth_type(mc), m_channel(c), m_time(t), m_source(source::sim) {}
 
     channel_id channel() const { return m_channel; }
 
@@ -45,6 +41,5 @@ namespace sand::reco {
     time m_time;
     source m_source;
   };
-
 
 } // namespace sand::reco
