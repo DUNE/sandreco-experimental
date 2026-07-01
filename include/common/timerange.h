@@ -71,11 +71,19 @@ namespace sand::reco {
 
   inline bool operator< (const timerange& lhs, const timerange& rhs) { return lhs.best() < rhs.best(); }
 
+  inline bool operator< (const timerange& lhs, double rhs) { return lhs.best() < rhs; }
+
+  inline bool operator< (double lhs, const timerange& rhs) { return lhs < rhs.best(); }
+
   inline double operator- (const timerange& lhs, const timerange& rhs) { return lhs.best() - rhs.best(); }
 
   inline bool consistent(const timerange& lhs, const timerange& rhs) {
     return !(lhs.latest() < rhs.earliest() || rhs.latest() < lhs.earliest());
   }
+
+  inline bool consistent(const timerange& lhs, double rhs) { return !(lhs.latest() < rhs || rhs < lhs.earliest()); }
+
+  inline bool consistent(double lhs, const timerange& rhs) { return !(lhs < rhs.earliest() || rhs.latest() < lhs); }
 
   inline bool close(const timerange& lhs, const timerange& rhs) {
     return lhs.contains(rhs.best()) && rhs.contains(lhs.best());
