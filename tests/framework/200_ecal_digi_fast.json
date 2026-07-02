@@ -53,6 +53,13 @@
       }
     },
     {
+      "sand::test::test_ecal_fast_digi": { },
+      "reqs": { 
+        "digi": "ecal_digits"
+      },
+      "prods": {}
+    },
+    {
       "sand::root::tree_streamer": {
         "uri": "test/ecal_fast_digi.root",
         "tree": "ecal_fast_digi"
