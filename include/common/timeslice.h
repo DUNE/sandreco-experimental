@@ -1,3 +1,8 @@
+
+#pragma once
+
+#include <common/digi.h>
+#include <common/sand.h>
 #include <common/timerange.h>
 
 namespace sand::reco {
