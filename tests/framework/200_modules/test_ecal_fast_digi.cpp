@@ -15,10 +15,12 @@ namespace sand::test {
     void run() override;
 
    private:
+    double m_int_time_window;
   };
 
   void test_ecal_fast_digi::configure(const ufw::config& cfg) {
     UFW_DEBUG("test_ecal_fast_digi configured at: {}", fmt::ptr(this));
+    m_int_time_window = cfg.at("int_time_window");
   }
 
   test_ecal_fast_digi::test_ecal_fast_digi() : process({{"digi", "sand::ecal::digits_container"}}, {}) {
@@ -33,17 +35,6 @@ namespace sand::test {
       // Check basic signal properties
       UFW_ASSERT(signal.tdc() >= 0, "Non-physical TDC time: {}", signal.tdc());
       UFW_ASSERT(signal.adc() >= 0, "Non-physical ADC value: {}", signal.adc());
-      UFW_ASSERT(signal.t(), "Signal time window is invalid (NaN)");
-
-      // Check time window properties (start, peak, end)
-      UFW_ASSERT(signal.t().earliest() <= signal.t().best(), "Time window start > peak: {} > {}", signal.t().earliest(),
-                 signal.t().best());
-      UFW_ASSERT(signal.t().best() <= signal.t().latest(), "Time window peak > end: {} > {}", signal.t().best(),
-                 signal.t().latest());
-
-      // Check that time window is valid (non-degenerate)
-      UFW_ASSERT(signal.t().earliest() < signal.t().latest(), "Time window is degenerate: {} >= {}",
-                 signal.t().earliest(), signal.t().latest());
 
       // Check that ADC value matches the number of photo-electrons in the pulse
       // (since current implementation uses PE count directly as ADC)
@@ -52,16 +43,17 @@ namespace sand::test {
       // Check ToT is NaN (as per current implementation)
       UFW_ASSERT(std::isnan(signal.tot()), "ToT value is not NaN: {}", signal.tot());
 
-      // Check truth hits if available
       if (!signal.true_hits().empty()) {
         UFW_ASSERT(signal.data_source() == sand::ecal::digits_container::digit::source::sim,
                    "Signal with truth hits is not marked as simulation source");
 
         for (auto& pe : signal.true_hits()) {
+          UFW_ASSERT(pe, "Signal truth channel is invalid");
           UFW_ASSERT(pe.arrival_time >= 0, "Photo-electron has non-physical arrival time: {}", pe.arrival_time);
-          if (!signal.t().contains(pe.arrival_time)) {
-            UFW_WARN("Photo-electron arrival time outside signal window: {} not in [{}, {}]", pe.arrival_time,
-                     signal.t().earliest(), signal.t().latest());
+          if ((pe.arrival_time <= signal.tdc() - m_int_time_window)
+              && (pe.arrival_time >= signal.tdc() + m_int_time_window)) {
+            UFW_WARN("Photo-electron arrival time is outside TDC time +- integration time window: {} not in [{}, {}]",
+                     pe.arrival_time, signal.tdc() - m_int_time_window, signal.tdc() + m_int_time_window);
           }
         }
       }

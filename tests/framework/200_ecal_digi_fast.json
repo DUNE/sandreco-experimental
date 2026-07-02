@@ -53,7 +53,9 @@
       }
     },
     {
-      "sand::test::test_ecal_fast_digi": { },
+      "sand::test::test_ecal_fast_digi": { 
+        "int_time_window": 30.0
+      },
       "reqs": { 
         "digi": "ecal_digits"
       },
