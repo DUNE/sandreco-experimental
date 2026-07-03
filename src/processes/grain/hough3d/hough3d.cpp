@@ -67,7 +67,7 @@ namespace sand::grain {
     uint m_min_points_per_track;
     uint m_max_tracks_per_event;
     std::vector<cl_float4> m_unique_versors;
-    std::vector<uint> m_voting_array;
+    std::vector<cl_uint> m_voting_array;
     cl::Program m_hough_vote_program;
     cl::Kernel m_hough_vote_kernel;
     cl::Program m_distance_program;
@@ -134,7 +134,7 @@ namespace sand::grain {
 
     m_voting_array.assign(m_unique_versors.size() * m_n_xy_bins * m_n_xy_bins, 0);
     UFW_INFO("Size of voting array: {}", m_voting_array.size());
-    UFW_INFO("Memory size of voting array: {} kB", static_cast<float>(sizeof(uint) * m_voting_array.size()) / 1024.0);
+    UFW_DEBUG("Memory size of voting array: {} kB", static_cast<float>(sizeof(cl_uint) * m_voting_array.size()) / 1024.0);
 
     auto& platform = instance<cl::platform>();
     configure_hough_vote(platform);
@@ -144,7 +144,7 @@ namespace sand::grain {
                                                                            m_unique_versors.size() * sizeof(cl_float4),
                                                                            m_unique_versors.data());
     m_buf_voting_array.allocate<CL_MEM_READ_WRITE>(platform.context(),
-                                                   m_voting_array.size() * sizeof(uint));
+                                                   m_voting_array.size() * sizeof(cl_uint));
   }
 
   hough3d::hough3d() : process({{"point_cloud", "sand::grain::point_cloud"}},
@@ -203,7 +203,7 @@ namespace sand::grain {
         // Find maximum
         const size_t max_votes_index =  std::distance(m_voting_array.begin(),
                                                       std::max_element(m_voting_array.begin(), m_voting_array.end()));
-        const uint vote_count = m_voting_array[max_votes_index];
+        const cl_uint vote_count = m_voting_array[max_votes_index];
         const size_t max_versor_index = max_votes_index / (m_n_xy_bins * m_n_xy_bins);
         const size_t remainder = max_votes_index % (m_n_xy_bins * m_n_xy_bins);
         const size_t max_x_index = remainder / m_n_xy_bins;
