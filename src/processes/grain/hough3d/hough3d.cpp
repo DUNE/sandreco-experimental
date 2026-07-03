@@ -134,7 +134,7 @@ namespace sand::grain {
 
     m_voting_array.assign(m_unique_versors.size() * m_n_xy_bins * m_n_xy_bins, 0);
     UFW_INFO("Size of voting array: {}", m_voting_array.size());
-    UFW_DEBUG("Memory size of voting array: {} MB", sizeof(cl_uint) * m_voting_array.size()) / (1024 * 1024);
+    UFW_DEBUG("Memory size of voting array: {} MB", sizeof(cl_uint) * m_voting_array.size() / (1024 * 1024));
 
     auto& platform = instance<cl::platform>();
     configure_hough_vote(platform);
