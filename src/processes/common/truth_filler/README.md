@@ -1,7 +1,7 @@
 # truth_filler
 
-Monte Carlo truth filler for SAND. Reads GENIE (`genie_reader`) and edep-sim (`edep_reader`) and produces
-an `SRTruthBranch` (`truth_branch_wrapper`) for downstream CAF consumers (`fake_reco`, `caf_streamer`).
+Reads GENIE (`genie_reader`) and edep-sim (`edep_reader`) and produces
+an `SRTruthBranch` (`truth_branch_wrapper`) for downstream CAF consumers (`fast_reco`, `caf_streamer`).
 
 ## Data flow
 
@@ -14,15 +14,13 @@ GRooTrackerEvent"]
 StdHep"]
         flux["nuParents_[i]
 NumiFlux
-(non ancora wired)"]
+(not wired yet)"]
     end
 
-    subgraph edep_reader["edep_reader (EDEPTree)"]
+    subgraph edep_reader["edep_reader"]
         children["GetChildrenTrajectories()
-tutte le primarie"]
-        traj["GetTrajectory(id)
-+ GetTrajectoryEnd()
-secondarie"]
+all primaries
+(and, recursively, their children)"]
     end
 
     subgraph truth_filler["truth_filler"]
@@ -32,9 +30,12 @@ EventSummary"]
         kin["calculate_kinematics()"]
         tif["true_interaction_from_genie()"]
         tpf["true_particle_from_genie()"]
-        mp["make_primaries()"]
         mpp["make_prefsi_particles()"]
-        ms["make_secondaries()"]
+        btpt["build_true_particle_tree()"]
+        tpe["true_particle_from_edep()"]
+        ast["add_secondary_subtree()
+(recursive: 1 call per tree node,
+at any depth)"]
     end
 
     subgraph output["output"]
@@ -50,6 +51,7 @@ EvtVtx_, EvtXSec_, EvtWght_"| tif
     stdhep -->|"P4_, Pdg_"| tpf
     stdhep -->|"Pdg_, Status_"| mpp
     mir -->|"interaction_ranges"| tif
+    mir -->|"first_idx, count"| btpt
     parse -->|"probe_pdg, target_pdg,
 iscc, mode..."| tif
     kin -->|"Q2, q0, W, x, y"| tif
@@ -57,14 +59,21 @@ iscc, mode..."| tif
     tif -->|"SRTrueInteraction"| tb
     tpf --> mpp
     mpp -->|"prefsi"| tb
-    mp -->|"prim, nproton,
-nneutron, npip,
+
+    children -->|"primaries in the range"| btpt
+    btpt -->|"true_particle_from_edep
+for each primary"| tpe
+    btpt -->|"for each primary's children"| ast
+    ast -->|"true_particle_from_edep
+for the current node"| tpe
+    ast -.->|"recurses over its own children
+(GetChildrenTrajectories)"| ast
+
+    btpt -->|"prim, daughters/daughtersID,
+nproton, nneutron, npip,
 npim, npi0"| tb
-    mp -->|"ancestor_ids"| ms
-    children --> mp
-    children --> ms
-    traj --> ms
-    ms -->|"sec"| tb
+    btpt -->|"sec, parentID/daughtersID
+(arbitrary depth)"| tb
 ```
 ---
 
@@ -108,19 +117,19 @@ Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from
 | `genweight` | `float` | `GRooTrackerEvent::EvtWght_` | dimensionless | |
 | `generator` | `Generator` | Hardcoded `kGENIE` | — | |
 | `xsec_cvwgt` | `float` | Hardcoded `1.0f` | — | Placeholder |
-| **Particle counters** (from primaries, via `make_primaries()`) |||||
+| **Particle counters** (from primaries, via `build_true_particle_tree()`) |||||
 | `nproton` | `int` | PDG 2212 count in `prim` | — | |
 | `nneutron` | `int` | PDG 2112 count in `prim` | — | |
 | `npip` | `int` | PDG 211 (π⁺) count in `prim` | — | |
 | `npim` | `int` | PDG −211 (π⁻) count in `prim` | — | |
 | `npi0` | `int` | PDG 111 (π⁰) count in `prim` | — | |
 | **Particle vectors** |||||
-| `nprim` | `int` | `make_primaries().particles.size()` | — | |
-| `prim` | `vector<SRTrueParticle>` | `make_primaries()` from edep-sim | — | Post-FSI, post-Geant4 |
+| `nprim` | `int` | `build_true_particle_tree().prim.size()` | — | |
+| `prim` | `vector<SRTrueParticle>` | `build_true_particle_tree()` from edep-sim | — | Post-FSI, post-Geant4; each linked to itself via `ancestor_id`, to its direct children via `daughtersID` |
 | `nprefsi` | `int` | `make_prefsi_particles().size()` | — | |
 | `prefsi` | `vector<SRTrueParticle>` | `make_prefsi_particles()` from GENIE StdHep | — | Status `kIStHadronInTheNucleus`, excluding bindino |
-| `nsec` | `int` | `make_secondaries().size()` | — | |
-| `sec` | `vector<SRTrueParticle>` | `make_secondaries()` from edep-sim | — | Geant4 secondaries under primaries |
+| `nsec` | `int` | `build_true_particle_tree().sec.size()` | — | |
+| `sec` | `vector<SRTrueParticle>` | `build_true_particle_tree()` from edep-sim | — | Geant4 descendants of the primaries, **flattened to any depth** (pre-order); each linked to its parent via `parentID`, to its root primary via `ancestor_id`, to its own children via `daughtersID` |
 
 **Filled:** 36 fields
 
@@ -135,8 +144,8 @@ Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from
 | `pdg` | `int` | `EDEPTrajectory::GetPDGCode()` | — | |
 | `G4ID` | `int` | `EDEPTrajectory::GetId()` | — | Geant4 track ID |
 | `interaction_id` | `long int` | Parameter (`ixn_id`) | — | |
-| `ancestor_id` | `TrueParticleID` | Parameter | — | `{ixn, kPrimary, index}` for `prim`; the ancestor's ID for `sec` |
-| `parent` | `int` | `EDEPTrajectory::GetParentId()` | — | Geant4 parent track ID |
+| `ancestor_id` | `TrueParticleID` | Parameter | — | For `prim`: itself, `{sr_ixn, kPrimary, i}`. For `sec`: the root primary's ID, propagated unchanged through the whole subtree |
+| `parent` | `int` | `EDEPTrajectory::GetParentId()` | — | Geant4 parent track ID (raw) |
 | `p` | `SRLorentzVector` | `GetInitialMomentum() × 1e−3` | **GeV/c**, **GeV** | edep-sim stores momentum in MeV |
 | `time` | `double` | First `TrajectoryPoint::GetPosition().T()` | **ns** | No conversion needed |
 | `start_pos` | `SRVector3D` | First `TrajectoryPoint::GetPosition() × 0.1` | **cm** | edep-sim stores positions in mm |
@@ -147,6 +156,20 @@ Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from
 | `end_subprocess` | `unsigned int` | Last `TrajectoryPoint::GetSubprocess()` | — | |
 
 **Filled:** 13 fields
+
+### Tree links (`build_true_particle_tree` / `add_secondary_subtree`) — used for `prim` and `sec`
+
+Set *after* `true_particle_from_edep()`, once the node's own `TrueParticleID` and its
+children are known. This is what makes the whole event tree navigable at any depth
+without ever nesting `SRTrueParticle` objects.
+
+| Field | Type | Source | Notes |
+|-------|------|--------|-------|
+| `parentID` | `TrueParticleID` | The caller's own ID, passed down before recursing | Left unset (`kUnknown`) for `prim` (no SR parent); set for every `sec` |
+| `daughtersID` | `vector<TrueParticleID>` | Return values of the recursive `add_secondary_subtree()` calls on direct children | Direct children only (one level down) |
+| `daughters` | `vector<unsigned int>` | `EDEPTrajectory::GetId()` of direct children | Raw Geant4 track IDs, redundant with `daughtersID` but kept for debugging |
+
+**Filled:** 3 fields (on top of the 13 above)
 
 ### From GENIE StdHep (`true_particle_from_genie`) — used for `prefsi` only
 
@@ -165,24 +188,24 @@ Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from
 
 ### `SRTrueInteraction`
 
-| Field | Reason | Priority |
-|-------|--------|----------|
-| `removalE` | Not available in gRooTracker format (TODO also in ND_CAFMaker) | Low |
-| `t` | Requires `genie::Interaction::Kine().t()` — not in gRooTracker | Low (Coh/Diff only) |
-| `baseline` | Requires neutrino production vertex — available in `NuParent::DecX4_` | Medium (Step 8) |
-| `prod_vtx` | Requires flux info — partially available in `NuParent` / `NumiFlux` | Medium (Step 8) |
-| `parent_pdg` | Available in `NuParent::Pdg_` — not yet wired | Medium (Step 8) |
-| `parent_dcy_mode` | Available in `NuParent::DecMode_` — not yet wired | Medium (Step 8) |
-| `parent_dcy_mom` | Available in `NuParent::DecP4_` — not yet wired | Medium (Step 8) |
-| `parent_dcy_E` | Available in `NuParent::DecP4_` — not yet wired | Medium (Step 8) |
-| `imp_weight` | Available in `NumiFlux::Nimpwt_` — not yet wired | Medium (Step 8) |
+| Field | Reason | 
+|-------|--------|
+| `removalE` | Not available in gRooTracker format (TODO also in ND_CAFMaker) |
+| `t` | Requires `genie::Interaction::Kine().t()` — not in gRooTracker |
+| `baseline` | Requires neutrino production vertex — available in `NuParent::DecX4_` |
+| `prod_vtx` | Requires flux info — partially available in `NuParent` / `NumiFlux` |
+| `parent_pdg` | Available in `NuParent::Pdg_` — not yet wired |
+| `parent_dcy_mode` | Available in `NuParent::DecMode_` — not yet wired |
+| `parent_dcy_mom` | Available in `NuParent::DecP4_` — not yet wired |
+| `parent_dcy_E` | Available in `NuParent::DecP4_` — not yet wired |
+| `imp_weight` | Available in `NumiFlux::Nimpwt_` — not yet wired |
 | `genVersion` | Not exposed | None |
 
 ### `SRTrueParticle`
 
-| Field | Reason | Priority |
-|-------|--------|----------|
-| `daughters` | Available via `EDEPTree::GetTrajectoryEnd()` but not stored (ND_CAFMaker doesn't fill it either) | Low |
+Nothing left unfilled for `prim`/`sec`: since the `build_true_particle_tree()` refactor,
+`parentID`, `daughtersID` and `daughters` are populated for every node in the event tree
+(previously only `ancestor_id`/`parent` were set, and the tree wasn't navigable downward).
 
 ---
 
@@ -195,6 +218,6 @@ Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from
 | edep-sim time | ns | none | ns | `p0.Position.T()` |
 | GENIE StdHep momentum | GeV | none | GeV | `*p->P4()` |
 | GENIE vertex | cm | none | cm | `event→Vertex() × 100` (m→cm) → same output |
-| GENIE time | ns | none | ns | `vtx.T()` ✅ |
+| GENIE time | ns | none | ns | `vtx.T()` |
 
 ---
