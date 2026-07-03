@@ -30,6 +30,13 @@
       }
     },
     {
+      "sand::test::truth_filler_test": {},
+      "reqs": {
+        "in_truth": "produced_truth"
+      },
+      "prods": {}
+    },
+    {
       "sand::caf::caf_streamer": {
         "uri": "test/output.truth.caf.root",
         "tree": "cafTree"
