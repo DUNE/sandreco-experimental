@@ -1,6 +1,7 @@
 #include "truth_filler_details.hpp"
 #include "evtcode_parser.hpp"
 
+#include <duneanaobj/StandardRecord/SREnums.h>
 #include <sand.h>
 
 #include <edep_reader/EDEPTrajectory.h>
@@ -14,15 +15,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <numeric>
 #include <string_view>
+#include <vector>
 
 namespace sand::common::filler_details {
 
   namespace {
-    [[nodiscard]] ::caf::TrueParticleID make_primary_id(long int ixn_id, int index) {
-      return {static_cast<int>(ixn_id), ::caf::TrueParticleID::kPrimary, index};
-    }
-
     struct Kinematics {
       float Q2{};
       float q0{};
@@ -69,7 +69,7 @@ namespace sand::common::filler_details {
     return output;
   }
 
-  [[nodiscard]] bool is_lepton_pdg(int pdg) {
+  bool is_lepton_pdg(int pdg) {
     if (auto* p = TDatabasePDG::Instance()->GetParticle(pdg)) {
       char const* pclass = p->ParticleClass();
       return pclass && std::string_view{pclass} == "Lepton";
@@ -210,57 +210,83 @@ namespace sand::common::filler_details {
     return p;
   }
 
-  PrimariesResult make_primaries(Primaries const& primaries, std::size_t first_idx, std::size_t count,
-                                 long int ixn_id) {
-    PrimariesResult result;
-    result.particles.reserve(count);
-    result.ancestor_ids.reserve(count);
-
-    for (std::size_t i{}; i != count; ++i) {
-      const auto part_id = make_primary_id(ixn_id, static_cast<int>(i));
-      result.ancestor_ids.push_back(part_id);
-      auto const& p = result.particles.emplace_back(true_particle_from_edep(primaries[first_idx + i], ixn_id, part_id));
-      switch (p.pdg) {
-      case 2212:
-        ++result.nproton;
-        break;
-      case 2112:
-        ++result.nneutron;
-        break;
-      case 211:
-        ++result.npip;
-        break;
-      case -211:
-        ++result.npim;
-        break;
-      case 111:
-        ++result.npi0;
-        break;
-      default:
-        break;
-      }
-    }
-
-    return result;
+  int subtree_node_count(EDEPTrajectory const& t) {
+    return std::accumulate(t.GetChildrenTrajectories().begin(), t.GetChildrenTrajectories().end(), 1,
+                           [](int acc, EDEPTrajectory const& c) { return acc + subtree_node_count(c); });
   }
 
-  std::vector<::caf::SRTrueParticle> make_secondaries(EDEPTree const& edep_tree, Primaries const& primaries,
-                                                      std::size_t first_idx, std::size_t count,
-                                                      AncestorIds const& ancestor_ids, long int ixn_id) {
-    std::vector<::caf::SRTrueParticle> particles;
+  namespace {
+    ::caf::TrueParticleID add_secondary_subtree(EDEPTrajectory const& traj, ::caf::TrueParticleID parent_id,
+                                                ::caf::TrueParticleID ancestor_id, int sr_ixn, long int interaction_id,
+                                                TrueParticleTree& out) {
+      auto const ordered_slot = static_cast<int>(out.sec.size());
+      ::caf::TrueParticleID const my_id{sr_ixn, caf::TrueParticleID::kSecondary, ordered_slot};
+
+      out.sec.emplace_back(true_particle_from_edep(traj, interaction_id, ancestor_id));
+      out.sec[ordered_slot].parentID = parent_id;
+
+      auto const& children = traj.GetChildrenTrajectories();
+      std::vector<caf::TrueParticleID> dids;
+      std::vector<unsigned int> g4ids;
+      dids.reserve(children.size());
+      g4ids.reserve(children.size());
+
+      std::transform(children.begin(), children.end(), std::back_inserter(dids), [&](auto const& child) {
+        g4ids.push_back(static_cast<unsigned int>(child.GetId()));
+        return add_secondary_subtree(child, my_id, ancestor_id, sr_ixn, interaction_id, out);
+      });
+
+      out.sec[ordered_slot].daughters   = std::move(g4ids);
+      out.sec[ordered_slot].daughtersID = std::move(dids);
+      return my_id;
+    }
+  } // namespace
+
+  [[nodiscard]] TrueParticleTree build_true_particle_tree(Primaries const& primaries, std::size_t first_idx,
+                                                          std::size_t count, int sr_ixn, long int interaction_id) {
+    TrueParticleTree out_tree;
+
+    out_tree.prim.reserve(count);
+    auto begin = primaries.begin() + first_idx;
+    auto end   = primaries.begin() + first_idx + count;
+    auto total = std::accumulate(begin, end, 0, [&](int acc, auto const& p) { return acc + subtree_node_count(p); });
+
+    out_tree.sec.reserve(static_cast<std::size_t>(total) - count);
 
     for (std::size_t i{}; i != count; ++i) {
-      auto const& prim     = primaries[first_idx + i];
-      auto const prim_it   = edep_tree.GetTrajectory(prim.GetId());
-      auto const sec_begin = std::next(prim_it);
-      auto const sec_end   = edep_tree.GetTrajectoryEnd(prim_it);
+      auto const& prim = primaries[first_idx + i];
+      ::caf::TrueParticleID const prim_id{sr_ixn, caf::TrueParticleID::kPrimary, static_cast<int>(i)};
 
-      for (auto sec_it = sec_begin; sec_it != sec_end; ++sec_it) {
-        particles.push_back(true_particle_from_edep(*sec_it, ixn_id, ancestor_ids[i]));
+      out_tree.prim.emplace_back(true_particle_from_edep(prim, interaction_id, prim_id));
+
+      auto const& children = prim.GetChildrenTrajectories();
+      std::vector<caf::TrueParticleID> dids;
+      std::vector<unsigned int> g4ids;
+      dids.reserve(children.size());
+      g4ids.reserve(children.size());
+
+      std::transform(children.begin(), children.end(), std::back_inserter(dids), [&](auto const& child) {
+        g4ids.push_back(static_cast<unsigned int>(child.GetId()));
+        return add_secondary_subtree(child, prim_id, prim_id, sr_ixn, interaction_id, out_tree);
+      });
+
+      out_tree.prim[i].daughters   = std::move(g4ids);
+      out_tree.prim[i].daughtersID = std::move(dids);
+
+      // Count only primaries
+      // clang-format off
+      switch (out_tree.prim[i].pdg) {
+        case  2212: ++out_tree.nproton;  break;
+        case  2112: ++out_tree.nneutron; break;
+        case   211: ++out_tree.npip;     break;
+        case  -211: ++out_tree.npim;     break;
+        case   111: ++out_tree.npi0;     break;
+        default: break;
       }
+      // clang-format on
     }
 
-    return particles;
+    return out_tree;
   }
 
 } // namespace sand::common::filler_details

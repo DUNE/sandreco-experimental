@@ -41,21 +41,20 @@ namespace sand::common {
       true_ixn.nprefsi = static_cast<int>(prefsi.size());
       true_ixn.prefsi  = std::move(prefsi);
 
-      // Add primaries from edep-sim
-      auto [particles, ancestor_ids, nproton, nneutron, npip, npim, npi0] =
-          filler_details::make_primaries(primaries, first_prim_idx, prim_count, true_ixn.id);
-      true_ixn.prim     = std::move(particles);
-      true_ixn.nprim    = static_cast<int>(true_ixn.prim.size());
-      true_ixn.nproton  = nproton;
-      true_ixn.nneutron = nneutron;
-      true_ixn.npip     = npip;
-      true_ixn.npim     = npim;
-      true_ixn.npi0     = npi0;
+      // Create primaries and secondaries tree
+      auto tree = filler_details::build_true_particle_tree(primaries, first_prim_idx, prim_count,
+                                                           static_cast<int>(ixn_idx), true_ixn.id);
 
-      // Add secondaries from edep-sim
-      true_ixn.sec =
-          filler_details::make_secondaries(edep, primaries, first_prim_idx, prim_count, ancestor_ids, true_ixn.id);
-      true_ixn.nsec = static_cast<int>(true_ixn.sec.size());
+      // Fill CAF fields
+      true_ixn.prim     = std::move(tree.prim);
+      true_ixn.nprim    = static_cast<int>(true_ixn.prim.size());
+      true_ixn.sec      = std::move(tree.sec);
+      true_ixn.nsec     = static_cast<int>(true_ixn.sec.size());
+      true_ixn.nproton  = tree.nproton;
+      true_ixn.nneutron = tree.nneutron;
+      true_ixn.npip     = tree.npip;
+      true_ixn.npim     = tree.npim;
+      true_ixn.npi0     = tree.npi0;
     }
   }
 

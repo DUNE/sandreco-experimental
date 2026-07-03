@@ -24,11 +24,9 @@ namespace sand::common::filler_details {
 
   using Primaries = std::vector<EDEPTrajectory>;
 
-  using AncestorIds = std::vector<::caf::TrueParticleID>;
-
-  struct PrimariesResult {
-    std::vector<::caf::SRTrueParticle> particles;
-    AncestorIds ancestor_ids;
+  struct TrueParticleTree {
+    std::vector<::caf::SRTrueParticle> prim;
+    std::vector<::caf::SRTrueParticle> sec;
     int nproton{};
     int nneutron{};
     int npip{};
@@ -57,13 +55,10 @@ namespace sand::common::filler_details {
   [[nodiscard]] ::caf::SRTrueParticle true_particle_from_edep(EDEPTrajectory const& traj, long int ixn_id,
                                                               ::caf::TrueParticleID const& ancestor_id);
 
-  [[nodiscard]] PrimariesResult make_primaries(Primaries const& primaries, std::size_t first_idx, std::size_t count,
-                                               long int ixn_id);
+  [[nodiscard]] int subtree_node_count(EDEPTrajectory const& t);
 
-  [[nodiscard]] std::vector<::caf::SRTrueParticle> make_secondaries(EDEPTree const& edep_tree,
-                                                                    Primaries const& primaries, std::size_t first_idx,
-                                                                    std::size_t count, AncestorIds const& ancestor_ids,
-                                                                    long int ixn_id);
+  [[nodiscard]] TrueParticleTree build_true_particle_tree(Primaries const& primaries, std::size_t first_idx,
+                                                          std::size_t count, int sr_ixn, long int interaction_id);
 
 } // namespace sand::common::filler_details
 
