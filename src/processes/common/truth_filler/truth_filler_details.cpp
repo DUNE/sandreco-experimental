@@ -1,7 +1,6 @@
 #include "truth_filler_details.hpp"
 #include "evtcode_parser.hpp"
 
-#include <duneanaobj/StandardRecord/SREnums.h>
 #include <sand.h>
 
 #include <edep_reader/EDEPTrajectory.h>
