@@ -121,14 +121,38 @@ namespace sand::drift {
       UFW_INFO("Found {} DRIFT hits for trajectory with ID {}", hit_map.at(component::DRIFT).size(), trj.GetId());
 
       for (const auto& hit : hit_map.at(component::DRIFT)) {
+        sand::pos_3d hit_start_3d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
+        auto direction = hit.GetStop() - hit.GetStart();
+        sand::dir_3d direction_3d(direction.X(), direction.Y(), direction.Z());
+        tgm.navigator()->set_track(hit_start_3d, direction_3d);
+        
         tgm.navigator()->FindNode(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
+        tgm.navigator()->FindNextBoundary(1000);
+        if (tgm.navigator()->GetStep() < 1E-5) {
+          tgm.navigator()->Step();
+          tgm.navigator()->GetCurrentNode();
+        }
+
         geo_path start_path(tgm.navigator()->GetPath());
         geo_path start_partial_path = drift->partial_path(start_path, gi);
+        UFW_DEBUG("start_partial_path: {}", start_partial_path);
         geo_id start_ID             = drift->id(start_partial_path);
+        
 
+
+
+
+        sand::pos_3d hit_stop_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
+        tgm.navigator()->set_track(hit_stop_3d, -direction_3d);
         tgm.navigator()->FindNode(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
+        tgm.navigator()->FindNextBoundary(1000);
+        if (tgm.navigator()->GetStep() < 1E-5) {
+          tgm.navigator()->Step();
+          tgm.navigator()->GetCurrentNode();
+        }
         geo_path stop_path(tgm.navigator()->GetPath());
         geo_path stop_partial_path = drift->partial_path(stop_path, gi);
+        UFW_DEBUG("stop_partial_path: {}", stop_partial_path);
         geo_id stop_ID             = drift->id(stop_partial_path);
 
         if (start_ID.drift.plane == 255 || stop_ID.drift.plane == 255) {
@@ -180,6 +204,7 @@ namespace sand::drift {
           auto split_hits = split_hit(closest_wire_start_index, closest_wire_stop_index, wires_in_view, hit);
           UFW_DEBUG(" Split hit between {} wires.", split_hits.size());
           for (const auto& [wire, split_hit] : split_hits) {
+            UFW_DEBUG(" Hit energy {}", split_hit.GetEnergyDeposit());
             hits_by_wire[wire].emplace_back(split_hit);
           }
         }
@@ -395,6 +420,10 @@ namespace sand::drift {
     }
 
     // Iterate through wires, splitting hit into segments
+    double cumulative_energy = 0;
+    double cumulative_secondary_energy = 0;
+    double cumulative_length = 0;
+    vec_4d last_hit_stop;
     for (size_t wire_index = first_wire_index; wire_index <= last_wire_index; ++wire_index) {
       const auto* current_wire = wires_in_view.at(wire_index);
       const bool is_last_wire  = (wire_index + 1 >= wires_in_view.size());
@@ -402,6 +431,14 @@ namespace sand::drift {
 
       if (next_wire == nullptr) {
         UFW_DEBUG(" Reached last wire in view during hit splitting.");
+        split_hit[current_wire] = EDEPHit(last_hit_stop, 
+                                          hit.GetStop(), 
+                                          hit.GetEnergyDeposit() - cumulative_energy,
+                                          hit.GetSecondaryDeposit() - cumulative_secondary_energy, 
+                                          hit.GetTrackLength() - cumulative_length,
+                                          hit.GetContrib(), // TO-DO: How to split contributor?
+                                          hit.GetPrimaryId(), 
+                                          hit.GetId());
         break;
       }
 
@@ -430,6 +467,11 @@ namespace sand::drift {
                                                      time_direction, total_time_span, segment_fraction, hit);
 
       split_hit[current_wire] = segment_hit;
+
+      cumulative_energy += segment_hit.GetEnergyDeposit();
+      cumulative_secondary_energy += segment_hit.GetSecondaryDeposit();
+      cumulative_length += segment_hit.GetTrackLength();
+      last_hit_stop = segment_hit.GetStop();
 
       // Move to next segment
       segment_start_global = segment_end_global;

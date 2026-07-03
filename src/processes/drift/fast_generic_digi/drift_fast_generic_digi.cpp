@@ -418,6 +418,10 @@ namespace sand::drift {
     }
 
     // Iterate through wires, splitting hit into segments
+    double cumulative_energy = 0;
+    double cumulative_secondary_energy = 0;
+    double cumulative_length = 0;
+    vec_4d last_hit_stop;
     for (size_t wire_index = first_wire_index; wire_index <= last_wire_index; ++wire_index) {
       const auto* current_wire = wires_in_view.at(wire_index);
       const bool is_last_wire  = (wire_index + 1 >= wires_in_view.size());
@@ -425,6 +429,14 @@ namespace sand::drift {
 
       if (next_wire == nullptr) {
         UFW_DEBUG(" Reached last wire in view during hit splitting.");
+        split_hit[current_wire] = EDEPHit(last_hit_stop, 
+                                          hit.GetStop(), 
+                                          hit.GetEnergyDeposit() - cumulative_energy,
+                                          hit.GetSecondaryDeposit() - cumulative_secondary_energy, 
+                                          hit.GetTrackLength() - cumulative_length,
+                                          hit.GetContrib(), // TO-DO: How to split contributor?
+                                          hit.GetPrimaryId(), 
+                                          hit.GetId());
         break;
       }
 
@@ -453,6 +465,11 @@ namespace sand::drift {
                                                      time_direction, total_time_span, segment_fraction, hit);
 
       split_hit[current_wire] = segment_hit;
+
+      cumulative_energy += segment_hit.GetEnergyDeposit();
+      cumulative_secondary_energy += segment_hit.GetSecondaryDeposit();
+      cumulative_length += segment_hit.GetTrackLength();
+      last_hit_stop = segment_hit.GetStop();
 
       // Move to next segment
       segment_start_global = segment_end_global;
