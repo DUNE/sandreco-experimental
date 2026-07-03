@@ -1,4 +1,4 @@
-CL_KERNEL(void hough_vote(__global const float4* points, __global const float4* versors, __global uint* voting_array, const float xy_step, const int n_xy_bins)
+CL_KERNEL(void hough_vote(__global const float4* points, __global const float4* versors, __global atomic_uint* voting_array, const float xy_step, const int n_xy_bins)
 {
     const int p_id = get_global_id(0);
     const int v_id = get_global_id(1);
@@ -34,5 +34,5 @@ CL_KERNEL(void hough_vote(__global const float4* points, __global const float4* 
 
     const int vote_index = v_id * n_xy_bins * n_xy_bins + x_index * n_xy_bins + y_index;
 
-    atomic_fetch_add(&voting_array[vote_index], 1);
+    atomic_fetch_add(&voting_array[vote_index], (uint)1u);
 })
