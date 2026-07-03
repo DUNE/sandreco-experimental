@@ -11,6 +11,7 @@
 
 namespace sand::common {
 
+  /// GENIE baryon resonance codes, as encoded in EvtCode_'s `res:` token.
   enum class GenieResonanceType : std::int8_t {
     NoResonance = -1,
     P33_1232    = 0,  ///< Delta(1232) P33
@@ -77,6 +78,7 @@ namespace sand::common {
     return os << "GenieResonanceType(" << static_cast<int>(r) << ")";
   }
 
+  /// Post-FSI hadron multiplicities, from EvtCode_'s `hmult:` token.
   struct HadronCounts {
     int n_protons{};
     int n_neutrons{};
@@ -115,6 +117,7 @@ namespace sand::common {
     HadronCounts hmult{};
   };
 
+  /// Parses a GENIE `EvtCode_` string (`;`-separated `key:value` tokens) into an EventSummary.
   [[nodiscard]] EventSummary parse_evt_code(std::string_view evt_code);
 
 } // namespace sand::common

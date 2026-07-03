@@ -12,6 +12,8 @@ namespace sand::common {
 
   truth_filler::truth_filler() : process{{}, {{"out_truth_branch", "sand::caf::truth_branch_wrapper"}}} {}
 
+  /// One SRTrueInteraction per GENIE/edep-sim interaction: vertex truth from GENIE,
+  /// pre-FSI hadrons from StdHep, primaries + secondaries from the edep-sim particle tree.
   void truth_filler::run() {
     auto const& genie  = instance<genie_reader>();
     auto const& edep   = instance<edep_reader>();

@@ -22,6 +22,7 @@ namespace sand::common {
       return std::nullopt;
     }
 
+    /// Parses `hmult:` payload, e.g. "(p=1,n=2,pi+=1)".
     HadronCounts parse_hmult(std::string_view sv) {
       if (sv.size() >= 2 && sv.front() == '(' && sv.back() == ')') {
         sv = sv.substr(1, sv.size() - 2);
@@ -69,6 +70,7 @@ namespace sand::common {
       bool is_sea{false};
     };
 
+    /// Parses `q:` payload, e.g. "2(s)" (PDG code, optionally flagged "(s)" for sea quark).
     QuarkInfo parse_quark(std::string_view val) {
       auto paren = val.find('(');
       if (paren == std::string_view::npos) {
@@ -82,6 +84,7 @@ namespace sand::common {
       ::caf::ScatteringMode scattering_type{};
     };
 
+    /// Parses `proc:` payload, e.g. "Weak[CC],QES" (interaction type, GENIE scattering mode name).
     ProcessInfo parse_process(std::string_view val) {
       static const std::unordered_map<std::string, ::caf::ScatteringMode> mode_map{
           {"QES", ::caf::kQE},

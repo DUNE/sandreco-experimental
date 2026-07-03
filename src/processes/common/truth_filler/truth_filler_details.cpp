@@ -216,6 +216,9 @@ namespace sand::common::filler_details {
   }
 
   namespace {
+    /// Recursively appends `traj`'s subtree to `out.sec` in pre-order, cross-linking each
+    /// node to its parent (`parentID`), root primary (`ancestor_id`) and children (`daughtersID`).
+    /// @return this node's own TrueParticleID, so the caller can link it as a parent/daughter.
     ::caf::TrueParticleID add_secondary_subtree(EDEPTrajectory const& traj, ::caf::TrueParticleID parent_id,
                                                 ::caf::TrueParticleID ancestor_id, int sr_ixn, long int interaction_id,
                                                 TrueParticleTree& out) {
