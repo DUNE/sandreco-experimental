@@ -8,10 +8,8 @@ namespace sand {
 
   public:
     struct station : public tracker_info::station {
-      geo_id geo_x, geo_u, geo_v; ///< The unique geometry identifier
-      wire_list x_view() const;
-      wire_list u_view() const;
-      wire_list v_view() const;
+      std::vector<geo_id> geos; ///< The unique geometry identifier
+      wire_list view(int number) const;
       void generate_drift_view(const geo_path &, const geo_id &);
       void generate_wire_list(const size_t &);
     };
@@ -26,16 +24,16 @@ namespace sand {
 
     geo_path path(geo_id) const override;
 
-    const std::array<double, 3> & view_angle() const { return m_view_angle; }
-    const std::array<double, 3> & view_offset() const { return m_view_offset; }
-    const std::array<double, 3> & view_spacing() const { return m_view_spacing; }
+    const std::vector<double> & view_angle() const { return m_view_angle; }
+    const std::vector<double> & view_offset() const { return m_view_offset; }
+    const std::vector<double> & view_spacing() const { return m_view_spacing; }
     double distance_between_views() const { return m_distance_between_views; }
 
   private:
 
-    std::array<double, 3> m_view_angle ;
-    std::array<double, 3> m_view_offset ;
-    std::array<double, 3> m_view_spacing ;
+    std::vector<double> m_view_angle ;
+    std::vector<double> m_view_offset ;
+    std::vector<double> m_view_spacing ;
     double m_distance_between_views ;
     
   };

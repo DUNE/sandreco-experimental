@@ -6,9 +6,9 @@
     },
     "globals" : {
         "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_flex_DRIFT.inner-volume.spills.8.root" },
-        "sand::geoinfo" : { "generic_drift" : { "view_angle" : [0.0, -0.087266463, 0.087266463],
-                                                "view_offset" : [10.0, 10.0, 10.0],
-                                                "view_spacing" : [10.0, 10.0, 10.0],
+        "sand::geoinfo" : { "generic_drift" : { "view_angle" : [0.0, -0.087266463, 0.087266463, 0.0],
+                                                "view_offset" : [10.0, 10.0, 10.0, 10.0],
+                                                "view_spacing" : [10.0, 10.0, 10.0, 10.0],
                                                 "distance_between_views" : 12 } }
     },
     "contexts" : {

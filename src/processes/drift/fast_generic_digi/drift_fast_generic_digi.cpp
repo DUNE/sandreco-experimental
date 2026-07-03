@@ -121,14 +121,38 @@ namespace sand::drift {
       UFW_INFO("Found {} DRIFT hits for trajectory with ID {}", hit_map.at(component::DRIFT).size(), trj.GetId());
 
       for (const auto& hit : hit_map.at(component::DRIFT)) {
+        sand::pos_3d hit_start_3d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
+        auto direction = hit.GetStop() - hit.GetStart();
+        sand::dir_3d direction_3d(direction.X(), direction.Y(), direction.Z());
+        tgm.navigator()->set_track(hit_start_3d, direction_3d);
+        
         tgm.navigator()->FindNode(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
+        tgm.navigator()->FindNextBoundary(1000);
+        if (tgm.navigator()->GetStep() < 1E-5) {
+          tgm.navigator()->Step();
+          tgm.navigator()->GetCurrentNode();
+        }
+
         geo_path start_path(tgm.navigator()->GetPath());
         geo_path start_partial_path = drift->partial_path(start_path, gi);
+        UFW_DEBUG("start_partial_path: {}", start_partial_path);
         geo_id start_ID             = drift->id(start_partial_path);
+        
 
+
+
+
+        sand::pos_3d hit_stop_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
+        tgm.navigator()->set_track(hit_stop_3d, -direction_3d);
         tgm.navigator()->FindNode(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
+        tgm.navigator()->FindNextBoundary(1000);
+        if (tgm.navigator()->GetStep() < 1E-5) {
+          tgm.navigator()->Step();
+          tgm.navigator()->GetCurrentNode();
+        }
         geo_path stop_path(tgm.navigator()->GetPath());
         geo_path stop_partial_path = drift->partial_path(stop_path, gi);
+        UFW_DEBUG("stop_partial_path: {}", stop_partial_path);
         geo_id stop_ID             = drift->id(stop_partial_path);
 
         if (start_ID.drift.plane == 255 || stop_ID.drift.plane == 255) {
@@ -142,17 +166,16 @@ namespace sand::drift {
           continue;
         }
 
+        UFW_DEBUG(" Hit details: start view ID ({},{},{}), stop view ID ({},{},{}).",
+                    start_ID.drift.subdetector, start_ID.drift.supermodule, start_ID.drift.plane,
+                    stop_ID.drift.subdetector, stop_ID.drift.supermodule, stop_ID.drift.plane);
+
         const auto* drift_station = static_cast<const sand::geoinfo::generic_drift_info::station*>(
             drift->get_station_by_ID(start_ID.drift.supermodule));
         // Pick the wire list of the view the hit belongs to: plane 0 -> X, 1 -> U, 2 -> V.
-        geoinfo::tracker_info::wire_list wires_in_view;
-        if (start_ID.drift.plane == 0) {
-          wires_in_view = drift_station->x_view();
-        } else if (start_ID.drift.plane == 1) {
-          wires_in_view = drift_station->u_view();
-        } else if (start_ID.drift.plane == 2) {
-          wires_in_view = drift_station->v_view();
-        }
+        geoinfo::tracker_info::wire_list wires_in_view = drift_station->view(start_ID.drift.plane);
+
+        UFW_DEBUG(" Number of wires in this view: {}", wires_in_view.size());
 
         const auto [closest_wire_start, closest_wire_start_index] =
             drift->closest_wire_in_list(wires_in_view, pos_3d(hit.GetStart().Vect()));

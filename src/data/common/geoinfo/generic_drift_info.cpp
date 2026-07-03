@@ -49,9 +49,9 @@ namespace sand {
     auto nav       = tgm.navigator();
     auto driftpath = gi.root_path() / path();
 
-    m_view_angle   = cfg.value("view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
-    m_view_offset  = cfg.value("view_offset", std::array<double, 3>{10.0, 10.0, 10.0});
-    m_view_spacing = cfg.value("view_spacing", std::array<double, 3>{10.0, 10.0, 10.0});
+    m_view_angle   = cfg.value("view_angle", std::vector<double> {});
+    m_view_offset  = cfg.value("view_offset", std::vector<double> {});
+    m_view_spacing = cfg.value("view_spacing", std::vector<double> {});
     m_distance_between_views = cfg.value("distance_between_views", 10.0);
 
     nav->cd(driftpath);
@@ -223,22 +223,14 @@ namespace sand {
     auto i2      = ch_name.find('_', i1 + 1);
     auto plane_ID = std::stoi(ch_name.substr(i1 + 1, i2 - i1 - 1));
 
-    if ((plane_ID % 3) == 0) {
-        geo_x = id;        
-    } else if ((plane_ID % 3) == 1) {
-        geo_u = id;
-    } else if ((plane_ID % 3) == 2) {
-        geo_v = id;
-    } else {
-        UFW_ERROR("DriftChamber '{}' has unrecognized plane '{}'.", ch_name, plane_ID);
-    }
-    generate_wire_list(plane_ID % 3);
+    geos.push_back(id);
+    generate_wire_list(plane_ID);
 
   }
 
   void geoinfo::generic_drift_info::station::generate_wire_list(const size_t & view_ID) {
 
-    UFW_DEBUG("Generate wire list ");
+    UFW_DEBUG("Generate wire list for view {}", view_ID);
 
     /////Get gas volume properties
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
@@ -319,26 +311,10 @@ namespace sand {
     }
   }
 
-  geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::x_view() const {
+  geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::view(int id) const {
     auto drift = dynamic_cast<const sand::geoinfo::generic_drift_info*>(this->parent);
     wire_list wl = select([&](const wire& w) {
-      return std::abs(w.angle() - drift->view_angle()[geo_x.drift.plane]) < 1e-6;
-    });
-    return wl;
-  }
-
-  geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::u_view() const {
-    auto drift = dynamic_cast<const sand::geoinfo::generic_drift_info*>(this->parent);
-    wire_list wl = select([&](const wire& w) {
-      return std::abs(w.angle() - drift->view_angle()[geo_u.drift.plane]) < 1e-6;
-    });
-    return wl;
-  }
-
-  geoinfo::generic_drift_info::wire_list geoinfo::generic_drift_info::station::v_view() const {
-    auto drift = dynamic_cast<const sand::geoinfo::generic_drift_info*>(this->parent);
-    wire_list wl = select([&](const wire& w) {
-      return std::abs(w.angle() - drift->view_angle()[geo_v.drift.plane]) < 1e-6;
+      return std::abs(w.angle() - drift->view_angle()[geos[id].drift.plane]) < 1e-6;
     });
     return wl;
   }
