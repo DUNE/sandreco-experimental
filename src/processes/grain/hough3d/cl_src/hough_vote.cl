@@ -34,5 +34,6 @@ CL_KERNEL(void hough_vote(__global const float4* points, __global const float4* 
 
     const int vote_index = v_id * n_xy_bins * n_xy_bins + x_index * n_xy_bins + y_index;
 
-    atomic_fetch_add(&voting_array[vote_index], 1);
+    // Casting explicitly to avoid ambiguity when compiling for NVIDIA GPU
+    atomic_fetch_add((uint*)&voting_array[vote_index], (uint)1); 
 })
