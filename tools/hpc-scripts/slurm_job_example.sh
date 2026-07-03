@@ -1,9 +1,10 @@
 #!/bin/bash
 #
 #SBATCH --job-name=job_name
-#SBATCH --output=<path/to/production/folder>/job.out
-#SBATCH --error=<path/to/production/folder>/job.err
+#SBATCH --output=<path/to/production/folder>/job.log
 #SBATCH --partition=bare-metal-nodes
+#SBATCH --mem=256G
+#SBATCH --ntasks=4
 #SBATCH --gres=gpu:1
 
 
