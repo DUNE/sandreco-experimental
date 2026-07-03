@@ -69,6 +69,7 @@ namespace sand {
       const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
       const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& part_id, bool is_primary,
       ::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const {
+    // Create SRRecoParticle from truth
     auto reco_part    = make_reco(true_part, part_id);
     reco_part.primary = is_primary;
     reco_ixn.part.sandreco.push_back(std::move(reco_part));
@@ -117,6 +118,7 @@ namespace sand {
       fill_reco_objects(make_reco, true_prim, true_prim.ancestor_id, true, reco_ixn, sand_ixn);
     }
 
+    // Loop over secondary particles
     for (std::size_t i{}; i != sec_count; ++i) {
       const auto& true_sec = true_ixn.sec[i];
       fill_reco_objects(make_reco, true_sec, true_sec.ancestor_id, false, reco_ixn, sand_ixn);
