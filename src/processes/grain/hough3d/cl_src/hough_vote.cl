@@ -36,5 +36,6 @@ CL_KERNEL(void hough_vote(__global const float4* points, __global const float4* 
 
     // Casting explicitly to avoid ambiguity when compiling for NVIDIA GPU
     __global uint* ptr = (__global uint*)&voting_array[vote_index];
-    atomic_fetch_add(ptr, (uint)1); 
+    uint increment = 1;
+    atomic_fetch_add(ptr, increment); 
 })
