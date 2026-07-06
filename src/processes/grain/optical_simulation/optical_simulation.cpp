@@ -86,8 +86,8 @@ namespace sand::grain {
     int eventCount   = 0;
 
     for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
-      if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
-        eventCount += trj_it->GetHitMap().at(component::GRAIN).size();
+      if (trj_it->GetHitMap().find(sand::subdetector_t::GRAIN) != trj_it->GetHitMap().end()) {
+        eventCount += trj_it->GetHitMap().at(sand::subdetector_t::GRAIN).size();
       }
     }
     UFW_DEBUG("Split into {} events.", eventCount);

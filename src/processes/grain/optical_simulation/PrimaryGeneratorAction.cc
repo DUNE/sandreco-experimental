@@ -73,14 +73,14 @@ void PrimaryGeneratorAction::nextIteration() {
         UFW_FATAL("Reached end of tree");
     }
 
-    if (m_tree_it->GetHitMap().find(component::GRAIN) == m_tree_it->GetHitMap().end()) {
+    if (m_tree_it->GetHitMap().find(sand::subdetector_t::GRAIN) == m_tree_it->GetHitMap().end()) {
         m_tree_it++;
         m_optmen_edepsim->setNewIteration(true);
         nextIteration();
         return;
     } else {
         const auto& hit_map = m_tree_it->GetHitMap();
-        const auto& hit_vect = hit_map.at(component::GRAIN);
+        const auto& hit_vect = hit_map.at(sand::subdetector_t::GRAIN);
         if(m_optmen_edepsim->getNewIteration()) {
             m_hits_it = hit_vect.begin();
             m_optmen_edepsim->setNewIteration(false);
@@ -209,7 +209,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 
     //TODO: check better sources
     // Xe-DOPING --> Xe-doping increases the overall LY to 1.20 pure LAr
-    // but this is slow component only (fast is suppressed?)
+    // but this is slow sand::subdetector_t only (fast is suppressed?)
     // LY = 0.25(fast) + 0.75(slow) + addition = 1.20
     int myXeAddition = 0;
     if (m_optmen_edepsim->opticsType() == optical_simulation::OpticsType::LENS_DOPED){
@@ -253,7 +253,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
         if( G4UniformRand() < mySingletTripletRatio ){
 
         //FIXME: uncertain (reported only by protoDUNE) -> investigate
-        //Xe-DOPING: Xe-doping below 1000ppm does not shift the fast component
+        //Xe-DOPING: Xe-doping below 1000ppm does not shift the fast sand::subdetector_t
         //but also reduces it to the absorption. From protoDUNE plots, it seems a 50% reduction
         /*if( ReadParameters::Get()->GetXeDoping() ) {
             if( G4UniformRand() < 0.5 ) continue; //skip, don't emit
@@ -277,7 +277,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
 
     // TODO: check better sources
     // Xe-DOPING --> Xe-doping increases the overall LY to 1.20 pure LAr
-    // emit here the additional photons which are all slow component
+    // emit here the additional photons which are all slow sand::subdetector_t
     for(int j = 0; j < myXeAddition; j++){
 
         // Momentum & Polarization
@@ -295,7 +295,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
         fParticleGun.SetParticlePosition(myPhotonPosition);
 
         // Time & Energy
-        // (slow component only)
+        // (slow sand::subdetector_t only)
         G4double myPhotonTime = m_hits_it->GetStart().T() + random*(m_hits_it->GetStop().T() - m_hits_it->GetStart().T()) - m_optmen_edepsim->properties().m_tau_slow * log(G4UniformRand());
         G4double mySampledEnergy = m_optmen_edepsim->properties().m_slow_component_distribution->GetRandom();
 

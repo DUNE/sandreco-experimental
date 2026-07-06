@@ -115,12 +115,12 @@ namespace sand::drift {
 
     for (const auto& trj : tree) {
       const auto& hit_map = trj.GetHitMap(); // pointer, not value
-      if (!trj.HasHitInDetector(component::DRIFT))
+      if (!trj.HasHitInDetector(sand::subdetector_t::DRIFT))
         continue;
 
-      UFW_INFO("Found {} DRIFT hits for trajectory with ID {}", hit_map.at(component::DRIFT).size(), trj.GetId());
+      UFW_INFO("Found {} DRIFT hits for trajectory with ID {}", hit_map.at(sand::subdetector_t::DRIFT).size(), trj.GetId());
 
-      for (const auto& hit : hit_map.at(component::DRIFT)) {
+      for (const auto& hit : hit_map.at(sand::subdetector_t::DRIFT)) {
         sand::pos_3d hit_start_3d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
         auto direction = hit.GetStop() - hit.GetStart();
         sand::dir_3d direction_3d(direction.X(), direction.Y(), direction.Z());
@@ -289,9 +289,9 @@ namespace sand::drift {
    * coordinate deltas, then the endpoint is transformed back to global coordinates.
    *
    * \param start_local            Segment start in local wire-plane coordinates.
-   * \param dx_local               Local x-component of the hit direction.
-   * \param dy_local               Local y-component (transverse) of the hit direction.
-   * \param dz_local               Local z-component of the hit direction.
+   * \param dx_local               Local x-sand::subdetector_t of the hit direction.
+   * \param dy_local               Local y-sand::subdetector_t (transverse) of the hit direction.
+   * \param dz_local               Local z-sand::subdetector_t of the hit direction.
    * \param segment_end_transverse Transverse coordinate at which the segment ends.
    * \param transform              Transform from local wire-plane coordinates to global coordinates.
    * \return A pair {endpoint in local coordinates, endpoint in global coordinates}.

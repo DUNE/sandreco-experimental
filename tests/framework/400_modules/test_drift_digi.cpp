@@ -5,6 +5,7 @@
 #include <geoinfo/tracker_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
+#include <common/sand.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -149,7 +150,7 @@ namespace sand::test {
     std::unordered_map<int, const EDEPHit*> all_drift_hits;
     for (const auto& trj : tree) {
       const auto& hit_map = trj.GetHitMap();
-      auto it             = hit_map.find(component::DRIFT);
+      auto it             = hit_map.find(sand::subdetector_t::DRIFT);
       if (it == hit_map.end())
         continue;
       for (const auto& hit : it->second)
