@@ -60,12 +60,14 @@ namespace sand {
       nav->cd(driftpath / stname);
       // UFW_DEBUG("Station name: {}", stname);
       auto stat = std::make_unique<station>();
-      target_material tgt;
+      target_material tgt = TRKONLY;
+      bool found_ch = false;
 
       nav->for_each_node([&](auto subunit) {
         std::string subuname = subunit->GetName();
         // UFW_DEBUG("Subunit name: {}", subuname);
         nav->cd(driftpath / stname / subuname);
+
         if (subuname.find("fr") != std::string::npos) {
           return; // skip the frame
         } else if (subuname.find("t_P") != std::string::npos) {
@@ -73,12 +75,16 @@ namespace sand {
         } else if (subuname.find("t_C") != std::string::npos) {
           tgt = CARBON;
         } else if (subuname.find("ch") != std::string::npos) {
-          tgt = TRKONLY;
-        } else {
-          UFW_ERROR("Drift station '{}' has unrecognized material.", subuname);
+          found_ch = true;
         }
       });
-        
+      
+      UFW_DEBUG("Drift station {} has {} as target", stname, tgt);
+
+      if (found_ch == false) {
+        UFW_ERROR("Drift station {} doesn't have neither a target nor a chamber!", stname);
+      }
+
       stat->target          = tgt;
       TGeoBBox* station_shape = dynamic_cast<TGeoBBox*>(station_node->GetVolume()->GetShape());
       if (!station_shape) {

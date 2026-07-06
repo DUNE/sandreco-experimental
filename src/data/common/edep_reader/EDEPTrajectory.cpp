@@ -66,8 +66,8 @@ TGeoNode* GetNode(const TG4TrajectoryPoint& tpoint) {
  * @param next_it The next trajectory point being checked.
  */
 void EDEPTrajectory::CheckInNext(bool* in, bool* next, TG4TrajectoryPoint it, TG4TrajectoryPoint next_it) {
-  for (int i = 0; i < 6; i++) {
-    for (int j = 0; j < 6; j++) {
+  for (int i = 0; i < 7; i++) {
+    for (int j = 0; j < 7; j++) {
       // Notice: this should be fixed in the geometry.
       if ((components[i] == component::STRAW && components[j] == component::DRIFT)
           || (components[j] == component::STRAW && components[i] == component::DRIFT)) {
