@@ -183,14 +183,14 @@ namespace sand {
     MUON = 4, 
     MAGNET= 5, 
     
-    kSandEnd = MAGNET,
+    kSandEnd = 6,
     
-    WORLD = 6, 
-    OTHER = 7, 
+    WORLD = 7, 
+    OTHER = 8, 
     
-    kLoopableEnd = 8,
+    kLoopableEnd = 9,
     
-    GENERIC_DRIFT = 9, 
+    GENERIC_DRIFT = 10, 
     TRACKER = STT, 
 
     NONE = 255 
