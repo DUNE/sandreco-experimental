@@ -12,6 +12,7 @@
 #include <common/sand.h>
 
 #include <drift_info.hpp>
+#include <generic_drift_info.hpp>
 #include <ecal_info.hpp>
 #include <geoinfo.hpp>
 #include <grain_info.hpp>
@@ -45,12 +46,13 @@ namespace sand {
    * @param cfg The geoinfo configuration object.
    */
   geoinfo::geoinfo(const ufw::config& cfg) {
-    m_root_path    = cfg.value("basepath", sand::root_path);
-    m_grain_cfg    = cfg.value("grain", ufw::json::object());
-    m_ecal_cfg     = cfg.value("ecal", ufw::json::object());
-    m_tracker_cfg  = cfg.value("tracker", ufw::json::object());
-    auto drift_cfg = cfg.value("drift", ufw::json::object());
-    auto stt_cfg   = cfg.value("stt", ufw::json::object());
+    m_root_path            = cfg.value("basepath", sand::root_path);
+    m_grain_cfg            = cfg.value("grain", ufw::json::object());
+    m_ecal_cfg             = cfg.value("ecal", ufw::json::object());
+    m_tracker_cfg          = cfg.value("tracker", ufw::json::object());
+    auto drift_cfg         = cfg.value("drift", ufw::json::object());
+    auto stt_cfg           = cfg.value("stt", ufw::json::object());
+    auto generic_drift_cfg = cfg.value("generic_drift", ufw::json::object());
 
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav  = tgm.navigator();
@@ -67,10 +69,31 @@ namespace sand {
       isSTT |= (name.find("STTtracker") != std::string::npos);
     });
 
+    bool isGenericDrift = false; /// CHECKME!!!
+    for (int d = 0; d < nav->GetCurrentNode()->GetNdaughters(); ++d) {
+      std::string daughter_tmp = nav->GetCurrentNode()->GetDaughter(d)->GetName(); // SANDtracker_PV_0
+      if (daughter_tmp.find("SANDtracker") != std::string::npos) {
+        UFW_DEBUG("DAUGHTER vol '{}' ", daughter_tmp.c_str());
+        std::string daughter_path = inner / daughter_tmp.c_str();
+        nav->cd(daughter_path.c_str());
+        std::string granddaughter_tmp = nav->GetCurrentNode()->GetDaughter(0)->GetName(); // s_...
+        UFW_DEBUG("GRANDDAUGHTER vol '{}' ", granddaughter_tmp.c_str());
+        if (granddaughter_tmp.find("s_") != std::string::npos){
+          isGenericDrift = true;
+        }
+        nav->CdUp();
+        break;
+      }
+    }
+
     if (isSTT) {
       UFW_INFO("STT subdetector implementation detected.");
       m_tracker_cfg.update(stt_cfg);
       m_tracker_type = STT;
+    } else if (isGenericDrift){ /// FIXME!!!
+      UFW_INFO("Generic Drift subdetector implementation detected.");
+      m_tracker_cfg.update(generic_drift_cfg);
+      m_tracker_type = GENERIC_DRIFT;
     } else {
       UFW_INFO("Drift subdetector implementation detected.");
       m_tracker_type = DRIFT;
@@ -99,6 +122,9 @@ namespace sand {
       return;
       case STT:
       m_tracker.reset(new stt_info(*this, geo_path(inner_path) / stt_path, m_tracker_cfg));
+      return;
+      case GENERIC_DRIFT:
+      m_tracker.reset(new generic_drift_info(*this, geo_path(inner_path) / drift_path, m_tracker_cfg));
       return;
       default:
       UFW_ERROR("Unknown tracker type");

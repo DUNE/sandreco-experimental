@@ -18,8 +18,8 @@ namespace sand::filter {
 
     void configure(const ufw::config& cfg) override {
       for (auto item : cfg.at("require")) {
-        auto it = string_to_component.find(item);
-        if (it == string_to_component.end()) {
+        auto it = sand::string_to_component.find(item);
+        if (it == sand::string_to_component.end()) {
           UFW_ERROR("Detector not found {}.", item);
         }
         m_desired.push_back(it->second);
@@ -36,7 +36,7 @@ namespace sand::filter {
       for (const auto& prim : primaries) {
         for (auto det : m_desired) {
           if (prim.HasHitInDetector(det)) {
-            for (auto& [name, val] : string_to_component) {
+            for (auto& [name, val] : sand::string_to_component) {
               if (val == det) {
                 UFW_INFO("Found a primary with hits in {}.", name);
               }
@@ -50,7 +50,7 @@ namespace sand::filter {
     }
 
    private:
-    std::vector<component> m_desired;
+    std::vector<sand::subdetector_t> m_desired;
   };
 
 } // namespace sand::filter

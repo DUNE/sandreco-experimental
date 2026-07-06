@@ -123,15 +123,15 @@ void EDEPTree::CreateTree(const std::vector<EDEPTrajectory>& trajectories_vect) 
  */
 void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
   this->GetChildrenTrajectories().clear();
-  std::map<int, std::map<component, std::vector<EDEPHit>>> hit_map;
+  std::map<int, std::map<sand::subdetector_t, std::vector<EDEPHit>>> hit_map;
   int ind = 0;
   for (auto hmap : edep_event.SegmentDetectors) {
     for (uint i = 0; i < hmap.second.size(); i++) {
       auto h = hmap.second[i];
-      if(string_to_component.find(hmap.first) == string_to_component.end()) {
-        hit_map[h.Contrib[0]][component::OTHER].push_back(EDEPHit(h, ind));
+      if(sand::string_to_component.find(hmap.first) == sand::string_to_component.end()) {
+        hit_map[h.Contrib[0]][sand::subdetector_t::OTHER].push_back(EDEPHit(h, ind));
       } else {
-        hit_map[h.Contrib[0]][string_to_component[hmap.first]].push_back(EDEPHit(h, ind));
+        hit_map[h.Contrib[0]][sand::string_to_component[hmap.first]].push_back(EDEPHit(h, ind));
       }
       ind++;
     }
@@ -372,13 +372,12 @@ EDEPTree::const_iterator EDEPTree::GetTrajectoryWithHitId(int id) const {
 }
 
 /**
- * @brief Retrieves the iterator to the trajectory containing a hit with the given ID in the specified detector
- * component.
+ * @brief Retrieves the iterator to the trajectory containing a hit with the given ID in the specified sand::subdetector_t.
  * @param id ID of the hit.
- * @param component_name Name of the detector component.
+ * @param component_name Name of the sand::subdetector_t.
  * @return Iterator pointing to the trajectory containing the hit.
  */
-EDEPTree::iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, component component_name) {
+EDEPTree::iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t component_name) {
   EDEPTree::iterator found_it =
       std::find_if(this->begin(), this->end(), [id, component_name](const EDEPTrajectory& trj) {
         return trj.HasHitWithIdInDetector(id, component_name);
@@ -387,13 +386,12 @@ EDEPTree::iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, component 
 }
 
 /**
- * @brief Retrieves the iterator to the trajectory containing a hit with the given ID in the specified detector
- * component.
+ * @brief Retrieves the iterator to the trajectory containing a hit with the given ID in the specified sand::subdetector_t.
  * @param id ID of the hit.
- * @param component_name Name of the detector component.
+ * @param component_name Name of the sand::subdetector_t.
  * @return Iterator pointing to the trajectory containing the hit.
  */
-EDEPTree::const_iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, component component_name) const {
+EDEPTree::const_iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t component_name) const {
   EDEPTree::const_iterator found_it =
       std::find_if(this->begin(), this->end(), [id, component_name](const EDEPTrajectory& trj) {
         return trj.HasHitWithIdInDetector(id, component_name);

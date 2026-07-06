@@ -23,7 +23,7 @@ class EDEPTrajectory {
       pdg_code_(trajectory.GetPDGCode()) {};
 
   EDEPTrajectory(const TG4Trajectory& trajectory,
-                 const std::map<int, std::map<component, std::vector<EDEPHit>>>& hit_map,
+                 const std::map<int, std::map<sand::subdetector_t, std::vector<EDEPHit>>>& hit_map,
                  const TG4PrimaryVertexContainer& primaries);
 
   EDEPTrajectory(const EDEPTrajectory& trj);
@@ -111,8 +111,8 @@ class EDEPTrajectory {
    */
   int GetPDGCode() const { return pdg_code_; };
 
-  std::vector<EDEPTrajectoryPoint>& GetFirstPointsInDetector(component component_name);
-  std::vector<EDEPTrajectoryPoint>& GetLastPointsInDetector(component component_name);
+  std::vector<EDEPTrajectoryPoint>& GetFirstPointsInDetector(sand::subdetector_t component_name);
+  std::vector<EDEPTrajectoryPoint>& GetLastPointsInDetector(sand::subdetector_t component_name);
 
   /**
    * @brief Get the initial momentum of this trajectory.
@@ -194,8 +194,8 @@ class EDEPTrajectory {
   bool HasHits() const { return !hit_map_.empty(); }
   bool HasHitWithId(int id) const;
   const EDEPHit& GetHitWithId(int id) const;
-  bool HasHitInDetector(component component_name) const;
-  double GetDepositedEnergy(component component_name) const;
+  bool HasHitInDetector(sand::subdetector_t component_name) const;
+  double GetDepositedEnergy(sand::subdetector_t component_name) const;
   bool HasHitBeforeTime(double start_time) const;
   bool HasHitAfterTime(double stop_time) const;
   bool HasHitWithEnergySmallerThan(double energy) const;
@@ -207,7 +207,7 @@ class EDEPTrajectory {
   bool IsTrajectorySaturated() const;
 
   bool HasHitInTime(double start_time, double stop_time) const;
-  bool HasHitWithIdInDetector(int id, component component_name) const;
+  bool HasHitWithIdInDetector(int id, sand::subdetector_t component_name) const;
 
   bool HasHitNearPoint(sand::pos_3d point, double distance) const;
   bool HasHitNear4DPoint(sand::vec_4d point, double distance, double time) const;
@@ -215,8 +215,8 @@ class EDEPTrajectory {
 
   std::string Print(std::string& full_out, int depth = 100, int current_depth = 0) const;
 
-  bool IsEntering(component component_name) const;
-  bool IsExiting(component component_name) const;
+  bool IsEntering(sand::subdetector_t component_name) const;
+  bool IsExiting(sand::subdetector_t component_name) const;
 
   template <typename Funct>
   bool HasHitWhere(Funct&& f) const {
@@ -244,7 +244,7 @@ class EDEPTrajectory {
 
   bool Match(std::string volume, std::initializer_list<std::string> names) const;
 
-  void CheckInNext(bool* in, bool* next, TG4TrajectoryPoint it, TG4TrajectoryPoint next_it);
+  void CheckInNext(std::array<bool, sand::kNumComponents> in, std::array<bool, sand::kNumComponents> next, TG4TrajectoryPoint it, TG4TrajectoryPoint next_it);
 
   friend class EDEPTree;
 
@@ -253,10 +253,10 @@ class EDEPTrajectory {
   EDEPHitsMap hit_map_;                               ///< Map of hits associated with the trajectory.
   EDEPTrajectoryPoints trajectory_points_;            ///< Trajectory points.
   std::vector<EDEPTrajectory> children_trajectories_; ///< Children trajectories.
-  std::map<component, bool> exiting_map_;             ///< Map indicating whether the trajectory is exiting a component.
-  std::map<component, bool> entering_map_; ///< Map indicating whether the trajectory is entering a component.
-  EDEPTrajectoryPoints last_points_;       ///< Map of all the first points in each component.
-  EDEPTrajectoryPoints first_points_;      ///< Map of all the last points in each component.
+  std::map<sand::subdetector_t, bool> exiting_map_;             ///< Map indicating whether the trajectory is exiting a sand::subdetector_t.
+  std::map<sand::subdetector_t, bool> entering_map_; ///< Map indicating whether the trajectory is entering a sand::subdetector_t.
+  EDEPTrajectoryPoints last_points_;       ///< Map of all the first points in each sand::subdetector_t.
+  EDEPTrajectoryPoints first_points_;      ///< Map of all the last points in each sand::subdetector_t.
   EDEPTrajectory* parent_trajectory_;      ///< Pointer to the parent trajectory.
   int id_;                                 ///< ID of the trajectory.
   int parent_id_;                          ///< Parent ID of the trajectory.

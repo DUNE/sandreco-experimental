@@ -1,9 +1,11 @@
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/drift_info.hpp>
+#include <geoinfo/generic_drift_info.hpp>
 #include <geoinfo/geoinfo.hpp>
 #include <geoinfo/tracker_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <tracker/digi.h>
+#include <common/sand.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -117,12 +119,13 @@ namespace sand::test {
   void test_drift_digi::analyze_drift_digi() {
     const auto& digi  = get<sand::tracker::digi>("digi");
     const auto& gi    = get<geoinfo>();
-    const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
+    const sand::geoinfo::tracker_info* drift = nullptr;
 
-    if (!drift) {
-      UFW_ERROR("The tracker info object is not DRIFT");
-      return;
-    }
+    if (const auto* d = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker()))
+        drift = d;
+    else if (const auto* gd = dynamic_cast<const sand::geoinfo::generic_drift_info*>(&gi.tracker()))
+        drift = gd;
+    else { UFW_ERROR("geo_info is not drift_info neither generic_drift_info"); return; }
 
     const auto nSignals = digi.signals.size();
 
@@ -147,7 +150,7 @@ namespace sand::test {
     std::unordered_map<int, const EDEPHit*> all_drift_hits;
     for (const auto& trj : tree) {
       const auto& hit_map = trj.GetHitMap();
-      auto it             = hit_map.find(component::DRIFT);
+      auto it             = hit_map.find(sand::subdetector_t::DRIFT);
       if (it == hit_map.end())
         continue;
       for (const auto& hit : it->second)
@@ -180,7 +183,13 @@ namespace sand::test {
   void test_drift_digi::check_truth_matching(const std::unordered_map<int, const EDEPHit*>& all_drift_hits) {
     const auto& digi  = get<sand::tracker::digi>("digi");
     const auto& gi    = get<geoinfo>();
-    const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
+    const sand::geoinfo::tracker_info* drift = nullptr;
+
+    if (const auto* d = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker()))
+        drift = d;
+    else if (const auto* gd = dynamic_cast<const sand::geoinfo::generic_drift_info*>(&gi.tracker()))
+        drift = gd;
+    else { UFW_ERROR("geo_info is not drift_info neither generic_drift_info"); return; }
 
     double total_adc = 0.0;                     // sum of every signal ADC
     std::unordered_set<int> referenced_hit_ids; // distinct hit ids touched by any signal
