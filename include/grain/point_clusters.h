@@ -7,7 +7,7 @@
 namespace sand::grain {
 
   struct point_clusters : managed_data_base {
-    class cluster : reco::hit {
+    class cluster : public reco::hit {
      public:
       /// @brief Default constuctor produces an invalid cluster, required by ROOT, do not use
       cluster() : reco::hit(pos_3d(0.0, 0.0, 0.0), dir_3d(0.0, 0.0, 0.0), reco::timerange(0.0, 0.0), 0.0) {}
