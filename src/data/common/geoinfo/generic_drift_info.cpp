@@ -224,8 +224,8 @@ namespace sand {
     }
 
     UFW_DEBUG("Setting drift view for path: {}", ch_path);
-    auto v_index = ch_name.find('v');
-    auto i1      = ch_name.find('_', v_index);
+    auto v_index = ch_name.find("_v_");
+    auto i1      = ch_name.find('_', v_index+1);
     auto i2      = ch_name.find('_', i1 + 1);
     auto plane_ID = std::stoi(ch_name.substr(i1 + 1, i2 - i1 - 1));
 
