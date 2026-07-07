@@ -113,12 +113,12 @@ namespace sand::stt {
 
     for (const auto& trj : tree) {
       const auto& hit_map = trj.GetHitMap(); // pointer, not value
-      if (hit_map.find(component::STRAW) == hit_map.end())
+      if (hit_map.find(sand::subdetector_t::STT) == hit_map.end())
         continue;
 
-      UFW_DEBUG("Found {} STRAW hits for trajectory with ID {}", hit_map.at(component::STRAW).size(), trj.GetId());
+      UFW_DEBUG("Found {} STRAW hits for trajectory with ID {}", hit_map.at(sand::subdetector_t::STT).size(), trj.GetId());
 
-      for (const auto& hit : hit_map.at(component::STRAW)) {
+      for (const auto& hit : hit_map.at(sand::subdetector_t::STT)) {
         // Use the hit midpoint to locate the geometry node, then derive the
         // tube identifier (geo_id) from the navigator path.
         pos_3d hit_mid_point =

@@ -75,8 +75,8 @@ namespace {
     }
 
     // hit map with test hits
-    std::map<int, std::map<component, std::vector<EDEPHit>>> hit_map;
-    hit_map[trackId][component::DRIFT] = hit_vec;
+    std::map<int, std::map<sand::subdetector_t, std::vector<EDEPHit>>> hit_map;
+    hit_map[trackId][sand::subdetector_t::DRIFT] = hit_vec;
 
     // default TG4 primaries (1 primary)
     TG4PrimaryVertexContainer primaries;
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(few_hit_points) {
   auto true_part_trj = make_test_true_trajectory(1, 100.0f, 13, 13);
 
   const auto& hit_map = true_part_trj.GetHitMap();
-  const auto& it      = hit_map.find(component::DRIFT);
+  const auto& it      = hit_map.find(sand::subdetector_t::DRIFT);
   const auto& hit_vec = it->second;
 
   const auto gluckstern_helper = GlucksternSmearing(hit_vec, 50.0f);
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(points_over_thr) {
   auto true_part_trj = make_test_true_trajectory(3, 100.0f, 13, 13);
 
   const auto& hit_map          = true_part_trj.GetHitMap();
-  const auto& it               = hit_map.find(component::DRIFT);
+  const auto& it               = hit_map.find(sand::subdetector_t::DRIFT);
   const auto& hit_vec          = it->second;
   const auto gluckstern_helper = GlucksternSmearing(hit_vec, 50.0f);
 

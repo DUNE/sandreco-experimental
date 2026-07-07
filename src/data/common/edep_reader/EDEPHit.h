@@ -136,4 +136,4 @@ class EDEPHit {
 /**
  * @brief Alias for a map of component to vector of EDEPHit.
  */
-using EDEPHitsMap = std::map<component, std::vector<EDEPHit>>;
+using EDEPHitsMap = std::map<sand::subdetector_t, std::vector<EDEPHit>>;

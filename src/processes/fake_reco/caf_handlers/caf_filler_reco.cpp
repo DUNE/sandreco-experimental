@@ -45,7 +45,7 @@ namespace sand {
 
     // for muons in the drift tracker (temporarily) smear according to the Gluckstern formula
     const auto& hit_map = true_part_trj.GetHitMap();
-    const auto& it      = hit_map.find(component::DRIFT);
+    const auto& it      = hit_map.find(sand::subdetector_t::DRIFT);
     if (it == hit_map.end()) {
       return reco;
     }
