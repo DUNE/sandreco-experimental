@@ -71,6 +71,7 @@ namespace sand {
         centre.SetCoordinates(tran);
         dir_3d halfsize(station_shape->GetDX(), station_shape->GetDY(), station_shape->GetDZ());
         dir_3d boxcorner = nav->to_master(halfsize);
+        stat->thickness = 2.0 * boxcorner.Z();
         boxcorner.SetZ(0); // we ignore the thickness here.
         stat->top_north    = centre + boxcorner;
         stat->bottom_south = centre - boxcorner;
@@ -94,7 +95,9 @@ namespace sand {
             UFW_DEBUG("Component name: {}", componentname);
             if (componentname.find("Target") != std::string::npos) {
               if (auto* target_shape = dynamic_cast<TGeoBBox*>(component->GetVolume()->GetShape())) {
-                stat->target_box = 2.0 * dir_3d(target_shape->GetDX(), target_shape->GetDY(), target_shape->GetDZ());
+                dir_3d target_halfsize(target_shape->GetDX(), target_shape->GetDY(), target_shape->GetDZ());
+                dir_3d target_boxcorner = nav->to_master(target_halfsize);
+                stat->target_box = 2.0 * dir_3d(target_boxcorner.X(), target_boxcorner.Y(), target_boxcorner.Z());
                 stat->target_density = component->GetVolume()->GetMaterial()->GetDensity() / 6.24e24;
               } else {
                 UFW_ERROR("Target shape is not a Box");
