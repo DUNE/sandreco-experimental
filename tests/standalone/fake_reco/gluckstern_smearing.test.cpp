@@ -23,6 +23,7 @@ namespace {
     v.z = z;
   }
 
+  // create a test caf::SRTrueParticle
   ::caf::SRTrueParticle make_test_true_particle(int pdg, float px, float py, float pz, float E) {
     ::caf::SRTrueParticle p{};
     p.pdg  = pdg;
@@ -36,12 +37,28 @@ namespace {
     return p;
   }
 
+  // create a test caf::SRInteraction
   ::caf::SRTrueInteraction make_test_true_interaction() {
     ::caf::SRTrueInteraction ixn{};
     ixn.id = 42;
     ixn.E  = 2.5f;
     set_vector(ixn.vtx, 100.0f, 200.0f, 300.0f);
     return ixn;
+  }
+
+  // create a test caf::SRTrack
+  ::caf::SRTrack make_test_true_track(double startx, double starty, double startz, double stopx, double stopy, double stopz, double E) {
+    ::caf::SRTrack track{};
+    set_vector(track.start, startx, starty, startz);
+    set_vector(track.end, stopx, stopy, stopz);
+    set_vector(track.dir, 0.0f, 0.0f, 1.0f);
+    set_vector(track.enddir, 0.0f, 0.0f, -1.0f);
+    track.time   = 2.0f;
+    track.E      = gev_to_mev(E);
+    track.Evis   = track.E;
+    track.len_cm = distance(track.start, track.end);
+    track.charge = 1.0f;
+    return track;
   }
 
   // create a test hit, where
@@ -59,7 +76,7 @@ namespace {
 
   // create a test EDEPTrajectory, starting from the default TG4Trajectory
   // and filling it with a specified nr of test hits and default TG4 primary
-  EDEPTrajectory make_test_true_trajectory(int nr_hit_points, double energy_deposit, int contrib, int primary_id) {
+  EDEPTrajectory make_test_true_edeptrajectory(int nr_hit_points, double energy_deposit, int contrib, int primary_id) {
     auto traj = TG4Trajectory();
 
     // get the id of the default TG4Trajectory
@@ -100,18 +117,19 @@ BOOST_AUTO_TEST_SUITE(reco_particle_filler_with_smearing)
 BOOST_AUTO_TEST_CASE(generic_particle_not_smeared) {
   auto true_part     = make_test_true_particle(2212, 0.0f, 0.0f, 1.0f, 1.1f);
   auto id            = make_primary_id(1, 0);
-  auto true_part_trj = make_test_true_trajectory(5, 100.0f, 2212, 2212);
+  auto true_part_trj = make_test_true_edeptrajectory(5, 100.0f, 2212, 2212);
+  auto true_track    = make_test_true_track(0.0f, 0.0f, 0.0f, 10.0f, 20.0f, 30.0f, 1.1f);
 
-  auto reco = CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_part, id, true_part_trj, 0.1f, 0.1f,
+  auto reco_track = CAFFiller<::caf::SRTrack>::from_true_with_mu_smearing(true_part, id, true_part_trj, 0.1f, 0.1f,
                                                                            50.0f, 1.0f);
 
-  BOOST_TEST(reco.pdg == 2212);
-  BOOST_TEST(reco.primary == true);
-  BOOST_CHECK_CLOSE(reco.E, 1.1f, 1e-5);
-  BOOST_TEST(reco.E_method == ::caf::PartEMethod::kCalorimetry);
-  BOOST_CHECK_CLOSE(reco.p.x, 0.0f, 1e-5);
-  BOOST_CHECK_CLOSE(reco.p.y, 0.0f, 1e-5);
-  BOOST_CHECK_CLOSE(reco.p.z, 1.0f, 1e-5);
+  BOOST_TEST(reco_track.start.X() == 0.0f);
+  BOOST_TEST(reco_track.start.Y() == 0.0f);
+  BOOST_TEST(reco_track.start.Z() == 0.0f);
+  BOOST_TEST(reco_track.end.X() == 10.0f);
+  BOOST_TEST(reco_track.end.Y() == 20.0f);
+  BOOST_TEST(reco_track.end.Z() == 30.0f);
+  BOOST_CHECK_CLOSE(reco_track.E, true_track.E, 1e-5);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -125,28 +143,30 @@ BOOST_AUTO_TEST_SUITE(edge_cases)
 BOOST_AUTO_TEST_CASE(few_hit_points) {
   auto true_part     = make_test_true_particle(13, 0.0f, 0.0f, 1.0f, 1.1f);
   auto id            = make_primary_id(1, 0);
-  auto true_part_trj = make_test_true_trajectory(1, 100.0f, 13, 13);
+  auto true_part_trj = make_test_true_edeptrajectory(1,1.1f, 13, 13);
+  auto true_track    = make_test_true_track(0.0f, 0.0f, 0.0f, 10.0f, 20.0f, 30.0f, 1.1f);
 
   const auto& hit_map = true_part_trj.GetHitMap();
   const auto& it      = hit_map.find(sand::subdetector_t::DRIFT);
   const auto& hit_vec = it->second;
 
   const auto gluckstern_helper = GlucksternSmearing(hit_vec, 50.0f);
-  auto reco = CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(true_part, id, true_part_trj, 0.1f, 0.1f,
+  auto reco_track = CAFFiller<::caf::SRTrack>::from_true_with_mu_smearing(true_part, id, true_part_trj, 0.1f, 0.1f,
                                                                            50.0f, 1.0f);
 
   BOOST_TEST(!gluckstern_helper.IsValid());
-  BOOST_TEST(reco.pdg == 13);
-  BOOST_TEST(reco.primary == true);
-  BOOST_CHECK_CLOSE(reco.E, 1.1f, 1e-5);
-  BOOST_TEST(reco.E_method == ::caf::PartEMethod::kCalorimetry);
-  BOOST_CHECK_CLOSE(reco.p.x, 0.0f, 1e-5);
-  BOOST_CHECK_CLOSE(reco.p.y, 0.0f, 1e-5);
-  BOOST_CHECK_CLOSE(reco.p.z, 1.0f, 1e-5);
+  BOOST_TEST(reco_track.start.X() == 0.0f);
+  BOOST_TEST(reco_track.start.Y() == 0.0f);
+  BOOST_TEST(reco_track.start.Z() == 0.0f);
+  BOOST_TEST(reco_track.end.X() == 10.0f);
+  BOOST_TEST(reco_track.end.Y() == 20.0f);
+  BOOST_TEST(reco_track.end.Z() == 30.0f);
+  BOOST_CHECK_CLOSE(reco_track.E, true_track.E, 1e-5);
 }
 
 BOOST_AUTO_TEST_CASE(points_over_thr) {
-  auto true_part_trj = make_test_true_trajectory(3, 100.0f, 13, 13);
+  auto true_part_trj = make_test_true_edeptrajectory(3, 100.0f, 13, 13);
+
 
   const auto& hit_map          = true_part_trj.GetHitMap();
   const auto& it               = hit_map.find(sand::subdetector_t::DRIFT);

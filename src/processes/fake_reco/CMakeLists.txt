@@ -5,6 +5,7 @@ target_sources(sand_fake_reco
     fake_reco.cpp
     caf_handlers/caf_filler_reco.cpp
     utils/GlucksternSmearing.cpp
+    utils/GaussSmearing.cpp
 )
 
 add_dependencies(sand_fake_reco sand_edep_reader sand_caf_caf_streamer)

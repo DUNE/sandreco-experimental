@@ -19,13 +19,18 @@ namespace sand {
     m_intrinsic_pos_res_l = cfg.value("intrinsic_pos_res_l", 0.);
     m_hit_energy_thr      = cfg.value("hit_energy_thr", 0.);
     m_b_field_magnitude   = cfg.value("b_field_magnitude", 0.);
+    m_energy_res          = cfg.value("energy_resolution", 0.);
+    m_momentum_res        = cfg.value("momentum_resolution", 0.);
+    m_x_res               = cfg.value("x_resolution", 0.);
+    m_y_res               = cfg.value("y_resolution", 0.);
+    m_z_res               = cfg.value("z_resolution", 0.);
   }
 
   void fake_reco::run() {
     auto const& truth_branch = get<sand::caf::truth_branch_wrapper>("in_truth");
     m_caf                    = &set<sand::caf::standard_record_wrapper>("output_caf");
 
-    if (m_reco_mode == "smearing") {
+    if (m_reco_mode == "total_smearing") {
       m_edep = &get<edep_reader>();
     }
 
@@ -67,6 +72,7 @@ namespace sand {
 
   void fake_reco::fill_reco_objects(
       const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
+      const std::function<::caf::SRTrack(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco_track,
       const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& part_id, bool is_primary,
       ::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const {
     // Create SRRecoParticle from truth
@@ -76,7 +82,7 @@ namespace sand {
     reco_ixn.part.nsandreco++;
 
     if (is_track_like(true_part.pdg)) {
-      auto track = CAFFiller<::caf::SRTrack>::from_true(true_part, part_id);
+      auto track = make_reco_track(true_part, part_id);
       sand_ixn.tracker.tracks.push_back(std::move(track));
       sand_ixn.tracker.ntracks++;
     } else if (is_shower_like(true_part.pdg)) {
@@ -95,33 +101,61 @@ namespace sand {
     reco_ixn.part.sandreco.reserve(prim_count + sec_count);
 
     std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle&, const ::caf::TrueParticleID&)> make_reco;
+    std::function<::caf::SRTrack(const ::caf::SRTrueParticle&, const ::caf::TrueParticleID&)> make_reco_track;
 
     if (m_reco_mode == "truth") {
       UFW_INFO("Using reconstruction from truth");
       make_reco = [](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
         return CAFFiller<::caf::SRRecoParticle>::from_true(true_prim, prim_id);
       };
-    } else if (m_reco_mode == "smearing") {
-      UFW_INFO("Using reconstruction from truth with smearing");
+      make_reco_track = [](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        return CAFFiller<::caf::SRTrack>::from_true(true_prim, prim_id);
+      };
+    } else if (m_reco_mode == "gauss_smearing") {
+      UFW_INFO("Using reconstruction from truth with fast smearing");
       make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        return CAFFiller<::caf::SRRecoParticle>::from_true_with_gauss_smearing(true_prim, prim_id, m_energy_res, m_momentum_res, m_x_res, m_y_res, m_z_res);
+      };
+      make_reco_track = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        return CAFFiller<::caf::SRTrack>::from_true(true_prim, prim_id);
+      };
+    } else if (m_reco_mode == "total_smearing") {
+      UFW_INFO("Using reconstruction from truth with smearing (gauss + gluckstern)");
+      make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+        return CAFFiller<::caf::SRRecoParticle>::from_true_with_gauss_smearing(true_prim, prim_id, m_energy_res, m_momentum_res, m_x_res, m_y_res, m_z_res);
+      };
+      make_reco_track = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
         const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
-        return CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(
-            true_prim, prim_id, true_prim_trj, m_intrinsic_pos_res_t, m_intrinsic_pos_res_l, m_hit_energy_thr,
-            m_b_field_magnitude);
+        return CAFFiller<::caf::SRTrack>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj,
+                                                                     m_intrinsic_pos_res_t, m_intrinsic_pos_res_l,
+                                                                     m_hit_energy_thr, m_b_field_magnitude);
       };
     } else {
-      UFW_ERROR("You need to specify which reco mode you want to use");
-    }
+        UFW_ERROR("You need to specify which reco mode you want to use");
+    };
+
+
+    // else if (m_reco_mode == "gluck_smearing") {
+    //   UFW_INFO("Using reconstruction from truth with gluckstern smearing");
+    //   make_reco = [this](const ::caf::SRTrueParticle& true_prim, const ::caf::TrueParticleID& prim_id) {
+    //     const auto true_prim_trj = *m_edep->GetTrajectory(true_prim.G4ID);
+    //     return CAFFiller<::caf::SRTrack>::from_true_with_mu_smearing(true_prim, prim_id, true_prim_trj, m_intrinsic_pos_res_t, m_intrinsic_pos_res_l, m_hit_energy_thr, m_b_field_magnitude);
+    //   };
+    // }
 
     for (std::size_t i{}; i != prim_count; ++i) {
       const auto& true_prim = true_ixn.prim[i];
-      fill_reco_objects(make_reco, true_prim, true_prim.ancestor_id, true, reco_ixn, sand_ixn);
+      const auto& prim_id   = true_prim.ancestor_id;
+
+      fill_reco_objects(make_reco, make_reco_track, true_prim, prim_id, true, reco_ixn, sand_ixn);
     }
 
     // Loop over secondary particles
     for (std::size_t i{}; i != sec_count; ++i) {
       const auto& true_sec = true_ixn.sec[i];
-      fill_reco_objects(make_reco, true_sec, true_sec.ancestor_id, false, reco_ixn, sand_ixn);
+      const auto& sec_id   = true_sec.ancestor_id;
+
+      fill_reco_objects(make_reco, make_reco_track, true_sec, sec_id, false, reco_ixn, sand_ixn);
     }
   }
 

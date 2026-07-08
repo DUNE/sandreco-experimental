@@ -23,9 +23,15 @@ namespace sand {
     double m_intrinsic_pos_res_l{};
     double m_hit_energy_thr{};
     double m_b_field_magnitude{};
+    double m_energy_res{};   ///< Energy resolution (%)
+    double m_momentum_res{}; ///< Momentum resolution (%)
+    double m_x_res{};        ///< x coordinate resolution
+    double m_y_res{};        ///< y coordinate resolution
+    double m_z_res{};        ///< z coordinate resolution
 
     /// @brief Fill the reco caf objects for a particle
     void fill_reco_objects(const std::function<::caf::SRRecoParticle(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco,
+                           const std::function<::caf::SRTrack(const ::caf::SRTrueParticle, const ::caf::TrueParticleID)>& make_reco_track,
                            const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& part_id,
                            bool is_primary, ::caf::SRInteraction& reco_ixn, ::caf::SRSANDInt& sand_ixn) const;
 

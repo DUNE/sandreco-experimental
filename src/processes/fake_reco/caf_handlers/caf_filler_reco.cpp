@@ -1,4 +1,6 @@
 #include "utils/GlucksternSmearing.hpp"
+#include "utils/GaussSmearing.hpp"
+
 #include "caf_filler.hpp"
 
 namespace sand {
@@ -33,32 +35,18 @@ namespace sand {
     return reco;
   }
 
-  ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_mu_smearing(
-      const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj,
-      double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude) {
-    // start by filling all fields from truth
+  ::caf::SRRecoParticle CAFFiller<::caf::SRRecoParticle>::from_true_with_gauss_smearing(const ::caf::SRTrueParticle& true_part,
+                                                                    const ::caf::TrueParticleID& id, const double en_res, const double p_res, 
+                                                                    const double x_res, const double y_res, const double z_res) {
+
     auto reco = CAFFiller<::caf::SRRecoParticle>::from_true(true_part, id);
-    // return from_true for all particle except muons (temporarily)
-    if (std::abs(true_part.pdg) != 13) {
-      return reco;
-    }
 
-    // for muons in the drift tracker (temporarily) smear according to the Gluckstern formula
-    const auto& hit_map = true_part_trj.GetHitMap();
-    const auto& it      = hit_map.find(sand::subdetector_t::DRIFT);
-    if (it == hit_map.end()) {
-      return reco;
-    }
-    const auto& hit_vec = it->second;
+    auto gauss_helper = GaussSmearing();
 
-    const auto gluckstern_helper = GlucksternSmearing{hit_vec, hit_energy_thr};
-
-    // apply the measurement resolution smearing
-    if (!gluckstern_helper.IsValid()) {
-      return reco;
-    }
-
-    reco.p = gluckstern_helper.apply_smearing(true_part.p, intrinsic_pos_res_t, intrinsic_pos_res_l, b_field_magnitude);
+    reco.E        = gauss_helper.apply_energy_smearing(true_part.p.E, en_res);
+    reco.p        = gauss_helper.apply_momentum_smearing(true_part.p, p_res);
+    reco.start    = gauss_helper.apply_pos_smearing(true_part.start_pos, x_res, y_res, z_res);
+    reco.end      = gauss_helper.apply_pos_smearing(true_part.end_pos, x_res, y_res, z_res);
 
     return reco;
   }
@@ -80,6 +68,42 @@ namespace sand {
 
     add_truth_match(track, id);
     return track;
+  }
+
+  ::caf::SRTrack CAFFiller<::caf::SRTrack>::from_true_with_mu_smearing(
+      const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& id, const EDEPTrajectory& true_part_trj,
+      double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude) {
+    
+    // start by filling all fields from truth
+    auto reco_track = CAFFiller<::caf::SRTrack>::from_true(true_part, id);
+
+    // return from_true for all particle except muons (temporarily)
+    if (std::abs(true_part.pdg) != 13) {
+      return reco_track;
+    }
+    static const double muon_mass = TDatabasePDG::Instance()->GetParticle(std::abs(true_part.pdg))->Mass(); 
+
+    // for muons in the drift tracker (temporarily) smear according to the Gluckstern formula
+    const auto& hit_map = true_part_trj.GetHitMap();
+    const auto& it      = hit_map.find(sand::subdetector_t::DRIFT);
+    if (it == hit_map.end()) {
+      return reco_track;
+    }
+    const auto& hit_vec = it->second;
+
+    const auto gluckstern_helper = GlucksternSmearing{hit_vec, hit_energy_thr};
+
+    if (!gluckstern_helper.IsValid()) {
+      return reco_track;
+    }
+    
+    // apply the measurement resolution smearing
+    const auto smeared_p = gluckstern_helper.apply_smearing(true_part.p, intrinsic_pos_res_t, intrinsic_pos_res_l, b_field_magnitude);
+
+    reco_track.E = std::hypot(std::hypot(smeared_p.x, smeared_p.y), std::hypot(smeared_p.z, muon_mass));
+    reco_track.Evis = reco_track.E;
+
+    return reco_track;
   }
 
   ::caf::SRShower CAFFiller<::caf::SRShower>::from_true(const ::caf::SRTrueParticle& true_part,
@@ -104,6 +128,18 @@ namespace sand {
 
     reco.truth.push_back(truth_index);
     reco.truthOverlap.push_back(1.0f);
+
+    return reco;
+  }
+
+  ::caf::SRInteraction CAFFiller<::caf::SRInteraction>::from_true_with_gauss_smearing(const ::caf::SRTrueInteraction& true_ixn,
+                                                                std::size_t truth_index, const double en_res, const double x_res, 
+                                                                const double y_res, const double z_res) {
+    auto reco = CAFFiller<::caf::SRInteraction>::from_true(true_ixn, truth_index);
+
+    auto gauss_helper = GaussSmearing();
+    reco.vtx          = gauss_helper.apply_pos_smearing(true_ixn.vtx, x_res, y_res, z_res);
+    reco.Enu.calo     = gauss_helper.apply_energy_smearing(true_ixn.E, en_res);
 
     return reco;
   }

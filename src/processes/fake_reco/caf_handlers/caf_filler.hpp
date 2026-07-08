@@ -39,10 +39,8 @@ namespace sand {
     [[nodiscard]] static ::caf::SRRecoParticle from_true(const ::caf::SRTrueParticle& true_part,
                                                          const ::caf::TrueParticleID& id);
 
-    [[nodiscard]] static ::caf::SRRecoParticle
-    from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part, const ::caf::TrueParticleID& id,
-                               const EDEPTrajectory& true_part_trj, double intrinsic_pos_res_t,
-                               double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude);
+    [[nodiscard]] static ::caf::SRRecoParticle from_true_with_gauss_smearing(const ::caf::SRTrueParticle& true_part,
+                                                         const ::caf::TrueParticleID& id, const double en_res, const double p_res, const double x_res, const double y_res, const double z_res);
   };
 
   /// @brief Fills SRTrack from truth (fake reconstruction)
@@ -52,6 +50,11 @@ namespace sand {
 
     [[nodiscard]] static ::caf::SRTrack from_true(const ::caf::SRTrueParticle& true_part,
                                                   const ::caf::TrueParticleID& id);
+
+    [[nodiscard]] static ::caf::SRTrack from_true_with_mu_smearing(const ::caf::SRTrueParticle& true_part,
+                                                                          const ::caf::TrueParticleID& id, 
+                                                                          const EDEPTrajectory& true_part_trj,
+                                                                          double intrinsic_pos_res_t, double intrinsic_pos_res_l, double hit_energy_thr, double b_field_magnitude);
   };
 
   /// @brief Fills SRShower from truth (fake reconstruction)
@@ -70,6 +73,9 @@ namespace sand {
 
     [[nodiscard]] static ::caf::SRInteraction from_true(const ::caf::SRTrueInteraction& true_ixn,
                                                         std::size_t truth_index);
+
+    [[nodiscard]] static ::caf::SRInteraction from_true_with_gauss_smearing(const ::caf::SRTrueInteraction& true_ixn,
+                                                        std::size_t truth_index, const double en_res, const double x_res, const double y_res, const double z_res);
   };
 
 } // namespace sand
