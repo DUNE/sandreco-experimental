@@ -37,6 +37,7 @@ namespace sand::grain {
    * | Type            | Comment  |
    * |-----------------|----------|
    * | `sand::geoinfo` | Geometry |
+   * | `sand::cl`      | GPU      |
    *
    * \subsection Requirements
    * |  Name         | Type                       | Comment          |
