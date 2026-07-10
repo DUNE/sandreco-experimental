@@ -3,6 +3,7 @@
 #include <common/hit.h>
 #include <common/sand.h>
 #include <common/timerange.h>
+#include <grain/point_cloud.h>
 
 namespace sand::grain {
 
