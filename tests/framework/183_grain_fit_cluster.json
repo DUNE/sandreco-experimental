@@ -21,6 +21,8 @@
       },
       {
         "sand::grain::fit_cluster" : {
+          "fit_step_size" : 0.01,
+          "use_weights" : true
         },
         "reqs" : {"point_clusters_in" : "grain_point_clusters"},
         "prods" : {"point_clusters_out" : "grain_fitted_point_clusters"}

@@ -6,8 +6,6 @@
 #include <vector>
 #include <array>
 
-#include <TMath.h>
-
 namespace sand::grain {
 
     std::pair<pos_3d, dir_3d> line_params_to_p_v(const std::array<double,4>& line_params) {
@@ -70,10 +68,10 @@ namespace sand::grain {
 
 
 
-    // Class to be used for custom ROOT Fitter
+    // Callable object to be used for custom ROOT Fitter
     class WeightedLineFitter {
         public:
-            WeightedLineFitter(const std::vector<point_cloud::point>& points) : m_points(points) {} 
+            WeightedLineFitter(const std::vector<point_cloud::point>& points, bool use_weights) : m_points(points), m_use_weights(use_weights) {} 
             double operator()(const double* fit_parameters);
 
 
@@ -81,6 +79,7 @@ namespace sand::grain {
             double point_line_distance(const point_cloud::point& point, const pos_3d& line_point, const dir_3d& line_dir);
             
             std::vector<point_cloud::point> m_points;
+            bool m_use_weights;
     };
 
 
@@ -91,7 +90,7 @@ namespace sand::grain {
         double cross_mag = cross_prod.R();
         double dir_mag = line_dir.R();
 
-        return (cross_mag / dir_mag) * point.amplitude;
+        return m_use_weights ? (cross_mag / dir_mag) * point.amplitude : (cross_mag / dir_mag);
     }
 
 

@@ -18,7 +18,6 @@
 #include <array>
 #include <utility>
 #include <algorithm>
-#include <iostream>
 
 namespace sand::grain {
 
@@ -28,11 +27,13 @@ namespace sand::grain {
    * \brief 3D linear fit for clusterized points.
    *
    * Given a cluster (`point_clusters_in` input), this process refines the track estimation by performing weighted 3d linear fit
-   * (`point_clusters_in` output) considering the amplitudes of the clusterized points.
+   * (`point_clusters_out` output) considering the amplitudes of the clusterized points.
    *
    * \subsection Configuration
    * | Parameter Name            | Type   | Unit  | Required/Default | Description                                                           |
    * |---------------------------|--------|-------|------------------|-----------------------------------------------------------------------|
+   * | `fit_step_size`           | double |       | Default: 0.01    | Step size for line fit.                                               |
+   * | `use_weights`             | bool   |       | Default: true    | Flag to use points amplitude as weights in fit minimizer.             |
    *
    * \subsection Dependencies
    * | Type            | Comment  |
@@ -55,47 +56,55 @@ namespace sand::grain {
     fit_cluster();
     void configure(const ufw::config& cfg) override;
     void run() override;
-    std::pair<pos_3d, dir_3d> weighted_linear_fit(const std::vector<point_cloud::point>& points, const std::array<double,4>& starting_params);
+    std::pair<pos_3d, dir_3d> weighted_linear_fit(const point_clusters::cluster& cluster);
 
    private:
-
+    ROOT::Fit::Fitter m_fitter{};
+    double m_fit_step_size;
+    bool m_use_weights;
   };
 
-  std::pair<pos_3d, dir_3d> fit_cluster::weighted_linear_fit(const std::vector<point_cloud::point>& points, const std::array<double,4>& starting_params) {
-      ROOT::Fit::Fitter fitter;
+  std::pair<pos_3d, dir_3d> fit_cluster::weighted_linear_fit(const point_clusters::cluster& cluster) {
 
-      WeightedLineFitter sdist(points);
-      ROOT::Math::Functor fcn(sdist, starting_params.size());
+    const pos_3d starting_line_point = cluster.centre();
+    const dir_3d starting_line_dir = cluster.axis();
+    UFW_DEBUG("Starting track: point {} direction {} n_points {}", starting_line_point, starting_line_dir, cluster.points().size());
 
-      fitter.SetFCN(fcn, starting_params.data());
+    const std::array<double,4> starting_params = line_p_v_to_params(starting_line_point, starting_line_dir);
 
-      for (int i{0}; i < starting_params.size(); ++i) {
-          fitter.Config().ParSettings(i).SetStepSize(0.01);
-      }
+    WeightedLineFitter sdist(cluster.points(), m_use_weights);
+    ROOT::Math::Functor fcn(sdist, starting_params.size());
+    m_fitter.SetFCN(fcn, starting_params.data());
 
-      // Optional limits:
-      fitter.Config().ParSettings(0).SetLimits(0.0, TMath::Pi()/2.0);
-      // fitter.Config().ParSettings(1).SetLimits(0.0, 2.0*TMath::Pi());
+    for (int i{0}; i < starting_params.size(); ++i) {
+      m_fitter.Config().ParSettings(i).SetStepSize(m_fit_step_size);
+    }
 
-      if (!fitter.FitFCN()) {
-        UFW_WARN("======== LINE FIT FAILED ======");
-          return std::pair<pos_3d, dir_3d>(pos_3d(std::nan(""), std::nan(""), std::nan("")), dir_3d(std::nan(""), std::nan(""), std::nan("")));
-      }
+    // Optional limits:
+    m_fitter.Config().ParSettings(0).SetLimits(0.0, TMath::Pi()/2.0);
+    // m_fitter.Config().ParSettings(1).SetLimits(0.0, 2.0*TMath::Pi());
 
-      const ROOT::Fit::FitResult& result = fitter.Result();
-      result.Print(std::cout);
+    // If fit fails, return starting hough3d estimate as is
+    if (!m_fitter.FitFCN()) {
+      UFW_WARN("======== LINE FIT FAILED ======");
+      return {starting_line_point, starting_line_dir};
+    }
 
-      std::array<double,4> fitted_params;
-      std::array<double,4> errors;
+    const ROOT::Fit::FitResult& result = m_fitter.Result();
 
-      std::copy(result.Parameters().begin(), result.Parameters().end(), fitted_params.begin());
-      std::copy(result.Errors().begin(), result.Errors().end(), errors.begin());
+    std::array<double,4> fitted_params;
+    std::array<double,4> errors;
 
-      return line_params_to_p_v(fitted_params);
+    std::copy(result.Parameters().begin(), result.Parameters().end(), fitted_params.begin());
+    std::copy(result.Errors().begin(), result.Errors().end(), errors.begin());
+
+    return line_params_to_p_v(fitted_params);
   }
 
   void fit_cluster::configure(const ufw::config& cfg) {
     process::configure(cfg);
+    m_use_weights = cfg.value("use_weights", true);
+    m_fit_step_size = cfg.value("fit_step_size", 0.01);
   }
 
   fit_cluster::fit_cluster() : process({{"point_clusters_in", "sand::grain::point_clusters"}},
@@ -120,18 +129,11 @@ namespace sand::grain {
           UFW_INFO("Skipping cluster with 0 points");
           continue;
         }
-        // Using placeholder time
-        const pos_3d starting_line_point = clust.centre();
-        const dir_3d starting_line_dir = clust.axis();
-        UFW_DEBUG("Starting track: point {} direction {} n_points {}", starting_line_point, starting_line_dir, clust.points().size());
 
-        const std::array<double,4> starting_params = line_p_v_to_params(starting_line_point, starting_line_dir);
-        auto [test_line_point, test_line_dir] = line_params_to_p_v(starting_params);
-        UFW_DEBUG("Test track: point {} direction {}", test_line_point, test_line_dir);
-
-        auto [fitted_line_point, fitted_line_dir] = weighted_linear_fit(clust.points(), starting_params);
+        auto [fitted_line_point, fitted_line_dir] = weighted_linear_fit(clust);
         UFW_DEBUG("Fitted track: point {} direction {}", fitted_line_point, fitted_line_dir);
 
+        // Using placeholder time
         ev_clusters_out.emplace_back(fitted_line_point, fitted_line_dir, reco::timerange(0.0, 0.0), 0.0, clust.points());
       }
       point_clusters_out.push_back(ev_clusters_out);
