@@ -30,6 +30,47 @@ namespace sand::grain {
         return std::pair<pos_3d, dir_3d>(line_p, line_v);
     }
 
+
+    std::array<double,4> line_p_v_to_params(const pos_3d& p, const dir_3d& v) {
+        // Unit direction
+        const dir_3d u = v.Unit();
+        const double vx = u.x(), vy = u.y(), vz = u.z();
+
+        const double phi = u.Phi();
+        // In ROOT theta is with respect to z axis, we need the elevation from xy plane, so PI/2 - theta_root
+        const double theta = M_PI_2 - u.Theta();
+
+        // Assume vz >=0, given the upper emishpere used for the hough3d
+        const double invDen = 1.0 / (1.0 + vz);
+
+        const double A = 1.0 - vx*vx * invDen;
+        const double E = -vx*vy * invDen;
+        const double D = 1.0 - vy*vy * invDen;
+
+        const dir_3d b1(A, E, -vx);
+        const dir_3d b2(E, D, -vy);
+
+        const double bx_bx = b1.Mag2();
+        const double by_by = b2.Mag2();
+        const double bx_by = b1.Dot(b2);
+
+        const double bx_p  = p.Dot(b1);
+        const double by_p  = p.Dot(b2);
+
+        const double det = bx_bx*by_by - bx_by*bx_by; // should be >0 unless special degeneracy
+
+        double x1 = 0.0, y1 = 0.0;
+        if (std::abs(det) > 1e-12) {
+            x1 = (bx_p*by_by - by_p*bx_by) / det;
+            y1 = (by_p*bx_bx - bx_p*bx_by) / det;
+        }
+
+        return {theta, phi, x1, y1};
+    }
+
+
+
+    // Class to be used for custom ROOT Fitter
     class WeightedLineFitter {
         public:
             WeightedLineFitter(const std::vector<point_cloud::point>& points) : m_points(points) {} 
@@ -61,6 +102,5 @@ namespace sand::grain {
 
         return sum;
     }
-
 
 }   // namespace sand::grain

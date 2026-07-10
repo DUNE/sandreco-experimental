@@ -55,26 +55,26 @@ namespace sand::grain {
     fit_cluster();
     void configure(const ufw::config& cfg) override;
     void run() override;
-    std::pair<pos_3d, dir_3d> weighted_linear_fit(const std::vector<point_cloud::point>& points);
+    std::pair<pos_3d, dir_3d> weighted_linear_fit(const std::vector<point_cloud::point>& points, const std::array<double,4>& starting_params);
 
    private:
 
   };
 
-  std::pair<pos_3d, dir_3d> weighted_linear_fit(const std::vector<point_cloud::point>& points, const std::array<double,4>& starting_param, std::array<double,4>& fitted_param, std::array<double,4>& errors) {
+  std::pair<pos_3d, dir_3d> fit_cluster::weighted_linear_fit(const std::vector<point_cloud::point>& points, const std::array<double,4>& starting_params) {
       ROOT::Fit::Fitter fitter;
 
       WeightedLineFitter sdist(points);
-      ROOT::Math::Functor fcn(sdist, starting_param.size());
+      ROOT::Math::Functor fcn(sdist, starting_params.size());
 
-      fitter.SetFCN(fcn, starting_param.data());
+      fitter.SetFCN(fcn, starting_params.data());
 
-      for (int i{0}; i < starting_param.size(); ++i) {
+      for (int i{0}; i < starting_params.size(); ++i) {
           fitter.Config().ParSettings(i).SetStepSize(0.01);
       }
 
       // Optional limits:
-      // fitter.Config().ParSettings(0).SetLimits(0.0, TMath::Pi()/2.0);
+      fitter.Config().ParSettings(0).SetLimits(0.0, TMath::Pi()/2.0);
       // fitter.Config().ParSettings(1).SetLimits(0.0, 2.0*TMath::Pi());
 
       if (!fitter.FitFCN()) {
@@ -85,10 +85,13 @@ namespace sand::grain {
       const ROOT::Fit::FitResult& result = fitter.Result();
       result.Print(std::cout);
 
-      std::copy(result.Parameters().begin(), result.Parameters().end(), fitted_param.begin());
+      std::array<double,4> fitted_params;
+      std::array<double,4> errors;
+
+      std::copy(result.Parameters().begin(), result.Parameters().end(), fitted_params.begin());
       std::copy(result.Errors().begin(), result.Errors().end(), errors.begin());
 
-      return line_params_to_p_v(fitted_param);
+      return line_params_to_p_v(fitted_params);
   }
 
   void fit_cluster::configure(const ufw::config& cfg) {
@@ -107,20 +110,29 @@ namespace sand::grain {
     // Loop on events in a spill
     for (const auto& ev_clusters_in : point_clusters_in) {
       if (ev_clusters_in.size() == 0) {
-        UFW_DEBUG("Skipping event with 0 clusters");
+        UFW_INFO("Skipping event with 0 clusters");
         continue;
       }
       UFW_DEBUG("Processing {} clusters", ev_clusters_in.size());
       std::vector<point_clusters::cluster> ev_clusters_out;
       for (const auto& clust : ev_clusters_in) {
+        if (clust.points().size() == 0) {
+          UFW_INFO("Skipping cluster with 0 points");
+          continue;
+        }
         // Using placeholder time
-        const pos_3d out_line_point = clust.centre();
-        const dir_3d out_line_dir = clust.axis();
-        ev_clusters_out.emplace_back(out_line_point, out_line_dir, reco::timerange(0.0, 0.0), 0.0,
-                                     clust.points());
-        UFW_DEBUG("Added track: point {} direction {} n_points {}", out_line_point, out_line_dir,
-                  clust.points().size());
+        const pos_3d starting_line_point = clust.centre();
+        const dir_3d starting_line_dir = clust.axis();
+        UFW_DEBUG("Starting track: point {} direction {} n_points {}", starting_line_point, starting_line_dir, clust.points().size());
 
+        const std::array<double,4> starting_params = line_p_v_to_params(starting_line_point, starting_line_dir);
+        auto [test_line_point, test_line_dir] = line_params_to_p_v(starting_params);
+        UFW_DEBUG("Test track: point {} direction {}", test_line_point, test_line_dir);
+
+        auto [fitted_line_point, fitted_line_dir] = weighted_linear_fit(clust.points(), starting_params);
+        UFW_DEBUG("Fitted track: point {} direction {}", fitted_line_point, fitted_line_dir);
+
+        ev_clusters_out.emplace_back(fitted_line_point, fitted_line_dir, reco::timerange(0.0, 0.0), 0.0, clust.points());
       }
       point_clusters_out.push_back(ev_clusters_out);
     }
