@@ -51,6 +51,8 @@ namespace sand::reco {
 
     bool contains(double t) const { return m_earliest <= t && t <= m_latest; }
 
+    bool span() const { return m_latest - m_earliest; }
+
    private:
     double m_earliest;
     double m_best;
