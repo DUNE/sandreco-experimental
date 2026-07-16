@@ -19,7 +19,7 @@ namespace sand::caf {
     : public ::caf::SRCommonRecoBranch
     , public sand::managed_data_base {};
 
-  struct nd_reco_branch
+  struct nd_reco_branch_wrapper
     : public ::caf::SRNDBranch
     , public sand::managed_data_base {};
 
@@ -28,6 +28,6 @@ namespace sand::caf {
 UFW_DECLARE_MANAGED_DATA(sand::caf::standard_record_wrapper);
 UFW_DECLARE_MANAGED_DATA(sand::caf::truth_branch_wrapper);
 UFW_DECLARE_MANAGED_DATA(sand::caf::common_reco_branch_wrapper);
-UFW_DECLARE_MANAGED_DATA(sand::caf::nd_reco_branch);
+UFW_DECLARE_MANAGED_DATA(sand::caf::nd_reco_branch_wrapper);
 
 #endif // SANDRECO_CAF_WRAPPER_HPP
