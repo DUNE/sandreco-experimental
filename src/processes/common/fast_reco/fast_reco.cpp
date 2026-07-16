@@ -1,6 +1,9 @@
 #include "fast_reco.hpp"
+#include "fast_reco_details.hpp"
 
 #include <caf/caf_wrapper.hpp>
+
+#include <duneanaobj/StandardRecord/SRInteraction.h>
 
 #include <ufw/factory.hpp>
 
@@ -22,6 +25,16 @@ namespace sand::common {
 
     for (std::size_t ixn_idx{}, n_nu = truth_branch.nu.size(); ixn_idx != n_nu; ++ixn_idx) {
       auto& true_ixn = truth_branch.nu[ixn_idx];
+
+      auto& common_reco_ixn = common_reco_branch.ixn.sandreco.emplace_back();
+      common_reco_ixn.id    = true_ixn.id;
+      common_reco_ixn.vtx   = true_ixn.vtx;
+      common_reco_ixn.dir   = reco_details::direction_from_true(true_ixn);
+      common_reco_ixn.nuhyp = reco_details::neutrino_hypothesis_from_true(true_ixn);
+      common_reco_ixn.Enu   = reco_details::energy_from_true(true_ixn);
+      // Missing reco particles ...
+      common_reco_ixn.truth        = {ixn_idx};
+      common_reco_ixn.truthOverlap = {1.f};
     }
   }
 
