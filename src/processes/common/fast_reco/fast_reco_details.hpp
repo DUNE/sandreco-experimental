@@ -1,7 +1,9 @@
 #ifndef SAND_COMMON_FAST_RECO_DETAILS_HPP
 #define SAND_COMMON_FAST_RECO_DETAILS_HPP
 
-#include <array>
+#include <duneanaobj/StandardRecord/SREnums.h>
+
+#include <vector>
 
 namespace caf {
   class SRVector3D;
@@ -9,14 +11,23 @@ namespace caf {
   class SRTrueInteraction;
   class SRDirectionBranch;
   class SRNeutrinoEnergyBranch;
+  class SRRecoParticlesBranch;
+  class SRRecoParticle;
+  class SRTrueParticle;
+  class SRShower;
+  class SRTrack;
 } // namespace caf
 
 namespace sand::common::reco_details {
 
-  [[nodiscard]] ::caf::SRVector3D normalize_to_direction(float px, float py, float pz);
+  struct ParticleSlot {
+    ::caf::TrueParticleID id;
+    int part_idx;
+    int track_idx  = -1;
+    int shower_idx = -1;
+  };
 
-  /// One-hot encoding over the {0, 1, 2, N>=3} multiplicity buckets used by SRCVNScoreBranch
-  [[nodiscard]] std::array<float, 4> count_bucket_one_hot(int count);
+  using ParticleSlots = std::vector<ParticleSlot>;
 
   /// Perfect classifier neutrino hypothesis
   [[nodiscard]] ::caf::SRNeutrinoHypothesisBranch
@@ -27,6 +38,16 @@ namespace sand::common::reco_details {
 
   /// Perfect neutrino energy hypothesis: every estimator collapses to the true energy
   [[nodiscard]] ::caf::SRNeutrinoEnergyBranch energy_from_true(::caf::SRTrueInteraction const& true_ixn);
+
+  [[nodiscard]] ::caf::SRRecoParticle reco_particle_from_true(::caf::SRTrueParticle const& true_part,
+                                                              ::caf::TrueParticleID const& id);
+
+  [[nodiscard]] ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id);
+
+  [[nodiscard]] ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part,
+                                                 ::caf::TrueParticleID const& id);
+
+  [[nodiscard]] ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx);
 
 } // namespace sand::common::reco_details
 

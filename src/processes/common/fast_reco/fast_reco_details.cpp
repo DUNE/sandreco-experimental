@@ -1,24 +1,71 @@
 #include "fast_reco_details.hpp"
 
 #include <duneanaobj/StandardRecord/SRDirectionBranch.h>
+#include <duneanaobj/StandardRecord/SREnums.h>
 #include <duneanaobj/StandardRecord/SRNeutrinoEnergyBranch.h>
 #include <duneanaobj/StandardRecord/SRNeutrinoHypothesisBranch.h>
+#include <duneanaobj/StandardRecord/SRRecoParticle.h>
+#include <duneanaobj/StandardRecord/SRRecoParticlesBranch.h>
+#include <duneanaobj/StandardRecord/SRShower.h>
+#include <duneanaobj/StandardRecord/SRTrack.h>
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
+#include <duneanaobj/StandardRecord/SRTrueParticle.h>
+
+#include <TDatabasePDG.h>
+#include <TParticlePDG.h>
 
 #include <cmath>
+#include <cstddef>
 
 namespace sand::common::reco_details {
 
-  ::caf::SRVector3D normalize_to_direction(float px, float py, float pz) {
-    float const mag = std::sqrt(px * px + py * py + pz * pz);
-    return (mag > 0.f) ? ::caf::SRVector3D{px / mag, py / mag, pz / mag} : ::caf::SRVector3D{0.f, 0.f, 0.f};
-  }
+  namespace {
+    bool is_track_like(int pdg) {
+      int const abs_pdg = std::abs(pdg);
+      return abs_pdg == 13 || abs_pdg == 211 || abs_pdg == 321 || abs_pdg == 2212;
+    }
 
-  std::array<float, 4> count_bucket_one_hot(int count) {
-    std::array<float, 4> bucket{0.f, 0.f, 0.f, 0.f};
-    bucket[static_cast<std::size_t>(std::min(count, 3))] = 1.f;
-    return bucket;
-  }
+    bool is_shower_like(int pdg) {
+      int const abs_pdg = std::abs(pdg);
+      return abs_pdg == 11 || abs_pdg == 22 || abs_pdg == 111;
+    }
+
+    ::caf::SRVector3D normalize_to_direction(float px, float py, float pz) {
+      float const mag = std::sqrt(px * px + py * py + pz * pz);
+      return (mag > 0.f) ? ::caf::SRVector3D{px / mag, py / mag, pz / mag} : ::caf::SRVector3D{0.f, 0.f, 0.f};
+    }
+
+    std::array<float, 4> count_bucket_one_hot(int count) {
+      std::array bucket{0.f, 0.f, 0.f, 0.f};
+      bucket[static_cast<std::size_t>(std::min(count, 3))] = 1.f;
+      return bucket;
+    }
+
+    short charge_from_pdg(int pdg) {
+      if (auto const* p = TDatabasePDG::Instance()->GetParticle(pdg)) {
+        double const q = p->Charge() / 3.0;
+        if (q > 0.5) {
+          return 1;
+        }
+        if (q < -0.5) {
+          return -1;
+        }
+      }
+      return 0;
+    }
+
+    float distance(::caf::SRVector3D const& a, ::caf::SRVector3D const& b) {
+      float const dx = b.x - a.x;
+      float const dy = b.y - a.y;
+      float const dz = b.z - a.z;
+      return std::sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    ::caf::SRTrueParticle const& true_particle_from_id(::caf::SRTrueInteraction const& true_ixn,
+                                                       ::caf::TrueParticleID const& id) {
+      return (id.type == ::caf::TrueParticleID::kPrimary) ? true_ixn.prim[id.part] : true_ixn.sec[id.part];
+    }
+  } // namespace
 
   ::caf::SRNeutrinoHypothesisBranch neutrino_hypothesis_from_true(::caf::SRTrueInteraction const& true_ixn) {
     ::caf::SRNeutrinoHypothesisBranch nuhyp{};
@@ -90,4 +137,87 @@ namespace sand::common::reco_details {
     return enu;
   }
 
+  ::caf::SRRecoParticle reco_particle_from_true(::caf::SRTrueParticle const& true_part,
+                                                ::caf::TrueParticleID const& id) {
+    ::caf::SRRecoParticle reco_p{};
+
+    reco_p.primary = (id.type == ::caf::TrueParticleID::kPrimary);
+    reco_p.pdg     = true_part.pdg;
+    reco_p.score   = 1.f;
+    reco_p.E       = true_part.p.E;
+    reco_p.p       = ::caf::SRVector3D{true_part.p.px, true_part.p.py, true_part.p.pz};
+    reco_p.start   = true_part.start_pos;
+    reco_p.end     = true_part.end_pos;
+
+    if (is_track_like(true_part.pdg)) {
+      reco_p.origRecoObjType = ::caf::RecoObjType::kTrack;
+    } else if (is_shower_like(true_part.pdg)) {
+      reco_p.origRecoObjType = ::caf::RecoObjType::kShower;
+    }
+
+    reco_p.truth.push_back(id);
+    reco_p.truthOverlap.push_back(1.f);
+
+    return reco_p;
+  }
+
+  ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
+    ::caf::SRTrack track{};
+
+    track.start  = true_part.start_pos;
+    track.end    = true_part.end_pos;
+    track.dir    = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
+    track.enddir = track.dir;
+    track.time   = true_part.time;
+    track.E      = true_part.p.E;
+    track.Evis   = track.E;
+    track.len_cm = distance(track.start, track.end);
+    track.charge = charge_from_pdg(true_part.pdg);
+    track.qual   = 1.f;
+
+    track.truth.push_back(id);
+    track.truthOverlap.push_back(1.f);
+
+    return track;
+  }
+
+  ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
+    ::caf::SRShower shower{};
+
+    shower.start     = true_part.start_pos;
+    shower.direction = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
+    shower.Evis      = true_part.p.E;
+
+    shower.truth.push_back(id);
+    shower.truthOverlap.push_back(1.f);
+
+    return shower;
+  }
+
+  ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx) {
+    ParticleSlots slots;
+    int track_idx{};
+    int shower_idx{};
+
+    auto add = [&](::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
+      ParticleSlot slot{id, static_cast<int>(slots.size())};
+      if (is_track_like(true_part.pdg)) {
+        slot.track_idx = track_idx++;
+      } else if (is_shower_like(true_part.pdg)) {
+        slot.shower_idx = shower_idx++;
+      }
+      slots.push_back(slot);
+    };
+
+    auto add_all = [&](std::vector<::caf::SRTrueParticle> const& particles, ::caf::TrueParticleID::PartType type) {
+      for (std::size_t i{}; i != particles.size(); ++i) {
+        add(particles[i], {ixn_idx, type, static_cast<int>(i)});
+      }
+    };
+
+    add_all(true_ixn.prim, ::caf::TrueParticleID::kPrimary);
+    add_all(true_ixn.sec, ::caf::TrueParticleID::kSecondary);
+
+    return slots;
+  }
 } // namespace sand::common::reco_details

@@ -32,7 +32,7 @@ namespace sand::common {
       common_reco_ixn.dir   = reco_details::direction_from_true(true_ixn);
       common_reco_ixn.nuhyp = reco_details::neutrino_hypothesis_from_true(true_ixn);
       common_reco_ixn.Enu   = reco_details::energy_from_true(true_ixn);
-      // Missing reco particles ...
+      // Reco particle branch missing
       common_reco_ixn.truth        = {ixn_idx};
       common_reco_ixn.truthOverlap = {1.f};
     }
