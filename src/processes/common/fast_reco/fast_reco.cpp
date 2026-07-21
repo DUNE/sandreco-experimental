@@ -26,15 +26,28 @@ namespace sand::common {
     for (std::size_t ixn_idx{}, n_nu = truth_branch.nu.size(); ixn_idx != n_nu; ++ixn_idx) {
       auto& true_ixn = truth_branch.nu[ixn_idx];
 
-      auto& common_reco_ixn = common_reco_branch.ixn.sandreco.emplace_back();
-      common_reco_ixn.id    = true_ixn.id;
-      common_reco_ixn.vtx   = true_ixn.vtx;
-      common_reco_ixn.dir   = reco_details::direction_from_true(true_ixn);
-      common_reco_ixn.nuhyp = reco_details::neutrino_hypothesis_from_true(true_ixn);
-      common_reco_ixn.Enu   = reco_details::energy_from_true(true_ixn);
-      // Reco particle branch missing
+      auto& common_reco_ixn        = common_reco_branch.ixn.sandreco.emplace_back();
+      common_reco_ixn.id           = true_ixn.id;
+      common_reco_ixn.vtx          = true_ixn.vtx;
+      common_reco_ixn.dir          = reco_details::direction_from_true(true_ixn);
+      common_reco_ixn.nuhyp        = reco_details::neutrino_hypothesis_from_true(true_ixn);
+      common_reco_ixn.Enu          = reco_details::energy_from_true(true_ixn);
+      common_reco_ixn.part         = reco_details::reco_particles_from_true(true_ixn, ixn_idx);
       common_reco_ixn.truth        = {ixn_idx};
       common_reco_ixn.truthOverlap = {1.f};
+      ++common_reco_branch.ixn.nsandreco;
+
+      auto& nd_reco_ixn   = nd_reco_branch.sand.ixn.emplace_back();
+      nd_reco_ixn.tracker = reco_details::sand_tracker_from_true(true_ixn, ixn_idx);
+      ++nd_reco_branch.sand.nixn;
+
+      UFW_ASSERT(common_reco_branch.ixn.sandreco.size() == common_reco_branch.ixn.nsandreco,
+                 "common.ixn.nsandreco ({}) doesn't match common.ixn.sandreco.size() ({})",
+                 common_reco_branch.ixn.nsandreco, common_reco_branch.ixn.sandreco.size());
+
+      UFW_ASSERT(nd_reco_branch.sand.ixn.size() == nd_reco_branch.sand.nixn,
+                 "nd.sand.nixn ({}) doesn't match nd.sand.ixn.size() ({})", nd_reco_branch.sand.nixn,
+                 nd_reco_branch.sand.ixn.size());
     }
   }
 

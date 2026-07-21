@@ -8,6 +8,7 @@
 #include <duneanaobj/StandardRecord/SRRecoParticlesBranch.h>
 #include <duneanaobj/StandardRecord/SRShower.h>
 #include <duneanaobj/StandardRecord/SRTrack.h>
+#include <duneanaobj/StandardRecord/SRSAND.h>
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
 #include <duneanaobj/StandardRecord/SRTrueParticle.h>
 
@@ -64,6 +65,19 @@ namespace sand::common::reco_details {
     ::caf::SRTrueParticle const& true_particle_from_id(::caf::SRTrueInteraction const& true_ixn,
                                                        ::caf::TrueParticleID const& id) {
       return (id.type == ::caf::TrueParticleID::kPrimary) ? true_ixn.prim[id.part] : true_ixn.sec[id.part];
+    }
+
+    // prim[i] always lands at part_idx i, sec[i] at part_idx n_prim + i, because
+    // particle_slots_from_true appends all prim before any sec, in the same order.
+    int reco_idx_from_id(::caf::TrueParticleID const& id, int n_prim) {
+      switch (id.type) {
+      case ::caf::TrueParticleID::kPrimary:
+        return id.part;
+      case ::caf::TrueParticleID::kSecondary:
+        return n_prim + id.part;
+      default:
+        return -1; // no parent, or prefsi (not modeled here)
+      }
     }
   } // namespace
 
@@ -220,4 +234,52 @@ namespace sand::common::reco_details {
 
     return slots;
   }
+
+  ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx) {
+    ::caf::SRRecoParticlesBranch part{};
+    auto const n_prim = static_cast<int>(true_ixn.prim.size());
+
+    for (auto const& slot : particle_slots_from_true(true_ixn, ixn_idx)) {
+      auto const& true_part = true_particle_from_id(true_ixn, slot.id);
+      auto reco_p           = reco_particle_from_true(true_part, slot.id);
+
+      int const parent_idx = reco_idx_from_id(true_part.parentID, n_prim);
+      if (parent_idx >= 0) {
+        reco_p.parent = parent_idx;
+        part.sandreco[parent_idx].daughters.push_back(static_cast<unsigned int>(slot.part_idx));
+      }
+
+      if (slot.track_idx >= 0) {
+        reco_p.recoobj = {ixn_idx, ::caf::SRRecoBaseID::kSANDTrackerTrack, slot.track_idx};
+      } else if (slot.shower_idx >= 0) {
+        reco_p.recoobj = {ixn_idx, ::caf::SRRecoBaseID::kSANDTrackerShower, slot.shower_idx};
+      }
+
+      part.sandreco.push_back(std::move(reco_p));
+      ++part.nsandreco;
+    }
+    return part;
+  }
+
+  ::caf::SRTracker sand_tracker_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx) {
+    ::caf::SRTracker tracker{};
+
+    for (auto const& slot : particle_slots_from_true(true_ixn, ixn_idx)) {
+      auto const& true_part = true_particle_from_id(true_ixn, slot.id);
+
+      if (slot.track_idx >= 0) {
+        auto track = track_from_true(true_part, slot.id);
+        track.part = {ixn_idx, ::caf::SRRecoParticleID::kSandreco, slot.part_idx};
+        tracker.tracks.push_back(std::move(track));
+        ++tracker.ntracks;
+      } else if (slot.shower_idx >= 0) {
+        auto shower = shower_from_true(true_part, slot.id);
+        shower.part = {ixn_idx, ::caf::SRRecoParticleID::kSandreco, slot.part_idx};
+        tracker.showers.push_back(std::move(shower));
+        ++tracker.nshowers;
+      }
+    }
+    return tracker;
+  }
+
 } // namespace sand::common::reco_details

@@ -2,6 +2,7 @@
 #define SAND_COMMON_FAST_RECO_DETAILS_HPP
 
 #include <duneanaobj/StandardRecord/SREnums.h>
+#include <duneanaobj/StandardRecord/SRSAND.h>
 
 #include <vector>
 
@@ -16,6 +17,7 @@ namespace caf {
   class SRTrueParticle;
   class SRShower;
   class SRTrack;
+  class SRTracker;
 } // namespace caf
 
 namespace sand::common::reco_details {
@@ -48,6 +50,11 @@ namespace sand::common::reco_details {
                                                  ::caf::TrueParticleID const& id);
 
   [[nodiscard]] ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx);
+
+  [[nodiscard]] ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn,
+                                                                      int ixn_idx);
+
+  [[nodiscard]] ::caf::SRTracker sand_tracker_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx);
 
 } // namespace sand::common::reco_details
 
