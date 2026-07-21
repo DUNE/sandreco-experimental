@@ -47,6 +47,13 @@
         "in_nd": "produced_nd"
       },
       "prods": {}
+    },
+    {
+      "sand::caf::caf_streamer": {
+        "uri": "test/output.caf.root",
+        "tree": "cafTree"
+      },
+      "write": ["produced_truth", "produced_common", "produced_nd"]
     }
   ]
 }
