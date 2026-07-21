@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_fast_reco)
+
+target_sources(sand_test_fast_reco PRIVATE test_fast_reco.cpp)
+
+target_link_libraries(sand_test_fast_reco PRIVATE duneanaobj::StandardRecord)
