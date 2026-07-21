@@ -30,20 +30,23 @@
       }
     },
     {
-      "sand::fake_reco": {},
+      "sand::common::fast_reco": {},
       "reqs": {
         "in_truth": "produced_truth"
       },
       "prods": {
-        "output_caf": "produced_caf"
+        "out_common": "produced_common",
+        "out_nd": "produced_nd"
       }
     },
     {
-      "sand::caf::caf_streamer": {
-        "uri": "test/output.caf.root",
-        "tree": "cafTree"
+      "sand::test::fast_reco_test": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_common": "produced_common",
+        "in_nd": "produced_nd"
       },
-      "write": ["produced_caf"]
+      "prods": {}
     }
   ]
 }
