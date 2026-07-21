@@ -1,12 +1,12 @@
-#ifndef CAF_STREAMER_HPP
-#define CAF_STREAMER_HPP
+#ifndef SAND_CAF_CAF_STREAMER_HPP
+#define SAND_CAF_CAF_STREAMER_HPP
 
 #include <ufw/streamer.hpp>
 
 #include <caf/caf_wrapper.hpp>
 
-#include <TFile.h>
-#include <TTree.h>
+class TFile;
+class TTree;
 
 namespace sand::caf {
 
@@ -17,22 +17,17 @@ namespace sand::caf {
    */
   class caf_streamer : public ufw::streamer {
     std::unique_ptr<TFile> m_file;
-    TTree* m_tree                              = nullptr;
-    standard_record_wrapper* m_data            = nullptr;
-    truth_branch_wrapper const* m_truth_branch = nullptr;
-    standard_record_wrapper m_internal_sr;
-    ufw::type_id m_attached_type;
-    ::caf::StandardRecord* m_caf_ptr                 = nullptr;
-    ufw::context_id m_context_id                     = {};
-    long m_last_entry                                = 0;
-    bool m_has_context_id                            = false;
+    TTree* m_tree{nullptr};
+    ::caf::StandardRecord* m_caf_ptr{nullptr};
+
+    ufw::context_id m_context_id{};
+    long m_last_entry{};
+    bool m_has_context_id{false};
+
     static constexpr const char* s_context_id_branch = "context_id";
     static constexpr const char* s_data_branch       = "rec";
 
    public:
-    caf_streamer() = default;
-    ~caf_streamer() override;
-
     void configure(const ufw::config& cfg, ufw::op_type op) override;
     void prepare(const ufw::public_id& id, const ufw::type_id& type) override;
     void attach(ufw::data::data_base& data, const ufw::public_id& id) override;
