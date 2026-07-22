@@ -1,0 +1,102 @@
+{
+  "ufw": {
+    "ufw-loglevel": "debug",
+    "ufw-basepath": "/usr/local/share/sandreco/data",
+    "ufw-ldpath": [
+      "/usr/local/lib64"
+    ]
+  },
+  "globals": {
+    "sand::root_tgeomanager": {
+      "geometry": "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"
+    },
+    "sand::geoinfo": {
+      "grain_geometry": "gdml-masks",
+      "drift_view_angle": [
+        0.0,
+        -0.087266463,
+        0.087266463
+      ],
+      "drift_view_offset": [
+        10.0,
+        10.0,
+        10.0
+      ],
+      "drift_view_spacing": [
+        10.0,
+        10.0,
+        10.0
+      ]
+    },
+    "sand::grain::geant_gdml_parser": {
+      "gdml-masks": {
+        "path": "geometries/grain/grain-masks/main.gdml"
+      },
+      "gdml-lenses": {
+        "path": "geometries/grain/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"
+      }
+    }
+  },
+  "contexts": {
+    "keys": 2,
+    "locals": {
+      "sand::edep_reader": {
+        "uri": "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"
+      }
+    }
+  },
+  "run": [
+    {
+      "sand::root::tree_streamer": {
+        "uri": "test/ecal_fast_digi.root",
+        "tree": "ecal_fast_digi"
+      },
+      "read": [
+        "ecal_digits"
+      ]
+    },
+    {
+      "sand::ecal::spill_slicer_placeholder": {},
+      "reqs": {
+        "digi": "ecal_digits"
+      },
+      "prods": {
+        "digit_slices": "digit_ecal_slices"
+      }
+    },
+    {
+      "sand::ecal::cell_pair_builder": {
+        "pair_time_tolerance_ns": 0.0,
+        "keep_incomplete": true
+      },
+      "reqs": {
+        "digit_slices": "digit_ecal_slices"
+      },
+      "prods": {
+        "cell_pair_slices": "ecal_cell_pair_slices"
+      }
+    },
+    {
+      "sand::ecal::reco_cell_builder": {
+        "adc_to_pe": 1.0,
+        "light_yield_pe_per_mev": 18.5,
+        "apply_attenuation_correction": true
+      },
+      "reqs": {
+        "cell_pair_slices": "ecal_cell_pair_slices"
+      },
+      "prods": {
+        "reco_cell_slices": "ecal_reco_cell_slices"
+      }
+    },
+    {
+      "sand::root::tree_streamer": {
+        "uri": "test/ecal_reco_cell_builder.root",
+        "tree": "ecal_reco_cell_builder"
+      },
+      "write": [
+        "ecal_reco_cell_slices"
+      ]
+    }
+  ]
+}

@@ -162,9 +162,7 @@ namespace sand::ecal {
 
   cell_pair_builder::cell_pair_builder()
     : process({{"digit_slices", "sand::ecal::digit_slices_container"}},
-              {{"cell_pair_slices", "sand::ecal::cell_pair_slices_container"}}) {
-    UFW_DEBUG("Creating ECal cell_pair_builder process at {}", fmt::ptr(this));
-  }
+              {{"cell_pair_slices", "sand::ecal::cell_pair_slices_container"}}) {}
 
   void cell_pair_builder::configure(const ufw::config& cfg) {
     process::configure(cfg);
@@ -172,9 +170,6 @@ namespace sand::ecal {
     m_pair_time_tolerance_ns = cfg.value("pair_time_tolerance_ns", m_pair_time_tolerance_ns);
 
     m_keep_incomplete = cfg.value("keep_incomplete", m_keep_incomplete);
-
-    UFW_INFO("Configured ECal cell_pair_builder: pair_time_tolerance_ns = {}, keep_incomplete = {}",
-             m_pair_time_tolerance_ns, m_keep_incomplete);
   }
 
   void cell_pair_builder::run() {
@@ -187,8 +182,6 @@ namespace sand::ecal {
 
     cell_pair_slices.collection.clear();
     cell_pair_slices.collection.reserve(digit_slices.collection.size());
-
-    UFW_INFO("ECal cell_pair_builder: input digit slices = {}", digit_slices.collection.size());
 
     for (std::size_t islice = 0; islice < digit_slices.collection.size(); ++islice) {
       const auto& digit_slice = digit_slices.collection.at(islice);
@@ -203,54 +196,21 @@ namespace sand::ecal {
 
       std::map<std::uint32_t, grouped_cell_digits> by_cell;
 
-      std::size_t n_digits_invalid_face = 0;
-      std::size_t n_digits_invalid_cell = 0;
-
       for (std::size_t idig = 0; idig < digit_slice.size(); ++idig) {
         const auto& d = digit_slice.at(idig);
 
         const auto pmt = ecal.pmt(d.channel());
 
         if (!valid_face(pmt.face_)) {
-          ++n_digits_invalid_face;
-
-          UFW_WARN("Ecal cell_pair_builder: skipping digit {} in slice {} with invalid face {}; channel raw = {}", idig,
-                   islice, static_cast<int>(pmt.face_), d.channel().raw);
-
           continue;
         }
 
         if (!valid_cell_id(pmt.cell_)) {
-          ++n_digits_invalid_cell;
-
-          UFW_WARN("Ecal cell_pair_builder: skipping digit {} in slice {} with invalid decoded ECal cell: "
-                   "cell raw = {}, region = {}, module = {}, row = {}, column = {}, face = {}, channel raw = {}",
-                   idig, islice, pmt.cell_.raw, static_cast<int>(pmt.cell_.region),
-                   static_cast<int>(pmt.cell_.module_number), static_cast<int>(pmt.cell_.row),
-                   static_cast<int>(pmt.cell_.column), static_cast<int>(pmt.face_), d.channel().raw);
-
           continue;
         }
 
         auto& group = by_cell[pmt.cell_.raw];
         group.cid   = pmt.cell_;
-
-        const auto ch = d.channel();
-
-        const char* face_name = "unknown";
-        if (pmt.face_ == face_location::begin) {
-          face_name = "begin";
-        } else if (pmt.face_ == face_location::end) {
-          face_name = "end";
-        }
-
-        UFW_DEBUG("ECAL channel debug: slice = {}, digit = {}, "
-                  "channel.raw = {:#018x}, channel.subdetector = {}, channel.link = {}, channel.channel = {:#010x}, "
-                  "pmt.cell.raw = {:#010x}, region = {}, module = {}, row = {}, column = {}, face = {} ({})",
-                  islice, idig, ch.raw, static_cast<int>(ch.subdetector), static_cast<int>(ch.link), ch.channel,
-                  pmt.cell_.raw, static_cast<int>(pmt.cell_.region), static_cast<int>(pmt.cell_.module_number),
-                  static_cast<int>(pmt.cell_.row), static_cast<int>(pmt.cell_.column), static_cast<int>(pmt.face_),
-                  face_name);
 
         if (pmt.face_ == face_location::begin) {
           group.begin.push_back({&d, idig});
@@ -258,25 +218,12 @@ namespace sand::ecal {
           group.end.push_back({&d, idig});
         }
       }
-
-      std::size_t n_complete_candidates        = 0;
-      std::size_t n_unphysical_pairs_removed   = 0;
-      std::size_t n_cells_with_unphysical_pair = 0;
-      std::size_t n_complete_kept              = 0;
-      std::size_t n_ambiguous_complete         = 0;
-      std::size_t n_unambiguous_complete       = 0;
-      std::size_t n_incomplete                 = 0;
-      std::size_t n_one_sided_cells            = 0;
-      std::size_t n_grouped_invalid_cells      = 0;
-
       for (const auto& [raw_cid, group] : by_cell) {
         /*
          * If the cell has only one readout side, no complete pair can be built.
          * In that case we do not need to access the ECal geometry at all.
          */
         if (group.begin.empty() || group.end.empty()) {
-          ++n_one_sided_cells;
-
           if (m_keep_incomplete) {
             for (const auto& b : group.begin) {
               sand::ecal::cell_pair pair;
@@ -285,7 +232,6 @@ namespace sand::ecal {
               pair.n_complete_candidates_in_cell     = 0;
 
               out_slice.push_back(std::move(pair));
-              ++n_incomplete;
             }
 
             for (const auto& e : group.end) {
@@ -295,7 +241,6 @@ namespace sand::ecal {
               pair.n_complete_candidates_in_cell     = 0;
 
               out_slice.push_back(std::move(pair));
-              ++n_incomplete;
             }
           }
 
@@ -309,21 +254,8 @@ namespace sand::ecal {
          */
 
         if (!valid_cell_id(group.cid)) {
-          ++n_grouped_invalid_cells;
-
-          UFW_WARN("ECal cell_pair_builder: skipping grouped cell with invalid decoded ECal cell: "
-                   "cell raw = {}, region = {}, module = {}, row = {}, column = {}",
-                   group.cid.raw, static_cast<int>(group.cid.region), static_cast<int>(group.cid.module_number),
-                   static_cast<int>(group.cid.row), static_cast<int>(group.cid.column));
-
           continue;
         }
-
-        UFW_DEBUG("ECal cell_pair_builder: accessing geoinfo cell in slice {}: "
-                  "cell raw = {}, region = {}, module = {}, row = {}, column = {}, begin digits = {}, end digits = {}",
-                  islice, group.cid.raw, static_cast<int>(group.cid.region), static_cast<int>(group.cid.module_number),
-                  static_cast<int>(group.cid.row), static_cast<int>(group.cid.column), group.begin.size(),
-                  group.end.size());
 
         const auto& cell = ecal.at(group.cid);
 
@@ -337,19 +269,10 @@ namespace sand::ecal {
                     static_cast<int>(group.cid.row), static_cast<int>(group.cid.column), length_mm, v_mm_per_ns);
         }
 
-        const auto begin_side = cell.side(face_location::begin);
-        const auto end_side   = cell.side(face_location::end);
-
-        UFW_DEBUG("ECal cell_pair_builder: slice {}, cell {}: begin digits = {}, end digits = {}, begin side = {}, end "
-                  "side = {}",
-                  islice, raw_cid, group.begin.size(), group.end.size(), begin_side, end_side);
-
         std::set<std::size_t> begin_used_in_good_pair;
         std::set<std::size_t> end_used_in_good_pair;
 
         std::vector<sand::ecal::cell_pair> complete_pairs_in_cell;
-        bool cell_has_unphysical_pair = false;
-
         /*
          * Build all complete begin/end hypotheses.
          *
@@ -358,40 +281,9 @@ namespace sand::ecal {
          */
         for (const auto& b : group.begin) {
           for (const auto& e : group.end) {
-            ++n_complete_candidates;
-
-            const double t_begin = b.ptr->tdc();
-            const double t_end   = e.ptr->tdc();
-            const double dt      = t_begin - t_end;
-
-            const double max_dt = length_mm / v_mm_per_ns;
-
-            const double d_begin = 0.5 * (length_mm + v_mm_per_ns * dt);
-            const double d_end   = length_mm - d_begin;
-
             const bool is_physical = physical_pair(*b.ptr, *e.ptr, length_mm, v_mm_per_ns, m_pair_time_tolerance_ns);
 
-            const char* region_name = "unknown";
-
-            if (group.cid.region == sand::geo_id::region_t::BARREL) {
-              region_name = "barrel";
-            } else if (group.cid.region == sand::geo_id::region_t::ENDCAP_A) {
-              region_name = "endcap_A";
-            } else if (group.cid.region == sand::geo_id::region_t::ENDCAP_B) {
-              region_name = "endcap_B";
-            }
-
-            UFW_DEBUG("ECal pair timing debug: slice = {}, cell = {}, region = {}, module = {}, row = {}, column = {}, "
-                      "begin digit = {}, end digit = {}, "
-                      "t_begin = {} ns, t_end = {} ns, dt = {} ns, max_dt = {} ns, "
-                      "length = {} mm, v = {} mm/ns, d_begin = {} mm, d_end = {} mm, physical = {}",
-                      islice, group.cid.raw, region_name, static_cast<int>(group.cid.module_number),
-                      static_cast<int>(group.cid.row), static_cast<int>(group.cid.column), b.index, e.index, t_begin,
-                      t_end, dt, max_dt, length_mm, v_mm_per_ns, d_begin, d_end, is_physical);
-
             if (!is_physical) {
-              ++n_unphysical_pairs_removed;
-              cell_has_unphysical_pair = true;
               continue;
             }
 
@@ -403,13 +295,7 @@ namespace sand::ecal {
 
             begin_used_in_good_pair.insert(b.index);
             end_used_in_good_pair.insert(e.index);
-
-            ++n_complete_kept;
           }
-        }
-
-        if (cell_has_unphysical_pair) {
-          ++n_cells_with_unphysical_pair;
         }
 
         /*
@@ -430,20 +316,9 @@ namespace sand::ecal {
         const bool has_competition                = n_complete_pairs_in_cell > 1;
         const auto n_valid_complete_pairs_in_cell = saturated_u16(n_complete_pairs_in_cell);
 
-        if (has_competition) {
-          UFW_DEBUG("ECal cell_pair_builder: slice {}, cell {} has {} competing complete pairs", islice, raw_cid,
-                    n_complete_pairs_in_cell);
-        }
-
         for (auto& pair : complete_pairs_in_cell) {
           pair.cell_has_competing_complete_pairs = has_competition;
           pair.n_complete_candidates_in_cell     = n_valid_complete_pairs_in_cell;
-
-          if (has_competition) {
-            ++n_ambiguous_complete;
-          } else {
-            ++n_unambiguous_complete;
-          }
 
           out_slice.push_back(std::move(pair));
         }
@@ -470,7 +345,6 @@ namespace sand::ecal {
           pair.n_complete_candidates_in_cell     = n_valid_complete_pairs_in_cell;
 
           out_slice.push_back(std::move(pair));
-          ++n_incomplete;
         }
 
         for (const auto& e : group.end) {
@@ -484,19 +358,8 @@ namespace sand::ecal {
           pair.n_complete_candidates_in_cell     = n_valid_complete_pairs_in_cell;
 
           out_slice.push_back(std::move(pair));
-          ++n_incomplete;
         }
       }
-
-      UFW_INFO("ECal cell_pair_builder: slice {}: input digits = {}, grouped cells = {}, invalid-face digits = {}, "
-               "invalid-cell digits = {}, one-sided cells = {}, grouped-invalid cells = {}, complete candidates = {}, "
-               "kept complete = {}, unambiguous complete = {}, ambiguous complete = {}, "
-               "unphysical complete pairs removed = {}, cells with unphysical complete pairs = {}, incomplete = {}, "
-               "output pairs = {}",
-               islice, digit_slice.size(), by_cell.size(), n_digits_invalid_face, n_digits_invalid_cell,
-               n_one_sided_cells, n_grouped_invalid_cells, n_complete_candidates, n_complete_kept,
-               n_unambiguous_complete, n_ambiguous_complete, n_unphysical_pairs_removed, n_cells_with_unphysical_pair,
-               n_incomplete, out_slice.size());
     }
 
     UFW_ASSERT(cell_pair_slices.collection.size() == digit_slices.collection.size(),
