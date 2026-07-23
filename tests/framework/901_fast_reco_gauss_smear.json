@@ -30,27 +30,45 @@
       }
     },
     {
-      "sand::fake_reco": {
-        "mode" : "gauss_smearing",
-        "energy_resolution" : 0.057,
-        "momentum_resolution" : 0.03,
-        "x_resolution" : 200e-3,
-        "y_resolution" : 200e-3,
-        "z_resolution" : 200e-3
-      },
+      "sand::common::fast_reco": {},
       "reqs": {
         "in_truth": "produced_truth"
       },
       "prods": {
-        "output_caf": "produced_caf"
+        "out_common": "produced_common",
+        "out_nd": "produced_nd"
+      }
+    },
+    {
+      "sand::test::fast_reco_test": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_common": "produced_common",
+        "in_nd": "produced_nd"
+      },
+      "prods": {}
+    },
+    {
+      "sand::common::gauss_smearing": {
+        "energy_resolution": 0.057,
+        "momentum_resolution": 0.03,
+        "x_resolution": 200e-3,
+        "y_resolution": 200e-3,
+        "z_resolution": 200e-3
+      },
+      "reqs": {
+        "in_common": "produced_common"
+      },
+      "prods": {
+        "out_common": "produced_common_smeared"
       }
     },
     {
       "sand::caf::caf_streamer": {
-        "uri": "test/output.caf.root",
+        "uri": "test/output_gauss_smeared.caf.root",
         "tree": "cafTree"
       },
-      "write": ["produced_caf"]
+      "write": ["produced_truth", "produced_common_smeared", "produced_nd"]
     }
   ]
 }
