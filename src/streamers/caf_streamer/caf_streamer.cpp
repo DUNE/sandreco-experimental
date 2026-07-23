@@ -1,5 +1,7 @@
 #include "caf_streamer.hpp"
 
+#include <caf/caf_wrapper.hpp>
+
 #include <ufw/config.hpp>
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>
@@ -27,6 +29,15 @@ namespace sand::caf {
       }
     }
   } // namespace
+
+  caf_streamer::~caf_streamer() {
+    if (operation() & ufw::op_type::wo) {
+      m_file->cd();
+      m_tree->Write(0, TObject::kOverwrite);
+    }
+    m_file->Close();
+    delete m_caf_ptr;
+  }
 
   void caf_streamer::configure(const ufw::config& cfg, ufw::op_type op) {
     streamer::configure(cfg, op);
@@ -66,8 +77,8 @@ namespace sand::caf {
       return;
     }
 
-    TBranch* id_branch   = nullptr;
-    TBranch* data_branch = nullptr;
+    TBranch* id_branch{nullptr};
+    TBranch* data_branch{nullptr};
 
     if (operation() & ufw::op_type::ro) {
       id_branch = m_tree->GetBranch(s_context_id_branch);
@@ -104,7 +115,7 @@ namespace sand::caf {
         return;
       }
       const long entries = m_tree->GetEntries();
-      for (; m_last_entry < entries; ++m_last_entry) {
+      for (; m_last_entry != entries; ++m_last_entry) {
         m_tree->GetEntry(m_last_entry);
         if (m_context_id == id) {
           return;

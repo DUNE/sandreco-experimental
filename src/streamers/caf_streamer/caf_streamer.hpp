@@ -2,11 +2,14 @@
 #define SAND_CAF_CAF_STREAMER_HPP
 
 #include <ufw/streamer.hpp>
-
-#include <caf/caf_wrapper.hpp>
+#include <duneanaobj/StandardRecord/StandardRecord.h>
 
 class TFile;
 class TTree;
+
+namespace caf {
+  class StandardRecord;
+}
 
 namespace sand::caf {
 
@@ -24,10 +27,13 @@ namespace sand::caf {
     long m_last_entry{};
     bool m_has_context_id{false};
 
-    static constexpr const char* s_context_id_branch = "context_id";
-    static constexpr const char* s_data_branch       = "rec";
+    static constexpr const char* s_context_id_branch{"context_id"};
+    static constexpr const char* s_data_branch{"rec"};
 
    public:
+    caf_streamer() = default;
+    ~caf_streamer() override;
+
     void configure(const ufw::config& cfg, ufw::op_type op) override;
     void prepare(const ufw::public_id& id, const ufw::type_id& type) override;
     void attach(ufw::data::data_base& data, const ufw::public_id& id) override;
