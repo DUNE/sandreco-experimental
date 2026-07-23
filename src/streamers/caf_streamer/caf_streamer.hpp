@@ -14,9 +14,32 @@ namespace caf {
 namespace sand::caf {
 
   /**
-   * @brief Streamer for CAF (Common Analysis Format) ROOT files.
+   * \class sand::caf::caf_streamer
    *
-   * Manages reading/writing standard_record_wrapper data to/from TTree branches.
+   * \brief Streamer for CAF (Common Analysis Format) ROOT files.
+   *
+   * Reads/writes a single `caf::StandardRecord` per event to/from the `rec` branch of a TTree, keyed by
+   * an optional `context_id` branch: if present, `read()` does a linear search for the matching
+   * `ufw::context_id`; otherwise (plain CAF files) the id is used directly as the entry index. All
+   * attached variables share the same underlying `caf::StandardRecord`: each is copied to/from its
+   * matching sub-branch (`mc`/`common`/`nd`) on every `read()`/`write()`.
+   *
+   * \subsection Configuration
+   * | Parameter Name | Type   | Unit | Required/Default | Description |
+   * |-----------------|--------|------|-------------------|----------------------------------------------------------------------------|
+   * | `uri`           | path   |      | Required          | ROOT file to open (mode — READ/RECREATE/UPDATE — set by the
+   * task's I/O direction). | | `tree`          | string |      | Required          | Name of the TTree holding the
+   * `rec` (and optional `context_id`) branches.  |
+   *
+   * \subsection Dependencies
+   * None.
+   *
+   * \subsection Supported types
+   * |  Type                                    | Comment                                 |
+   * |--------------------------------------------|--------------------------------------|
+   * | `sand::caf::truth_branch_wrapper`          | Mapped to `caf::StandardRecord::mc`     |
+   * | `sand::caf::common_reco_branch_wrapper`    | Mapped to `caf::StandardRecord::common` |
+   * | `sand::caf::nd_reco_branch_wrapper`        | Mapped to `caf::StandardRecord::nd`     |
    */
   class caf_streamer : public ufw::streamer {
     std::unique_ptr<TFile> m_file;
