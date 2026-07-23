@@ -21,27 +21,32 @@
 namespace sand::common::reco_details {
 
   namespace {
+    /// @return true for mu, pi+/-, K+/-, p.
     bool is_track_like(int pdg) {
       int const abs_pdg = std::abs(pdg);
       return abs_pdg == 13 || abs_pdg == 211 || abs_pdg == 321 || abs_pdg == 2212;
     }
 
+    /// @return true for e+/-, gamma, pi0.
     bool is_shower_like(int pdg) {
       int const abs_pdg = std::abs(pdg);
       return abs_pdg == 11 || abs_pdg == 22 || abs_pdg == 111;
     }
 
+    /// Unit vector along (px, py, pz), or the zero vector if the input is null.
     ::caf::SRVector3D normalize_to_direction(float px, float py, float pz) {
       float const mag = std::sqrt(px * px + py * py + pz * pz);
       return (mag > 0.f) ? ::caf::SRVector3D{px / mag, py / mag, pz / mag} : ::caf::SRVector3D{0.f, 0.f, 0.f};
     }
 
+    /// One-hot encoding over the {0, 1, 2, N>=3} multiplicity buckets used by SRCVNScoreBranch.
     std::array<float, 4> count_bucket_one_hot(int count) {
       std::array bucket{0.f, 0.f, 0.f, 0.f};
       bucket[static_cast<std::size_t>(std::min(count, 3))] = 1.f;
       return bucket;
     }
 
+    /// @return +1/-1/0 from TDatabasePDG's charge for `pdg`, or 0 if the PDG code is unknown.
     short charge_from_pdg(int pdg) {
       if (auto const* p = TDatabasePDG::Instance()->GetParticle(pdg)) {
         double const q = p->Charge() / 3.0;
@@ -55,6 +60,7 @@ namespace sand::common::reco_details {
       return 0;
     }
 
+    /// Euclidean distance between two points.
     float distance(::caf::SRVector3D const& a, ::caf::SRVector3D const& b) {
       float const dx = b.x - a.x;
       float const dy = b.y - a.y;
@@ -62,13 +68,17 @@ namespace sand::common::reco_details {
       return std::sqrt(dx * dx + dy * dy + dz * dz);
     }
 
+    /// Resolves a TrueParticleID (as produced by particle_slots_from_true()) back to the
+    /// SRTrueParticle it refers to.
     ::caf::SRTrueParticle const& true_particle_from_id(::caf::SRTrueInteraction const& true_ixn,
                                                        ::caf::TrueParticleID const& id) {
       return (id.type == ::caf::TrueParticleID::kPrimary) ? true_ixn.prim[id.part] : true_ixn.sec[id.part];
     }
 
-    // prim[i] always lands at part_idx i, sec[i] at part_idx n_prim + i, because
-    // particle_slots_from_true appends all prim before any sec, in the same order.
+    /// Maps a TrueParticleID (typically SRTrueParticle::parentID) to its SRRecoParticle index in
+    /// SRRecoParticlesBranch::sandreco, or -1 if it has no reco parent (kUnknown/prefsi).
+    /// prim[i] always lands at part_idx i, sec[i] at part_idx n_prim + i, because
+    /// particle_slots_from_true appends all prim before any sec, in the same order.
     int reco_idx_from_id(::caf::TrueParticleID const& id, int n_prim) {
       switch (id.type) {
       case ::caf::TrueParticleID::kPrimary:
