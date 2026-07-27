@@ -6,4 +6,6 @@ target_sources(sand_common_fast_reco
   fast_reco_details.cpp
 )
 
-target_link_libraries(sand_common_fast_reco PRIVATE ROOT::MathCore ROOT::EG duneanaobj::StandardRecord)
+add_dependencies(sand_common_fast_reco sand_edep_reader)
+
+target_link_libraries(sand_common_fast_reco PRIVATE sand_edep_reader ROOT::MathCore ROOT::EG duneanaobj::StandardRecord)

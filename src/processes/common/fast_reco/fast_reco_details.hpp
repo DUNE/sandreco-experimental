@@ -19,58 +19,61 @@ namespace caf {
   class SRTracker;
 } // namespace caf
 
-namespace sand::common::reco_details {
+namespace sand {
 
-  /// Where one true particle (prim or sec) lands in the output: its position in
-  /// SRRecoParticlesBranch::sandreco, and, if track-/shower-like, in SRTracker::tracks/showers.
-  struct ParticleSlot {
-    ::caf::TrueParticleID id;
-    int part_idx;
-    int track_idx  = -1; ///< valid only if track-like
-    int shower_idx = -1; ///< valid only if shower-like
-  };
+  class edep_reader;
 
-  using ParticleSlots = std::vector<ParticleSlot>;
+  namespace common::reco_details {
 
-  /// Perfect classifier neutrino hypothesis
-  [[nodiscard]] ::caf::SRNeutrinoHypothesisBranch
-  neutrino_hypothesis_from_true(::caf::SRTrueInteraction const& true_ixn);
+    struct ParticleSlot {
+      ::caf::TrueParticleID id; ///< the true particle this slot stands for
+      int part_idx;             ///< its index in caf::SRRecoParticlesBranch::sandreco
+      int track_idx  = -1;      ///< its index in caf::SRTracker::tracks, or -1 if it gets no track
+      int shower_idx = -1;      ///< its index in caf::SRTracker::showers, or -1 if it gets no shower
+    };
 
-  /// Perfect direction hypothesis: every estimator collapses to the true neutrino direction,
-  [[nodiscard]] ::caf::SRDirectionBranch direction_from_true(::caf::SRTrueInteraction const& true_ixn);
+    using ParticleSlots = std::vector<ParticleSlot>;
 
-  /// Perfect neutrino energy hypothesis: every estimator collapses to the true energy
-  [[nodiscard]] ::caf::SRNeutrinoEnergyBranch energy_from_true(::caf::SRTrueInteraction const& true_ixn);
+    using TrackerG4IDs = std::vector<int>;
 
-  /// Perfect SRRecoParticle: every field copied/derived 1:1 from true_part. Does not set
-  /// recoobj/parent/daughters -- those are cross-particle links, resolved in reco_particles_from_true().
-  [[nodiscard]] ::caf::SRRecoParticle reco_particle_from_true(::caf::SRTrueParticle const& true_part,
-                                                              ::caf::TrueParticleID const& id);
+    /// \brief Collects the G4IDs of every trajectory with hits in the tracker.
+    [[nodiscard]] TrackerG4IDs tracker_g4ids_from_edep(sand::edep_reader const& tree);
 
-  /// Perfect SRTrack, for track-like particles.
-  [[nodiscard]] ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id);
+    /// \brief Perfect classifier: one-hot CVN scores on the true interaction class.
+    [[nodiscard]] ::caf::SRNeutrinoHypothesisBranch
+    neutrino_hypothesis_from_true(::caf::SRTrueInteraction const& true_ixn);
 
-  /// Perfect SRShower, for shower-like particles.
-  [[nodiscard]] ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part,
+    /// \brief Perfect direction hypothesis: every estimator collapses to the true neutrino direction.
+    [[nodiscard]] ::caf::SRDirectionBranch direction_from_true(::caf::SRTrueInteraction const& true_ixn);
+
+    /// \brief Perfect neutrino energy hypothesis: every estimator collapses to the true energy.
+    [[nodiscard]] ::caf::SRNeutrinoEnergyBranch energy_from_true(::caf::SRTrueInteraction const& true_ixn);
+
+    /// \brief Perfect reco particle: every field copied or derived 1:1 from the true particle.
+    [[nodiscard]] ::caf::SRRecoParticle reco_particle_from_true(::caf::SRTrueParticle const& true_part,
+                                                                ::caf::TrueParticleID const& id);
+
+    /// \brief Perfect track, for a track-like particle that has tracker hits.
+    [[nodiscard]] ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part,
                                                  ::caf::TrueParticleID const& id);
 
-  /// Indexes every particle of true_ixn.prim then true_ixn.sec, in order: the position each one will
-  /// get in SRRecoParticlesBranch::sandreco / SRTracker::tracks / SRTracker::showers. Computed once and
-  /// shared by reco_particles_from_true()/sand_tracker_from_true() so their cross-links
-  /// (SRRecoParticle::recoobj <-> SRTrack/SRShower::part) can never fall out of sync.
-  /// @param ixn_idx  index of this interaction in the SRTruthBranch (-> TrueParticleID::ixn).
-  [[nodiscard]] ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx);
+    /// \brief Perfect shower, for a shower-like particle that has tracker hits.
+    [[nodiscard]] ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part,
+                                                   ::caf::TrueParticleID const& id);
 
-  /// Perfect SRRecoParticlesBranch: one SRRecoParticle per true_ixn.prim/sec, with recoobj (link to the
-  /// matching SRTrack/SRShower from sand_tracker_from_true()) and parent/daughters (from
-  /// true_part.parentID) resolved.
-  [[nodiscard]] ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                                      int ixn_idx);
+    /// \brief Indexes every true particle of an interaction, applying the tracker gate.
+    [[nodiscard]] ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn,
+                                                         TrackerG4IDs const& tracker_ids, int ixn_idx);
 
-  /// Perfect SRTracker: one SRTrack/SRShower per track-/shower-like true_ixn.prim/sec, with part set to
-  /// link back to the matching SRRecoParticle from reco_particles_from_true().
-  [[nodiscard]] ::caf::SRTracker sand_tracker_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx);
+    /// \brief Perfect reco particles: one caf::SRRecoParticle per true `prim`/`sec`, cross-links resolved.
+    [[nodiscard]] ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn,
+                                                                        TrackerG4IDs const& tracker_ids, int ixn_idx);
 
-} // namespace sand::common::reco_details
+    /// \brief Perfect SAND tracker: one caf::SRTrack/caf::SRShower per particle that passed the gate.
+    [[nodiscard]] ::caf::SRTracker sand_tracker_from_true(::caf::SRTrueInteraction const& true_ixn,
+                                                          TrackerG4IDs const& tracker_ids, int ixn_idx);
+
+  } // namespace common::reco_details
+} // namespace sand
 
 #endif
