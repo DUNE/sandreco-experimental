@@ -6,6 +6,9 @@ Reads the `SRTruthBranch` produced by `truth_filler` and produces `SRCommonRecoB
 1:1 from truth, no smearing — `gauss_smearing`/`gluckstern_smearing` perturb this output
 afterwards.
 
+Which particles get a reconstructed object is *not* decided by PDG alone: see
+[§0 Tracker gate](#0-tracker-gate) below.
+
 ## Data flow
 
 ```mermaid
@@ -17,10 +20,17 @@ SRTrueInteraction"]
 SRTrueParticle"]
     end
 
+    subgraph edep["sand::edep_reader (context instance)"]
+        trj["EDEPTrajectory
+(hits per subdetector)"]
+    end
+
     subgraph fast_reco["fast_reco_details"]
         dft["direction_from_true()"]
         nhft["neutrino_hypothesis_from_true()"]
         eft["energy_from_true()"]
+        tgfe["tracker_g4ids_from_edep()
+(sorted G4IDs with STT/DRIFT hits)"]
         psft["particle_slots_from_true()
 (ParticleSlot per particle:
 id, part_idx, track_idx, shower_idx)"]
@@ -56,7 +66,9 @@ SRShower"]
 npip+npim, npi0, nneutron"| nhft -->|"nuhyp"| ixn
     nu -->|"E"| eft -->|"Enu"| ixn
 
-    prim --> psft
+    trj -->|"hits in STT or DRIFT"| tgfe
+    tgfe -->|"tracker_ids (gate)"| psft
+    prim -->|"pdg, G4ID"| psft
     psft --> rpsft
     psft --> stft
 
@@ -91,6 +103,42 @@ link, both `TrueParticleID`/`SRRecoBaseID`/`SRRecoParticleID`, not nested object
 
 ---
 
+## 0. Tracker gate
+
+A true particle becomes an `SRTrack`/`SRShower` only if **both** hold:
+
+1. its PDG is track-like (μ, π±, K±, p) or shower-like (e±, γ, π0), and
+2. its trajectory left at least one hit in the tracker.
+
+Condition 2 is the gate. It is evaluated by `tracker_g4ids_from_edep()`, which walks the
+`sand::edep_reader` tree once per event and collects the G4IDs of the trajectories with
+hits in `sand::subdetector_t::STT` **or** `::DRIFT` — the two tracker technologies, `"Straw"`
+and `"DriftVolume"` in edep-sim's sensitive-detector names (`sand::string_to_component`,
+`include/common/sand.h`). Which one a file uses depends on the simulated geometry, so
+`fast_reco` accepts either. `particle_slots_from_true()` then looks each particle's `G4ID` up
+in that sorted vector with `std::binary_search`.
+
+Particles that fail the gate are **not** dropped: they still get their own `SRRecoParticle`
+(with kinematics, `parent`, `daughters`), only with `recoobj` and `origRecoObjType` left
+unset. `SRRecoParticlesBranch::sandreco` therefore always holds exactly one entry per
+`true_ixn.prim`/`true_ixn.sec`, in that order — an invariant the `parent`/`daughters` index
+arithmetic depends on.
+
+Two consequences worth knowing:
+
+- **Neutrals never pass.** edep-sim attributes each hit segment to the charged particle that
+  ionised (`TG4HitSegment::Contrib[0]`), so a γ or a π0 owns no hits of its own and gets no
+  `SRShower`. `tracker.showers` in practice holds e± only, including the e+e− of a
+  conversion, which are trajectories in their own right.
+- **Low-energy secondaries mostly do not pass either**, which is the point: before the gate,
+  `tracker` had an entry per track-/shower-like PDG whether or not it ever crossed the
+  tracker.
+
+Requires `sand::edep_reader` as a context instance — `fast_reco` reads it directly, it is
+not a per-event requirement, so no change to the process' `reqs`.
+
+---
+
 ## 1. `caf::SRInteraction` — the reconstructed neutrino vertex
 
 Stored in `common_reco_branch.ixn.sandreco[i]`. Filled directly in `fast_reco::run()`,
@@ -103,7 +151,7 @@ one per `truth_branch.nu[i]`.
 | `dir` | `SRDirectionBranch` | `direction_from_true(true_ixn)` | See §2 |
 | `nuhyp` | `SRNeutrinoHypothesisBranch` | `neutrino_hypothesis_from_true(true_ixn)` | See §3 |
 | `Enu` | `SRNeutrinoEnergyBranch` | `energy_from_true(true_ixn)` | See §4 |
-| `part` | `SRRecoParticlesBranch` | `reco_particles_from_true(true_ixn, ixn_idx)` | See §5 |
+| `part` | `SRRecoParticlesBranch` | `reco_particles_from_true(true_ixn, tracker_ids, ixn_idx)` | See §5 |
 | `truth` | `vector<size_t>` | `{ixn_idx}` | Index into `truth_branch.nu` |
 | `truthOverlap` | `vector<float>` | `{1.0}` | Perfect reco: 100% overlap |
 
@@ -176,25 +224,25 @@ Stored in `common_reco_branch.ixn.sandreco[i].part.sandreco[j]`, one per
 | `p` | `SRVector3D` | `{true_part.p.px, py, pz}` | **GeV/c** |
 | `start` | `SRVector3D` | `true_part.start_pos` | **cm** |
 | `end` | `SRVector3D` | `true_part.end_pos` | **cm** |
-| `origRecoObjType` | `RecoObjType` | `kTrack`/`kShower` from PDG classification, else `kUnknownRecoObj` | See §8 |
+| `origRecoObjType` | `RecoObjType` | `kTrack`/`kShower` from the slot, else `kUnknownRecoObj` | Set together with `recoobj`, never from the PDG alone — see §0 |
 | `parent` | `int` | Index of the parent's `SRRecoParticle` in the same `part.sandreco`, via `true_part.parentID` | `-1` if no parent (primaries) |
 | `daughters` | `vector<unsigned int>` | Reverse of `parent`: this particle's index, pushed onto its parent's `daughters` | |
 | `truth` | `vector<TrueParticleID>` | `{id}` | `id = {ixn_idx, kPrimary\|kSecondary, i}`, **not** `true_part.ancestor_id` (see fast_reco/PLAN.md) |
 | `truthOverlap` | `vector<float>` | `{1.0}` | |
-| `recoobj` | `SRRecoBaseID` | `{ixn_idx, kSANDTrackerTrack\|kSANDTrackerShower, slot.track_idx\|shower_idx}` | Only for track-/shower-like PDGs; unset (`kUnknown`) otherwise |
+| `recoobj` | `SRRecoBaseID` | `{ixn_idx, kSANDTrackerTrack\|kSANDTrackerShower, slot.track_idx\|shower_idx}` | Only for particles that pass the tracker gate (§0); unset (`kUnknown`) otherwise |
 
-**Filled:** 13/17 fields. **Not filled** (rimandati per scelta, vedi PLAN.md):
-`E_method` (→ `PartEMethod::kCalorimetry` quando ripreso), `tgtA` (→ da
-`true_ixn.targetPDG`). **Domanda aperta** (non risolvibile senza nuova infrastruttura):
-`contained`, `walldist` — nessuna query di containment esiste ancora nel repo.
+**Filled:** 13/17 fields. **Not filled** (deferred on purpose, see PLAN.md): `E_method`
+(→ `PartEMethod::kCalorimetry` when picked up), `tgtA` (→ from `true_ixn.targetPDG`).
+**Open question** (not answerable without new infrastructure): `contained`, `walldist` —
+no containment query exists in the repo yet.
 
 ---
 
-## 6. `caf::SRTrack` — one per track-like particle
+## 6. `caf::SRTrack` — one per track-like particle with tracker hits
 
 Stored in `nd_reco_branch.sand.ixn[i].tracker.tracks[k]`, one per primary/secondary
-whose PDG is track-like (μ, π±, K±, p). Filled by `track_from_true()` (+ `part` set in
-`sand_tracker_from_true()`).
+whose PDG is track-like (μ, π±, K±, p) **and** that left hits in the tracker (§0). Filled
+by `track_from_true()` (+ `part` set in `sand_tracker_from_true()`).
 
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
@@ -217,10 +265,11 @@ density integration along the track, not derivable from truth alone).
 
 ---
 
-## 7. `caf::SRShower` — one per shower-like particle
+## 7. `caf::SRShower` — one per shower-like particle with tracker hits
 
 Stored in `nd_reco_branch.sand.ixn[i].tracker.showers[k]`, one per primary/secondary
-whose PDG is shower-like (e±, γ, π0). Filled by `shower_from_true()` (+ `part` set in
+whose PDG is shower-like (e±, γ, π0) **and** that left hits in the tracker (§0) — in
+practice e± only, see §0. Filled by `shower_from_true()` (+ `part` set in
 `sand_tracker_from_true()`).
 
 | Field | Type | Source | Notes |
