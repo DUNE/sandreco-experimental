@@ -1,0 +1,5 @@
+sandreco_add_process(sand_grain_fit_cluster)
+
+target_sources(sand_grain_fit_cluster PRIVATE fit_cluster.cpp)
+
+target_link_libraries(sand_grain_fit_cluster PRIVATE sand_geoinfo)

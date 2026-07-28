@@ -1,12 +1,14 @@
 #define BOOST_TEST_MODULE caf_filler
-#include <boost/test/included/unit_test.hpp>
 
+#include <processes/fake_reco/utils/GlucksternSmearing.hpp>
 #include <processes/fake_reco/caf_handlers/caf_filler.hpp>
 #include <processes/fake_reco/caf_handlers/caf_filler_common.hpp>
-#include <processes/fake_reco/utils/GlucksternSmearing.hpp>
 #include <test_helpers.hpp>
-#include <TG4Event.h>
 #include <data/common/edep_reader/EDEPTrajectory.h>
+
+#include <boost/test/included/unit_test.hpp>
+
+#include <TG4Event.h>
 
 using namespace sand;
 

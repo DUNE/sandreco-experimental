@@ -76,15 +76,8 @@ namespace sand::root {
   }
 
   void tree_streamer::attach(ufw::data::data_base& d, const ufw::public_id& id) {
-    UFW_DEBUG("Attaching streamer at {} to variable '{}' at {}.", fmt::ptr(this), id, fmt::ptr(&d));
-    auto it = info_map().find(id);
-    UFW_ASSERT(it != info_map().end(), "Variable '{}' unknown to streamer at {}.", id, fmt::ptr(this));
-    var_info& info = it->second;
-    if (info.address == &d) { // we are already attached
-      return;
-    }
-    UFW_ASSERT(info.address == nullptr, "Variable '{}' already attached at {} for streamer at {}.", id,
-               fmt::ptr(it->second.address), fmt::ptr(this));
+    streamer::attach(d, id);
+    var_info& info  = info_map().at(id);
     info.address    = &d;
     TBranch* brdata = nullptr;
     if (operation() & ufw::op_type::ro) {

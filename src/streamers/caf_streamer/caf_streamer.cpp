@@ -61,11 +61,24 @@ namespace sand::caf {
     }
   }
 
+  void caf_streamer::prepare(const ufw::public_id& id, const ufw::type_id& type) {
+    streamer::prepare(id, type);
+    m_attached_type = type;
+  }
+
   void caf_streamer::attach(ufw::data::data_base& data, const ufw::public_id& id) {
     streamer::attach(data, id);
 
-    m_data    = static_cast<caf_wrapper*>(&data);
-    m_caf_ptr = m_data; // upcast: ROOT serializes via "caf::StandardRecord" class name
+    if (m_attached_type == ufw::type_of<standard_record_wrapper>()) {
+      m_data    = static_cast<standard_record_wrapper*>(&data);
+      m_caf_ptr = static_cast<::caf::StandardRecord*>(m_data);
+    } else if (m_attached_type == ufw::type_of<truth_branch_wrapper>()) {
+      m_truth_branch = static_cast<truth_branch_wrapper const*>(&data);
+      m_caf_ptr      = &m_internal_sr;
+    } else {
+      UFW_ERROR("caf_streamer requires a standard_record_wrapper or truth_branch_wrapper, got type: {}",
+                ufw::simplified_name(m_attached_type));
+    }
 
     TBranch* id_branch   = nullptr;
     TBranch* data_branch = nullptr;
@@ -121,6 +134,11 @@ namespace sand::caf {
 
   void caf_streamer::write(ufw::context_id id) {
     m_file->cd();
+
+    if (m_truth_branch != nullptr) {
+      m_internal_sr.mc = *m_truth_branch;
+    }
+
     m_context_id = id;
     m_tree->Fill();
     ++m_last_entry;
