@@ -227,11 +227,11 @@ Stored in `common_reco_branch.ixn.sandreco[i].part.sandreco[j]`, one per
 | `origRecoObjType` | `RecoObjType` | `kTrack`/`kShower` from the slot, else `kUnknownRecoObj` | Set together with `recoobj`, never from the PDG alone — see §0 |
 | `parent` | `int` | Index of the parent's `SRRecoParticle` in the same `part.sandreco`, via `true_part.parentID` | `-1` if no parent (primaries) |
 | `daughters` | `vector<unsigned int>` | Reverse of `parent`: this particle's index, pushed onto its parent's `daughters` | |
-| `truth` | `vector<TrueParticleID>` | `{id}` | `id = {ixn_idx, kPrimary\|kSecondary, i}`, **not** `true_part.ancestor_id` (see fast_reco/PLAN.md) |
+| `truth` | `vector<TrueParticleID>` | `{id}` | `id = {ixn_idx, kPrimary\|kSecondary, i}`, **not** `true_part.ancestor_id` |
 | `truthOverlap` | `vector<float>` | `{1.0}` | |
 | `recoobj` | `SRRecoBaseID` | `{ixn_idx, kSANDTrackerTrack\|kSANDTrackerShower, slot.track_idx\|shower_idx}` | Only for particles that pass the tracker gate (§0); unset (`kUnknown`) otherwise |
 
-**Filled:** 13/17 fields. **Not filled** (deferred on purpose, see PLAN.md): `E_method`
+**Filled:** 13/17 fields. **Not filled**: `E_method`
 (→ `PartEMethod::kCalorimetry` when picked up), `tgtA` (→ from `true_ixn.targetPDG`).
 **Open question** (not answerable without new infrastructure): `contained`, `walldist` —
 no containment query exists in the repo yet.
