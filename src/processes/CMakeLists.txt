@@ -14,7 +14,6 @@ function(sandreco_add_process tgt)
 endfunction()
 
 add_subdirectory(common)
-add_subdirectory(fake_reco)
 add_subdirectory(grain)
 add_subdirectory(stt)
 add_subdirectory(drift)
