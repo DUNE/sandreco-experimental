@@ -3,8 +3,6 @@
 
 #include <common/version.h>
 
-#include <edep_reader/EDEPHit.h>
-
 #include <ufw/process.hpp>
 
 #include <optional>
@@ -13,6 +11,13 @@
 namespace sand {
   class root_tgeomanager;
 }
+
+namespace caf {
+  class SRLorentzVector;
+  class SRVector3D;
+} // namespace caf
+
+class EDEPHit;
 
 namespace sand::common {
 
@@ -23,9 +28,9 @@ namespace sand::common {
     double path_len_over_x0_transverse; // YZ projection, in unità di X0
   };
 
-  // At least 2 hits above hit_energy_thr are required; nullopt if the track doesn't have enough.
-  [[nodiscard]] std::optional<GlucksternGeometry> gluckstern_geometry_from_hits(
-      sand::root_tgeomanager& tgm, std::vector<EDEPHit> const& trk_hits, double hit_energy_thr);
+  [[nodiscard]] std::optional<GlucksternGeometry> gluckstern_geometry_from_hits(sand::root_tgeomanager& tgm,
+                                                                                std::vector<EDEPHit> const& trk_hits,
+                                                                                double hit_energy_thr);
 
   double gluckstern_pt_resolution(double p_t, GlucksternGeometry const& geometry, double sigma_t, double b_field);
 
@@ -35,12 +40,24 @@ namespace sand::common {
 
   double mcs_angle_resolution(double len_over_x0, double p);
 
+  [[nodiscard]] ::caf::SRVector3D smear_momentum_gluckstern(::caf::SRLorentzVector const& true_p,
+                                                            GlucksternGeometry const& geom, double sigma_t,
+                                                            double sigma_l, double b_field);
+
   class gluckstern_smearing : public ufw::process {
+    double m_sigma_t{};        // [m]
+    double m_sigma_l{};        // [m]
+    double m_hit_energy_thr{}; // [MeV]
+    double m_b_field{};        // [T]
+
+   public:
     gluckstern_smearing();
     void configure(ufw::config const& cfg) override;
     void run() override;
   };
 
 } // namespace sand::common
+
+UFW_REGISTER_PROCESS(sand::common::gluckstern_smearing);
 
 #endif
