@@ -5,4 +5,11 @@ target_sources(sand_common_gluckstern_smearing
   gluckstern_smearing.cpp
 )
 
-target_link_libraries(sand_common_gluckstern_smearing PRIVATE sand_root_tgeomanager sand_edep_reader ROOT::MathCore duneanaobj::StandardRecord)
+target_link_libraries(sand_common_gluckstern_smearing
+  PRIVATE
+  sand_root_tgeomanager
+  sand_edep_reader
+  ROOT::MathCore
+  ROOT::EG
+  duneanaobj::StandardRecord
+)
