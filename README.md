@@ -7,7 +7,7 @@ This software is based on [ufw](https://baltig.infn.it/dune/ufw), and it is mean
 A sandreco job is based on a `.json` configuration that specifies what modules to run and their configuration. A list of modules
 
 The typical goal of a "production" job is to produce a CAF-like file, an analysis-oriented `.root` file whose content matches the SAND portion of [the full CAF format](https://github.com/DUNE/duneanaobj).
-You can find a description of the data fields filled at present [here](src/processes/fake_reco/fields.md).
+You can find a description of the data fields filled at present in the [truth_filler](src/processes/common/truth_filler/README.md) and [fast_reco](src/processes/common/fast_reco/README.md) READMEs.
 
 ## Developer information
 
