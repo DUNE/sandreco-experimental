@@ -4,11 +4,6 @@
 #include <processes/common/gluckstern_smearing/gluckstern_smearing.hpp>
 #include <test_helpers.hpp>
 
-// Pure-formula tests for REFACTOR.md §3.2: no root_tgeomanager, no edep_reader, no RNG.
-// Inputs are physically plausible synthetic values (not chosen for round numbers); expected
-// values are computed independently from the formulas in REFACTOR.md §1, not from the code
-// under test.
-
 namespace {
   double constexpr sigma_t   = 0.0002; // m (0.2 mm intrinsic position resolution, transverse)
   double constexpr sigma_l   = 0.002;  // m (2 mm intrinsic position resolution, longitudinal)
