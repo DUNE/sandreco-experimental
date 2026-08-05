@@ -36,6 +36,8 @@ namespace sand::common {
 
     double constexpr mm_to_m(double x) { return x / 1000.; }
 
+    double constexpr kMaxRelativePtResolution = 1.0;
+
     ::caf::SRTrueParticle const& true_particle_from_id(::caf::SRTrueInteraction const& true_ixn,
                                                        ::caf::TrueParticleID const& id) {
       return (id.type == ::caf::TrueParticleID::kPrimary) ? true_ixn.prim[id.part] : true_ixn.sec[id.part];
@@ -150,8 +152,9 @@ namespace sand::common {
     return mcs_angle_resolution(geom.path_len_over_x0_full, p) / (0.3 * b_field * geom.lever_arm);
   }
 
-  ::caf::SRVector3D smear_momentum_gluckstern(::caf::SRLorentzVector const& true_p, GlucksternGeometry const& geom,
-                                              double sigma_t, double sigma_l, double b_field) {
+  std::optional<::caf::SRVector3D> smear_momentum_gluckstern(::caf::SRLorentzVector const& true_p,
+                                                             GlucksternGeometry const& geom, double sigma_t,
+                                                             double sigma_l, double b_field) {
     double const p_transverse = std::hypot(true_p.Y(), true_p.Z());
     double const dip_angle    = std::atan(true_p.X() / p_transverse);
     double const zy_angle     = std::atan2(true_p.Y(), true_p.Z());
@@ -162,6 +165,11 @@ namespace sand::common {
     double const dip_res =
         std::hypot(gluckstern_dip_resolution(geom, sigma_l), mcs_angle_resolution(geom.path_len_over_x0_full, p));
     double const zy_res = mcs_angle_resolution(geom.path_len_over_x0_transverse, p);
+
+    if (!std::isfinite(pt_res) || !std::isfinite(dip_res) || !std::isfinite(zy_res)
+        || pt_res > kMaxRelativePtResolution) {
+      return std::nullopt;
+    }
 
     auto& rng = ufw::context::current()->engine();
 
@@ -205,6 +213,7 @@ namespace sand::common {
     out_nd.sand.ixn.reserve(in_nd.sand.ixn.size());
 
     int n_smeared{};
+    int n_out_of_range{};
 
     for (std::size_t ixn_idx{}, sand_ixn_size{in_nd.sand.ixn.size()}; ixn_idx != sand_ixn_size; ++ixn_idx) {
       auto const& true_ixn = in_truth.nu[ixn_idx];
@@ -234,20 +243,25 @@ namespace sand::common {
         }
 
         auto const smeared_p = smear_momentum_gluckstern(true_part.p, *geom, m_sigma_t, m_sigma_l, m_b_field);
+        if (!smeared_p) {
+          ++n_out_of_range; // resolution not physically usable (see kMaxRelativePtResolution); left unsmeared
+          continue;
+        }
 
         auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
         float const mass     = pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
 
-        track.dir    = normalize_to_direction(smeared_p.x, smeared_p.y, smeared_p.z);
+        track.dir    = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
         track.enddir = track.dir;
-        track.E      = std::hypot(std::hypot(smeared_p.x, smeared_p.y), std::hypot(smeared_p.z, mass));
+        track.E      = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass));
         track.Evis   = track.E;
 
         ++n_smeared;
       }
     }
 
-    UFW_DEBUG("gluckstern_smearing: smeared {} muon tracks", n_smeared);
+    UFW_DEBUG("gluckstern_smearing: smeared {} muon tracks, {} left unsmeared (resolution out of range)", n_smeared,
+              n_out_of_range);
   }
 
 } // namespace sand::common

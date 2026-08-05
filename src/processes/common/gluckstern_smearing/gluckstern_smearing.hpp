@@ -40,9 +40,12 @@ namespace sand::common {
 
   double mcs_angle_resolution(double len_over_x0, double p);
 
-  [[nodiscard]] ::caf::SRVector3D smear_momentum_gluckstern(::caf::SRLorentzVector const& true_p,
-                                                            GlucksternGeometry const& geom, double sigma_t,
-                                                            double sigma_l, double b_field);
+  /// \brief Smears the momentum via the Gluckstern+MCS formulas, or `std::nullopt` if the
+  /// resulting resolution is not physically usable (see `gluckstern_smearing.cpp` for why).
+  [[nodiscard]] std::optional<::caf::SRVector3D> smear_momentum_gluckstern(::caf::SRLorentzVector const& true_p,
+                                                                           GlucksternGeometry const& geom,
+                                                                           double sigma_t, double sigma_l,
+                                                                           double b_field);
 
   class gluckstern_smearing : public ufw::process {
     double m_sigma_t{};        // [m]
