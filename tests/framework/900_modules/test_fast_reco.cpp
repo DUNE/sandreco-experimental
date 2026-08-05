@@ -115,9 +115,6 @@ namespace sand::test {
                  "nu[{}]: tracker.nshowers ({}) doesn't match tracker.showers.size() ({})", ixn_idx,
                  sand_ixn.tracker.nshowers, sand_ixn.tracker.showers.size());
 
-      // Slot invariant: one SRRecoParticle per true prim/sec, in that order, none skipped. The
-      // parent/daughters links are index arithmetic built on top of this (fast_reco_details.cpp,
-      // reco_idx_from_id), so dropping gated-out particles here would silently mislink them.
       UFW_ASSERT(reco_ixn.part.sandreco.size() == n_prim + true_ixn.sec.size(),
                  "nu[{}]: part.sandreco.size() ({}) doesn't match prim ({}) + sec ({})", ixn_idx,
                  reco_ixn.part.sandreco.size(), n_prim, true_ixn.sec.size());
@@ -137,7 +134,11 @@ namespace sand::test {
         UFW_ASSERT(true_part.pdg == particle.pdg, "nu[{}].part[{}]: pdg mismatch, reco {} vs true {}", ixn_idx, p,
                    particle.pdg, true_part.pdg);
 
-        // ... and it is the true particle this slot is supposed to hold: prim[i] at i, sec[i] at n_prim + i
+        UFW_ASSERT(particle.E == true_part.p.E,
+                   "nu[{}].part[{}]: SRRecoParticle::E ({}) doesn't match true SRTrueParticle::p.E ({}) -- possible "
+                   "GeV/MeV unit mismatch",
+                   ixn_idx, p, particle.E, true_part.p.E);
+
         auto const& id           = particle.truth[0];
         auto const expected_type = (p < n_prim) ? ::caf::TrueParticleID::kPrimary : ::caf::TrueParticleID::kSecondary;
         auto const expected_part_idx = (p < n_prim) ? p : p - n_prim;
@@ -146,8 +147,6 @@ namespace sand::test {
                    "nu[{}].part[{}]: truth[0] ({}, {}, {}) isn't the expected slot ({}, {}, {})", ixn_idx, p, id.ixn,
                    static_cast<int>(id.type), id.part, ixn_idx_i, static_cast<int>(expected_type), expected_part_idx);
 
-        // The tracker gate: a reco object exists iff the particle is track-/shower-like by pdg AND
-        // actually left hits in the tracker. Expectation recomputed from edep, not from fast_reco.
         bool const trackish   = is_track_like(true_part.pdg);
         bool const showerish  = is_shower_like(true_part.pdg);
         bool const in_tracker = has_tracker_hits(edep, true_part);
@@ -185,6 +184,12 @@ namespace sand::test {
           UFW_ASSERT(track.part.type == ::caf::SRRecoParticleID::kSandreco && track.part.ixn == ixn_idx_i
                          && track.part.ipart == p_i,
                      "nu[{}].part[{}]: matched track's part doesn't point back to this particle", ixn_idx, p);
+          UFW_ASSERT(track.E == true_part.p.E,
+                     "nu[{}].part[{}]: SRTrack::E ({}) doesn't match true SRTrueParticle::p.E ({}) -- possible "
+                     "GeV/MeV unit mismatch",
+                     ixn_idx, p, track.E, true_part.p.E);
+          UFW_ASSERT(track.Evis == track.E, "nu[{}].part[{}]: SRTrack::Evis ({}) doesn't match SRTrack::E ({})",
+                     ixn_idx, p, track.Evis, track.E);
           ++n_with_track;
         } else if (particle.origRecoObjType == ::caf::RecoObjType::kShower) {
           UFW_ASSERT(showerish, "nu[{}].part[{}]: pdg {} isn't shower-like but got a shower", ixn_idx, p, particle.pdg);
@@ -199,6 +204,12 @@ namespace sand::test {
           UFW_ASSERT(shower.part.type == ::caf::SRRecoParticleID::kSandreco && shower.part.ixn == ixn_idx_i
                          && shower.part.ipart == p_i,
                      "nu[{}].part[{}]: matched shower's part doesn't point back to this particle", ixn_idx, p);
+          // Same units regression guard as above, on the nd branch: shower_from_true() also
+          // copies true_part.p.E verbatim into SRShower::Evis.
+          UFW_ASSERT(shower.Evis == true_part.p.E,
+                     "nu[{}].part[{}]: SRShower::Evis ({}) doesn't match true SRTrueParticle::p.E ({}) -- possible "
+                     "GeV/MeV unit mismatch",
+                     ixn_idx, p, shower.Evis, true_part.p.E);
           ++n_with_shower;
         }
 
