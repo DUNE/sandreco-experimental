@@ -60,8 +60,9 @@ namespace ufw::data {
       // Copy EvtCode string (handle null pointer)
       std::string evtCodeStr = EvtCode ? EvtCode->GetString().Data() : "";
 
-      reader.events_.push_back({EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+      reader.events_.push_back({j, EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
 
+      UFW_INFO("Filling genie event number: {}", EvtNum);
       reader.stdHeps_.emplace_back(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
                                    StdHepFd, StdHepLd, StdHepFm, StdHepLm);
 
@@ -123,6 +124,8 @@ namespace ufw::data {
     spills_boundaries.reserve(n_spills);
 
     for (Long64_t spill = 0; spill < n_spills; spill++) {
+      //UFW_INFO("Building boundary for spill {}", spill);
+      
       edep_tree->GetEntry(spill);
 
       if (event->Primaries.empty()) {
@@ -134,6 +137,7 @@ namespace ufw::data {
       const Long64_t first_idx = event->Primaries.front().GetInteractionNumber();
       const Long64_t last_idx  = event->Primaries.back().GetInteractionNumber();
 
+      //UFW_INFO("  Boundaries: {} - {}", first_idx, last_idx);
       // Boundaries are [first, last+1) to match the original convention
       spills_boundaries.emplace_back(first_idx, last_idx + 1);
     }
