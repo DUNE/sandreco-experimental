@@ -1,5 +1,5 @@
-
 #include <TFile.h>
+#include <TInterpreter.h>
 #include <TTree.h>
 
 #include <data.h>
@@ -9,6 +9,7 @@
 #include <ufw/factory.hpp>
 
 #include <tree_streamer.hpp>
+#include <include_paths.h>
 
 #define UFW_IMPLEMENT_STREAMER_FOR_TYPE(type) UFW_DECLARE_RTTI(type)
 #include <tree_streamer_types.hpp>
@@ -18,6 +19,8 @@ namespace sand::root {
 
   tree_streamer::tree_streamer() : m_file(nullptr), m_tree(nullptr), m_branchaddr(nullptr), m_id(), m_last_entry(-1) {
     m_id_ptr = &m_id;
+    gInterpreter->AddIncludePath(PUBLIC_HEADERS_PATH);
+    gInterpreter->AddIncludePath(PUBLIC_HEADERS_PATH "/common");
   }
 
   tree_streamer::~tree_streamer() {

@@ -9,6 +9,12 @@ target_include_directories(sand_root_tree_streamer PRIVATE ${duneanaobj_INCLUDE_
 
 target_link_libraries(sand_root_tree_streamer PRIVATE ROOT::RIO ROOT::Tree)
 
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/include_paths.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/include_paths.h"
+)
+target_include_directories(sand_root_tree_streamer PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
 #The streamer relies on dictionary generation and its own definitions for
 #correct representation of any user type. This requires all said types to be known.
 #The code below attempts to grab all user types from include/
