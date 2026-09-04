@@ -75,5 +75,5 @@ ROOT_GENERATE_DICTIONARY(sand_root_tree_streamer_dictionaries ${STREAMER_TYPES} 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer_rdict.pcm
         ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer.rootmap DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-install(FILES ${STREAMER_TYPES} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES ${STREAMER_TYPES} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/sandreco/public")
 

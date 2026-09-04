@@ -73,4 +73,4 @@ ROOT_GENERATE_DICTIONARY(sand_caf_caf_streamer_dictionaries ${STREAMER_TYPES} MO
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer_rdict.pcm
         ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer.rootmap DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-install(FILES ${STREAMER_TYPES} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES ${STREAMER_TYPES} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/sandreco/public")
