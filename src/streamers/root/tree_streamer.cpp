@@ -1,5 +1,6 @@
 #include <TFile.h>
 #include <TInterpreter.h>
+#include <TSystem.h>
 #include <TTree.h>
 
 #include <data.h>
@@ -27,8 +28,14 @@ namespace sand::root {
     // I hate doing this, but there seems to be no other way of making ROOT reliably find includes
     std::filesystem::path search_paths[3] = {"sandreco", "sandreco/public", "sandreco/public/common"};
     for (auto p : search_paths) {
-      gInterpreter->AddIncludePath(("/usr/local/include" + p).c_str());
-      gInterpreter->AddIncludePath((STREAMER_INSTALL_PATH + p).c_str());
+      auto p1 = "/usr/local/include" / p;
+      auto p2 = STREAMER_INSTALL_PATH / p;
+      UFW_DEBUG("Adding include path: {}", p1.c_str());
+      gInterpreter->AddIncludePath(p1.c_str());
+      gSystem->AddIncludePath(p1.c_str());
+      UFW_DEBUG("Adding include path: {}", p2.c_str());
+      gInterpreter->AddIncludePath(p2.c_str());
+      gSystem->AddIncludePath(p2.c_str());
     }
   }
 
