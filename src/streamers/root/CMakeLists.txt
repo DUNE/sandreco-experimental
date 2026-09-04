@@ -9,6 +9,9 @@ target_include_directories(sand_root_tree_streamer PRIVATE ${duneanaobj_INCLUDE_
 
 target_link_libraries(sand_root_tree_streamer PRIVATE ROOT::RIO ROOT::Tree)
 
+set(PROJECT_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/sandreco/public")
+
+
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/include_paths.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/include_paths.h"
@@ -75,3 +78,4 @@ ROOT_GENERATE_DICTIONARY(sand_root_tree_streamer_dictionaries tree_streamer_type
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer_rdict.pcm
         ${CMAKE_CURRENT_BINARY_DIR}/libsand_root_tree_streamer.rootmap
         ${CMAKE_CURRENT_SOURCE_DIR}/tree_streamer_types.hpp DESTINATION ${CMAKE_INSTALL_LIBDIR})
+

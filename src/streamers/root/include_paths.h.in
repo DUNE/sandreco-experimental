@@ -1,4 +1,4 @@
 #pragma once
 
 // The installation path will be inserted here by CMake
-#define PUBLIC_HEADERS_PATH "@CMAKE_INSTALL_INCLUDEDIR@/sandreco/public"
+#define PUBLIC_HEADERS_PATH "@PROJECT_INCLUDE_DIR@"
