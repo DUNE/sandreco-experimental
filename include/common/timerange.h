@@ -69,7 +69,17 @@ namespace sand::reco {
     return t -= shift;
   }
 
-  inline bool operator< (const timerange& lhs, const timerange& rhs) { return lhs.best() < rhs.best(); }
+  inline bool operator< (const timerange& lhs, const timerange& rhs) {
+    if (lhs.latest() < rhs.best() || lhs.best() < rhs.earliest()) {
+      return true;
+    }
+    if (lhs.earliest() < rhs.earliest() && lhs.best() < rhs.best() && lhs.latest() < rhs.latest()) {
+      return true;
+    }
+    if (lhs.earliest() < rhs.earliest() && lhs.latest() > rhs.latest()) { // rhs contained within lhs
+      return lhs.best() < rhs.best();
+    }
+  }
 
   inline bool operator< (const timerange& lhs, double rhs) { return lhs.best() < rhs; }
 
