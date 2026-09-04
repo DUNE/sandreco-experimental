@@ -9,12 +9,13 @@ build:
  script:
    - mkdir install
    - mkdir build
-   - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=ON -DCMAKE_INSTALL_PREFIX=/usr/local/
+   - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=ON -DCMAKE_INSTALL_PREFIX=./install
    - cd build && make -j8 install
 
  artifacts:
    paths:
-     - src/streamers/root/tree_streamer_types.hpp
+     - install/include/*
+     - install/lib64/*
      - build/CTestTestfile.cmake
      - build/tests/*
      - build/docs/html
@@ -26,4 +27,6 @@ build:
 test:
  stage: test
  script:
+   - cp -r install/include/* /usr/local/include/
+   - cp -r install/lib64/* /usr/local/lib64/
    - cd build && ctest --output-on-failure
