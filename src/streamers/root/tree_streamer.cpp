@@ -14,10 +14,22 @@
 #include <tree_streamer_types.hpp>
 #undef UFW_IMPLEMENT_STREAMER_FOR_TYPE
 
+#ifndef STREAMER_INSTALL_PATH
+#  define STREAMER_INSTALL_PATH "/usr/include"
+#endif
+
+#include <filesystem>
+
 namespace sand::root {
 
   tree_streamer::tree_streamer() : m_file(nullptr), m_tree(nullptr), m_branchaddr(nullptr), m_id(), m_last_entry(-1) {
     m_id_ptr = &m_id;
+    // I hate doing this, but there seems to be no other way of making ROOT reliably find includes
+    std::filesystem::path search_paths[3] = {"sandreco", "sandreco/public", "sandreco/public/common"};
+    for (auto p : search_paths) {
+      gInterpreter->AddIncludePath(("/usr/local/include" + p).c_str());
+      gInterpreter->AddIncludePath((STREAMER_INSTALL_PATH + p).c_str());
+    }
   }
 
   tree_streamer::~tree_streamer() {
@@ -73,7 +85,7 @@ namespace sand::root {
     TClass* tcl = TClass::GetClass(tp.c_str());
     UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", tp);
     TList* members = tcl->GetListOfDataMembers();
-    TList* bases = tcl->GetListOfBases();
+    TList* bases   = tcl->GetListOfBases();
     TList* methods = tcl->GetListOfMethods();
     // probing if ROOT is actually loading the class
     UFW_ASSERT(members != nullptr && bases != nullptr && methods != nullptr, "TClass for '{}' is incomplete.", tp);
