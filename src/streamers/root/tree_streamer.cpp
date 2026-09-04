@@ -72,6 +72,11 @@ namespace sand::root {
   void tree_streamer::prepare(const ufw::public_id& id, const ufw::type_id& tp) {
     TClass* tcl = TClass::GetClass(tp.c_str());
     UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", tp);
+    TList* members = tcl->GetListOfDataMembers();
+    TList* bases = tcl->GetListOfBases();
+    TList* methods = tcl->GetListOfMethods();
+    // probing if ROOT is actually loading the class
+    UFW_ASSERT(members != nullptr && bases != nullptr && methods != nullptr, "TClass for '{}' is incomplete.", tp);
     ufw::streamer::prepare(id, tp);
   }
 
