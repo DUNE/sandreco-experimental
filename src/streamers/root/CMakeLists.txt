@@ -4,13 +4,7 @@ target_sources(sand_root_tree_streamer PRIVATE
     tree_streamer.hpp
     tree_streamer.cpp)
 
-target_include_directories(sand_root_tree_streamer PRIVATE ${duneanaobj_INCLUDE_DIR})
-
 target_link_libraries(sand_root_tree_streamer PRIVATE ROOT::RIO ROOT::Tree)
-
-#Help gInterpreter find stuff
-target_compile_definitions(sand_root_tree_streamer PRIVATE
-                           STREAMER_INSTALL_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
 
 #The streamer relies on dictionary generation and its own definitions for
 #correct representation of any user type. This requires all said types to be known.
@@ -71,6 +65,17 @@ file(APPEND ${STREAMER_LINKDEF} "#pragma link C++ class sand::channel_id+;\n")
 file(APPEND ${STREAMER_LINKDEF} ${USER_TYPES_LINKDEF})
 file(APPEND ${STREAMER_LINKDEF} "#endif\n")
 #Add everything that does not get picked up by itself
+
+#Coerce ROOT to actually include these.
+#The first triplet works if you are sane and actually install via cmake
+#The second triplet takes care of some insanity in the CI.
+target_include_directories(sand_root_tree_streamer PUBLIC
+                           "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/sandreco"
+                           "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/sandreco/public"
+                           "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/sandreco/public/common"
+                           "/usr/local/include/sandreco"
+                           "/usr/local/include/sandreco/public"
+                           "/usr/local/include/sandreco/public/common")
 
 ROOT_GENERATE_DICTIONARY(sand_root_tree_streamer_dictionaries ${STREAMER_TYPES} MODULE sand_root_tree_streamer LINKDEF ${STREAMER_LINKDEF})
 

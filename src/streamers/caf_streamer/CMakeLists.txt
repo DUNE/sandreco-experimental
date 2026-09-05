@@ -67,7 +67,18 @@ file(APPEND ${STREAMER_LINKDEF} ${USER_TYPES_LINKDEF})
 file(APPEND ${STREAMER_LINKDEF} "#endif\n")
 
 
-include_directories(${duneanaobj_INCLUDE_DIR})
+#Coerce ROOT to actually include these.
+#The first triplet works if you are sane and actually install via cmake
+#The second triplet takes care of some insanity in the CI.
+target_include_directories(sand_caf_caf_streamer PUBLIC
+                           "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/sandreco"
+                           "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/sandreco/public"
+                           "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/sandreco/public/common"
+                           "/usr/local/include/sandreco"
+                           "/usr/local/include/sandreco/public"
+                           "/usr/local/include/sandreco/public/common"
+                           ${duneanaobj_INCLUDE_DIR})
+
 ROOT_GENERATE_DICTIONARY(sand_caf_caf_streamer_dictionaries ${STREAMER_TYPES} MODULE sand_caf_caf_streamer LINKDEF ${STREAMER_LINKDEF})
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libsand_caf_caf_streamer_rdict.pcm

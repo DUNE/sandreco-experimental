@@ -1,6 +1,4 @@
 #include <TFile.h>
-#include <TInterpreter.h>
-#include <TSystem.h>
 #include <TTree.h>
 
 #include <data.h>
@@ -15,28 +13,10 @@
 #include <tree_streamer_types.hpp>
 #undef UFW_IMPLEMENT_STREAMER_FOR_TYPE
 
-#ifndef STREAMER_INSTALL_PATH
-#  define STREAMER_INSTALL_PATH "/usr/include"
-#endif
-
-#include <filesystem>
-
 namespace sand::root {
 
   tree_streamer::tree_streamer() : m_file(nullptr), m_tree(nullptr), m_branchaddr(nullptr), m_id(), m_last_entry(-1) {
     m_id_ptr = &m_id;
-    // I hate doing this, but there seems to be no other way of making ROOT reliably find includes
-    std::filesystem::path search_paths[3] = {"sandreco", "sandreco/public", "sandreco/public/common"};
-    for (auto p : search_paths) {
-      auto p1 = "/usr/local/include" / p;
-      auto p2 = STREAMER_INSTALL_PATH / p;
-      UFW_DEBUG("Adding include path: {}", p1.c_str());
-      gInterpreter->AddIncludePath(p1.c_str());
-      gSystem->AddIncludePath(p1.c_str());
-      UFW_DEBUG("Adding include path: {}", p2.c_str());
-      gInterpreter->AddIncludePath(p2.c_str());
-      gSystem->AddIncludePath(p2.c_str());
-    }
   }
 
   tree_streamer::~tree_streamer() {
@@ -88,15 +68,11 @@ namespace sand::root {
     brid->SetAutoDelete(false);
   }
 
-  void tree_streamer::prepare(const ufw::public_id& id, const ufw::type_id& tp) {
-    TClass* tcl = TClass::GetClass(tp.c_str());
-    UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", tp);
-    TList* members = tcl->GetListOfDataMembers();
-    TList* bases   = tcl->GetListOfBases();
-    TList* methods = tcl->GetListOfMethods();
-    // probing if ROOT is actually loading the class
-    UFW_ASSERT(members != nullptr && bases != nullptr && methods != nullptr, "TClass for '{}' is incomplete.", tp);
-    ufw::streamer::prepare(id, tp);
+  void tree_streamer::prepare(const ufw::public_id& id, const ufw::type_id& type) {
+    TClass* tcl = TClass::GetClass(type.c_str(), true, false);
+    UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", type);
+    UFW_INFO("Found TClass for '{}'.", type);
+    ufw::streamer::prepare(id, type);
   }
 
   void tree_streamer::attach(ufw::data::data_base& d, const ufw::public_id& id) {

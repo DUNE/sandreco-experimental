@@ -63,6 +63,9 @@ namespace sand::caf {
 
   void caf_streamer::prepare(const ufw::public_id& id, const ufw::type_id& type) {
     streamer::prepare(id, type);
+    TClass* tcl = TClass::GetClass(type.c_str(), true, false);
+    UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", type);
+    UFW_INFO("Found TClass for '{}'.", type);
     m_attached_type = type;
   }
 
