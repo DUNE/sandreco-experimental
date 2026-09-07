@@ -47,81 +47,6 @@ namespace sand::ecal {
       return static_cast<std::uint16_t>(value);
     }
 
-    bool valid_face(face_location face) { return face == face_location::begin || face == face_location::end; }
-
-    std::size_t n_endcap_columns(module_t module_number) {
-      switch (module_number) {
-      case 0:
-      case 1:
-      case 16:
-      case 17:
-        return 6;
-
-      case 12:
-      case 13:
-      case 14:
-      case 15:
-      case 28:
-      case 29:
-      case 30:
-      case 31:
-        return 2;
-
-      default:
-        return 3;
-      }
-    }
-
-    bool valid_cell_id(cell_id cid) {
-      using region_t = sand::geo_id::region_t;
-
-      const auto module = static_cast<std::size_t>(cid.module_number);
-      const auto row    = static_cast<std::size_t>(cid.row);
-      const auto column = static_cast<std::size_t>(cid.column);
-
-      /*
-       * ECal cells are constructed in geoinfo::ecal_info::construct_module_cells()
-       * with irow = 0..4.
-       */
-      if (row >= 5) {
-        return false;
-      }
-
-      /*
-       * Barrel:
-       *
-       * geoinfo::ecal_info::barrel_module_cells() uses:
-       *
-       *   static std::vector<double> col_widths(12, 1.);
-       *
-       * so there are 12 columns.
-       *
-       * The usual KLOE barrel has 24 modules, indexed 0..23.
-       */
-      if (cid.region == region_t::BARREL) {
-        return module < 24 && column < 12;
-      }
-
-      /*
-       * Endcaps:
-       *
-       * geoinfo::ecal_info::endcap_module_cells() constructs modules 0..31.
-       *
-       * Modules 0, 1, 16, 17 have 6 columns.
-       * Modules 12..15 and 28..31 have 2 columns.
-       * All other modules have 3 columns.
-       */
-      if (cid.region == region_t::ENDCAP_A || cid.region == region_t::ENDCAP_B) {
-        if (module >= 32) {
-          return false;
-        }
-
-        return column < n_endcap_columns(cid.module_number);
-      }
-
-      return false;
-    }
-
     /// @brief Check whether a begin/end digit pair is physically compatible.
     ///
     /// Model:
@@ -201,12 +126,11 @@ namespace sand::ecal {
 
         const auto pmt = ecal.pmt(d.channel());
 
-        if (!valid_face(pmt.face_)) {
-          continue;
-        }
-
-        if (!valid_cell_id(pmt.cell_)) {
-          continue;
+        if (!ecal.contains(pmt.cell_)) {
+          UFW_ERROR("ECal cell_pair_builder: channel refers to an unknown cell: "
+                    "cell = {}, region = {}, module = {}, row = {}, column = {}",
+                    pmt.cell_.raw, static_cast<int>(pmt.cell_.region), static_cast<int>(pmt.cell_.module_number),
+                    static_cast<int>(pmt.cell_.row), static_cast<int>(pmt.cell_.column));
         }
 
         auto& group = by_cell[pmt.cell_.raw];
@@ -214,8 +138,10 @@ namespace sand::ecal {
 
         if (pmt.face_ == face_location::begin) {
           group.begin.push_back({&d, idig});
-        } else {
+        } else if (pmt.face_ == face_location::end) {
           group.end.push_back({&d, idig});
+        } else {
+          UFW_ERROR("ECal cell_pair_builder: invalid PMT face {}", static_cast<int>(pmt.face_));
         }
       }
       for (const auto& [raw_cid, group] : by_cell) {
@@ -244,16 +170,6 @@ namespace sand::ecal {
             }
           }
 
-          continue;
-        }
-
-        /*
-         * This should already be true because every digit was checked during
-         * grouping. Keep the guard anyway, so ecal.at() is never called for
-         * invalid decoded IDs.
-         */
-
-        if (!valid_cell_id(group.cid)) {
           continue;
         }
 

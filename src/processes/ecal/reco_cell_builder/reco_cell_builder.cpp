@@ -93,8 +93,9 @@ namespace sand::ecal {
         }
 
         const double half_length = 0.5 * length_mm;
-        const double d_begin     = half_length + 0.5 * v_mm_per_ns * (t_begin - t_end);
-        const double d_end       = length_mm - d_begin;
+        const double offset      = 0.5 * v_mm_per_ns * (t_begin - t_end);
+        const double d_begin     = half_length + offset;
+        const double d_end       = half_length - offset;
 
         if (!std::isfinite(d_begin) || !std::isfinite(d_end)) {
           UFW_ASSERT(false, "ECal reco_cell_builder: invalid complete pair: d_begin = {}, d_end = {}",
@@ -128,15 +129,13 @@ namespace sand::ecal {
           continue;
         }
 
-        const auto position = cell.offset2position(d_begin - half_length);
+        const auto position = cell.offset2position(offset);
 
         auto& reco_cell = out_slice.emplace_back();
         static_cast<sand::ecal::cell_pair&>(reco_cell) = pair;
         reco_cell.position                             = position;
         reco_cell.time                                 = sand::reco::timerange(time_ns);
         reco_cell.e                                    = energy_mev;
-        reco_cell.d_begin                              = d_begin;
-        reco_cell.d_end                                = d_end;
         reco_cell.originally_incomplete                = false;
       }
     }

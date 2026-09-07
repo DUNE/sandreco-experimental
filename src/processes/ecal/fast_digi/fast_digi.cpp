@@ -69,8 +69,8 @@ namespace sand::ecal {
       // Sliding window loop: collect PEs within integration window
       while (true) {
         // Find all photo-electrons within the integration time window
-        const double window_end = start_int_window + m_int_time_window;
-        while (this_pe != pe_collection.end() && this_pe->arrival_time < window_end) {
+        const double end_int_window = start_int_window + m_int_time_window;
+        while (this_pe != pe_collection.end() && this_pe->arrival_time < end_int_window) {
           this_pe++;
         }
         // Count photo-electrons in current window
@@ -107,7 +107,7 @@ namespace sand::ecal {
 
           // Skip photo-electrons in the dead time window after signal detection
           while (this_pe != pe_collection.end()
-                 && this_pe->arrival_time < start_int_window + m_int_time_window + m_dead_time_window) {
+                 && this_pe->arrival_time < end_int_window + m_dead_time_window) {
             this_pe++;
           }
           // Check if we've processed all photo-electrons

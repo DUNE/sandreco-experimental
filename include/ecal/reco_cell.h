@@ -19,10 +19,6 @@ namespace sand::ecal {
     /// Reconstructed deposited energy [MeV].
     double e = NAN;
 
-    /// Reconstructed light path distance to each readout face [mm].
-    double d_begin = NAN;
-    double d_end   = NAN;
-
     /// True if this reco cell was first built from a one-sided (incomplete) digit pair.
     bool originally_incomplete = false;
   };
