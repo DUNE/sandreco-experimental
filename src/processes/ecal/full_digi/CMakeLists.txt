@@ -1,0 +1,5 @@
+sandreco_add_process(sand_ecal_full_digi)
+
+target_sources(sand_ecal_full_digi PRIVATE full_digi.cpp)
+
+target_link_libraries(sand_ecal_full_digi PRIVATE sand_edep_reader sand_root_tgeomanager sand_geoinfo)
