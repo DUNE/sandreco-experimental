@@ -35,6 +35,10 @@ namespace sand::grain {
    * | `fit_step_size`           | double |       | Default: 0.01    | Step size for line fit.                                               |
    * | `use_weights`             | bool   |       | Default: true    | Flag to use points amplitude as weights in fit minimizer.             |
    *
+   * \subsection Dependencies
+   * | Type            | Comment  |
+   * |-----------------|----------|
+   *
    * \subsection Requirements
    * |  Name               | Type                          | Comment                           |
    * |---------------------|-------------------------------|-----------------------------------|
