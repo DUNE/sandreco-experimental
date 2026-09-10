@@ -1,5 +1,5 @@
-#include "caf_filler.hpp"
 #include "utils/GlucksternSmearing.hpp"
+#include "caf_filler.hpp"
 
 namespace sand {
 

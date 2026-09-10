@@ -30,20 +30,18 @@
       }
     },
     {
-      "sand::fake_reco": {},
+      "sand::test::truth_filler_test": {},
       "reqs": {
         "in_truth": "produced_truth"
       },
-      "prods": {
-        "output_caf": "produced_caf"
-      }
+      "prods": {}
     },
     {
       "sand::caf::caf_streamer": {
-        "uri": "test/output.caf.root",
+        "uri": "test/output.truth.caf.root",
         "tree": "cafTree"
       },
-      "write": ["produced_caf"]
+      "write": ["produced_truth"]
     }
   ]
 }

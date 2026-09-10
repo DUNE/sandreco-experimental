@@ -23,6 +23,13 @@
   },
   "run": [
     {
+      "sand::common::truth_filler": {},
+      "reqs": {},
+      "prods": {
+        "out_truth_branch": "produced_truth"
+      }
+    },
+    {
       "sand::fake_reco": {
         "mode" : "smearing",
         "intrinsic_pos_res_t" : 200e-3,
@@ -30,7 +37,9 @@
         "hit_energy_thr" : 250e-6,
         "b_field_magnitude" : 0.6
       },
-      "reqs": {},
+      "reqs": {
+        "in_truth": "produced_truth"
+      },
       "prods": {
         "output_caf": "produced_caf"
       }
