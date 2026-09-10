@@ -25,6 +25,7 @@ namespace sand::grain {
    * \subsection Dependencies
    * | Type            | Comment  |
    * |-----------------|----------|
+   * | `sand::geoinfo` | Geometry |
    *
    * \subsection Requirements
    * |  Name               | Type                          | Comment                           |
