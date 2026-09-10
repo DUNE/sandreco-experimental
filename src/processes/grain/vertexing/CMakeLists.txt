@@ -1,0 +1,5 @@
+sandreco_add_process(sand_grain_vertexing)
+
+target_sources(sand_grain_vertexing PRIVATE vertexing.cpp)
+
+target_link_libraries(sand_grain_vertexing PRIVATE sand_geoinfo)
