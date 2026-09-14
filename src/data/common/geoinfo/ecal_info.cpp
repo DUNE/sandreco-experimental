@@ -838,6 +838,20 @@ namespace sand {
     return m_modules_cells_maps.at(mid).at(cid);
   }
 
+  bool geoinfo::ecal_info::contains(cell_id cid) const {
+    module_id mid;
+    mid.region        = cid.region;
+    mid.module_number = cid.module_number;
+
+    const auto module_it = m_modules_cells_maps.find(mid);
+
+    if (module_it == m_modules_cells_maps.end()) {
+      return false;
+    }
+
+    return module_it->second.count(cid) != 0;
+  }
+
   const std::vector<cell_ref>& geoinfo::ecal_info::cells(geo_id gid) const {
     if (!m_cells_map.count(gid)) {
       UFW_ERROR("geo_id: {} not found in the map: m_cells_map", gid);

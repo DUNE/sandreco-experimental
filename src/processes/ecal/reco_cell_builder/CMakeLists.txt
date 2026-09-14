@@ -1,0 +1,5 @@
+sandreco_add_process(sand_ecal_reco_cell_builder)
+
+target_sources(sand_ecal_reco_cell_builder PRIVATE reco_cell_builder.cpp)
+
+target_link_libraries(sand_ecal_reco_cell_builder PRIVATE sand_geoinfo)
