@@ -18,11 +18,11 @@
 
 namespace sand::tracker {
 
-  void dumper_dig::configure(const ufw::config& cfg) { process::configure(cfg); }
-
-  dumper_dig::dumper_dig() : process({{"digi", "sand::tracker::digi"}}, {}) {
-    UFW_DEBUG("Creating dumper_dig process at {}", fmt::ptr(this));
-    _fout = std::unique_ptr<TFile>(new TFile("dumper_dig.root", "RECREATE"));
+  void dumper_dig::configure(const ufw::config& cfg) {
+    process::configure(cfg);
+    m_filepath = cfg.at("filepath");
+    UFW_DEBUG("Output filepath: {}", m_filepath);
+    _fout = std::unique_ptr<TFile>(new TFile(m_filepath.c_str(), "RECREATE"));
     _tree = new TTree("digi_tree", "Digi Tree");
     _tree->Branch("adc", &_adc);
     _tree->Branch("tdc", &_tdc);
@@ -32,6 +32,10 @@ namespace sand::tracker {
     _tree->Branch("w_dx", &_w_dx);
     _tree->Branch("w_dy", &_w_dy);
     _tree->Branch("w_dz", &_w_dz);
+  }
+
+  dumper_dig::dumper_dig() : process({{"digi", "sand::tracker::digi"}}, {}) {
+    UFW_DEBUG("Creating dumper_dig process at {}", fmt::ptr(this));
   }
 
   dumper_dig::~dumper_dig() {
@@ -55,7 +59,7 @@ namespace sand::tracker {
     for (const auto& signal : digi.signals) {
       _adc.push_back(signal.adc());
       _tdc.push_back(signal.tdc());
-      auto w = gi.tracker().wire_at(signal.channel());
+      auto w   = gi.tracker().wire_at(signal.channel());
       auto pos = w.head;
       auto dir = w.direction();
       dir /= dir.r();

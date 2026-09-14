@@ -26,6 +26,7 @@ namespace sand::tracker {
     void run() override;
 
    private:
+    std::string m_filepath;
     std::unique_ptr<TFile> _fout;
     TTree* _tree;
     std::vector<double> _adc;
