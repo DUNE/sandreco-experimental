@@ -33,7 +33,11 @@ namespace sand::grain {
    * |--------------------------|--------|-------|------------------|-------------------------------------------------------------|
    * | `geometry`               | string |       | Required         | Internal GDML file for GRAIN.                               |
    * | `energy_split_threshold` | double | MeV   | Default: 100     | Threshold energy at which to split events for memory usage. |
-   *
+   * \subsection Dependencies
+   * | Type | Comment |
+   * |------|---------|
+   * | `sand::geant_run_manager` | Handle to Geant4 engine |
+   * | `sand::edep_reader` | Event data |
    */
 
   void optical_simulation::configure(const ufw::config& cfg) {
@@ -82,7 +86,7 @@ namespace sand::grain {
 
   int optical_simulation::GetEventsNumber() {
     UFW_DEBUG("Computing the number of block for the event");
-    const auto& tree = get<sand::edep_reader>();
+    const auto& tree = instance<sand::edep_reader>();
     int eventCount   = 0;
 
     for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
