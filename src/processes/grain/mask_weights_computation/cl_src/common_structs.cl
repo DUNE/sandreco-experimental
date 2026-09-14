@@ -27,6 +27,5 @@ CL_STRUCT(typedef struct {
 CL_STRUCT(typedef struct {
   float voxel_size;
   float lar_attenuation_length;
-  float pde;
   int minivoxels_per_side;
 } solidangle_cfg;)

@@ -13,13 +13,16 @@ namespace sand::caf {
   /**
    * @brief Streamer for CAF (Common Analysis Format) ROOT files.
    *
-   * Manages reading/writing caf_wrapper data to/from TTree branches.
+   * Manages reading/writing standard_record_wrapper data to/from TTree branches.
    */
   class caf_streamer : public ufw::streamer {
     std::unique_ptr<TFile> m_file;
-    TTree* m_tree                                    = nullptr; // owned by m_file (ROOT ownership)
-    caf_wrapper* m_data                              = nullptr; // non-owning, points to external data
-    ::caf::StandardRecord* m_caf_ptr                 = nullptr; // upcast pointer passed to ROOT branch
+    TTree* m_tree                              = nullptr;
+    standard_record_wrapper* m_data            = nullptr;
+    truth_branch_wrapper const* m_truth_branch = nullptr;
+    standard_record_wrapper m_internal_sr;
+    ufw::type_id m_attached_type;
+    ::caf::StandardRecord* m_caf_ptr                 = nullptr;
     ufw::context_id m_context_id                     = {};
     long m_last_entry                                = 0;
     bool m_has_context_id                            = false;
@@ -31,6 +34,7 @@ namespace sand::caf {
     ~caf_streamer() override;
 
     void configure(const ufw::config& cfg, ufw::op_type op) override;
+    void prepare(const ufw::public_id& id, const ufw::type_id& type) override;
     void attach(ufw::data::data_base& data, const ufw::public_id& id) override;
     void read(ufw::context_id id) override;
     void write(ufw::context_id id) override;

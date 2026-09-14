@@ -25,7 +25,7 @@ namespace sand::tracker {
 
       /**
        * @brief Analog-to-digital converter (ADC) value.
-       * @unit ADC counts (arbitrary units)
+       * @unit ADC counts
        */
       double adc() const { return m_adc; }
 

@@ -21,7 +21,8 @@ namespace sand::reco {
     };
 
    public:
-    hit(const pos_3d& c, const dir_3d& d, const time& t) : m_centre(c), m_primary_axis(d), m_time(t) {}
+    hit(const pos_3d& c, const dir_3d& d, const time& t, double w)
+      : m_centre(c), m_primary_axis(d), m_time(t), m_width(w) {}
 
     dir_3d axis() const { return m_primary_axis; }
 
@@ -34,8 +35,8 @@ namespace sand::reco {
    private:
     pos_3d m_centre;
     dir_3d m_primary_axis;
-    double m_width;
     time m_time;
+    double m_width;
   };
 
   inline hit::match match(const hit& lhs, const hit& rhs) {

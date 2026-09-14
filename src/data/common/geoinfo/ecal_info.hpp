@@ -283,6 +283,7 @@ namespace sand {
     virtual ~ecal_info();
     const cell& at(const pos_3d& p) const;
     const cell& at(cell_id cid) const;
+    bool contains(cell_id cid) const;
     const std::vector<cell_ref>& cells(geo_id gid) const;
     inline pmt_id pmt(channel_id cid) const {
       pmt_id pid;
@@ -297,8 +298,8 @@ namespace sand {
       channel_id c;
       c.subdetector = subdetector_t::ECAL;
       c.channel     = (static_cast<uint32_t>(pid.face_) << 24) | (pid.cell_.module_number << 16) | (pid.cell_.row << 8)
-                | pid.cell_.column;
-      c.link = pid.cell_.region;
+                    | pid.cell_.column;
+      c.link        = pid.cell_.region;
       return c;
     };
     static const char* face_side_name(face_side side);

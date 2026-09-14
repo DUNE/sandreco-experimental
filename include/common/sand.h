@@ -173,7 +173,92 @@ namespace sand {
   /**
    * Subdetector type enumeration
    */
-  enum subdetector_t : uint8_t { DRIFT = 0, ECAL = 1, GRAIN = 2, STT = 3, TRACKER = STT, MUON = 4, NONE = 255 };
+  enum subdetector_t : uint8_t { 
+    kSandBegin = 0,
+  
+    ECAL = kSandBegin, 
+    GRAIN = 1, 
+    STT = 2, 
+    DRIFT = 3, 
+    MUON = 4, 
+    MAGNET= 5, 
+    
+    kSandEnd = 6,
+    
+    WORLD = 7, 
+    OTHER = 8, 
+    
+    kLoopableEnd = 9,
+    
+    GENERIC_DRIFT = 10, 
+    TRACKER = STT, 
+
+    NONE = 255 
+  };
+
+  static constexpr size_t kNumComponents = static_cast<size_t>(subdetector_t::kLoopableEnd);
+
+  /**
+ * @brief Map associating component enums with their EDepSim string representations.
+ */
+  inline std::map<subdetector_t, std::string> component_to_string = {
+      {subdetector_t::GRAIN, "LArHit"},  
+      {subdetector_t::STT, "Straw"},   
+      {subdetector_t::DRIFT, "DriftVolume"},
+      {subdetector_t::ECAL, "EMCalSci"}, 
+      {subdetector_t::MAGNET, "Magnet"}, 
+      {subdetector_t::WORLD, "World"},
+  };
+
+  /**
+   * @brief Map associating EDepSim string representations of components with their enums.
+   */
+  inline std::map<std::string, subdetector_t> string_to_component = {
+      {"LArHit", subdetector_t::GRAIN},  
+      {"Straw", subdetector_t::STT},   
+      {"DriftVolume", subdetector_t::DRIFT},
+      {"EMCalSci", subdetector_t::ECAL}, 
+      {"Magnet", subdetector_t::MAGNET}, 
+      {"World", subdetector_t::WORLD},
+  };
+
+  /**
+   * @brief List of string names associated with the GRAIN component.
+   */
+  inline std::initializer_list<std::string> grain_names = {"GRAIN", "GRIAN"};
+
+  /**
+   * @brief List of string names associated with the STRAW component.
+   */
+  inline std::initializer_list<std::string> stt_names = {"horizontalST", "STT", "TrkMod",   "CMod",
+                                                  "C3H6Mod",      "Trk", "SuperMod", "Drift"};
+
+  /**
+   * @brief List of string names associated with the generic DRIFT component.
+   */
+  inline std::initializer_list<std::string> generic_drift_names = {"SANDtracker", "ch", "t_P",  "t_C", "m", "fr", "_v_"};
+
+  /**
+   * @brief List of string names associated with the DRIFT component.
+   */
+  inline std::initializer_list<std::string> drift_names = {"SANDtracker", "Trk",     "CMod",      "C3H6Mod", "SuperMod", "Drift",
+                                                    "C3H6Target",  "CTarget", "C3H6Mylar", "CMylar",  "Frame"};
+
+  /**
+   * @brief List of string names associated with the ECAL component.
+   */
+  inline std::initializer_list<std::string> ecal_names = {"ECAL", "kloe_calo_volume"};
+
+  /**
+   * @brief List of string names associated with the MAGNET component.
+   */
+  inline std::initializer_list<std::string> magnet_names = {"KLOE", "Yoke", "Mag"};
+
+  /**
+   * @brief List of string names associated with the WORLD component.
+   */
+  inline std::initializer_list<std::string> world_names = {"World",      "rock",      "volSAND",
+                                                    "sand_inner", "Enclosure", "volDetEnclosure"};
   /**
    * Unique identifier for elements of the detector geometry as known by Geant.
    * There is a 1-1 correspondence between the geo_path of a sensitive detector and a geo_id.

@@ -1,0 +1,5 @@
+sandreco_add_process(sand_grain_hough3d)
+
+target_sources(sand_grain_hough3d PRIVATE hough3d.cpp)
+
+target_link_libraries(sand_grain_hough3d PRIVATE sand_cl sand_geoinfo)

@@ -23,8 +23,17 @@
   },
   "run": [
     {
-      "sand::fake_reco": {},
+      "sand::common::truth_filler": {},
       "reqs": {},
+      "prods": {
+        "out_truth_branch": "produced_truth"
+      }
+    },
+    {
+      "sand::fake_reco": {},
+      "reqs": {
+        "in_truth": "produced_truth"
+      },
       "prods": {
         "output_caf": "produced_caf"
       }

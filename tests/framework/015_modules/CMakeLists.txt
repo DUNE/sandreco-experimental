@@ -1,0 +1,3 @@
+sandreco_add_test_process(sand_test_streamer_multiread_read)
+target_sources(sand_test_streamer_multiread_read PRIVATE streamer_multiread_read.cpp)
+target_link_libraries(sand_test_streamer_multiread_read PRIVATE ROOT::MathCore)

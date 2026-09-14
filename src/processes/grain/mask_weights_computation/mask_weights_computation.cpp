@@ -27,7 +27,6 @@ namespace sand::grain {
    * |--------------------------|--------|-----------------|------------------|-------------------------------------------------------------------------------------|
    * | `voxel_size`             | double | mm              | Required         | Size of each voxel in the grid to be computed.                                      |
    * | `lar_attenuation_length` | double | mm              | Required         | Mean free path length for light attenuation in liquid argon.                        |
-   * | `pde`                    | double | ratio [0.0-1.0] | Required         | Photodetector efficiency.                                                           |
    * | `minivoxels_per_side`    | uint   |                 | Required         | Number of minivoxels per side of larger voxels for refined solid angle computation. |
    */
   class mask_weights_computation : public ufw::process {
@@ -69,7 +68,7 @@ namespace sand::grain {
 
   void mask_weights_computation::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_solidangle_cfg = {cfg.at("voxel_size"), cfg.at("lar_attenuation_length"), cfg.at("pde"),
+    m_solidangle_cfg = {cfg.at("voxel_size"), cfg.at("lar_attenuation_length"),
                         cfg.at("minivoxels_per_side")};
     auto& platform   = instance<cl::platform>();
     configure_frustum(platform);

@@ -63,4 +63,4 @@ class EDEPTrajectoryPoint {
   int sub_process_;         ///< Subprocess associated with the trajectory point.
 };
 
-using EDEPTrajectoryPoints = std::map<component, std::vector<EDEPTrajectoryPoint>>;
+using EDEPTrajectoryPoints = std::map<sand::subdetector_t, std::vector<EDEPTrajectoryPoint>>;

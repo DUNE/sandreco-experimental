@@ -46,7 +46,7 @@ TGeoNode* GetNode(const TG4TrajectoryPoint& tpoint) {
  * @brief Checks for transitions between detector components in a particle trajectory.
  *
  * This function examines the current and next trajectory points to determine
- * if a transition occurs from one detector component to another.
+ * if a transition occurs from one sand::subdetector_t to another.
  * If a transition is detected, it updates the entering and exiting state
  * of the respective components and stores the associated trajectory points.
  *
@@ -65,23 +65,28 @@ TGeoNode* GetNode(const TG4TrajectoryPoint& tpoint) {
  * @param it The current trajectory point being checked.
  * @param next_it The next trajectory point being checked.
  */
-void EDEPTrajectory::CheckInNext(bool* in, bool* next, TG4TrajectoryPoint it, TG4TrajectoryPoint next_it) {
-  for (int i = 0; i < 6; i++) {
-    for (int j = 0; j < 6; j++) {
+void EDEPTrajectory::CheckInNext(std::array<bool, sand::kNumComponents> in, std::array<bool, sand::kNumComponents> next, TG4TrajectoryPoint it, TG4TrajectoryPoint next_it) {
+  for (int i = sand::subdetector_t::kSandBegin; i < sand::subdetector_t::kLoopableEnd; i++) {
+    for (int j = sand::subdetector_t::kSandBegin; j < sand::subdetector_t::kLoopableEnd; j++) {
       // Notice: this should be fixed in the geometry.
-      if ((components[i] == component::STRAW && components[j] == component::DRIFT)
-          || (components[j] == component::STRAW && components[i] == component::DRIFT)) {
+      if ((i == sand::subdetector_t::STT && j == sand::subdetector_t::DRIFT) ||
+          (j == sand::subdetector_t::STT && i == sand::subdetector_t::DRIFT)) {
         continue;
       }
+
       if (i == j) {
         continue;
       }
-      if (in[i] && next[j]) {
-        last_points_[components[i]].push_back(it);
-        first_points_[components[j]].push_back(next_it);
 
-        exiting_map_[components[i]]  = true;
-        entering_map_[components[j]] = true;
+      if (in[i] && next[j]) {
+        auto comp_i = static_cast<sand::subdetector_t>(i);
+        auto comp_j = static_cast<sand::subdetector_t>(j);
+
+        last_points_[comp_i].push_back(it);
+        first_points_[comp_j].push_back(next_it);
+
+        exiting_map_[comp_i]  = true;
+        entering_map_[comp_j] = true;
 
         return;
       }
@@ -103,7 +108,7 @@ void EDEPTrajectory::CheckInNext(bool* in, bool* next, TG4TrajectoryPoint it, TG
  * @param primaries A container for primary vertex information to track interaction number and reaction type.
  */
 EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
-                               const std::map<int, std::map<component, std::vector<EDEPHit>>>& hit_map,
+                               const std::map<int, std::map<sand::subdetector_t, std::vector<EDEPHit>>>& hit_map,
                                const TG4PrimaryVertexContainer& primaries)
   : p0_(trajectory.GetInitialMomentum()),
     parent_trajectory_(nullptr),
@@ -121,7 +126,7 @@ EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
     }
   }
 
-  for (auto comp : string_to_component) {
+  for (auto comp : sand::string_to_component) {
     last_points_[comp.second]  = {};
     first_points_[comp.second] = {};
 
@@ -140,29 +145,30 @@ EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
       current_volume = "";
     }
 
-    component comp;
-    bool in_grain   = Match(current_volume, grain_names);
-    if(in_grain) comp = component::GRAIN;
+    sand::subdetector_t comp;
+    bool in_grain   = Match(current_volume, sand::grain_names);
+    if(in_grain) comp = sand::subdetector_t::GRAIN;
 
-    bool in_ecal    = Match(current_volume, ecal_names);
-    if(in_ecal) comp = component::ECAL;
+    bool in_ecal    = Match(current_volume, sand::ecal_names);
+    if(in_ecal) comp = sand::subdetector_t::ECAL;
 
-    bool in_mag     = Match(current_volume, magnet_names);
-    if(in_mag) comp = component::MAGNET;
+    bool in_mag     = Match(current_volume, sand::magnet_names);
+    if(in_mag) comp = sand::subdetector_t::MAGNET;
 
-    bool in_world   = Match(current_volume, world_names);
-    if(in_world) comp = component::WORLD;
+    bool in_world   = Match(current_volume, sand::world_names);
+    if(in_world) comp = sand::subdetector_t::WORLD;
 
-    bool in_stt     = Match(current_volume, stt_names);
-    bool in_drift   = Match(current_volume, drift_names);
+    bool in_stt             = Match(current_volume, sand::stt_names);
+    bool in_drift           = Match(current_volume, sand::drift_names);
+    bool in_generic_drift   = Match(current_volume, sand::generic_drift_names);
 
-    if(in_stt )   comp = component::STRAW;
-    if(in_drift)  comp = component::DRIFT;
+    if(in_stt )   comp = sand::subdetector_t::STT;
+    if(in_drift || in_generic_drift)  comp = sand::subdetector_t::DRIFT;
 
     // Notice: This is useful to debug unincluded volume names
     // if (!(in_grain || in_stt || in_drift || in_ecal || in_mag || in_world)) {
     // continue;
-    // std::cout << current_volume << "  " << component_to_string[comp] << std::endl;
+    // std::cout << current_volume << "  " << sand::component_to_string[comp] << std::endl;
     // }
 
     // Notice: this should simply be 'trajectory_points_[comp].push_back(*it);'
@@ -171,15 +177,15 @@ EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
 
     if (in_grain || in_ecal || in_mag || in_world) {
       trajectory_points_[comp].push_back(*it);
-    } else if (in_stt && in_drift) {
-      trajectory_points_[component::STRAW].push_back(*it);
-      trajectory_points_[component::DRIFT].push_back(*it);
-    } else if (!in_stt && in_drift) {
-      trajectory_points_[component::DRIFT].push_back(*it);
-    } else if (in_stt && !in_drift) {
-      trajectory_points_[component::STRAW].push_back(*it);
+    } else if (in_stt && (in_drift || in_generic_drift)) {
+      trajectory_points_[sand::subdetector_t::STT].push_back(*it);
+      trajectory_points_[sand::subdetector_t::DRIFT].push_back(*it);
+    } else if (!in_stt && (in_drift || in_generic_drift)) {
+      trajectory_points_[sand::subdetector_t::DRIFT].push_back(*it);
+    } else if (in_stt && !(in_drift || in_generic_drift)) {
+      trajectory_points_[sand::subdetector_t::STT].push_back(*it);
     } else {
-      trajectory_points_[component::OTHER].push_back(*it);
+      trajectory_points_[sand::subdetector_t::OTHER].push_back(*it);
     }
 
     if(it == trajectory.Points.begin()){
@@ -198,15 +204,36 @@ EDEPTrajectory::EDEPTrajectory(const TG4Trajectory& trajectory,
       next_volume = "";
     }
 
-    bool next_grain = Match(next_volume,    grain_names);
-    bool next_stt   = Match(next_volume,    stt_names);
-    bool next_drift = Match(next_volume,    drift_names);
-    bool next_ecal  = Match(next_volume,    ecal_names);
-    bool next_mag   = Match(next_volume,    magnet_names);
-    bool next_world = Match(next_volume,    world_names);
+    bool next_grain         = Match(next_volume,    sand::grain_names);
+    bool next_stt           = Match(next_volume,    sand::stt_names);
+    bool next_drift         = Match(next_volume,    sand::drift_names);
+    bool next_generic_drift = Match(next_volume,    sand::generic_drift_names);
+    bool next_ecal          = Match(next_volume,    sand::ecal_names);
+    bool next_mag           = Match(next_volume,    sand::magnet_names);
+    bool next_world         = Match(next_volume,    sand::world_names);
 
-    bool      in[6]   = {in_grain,   in_stt,   in_drift,   in_ecal,   in_mag,   in_world};
-    bool      next[6] = {next_grain, next_stt, next_drift, next_ecal, next_mag, next_world};
+
+    bool in_other   = !(in_grain || in_stt || in_drift || in_generic_drift || in_ecal || in_mag || in_world);
+    bool next_other = !(next_grain || next_stt || next_drift || next_generic_drift || next_ecal || next_mag || next_world);
+    
+    std::array<bool, sand::kNumComponents> in{};   
+    std::array<bool, sand::kNumComponents> next{}; 
+
+    in[sand::subdetector_t::GRAIN]  = in_grain;
+    in[sand::subdetector_t::STT]    = in_stt;
+    in[sand::subdetector_t::DRIFT]  = in_drift || in_generic_drift;
+    in[sand::subdetector_t::ECAL]   = in_ecal;
+    in[sand::subdetector_t::MAGNET] = in_mag;
+    in[sand::subdetector_t::WORLD]  = in_world;
+    in[sand::subdetector_t::OTHER]  = in_other;
+
+    next[sand::subdetector_t::GRAIN]  = next_grain;
+    next[sand::subdetector_t::STT]    = next_stt;
+    next[sand::subdetector_t::DRIFT]  = next_drift || next_generic_drift;
+    next[sand::subdetector_t::ECAL]   = next_ecal;
+    next[sand::subdetector_t::MAGNET] = next_mag;
+    next[sand::subdetector_t::WORLD]  = next_world;
+    next[sand::subdetector_t::OTHER]  = next_other;
     CheckInNext(in, next, *it, *next_it);
 
   }
@@ -354,8 +381,8 @@ std::string EDEPTrajectory::Print(std::string& full_out, int depth, int current_
         }
       }
 
-      std::cout << component_to_string[el.first] << " " << el.second.size() << "; ";
-      full_out += component_to_string[el.first] + " " + std::to_string(el.second.size()) + "; ";
+      std::cout << sand::component_to_string[el.first] << " " << el.second.size() << "; ";
+      full_out += sand::component_to_string[el.first] + " " + std::to_string(el.second.size()) + "; ";
       if (hit_map_.size() > 0) {
         std::cout << std::endl;
         full_out += "\n";
@@ -383,11 +410,11 @@ void EDEPTrajectory::ComputeDepth() {
 }
 
 /**
- * @brief Checks if the trajectory has hits in the specified detector component.
- * @param component_name The name of the detector component.
- * @return True if the trajectory has hits in the specified component, otherwise false.
+ * @brief Checks if the trajectory has hits in the specified detector sand::subdetector_t.
+ * @param component_name The name of the detector sand::subdetector_t.
+ * @return True if the trajectory has hits in the specified sand::subdetector_t, otherwise false.
  */
-bool EDEPTrajectory::HasHitInDetector(component component_name) const {
+bool EDEPTrajectory::HasHitInDetector(sand::subdetector_t component_name) const {
   return hit_map_.find(component_name) != hit_map_.end();
 }
 
@@ -569,12 +596,12 @@ bool EDEPTrajectory::HasHitWithId(int id) const {
 
 
 /**
- * @brief Checks if the trajectory has a hit with the specified ID in the specified detector component.
+ * @brief Checks if the trajectory has a hit with the specified ID in the specified detector sand::subdetector_t.
  * @param id The ID of the hit.
- * @param component_name The name of the detector component.
- * @return True if the trajectory has a hit with the specified ID in the specified component, otherwise false.
+ * @param component_name The name of the detector sand::subdetector_t.
+ * @return True if the trajectory has a hit with the specified ID in the specified sand::subdetector_t, otherwise false.
  */
-bool EDEPTrajectory::HasHitWithIdInDetector(int id, component component_name) const {
+bool EDEPTrajectory::HasHitWithIdInDetector(int id, sand::subdetector_t component_name) const {
   if (GetHitMap().find(component_name) == GetHitMap().end())
     return false;
 
@@ -585,11 +612,11 @@ bool EDEPTrajectory::HasHitWithIdInDetector(int id, component component_name) co
 }
 
 /**
- * @brief Calculates the total deposited energy in the specified detector component.
- * @param component_name The name of the detector component.
- * @return The total deposited energy in the specified component.
+ * @brief Calculates the total deposited energy in the specified detector sand::subdetector_t.
+ * @param component_name The name of the detector sand::subdetector_t.
+ * @return The total deposited energy in the specified sand::subdetector_t.
  */
-double EDEPTrajectory::GetDepositedEnergy(component component_name) const {
+double EDEPTrajectory::GetDepositedEnergy(sand::subdetector_t component_name) const {
   double deposited_energy = 0;
   for (const auto& hit : hit_map_.at(component_name)) {
     deposited_energy += hit.GetSecondaryDeposit();
@@ -619,24 +646,24 @@ bool EDEPTrajectory::Match(std::string volume, std::initializer_list<std::string
 }
 
 /**
- * @brief Checks if the trajectory is entering the specified detector component.
- * @param component_name The name of the detector component.
- * @return True if the trajectory is entering the specified component, otherwise false.
+ * @brief Checks if the trajectory is entering the specified detector sand::subdetector_t.
+ * @param component_name The name of the detector sand::subdetector_t.
+ * @return True if the trajectory is entering the specified sand::subdetector_t, otherwise false.
  */
-bool EDEPTrajectory::IsEntering(component component_name) const { return entering_map_.at(component_name); }
+bool EDEPTrajectory::IsEntering(sand::subdetector_t component_name) const { return entering_map_.at(component_name); }
 
 /**
- * @brief Checks if the trajectory is exiting the specified detector component.
- * @param component_name The name of the detector component.
- * @return True if the trajectory is exiting the specified component, otherwise false.
+ * @brief Checks if the trajectory is exiting the specified detector sand::subdetector_t.
+ * @param component_name The name of the detector sand::subdetector_t.
+ * @return True if the trajectory is exiting the specified sand::subdetector_t, otherwise false.
  */
-bool EDEPTrajectory::IsExiting(component component_name) const { return exiting_map_.at(component_name); }
+bool EDEPTrajectory::IsExiting(sand::subdetector_t component_name) const { return exiting_map_.at(component_name); }
 
-std::vector<EDEPTrajectoryPoint>& EDEPTrajectory::GetFirstPointsInDetector(component component_name) {
+std::vector<EDEPTrajectoryPoint>& EDEPTrajectory::GetFirstPointsInDetector(sand::subdetector_t component_name) {
   return first_points_.at(component_name);
 }
 
-std::vector<EDEPTrajectoryPoint>& EDEPTrajectory::GetLastPointsInDetector(component component_name) {
+std::vector<EDEPTrajectoryPoint>& EDEPTrajectory::GetLastPointsInDetector(sand::subdetector_t component_name) {
   return last_points_.at(component_name);
 }
 

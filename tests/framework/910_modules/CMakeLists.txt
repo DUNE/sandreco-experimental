@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_truth_filler)
+
+target_sources(sand_test_truth_filler PRIVATE test_truth_filler.cpp)
+
+target_link_libraries(sand_test_truth_filler PRIVATE duneanaobj::StandardRecord)

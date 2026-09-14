@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_test_stt_digi)
+
+target_sources(sand_test_test_stt_digi PRIVATE test_stt_digi.cpp)
+
+target_link_libraries(sand_test_test_stt_digi PRIVATE sand_edep_reader sand_geoinfo)

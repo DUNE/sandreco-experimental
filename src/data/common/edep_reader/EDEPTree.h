@@ -144,8 +144,8 @@ class EDEPTree : public EDEPTrajectory {
   iterator GetTrajectoryWithHitId(int id);
   const_iterator GetTrajectoryWithHitId(int id) const;
 
-  iterator GetTrajectoryWithHitIdInDetector(int id, component component_name);
-  const_iterator GetTrajectoryWithHitIdInDetector(int id, component component_name) const;
+  iterator GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t component_name);
+  const_iterator GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t component_name) const;
 
   /**
    * @brief Filter trajectories based on a custom predicate and copy the results to an output iterator.

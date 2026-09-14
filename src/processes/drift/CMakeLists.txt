@@ -1,1 +1,2 @@
 add_subdirectory(fast_digi)
+add_subdirectory(fast_generic_digi)

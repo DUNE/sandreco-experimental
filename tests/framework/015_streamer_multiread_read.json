@@ -1,0 +1,16 @@
+{
+  "ufw": { "ufw-loglevel": "debug", "ufw-basepath": "/usr/local/share/sandreco/data", "ufw-ldpath": ["/usr/local/lib64"] },
+  "globals": {},
+  "contexts": { "keys": 1, "locals": {} },
+  "run": [
+    {
+      "sand::root::tree_streamer": { "uri": "test/streamer_multiread.root", "tree": "vars" },
+      "read": ["var_a", "var_b"]
+    },
+    {
+      "sand::test::streamer_multiread_read": {},
+      "reqs": { "in_a": "var_a", "in_b": "var_b" },
+      "prods": {}
+    }
+  ]
+}

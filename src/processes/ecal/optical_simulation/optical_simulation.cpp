@@ -32,14 +32,14 @@ namespace sand::ecal {
     for (const auto& trj : tree) {
       const auto& hit_map = trj.GetHitMap();
       // Skip trajectories with no ECAL hits
-      if (!trj.HasHitInDetector(component::ECAL))
+      if (!trj.HasHitInDetector(sand::subdetector_t::ECAL))
         continue;
 
       // Pointer to the current ECAL cell being processed
       sand::geoinfo::ecal_info::cell const* pcell = nullptr;
 
       // Process each energy deposit hit in the ECAL
-      for (const auto& hit : hit_map.at(component::ECAL)) {
+      for (const auto& hit : hit_map.at(sand::subdetector_t::ECAL)) {
         // Calculate hit position (midpoint between start and stop)
         auto phit = 0.5 * (hit.GetStart() + hit.GetStop());
         pos_3d h_pos(phit.X(), phit.Y(), phit.Z());

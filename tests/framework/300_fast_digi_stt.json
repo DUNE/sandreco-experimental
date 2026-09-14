@@ -29,6 +29,15 @@
         "prods" : {"digi": "stt_digi"}
       },
       {
+        "sand::test::test_stt_digi" : {
+            "drift_velocity": 0.05,
+            "wire_velocity": 200.0, 
+            "sigma_tdc": 3.5 
+        },
+        "reqs" : {"digi": "stt_digi"},
+        "prods" : {}
+      }, 
+      {
         "sand::root::tree_streamer" : { 
           "uri" : "test/stt_fast_digi.root",
           "tree" : "stt_fast_digi"

@@ -84,12 +84,12 @@ namespace sand::ecal {
       // Sliding window loop: collect PEs within integration window
       while (true) {
         // Find all photo-electrons within the integration time window
-        while (this_pe->arrival_time < start_int_window + m_int_time_window && this_pe != pe_collection.end()) {
+        const double end_int_window = start_int_window + m_int_time_window;
+        while (this_pe != pe_collection.end() && this_pe->arrival_time < end_int_window) {
           this_pe++;
         }
         // Count photo-electrons in current window
-        auto pe_count = std::distance(start_pe, this_pe) + 1; // +1 to include the boundary PE
-
+        auto pe_count = std::distance(start_pe, this_pe);
         // Check if pulse meets minimum threshold for digitization
         if (pe_count >= m_pe_threshold) {
           // Calculate timing using constant fraction discriminator method
@@ -117,28 +117,28 @@ namespace sand::ecal {
             signal.insert(*it);
             it++;
           }
-          // Include the boundary photo-electron if it exists
-          if (this_pe != pe_collection.end())
-            signal.insert(*this_pe);
-
           // Store the digitized signal in output collection
           digi.digits.push_back(signal);
 
           // Skip photo-electrons in the dead time window after signal detection
-          while (this_pe->arrival_time < start_int_window + m_int_time_window + m_dead_time_window
-                 && this_pe != pe_collection.end()) {
+          while (this_pe != pe_collection.end()
+                 && this_pe->arrival_time < end_int_window + m_dead_time_window) {
             this_pe++;
           }
           // Check if we've processed all photo-electrons
           if (this_pe == pe_collection.end())
             break;
           // Restart search from after dead time
-          start_pe = std::next(this_pe);
+          start_pe = this_pe;
+          if (start_pe == pe_collection.end()) {
+            break;
+          }
         } else {
           // Pulse below threshold: advance starting point and continue searching
-          if (start_pe == pe_collection.end())
-            break;
           start_pe = std::next(start_pe);
+          if (start_pe == pe_collection.end()) {
+            break;
+          }
         }
         // Update integration window with next starting photo-electron
         start_int_window = start_pe->arrival_time;

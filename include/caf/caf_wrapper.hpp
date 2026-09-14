@@ -1,9 +1,5 @@
-//
-// Created by Paolo Forni on 11/14/25.
-//
-
-#ifndef SANDRECO_CAF_WRAPPER_HPP
-#define SANDRECO_CAF_WRAPPER_HPP
+#ifndef SAND_CAF_WRAPPERS_HPP
+#define SAND_CAF_WRAPPERS_HPP
 
 #include <data.h>
 
@@ -11,12 +7,17 @@
 
 namespace sand::caf {
 
-  struct caf_wrapper
+  struct standard_record_wrapper
     : public ::caf::StandardRecord
+    , public sand::managed_data_base {};
+
+  struct truth_branch_wrapper
+    : public ::caf::SRTruthBranch
     , public sand::managed_data_base {};
 
 } // namespace sand::caf
 
-UFW_DECLARE_MANAGED_DATA(sand::caf::caf_wrapper);
+UFW_DECLARE_MANAGED_DATA(sand::caf::standard_record_wrapper);
+UFW_DECLARE_MANAGED_DATA(sand::caf::truth_branch_wrapper);
 
 #endif // SANDRECO_CAF_WRAPPER_HPP

@@ -1,4 +1,5 @@
 set(HDRS drift_info.hpp 
+         generic_drift_info.hpp
          ecal_info.hpp
          grain_info.hpp
          stt_info.hpp
@@ -12,6 +13,7 @@ sandreco_add_complex_data(sand_geoinfo EXPORT_HEADERS ${HDRS})
 
 target_sources(sand_geoinfo PRIVATE
                drift_info.cpp
+               generic_drift_info.cpp
                ecal_info.cpp
                grain_info.cpp
                stt_info.cpp

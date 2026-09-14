@@ -17,6 +17,7 @@ namespace sand {
     class grain_info;
     class tracker_info;
     class drift_info;
+    class generic_drift_info;
     class stt_info;
 
    private:
@@ -51,6 +52,7 @@ namespace sand {
     friend class grain_info;
     friend class tracker_info;
     friend class drift_info;
+    friend class generic_drift_info;
     friend class stt_info;
 
    private:

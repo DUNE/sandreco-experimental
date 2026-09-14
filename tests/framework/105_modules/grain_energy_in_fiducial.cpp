@@ -69,8 +69,8 @@ namespace sand::test {
     double outside = 0.0;
     double total = 0.0;
     for (auto trj_it = tree.begin(); trj_it != tree.end(); trj_it++) {
-      if (trj_it->GetHitMap().find(component::GRAIN) != trj_it->GetHitMap().end()) {
-        for (auto& dep : trj_it->GetHitMap().at(component::GRAIN)) {
+      if (trj_it->GetHitMap().find(sand::subdetector_t::GRAIN) != trj_it->GetHitMap().end()) {
+        for (auto& dep : trj_it->GetHitMap().at(sand::subdetector_t::GRAIN)) {
           auto hit = ((dep.GetStart() + dep.GetStop()) / 2.0).Vect();
           if (m_min_fiducial.x() <= hit.x() && hit.x() <= m_max_fiducial.x() &&
               m_min_fiducial.y() <= hit.y() && hit.y() <= m_max_fiducial.y() &&
@@ -81,7 +81,7 @@ namespace sand::test {
                      m_min_LAr.z() <= hit.z() && hit.z() <= m_max_LAr.z()) {
             outside += dep.GetSecondaryDeposit();
           } else {
-            UFW_WARN("Energy deposit for component GRAIN found outside GRAIN bounding box at {}.", hit);
+            UFW_WARN("Energy deposit for sand::subdetector_t GRAIN found outside GRAIN bounding box at {}.", hit);
           }
           total += dep.GetSecondaryDeposit();
         }

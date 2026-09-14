@@ -1,4 +1,4 @@
-CL_KERNEL(void multiply_matrices_in_place(__global float* matrix_a, __global const float* matrix_b)
+CL_KERNEL(void multiply_matrices_in_place(__global float* matrix_a, __global const float* matrix_b, const float scale)
  {
   const int i = get_global_id(0);
   const int j = get_global_id(1);
@@ -8,5 +8,5 @@ CL_KERNEL(void multiply_matrices_in_place(__global float* matrix_a, __global con
   const int ksize = get_global_size(2);
   
   const int v_idx = (i * jsize + j) * ksize + k;  //voxel idx
-  matrix_a[v_idx] *= matrix_b[v_idx];
+  matrix_a[v_idx] *= (scale * matrix_b[v_idx]);
  })
