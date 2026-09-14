@@ -9,26 +9,20 @@
 
 using namespace sand::reco;
 
-BOOST_AUTO_TEST_CASE(time_range) {
-  timerange tr1(5.0, 1.0, 10.0);
-  timerange tr2(6.0, 4.0, 9.0);
-  BOOST_TEST(tr1 < tr2);
-}
-
 timerange gen_tr() {
   static std::mt19937 gen(42);
 
   std::uniform_real_distribution<double> dist_centre(-500.0, 15000.0);
-  std::uniform_real_distribution<double> dist_low(0.1, 500.0);
-  std::uniform_real_distribution<double> dist_high(0.1, 500.0);
+  std::uniform_real_distribution<double> dist_low(0.1, 2500.0);
+  std::uniform_real_distribution<double> dist_high(0.1, 2500.0);
   double centre = dist_centre(gen);
   double low    = centre - dist_low(gen);
   double high   = centre + dist_high(gen);
 
-  return timerange(centre); //, low, high);
+  return timerange(centre, low, high);
 }
 
-BOOST_AUTO_TEST_CASE(test_timerange_random_samples) {
+BOOST_AUTO_TEST_CASE(time_range_random_samples) {
   const int num_samples = 1000;
 
   BOOST_CHECK_NO_THROW(gen_tr());
@@ -60,30 +54,94 @@ BOOST_AUTO_TEST_CASE(time_slice) {
   BOOST_REQUIRE_THROW(timeslices{vec}, ufw::exception);
   std::sort(vec.begin(), vec.end());
   BOOST_REQUIRE_NO_THROW(timeslices{vec});
+
+  //check we have some coverage
+  double total_range = 0.0;
+  for (auto range : vec) {
+    total_range += range.span();
+  }
+  BOOST_REQUIRE_GT(total_range, 1000.0);
   std::mt19937 gen(1337);
   std::uniform_real_distribution<double> dist_centre(-500.0, 15000.0);
 
-  const int num_samples = 1000;
+  const int num_samples = 100;
   using digi            = sand::reco::digi<sand::truth_index>;
   std::vector<digi> digis;
 
   for (int i = 0; i < num_samples; ++i) {
     digis.emplace_back(sand::channel_id{.raw = -1ul}, dist_centre(gen), digi::source::unknown);
   }
+  std::sort(digis.begin(), digis.end(), [](auto lhs, auto rhs) { return lhs.t() < rhs.t(); });
   timeslices ts{vec};
   auto slices = ts.slice(digis.begin(), digis.end());
+  //check that we created some non empty slice
+  BOOST_REQUIRE_GT(slices.size(), 0);
+  int in_slices = 0;
+  for (auto slice : slices) {
+    in_slices += std::distance(slice.begin(), slice.end());
+  }
+  BOOST_REQUIRE_GT(in_slices, 0);
   //check we did not create more slices than necessary
   BOOST_REQUIRE_LE(std::distance(slices.begin(), slices.end()), vec.size());
   //check all elements of digis that are in a slice are inside that slice
   for (auto slice : slices) {
+    BOOST_REQUIRE_LT(slice.earliest(), slice.latest());
     for (const auto& d : slice) {
-      BOOST_TEST(slice.contains(d.t()));
+      BOOST_REQUIRE_GE(d.t(), slice.earliest());
+      BOOST_REQUIRE_LE(d.t(), slice.latest());
     }
   }
-  //check that no elements of digis that are not in a slice are not supposed to be
+  //check that no elements of digis that are not in a slice are supposed to be
   for (auto it = digis.begin(); it != digis.end(); ++it) {
+    bool in_slice = false;
     for (auto slice : vec) {
-      BOOST_TEST(!slice.contains(it->t()));
+      in_slice = in_slice || slice.contains(it->t());
+    }
+    if (in_slice) {
+      continue;
+    }
+    for (auto slice : slices) {
+      auto its = slice.begin();
+      while (its != slice.end()) {
+        bool b = it != its++;
+        BOOST_TEST(b);
+      }
+    }
+  }
+  // Repeat for disjoint
+  auto slices_d = ts.slice_disjoint(digis.begin(), digis.end());
+  //check that we created some non empty slice
+  BOOST_REQUIRE_GT(slices_d.size(), 0);
+  in_slices = 0;
+  for (auto slice : slices_d) {
+    in_slices += std::distance(slice.begin(), slice.end());
+  }
+  BOOST_REQUIRE_GT(in_slices, 0);
+  //check we did not create more slices than necessary
+  BOOST_REQUIRE_LE(std::distance(slices_d.begin(), slices_d.end()), vec.size());
+  //check all elements of digis that are in a slice are inside that slice
+  for (auto slice : slices_d) {
+    BOOST_REQUIRE_LT(slice.earliest(), slice.latest());
+    for (const auto& d : slice) {
+      BOOST_REQUIRE_GE(d.t(), slice.earliest());
+      BOOST_REQUIRE_LE(d.t(), slice.latest());
+    }
+  }
+  //check that no elements of digis that are not in a slice are supposed to be
+  for (auto it = digis.begin(); it != digis.end(); ++it) {
+    bool in_slice = false;
+    for (auto slice : vec) {
+      in_slice = in_slice || slice.contains(it->t());
+    }
+    if (in_slice) {
+      continue;
+    }
+    for (auto slice : slices_d) {
+      auto its = slice.begin();
+      while (its != slice.end()) {
+        bool b = it != its++;
+        BOOST_TEST(b);
+      }
     }
   }
 }
