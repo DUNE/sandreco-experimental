@@ -1,5 +1,4 @@
 #include <TFile.h>
-#include <TInterpreter.h>
 #include <TTree.h>
 
 #include <data.h>
@@ -9,7 +8,6 @@
 #include <ufw/factory.hpp>
 
 #include <tree_streamer.hpp>
-#include <include_paths.h>
 
 #define UFW_IMPLEMENT_STREAMER_FOR_TYPE(type) UFW_DECLARE_RTTI(type)
 #include <tree_streamer_types.hpp>
@@ -19,8 +17,6 @@ namespace sand::root {
 
   tree_streamer::tree_streamer() : m_file(nullptr), m_tree(nullptr), m_branchaddr(nullptr), m_id(), m_last_entry(-1) {
     m_id_ptr = &m_id;
-    gInterpreter->AddIncludePath(PUBLIC_HEADERS_PATH);
-    gInterpreter->AddIncludePath(PUBLIC_HEADERS_PATH "/common");
   }
 
   tree_streamer::~tree_streamer() {
@@ -72,10 +68,11 @@ namespace sand::root {
     brid->SetAutoDelete(false);
   }
 
-  void tree_streamer::prepare(const ufw::public_id& id, const ufw::type_id& tp) {
-    TClass* tcl = TClass::GetClass(tp.c_str());
-    UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", tp);
-    ufw::streamer::prepare(id, tp);
+  void tree_streamer::prepare(const ufw::public_id& id, const ufw::type_id& type) {
+    TClass* tcl = TClass::GetClass(type.c_str(), true, false);
+    UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", type);
+    UFW_INFO("Found TClass for '{}'.", type);
+    ufw::streamer::prepare(id, type);
   }
 
   void tree_streamer::attach(ufw::data::data_base& d, const ufw::public_id& id) {

@@ -1,3 +1,5 @@
 add_subdirectory(optical_simulation)
 add_subdirectory(fast_digi)
 add_subdirectory(spill_slicer_placeholder)
+add_subdirectory(cell_pair_builder)
+add_subdirectory(reco_cell_builder)

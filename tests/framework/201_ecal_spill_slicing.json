@@ -44,7 +44,7 @@
         "digi": "ecal_digits"
       },
       "prods": {
-        "slices": "ecal_slices"
+        "digit_slices": "digit_ecal_slices"
       }
     }
   ]

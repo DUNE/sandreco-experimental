@@ -1,15 +1,3 @@
-/**
- * \file
- * \brief Implementation of the \ref sand::drift::drift_fast_digi process.
- *
- * Contains the drift-chamber fast-digitization algorithm: assignment of the
- * DRIFT energy deposits to readout views and wires, splitting of hits that
- * cross several wires into per-wire sub-hits, hit-to-wire closest-approach
- * geometry, drift and in-wire propagation timing, and construction of the
- * digitized signals. The public interface and parameters are documented in
- * drift_fast_digi.hpp.
- */
-
 #include <drift_fast_digi.hpp>
 
 #include <edep_reader/edep_reader.hpp>
@@ -31,6 +19,11 @@ namespace sand::drift {
    *
    * \brief Fast digitization of drift-chamber energy deposits into wire signals.
    *
+   * Drift-chamber fast-digitization algorithm: assignment of the
+   * DRIFT energy deposits to readout views and wires, splitting of hits that
+   * cross several wires into per-wire sub-hits, hit-to-wire closest-approach
+   * geometry, drift and in-wire propagation timing, and construction of the
+   * digitized signals.
    * Assigns the DRIFT energy deposits of the event to readout views and wires — splitting
    * a hit that crosses a cell boundary into one sub-hit per wire, with the energy shared by
    * segment length — and turns the hits collected on each fired wire into one digitized
@@ -85,10 +78,10 @@ namespace sand::drift {
    */
   void drift_fast_digi::run() {
     UFW_DEBUG("Running drift_fast_digi process at {}", fmt::ptr(this));
-    const auto& tree = get<sand::edep_reader>();
-    const auto& gi   = get<geoinfo>();
+    const auto& tree = instance<sand::edep_reader>();
+    const auto& gi   = instance<geoinfo>();
     auto& digi       = set<sand::tracker::digi>("digi");
-    auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
+    auto& tgm        = instance<root_tgeomanager>();
     // Two phases: first assign every DRIFT hit (splitting it across wires when
     // needed) to its wire, then turn the hits collected on each wire into one
     // digitized signal.
@@ -107,9 +100,9 @@ namespace sand::drift {
    * \return A map from wire to the hits (whole or split) collected on that wire.
    */
   std::map<const geoinfo::tracker_info::wire*, std::vector<EDEPHit>> drift_fast_digi::group_hits_by_wire() {
-    const auto& gi   = get<geoinfo>();
-    const auto& tree = get<sand::edep_reader>();
-    auto& tgm        = ufw::context::current()->instance<root_tgeomanager>();
+    const auto& gi   = instance<geoinfo>();
+    const auto& tree = instance<sand::edep_reader>();
+    auto& tgm        = instance<root_tgeomanager>();
     std::map<const geoinfo::tracker_info::wire*, std::vector<EDEPHit>> hits_by_wire;
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
 
@@ -118,14 +111,15 @@ namespace sand::drift {
       if (!trj.HasHitInDetector(sand::subdetector_t::DRIFT))
         continue;
 
-      UFW_INFO("Found {} DRIFT hits for trajectory with ID {}", hit_map.at(sand::subdetector_t::DRIFT).size(), trj.GetId());
+      UFW_INFO("Found {} DRIFT hits for trajectory with ID {}", hit_map.at(sand::subdetector_t::DRIFT).size(),
+               trj.GetId());
 
       for (const auto& hit : hit_map.at(sand::subdetector_t::DRIFT)) {
         sand::pos_3d hit_start_3d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
         auto direction = hit.GetStop() - hit.GetStart();
         sand::dir_3d direction_3d(direction.X(), direction.Y(), direction.Z());
         tgm.navigator()->set_track(hit_start_3d, direction_3d);
-        
+
         tgm.navigator()->FindNode(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z());
         tgm.navigator()->FindNextBoundary(1000);
         if (tgm.navigator()->GetStep() < 1E-5) {
@@ -136,11 +130,7 @@ namespace sand::drift {
         geo_path start_path(tgm.navigator()->GetPath());
         geo_path start_partial_path = drift->partial_path(start_path, gi);
         UFW_DEBUG("start_partial_path: {}", start_partial_path);
-        geo_id start_ID             = drift->id(start_partial_path);
-        
-
-
-
+        geo_id start_ID = drift->id(start_partial_path);
 
         sand::pos_3d hit_stop_3d(hit.GetStop().X(), hit.GetStop().Y(), hit.GetStop().Z());
         tgm.navigator()->set_track(hit_stop_3d, -direction_3d);
@@ -153,7 +143,7 @@ namespace sand::drift {
         geo_path stop_path(tgm.navigator()->GetPath());
         geo_path stop_partial_path = drift->partial_path(stop_path, gi);
         UFW_DEBUG("stop_partial_path: {}", stop_partial_path);
-        geo_id stop_ID             = drift->id(stop_partial_path);
+        geo_id stop_ID = drift->id(stop_partial_path);
 
         if (start_ID.drift.plane == 255 || stop_ID.drift.plane == 255) {
           UFW_DEBUG(" One of two hit_segment ends has invalid plane ID, skipping.");
@@ -366,7 +356,7 @@ namespace sand::drift {
   std::map<const geoinfo::tracker_info::wire*, EDEPHit>
   drift_fast_digi::split_hit(size_t closest_wire_start_index, size_t closest_wire_stop_index,
                              const geoinfo::tracker_info::wire_list& wires_in_view, const EDEPHit& hit) {
-    const auto& gi    = get<geoinfo>();
+    const auto& gi    = instance<geoinfo>();
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
     std::map<const geoinfo::tracker_info::wire*, EDEPHit> split_hit;
 
@@ -420,9 +410,9 @@ namespace sand::drift {
     }
 
     // Iterate through wires, splitting hit into segments
-    double cumulative_energy = 0;
+    double cumulative_energy           = 0;
     double cumulative_secondary_energy = 0;
-    double cumulative_length = 0;
+    double cumulative_length           = 0;
     vec_4d last_hit_stop;
     for (size_t wire_index = first_wire_index; wire_index <= last_wire_index; ++wire_index) {
       const auto* current_wire = wires_in_view.at(wire_index);
@@ -431,14 +421,11 @@ namespace sand::drift {
 
       if (next_wire == nullptr) {
         UFW_DEBUG(" Reached last wire in view during hit splitting.");
-        split_hit[current_wire] = EDEPHit(last_hit_stop, 
-                                          hit.GetStop(), 
-                                          hit.GetEnergyDeposit() - cumulative_energy,
-                                          hit.GetSecondaryDeposit() - cumulative_secondary_energy, 
-                                          hit.GetTrackLength() - cumulative_length,
-                                          hit.GetContrib(), // TO-DO: How to split contributor?
-                                          hit.GetPrimaryId(), 
-                                          hit.GetId());
+        split_hit[current_wire] =
+            EDEPHit(last_hit_stop, hit.GetStop(), hit.GetEnergyDeposit() - cumulative_energy,
+                    hit.GetSecondaryDeposit() - cumulative_secondary_energy, hit.GetTrackLength() - cumulative_length,
+                    hit.GetContrib(), // TO-DO: How to split contributor?
+                    hit.GetPrimaryId(), hit.GetId());
         break;
       }
 
@@ -490,7 +477,7 @@ namespace sand::drift {
    */
   void drift_fast_digi::digitize_hits_in_wires(
       const std::map<const geoinfo::tracker_info::wire*, std::vector<EDEPHit>>& hits_by_wire) {
-    const auto& gi    = get<geoinfo>();
+    const auto& gi    = instance<geoinfo>();
     auto& digi        = set<sand::tracker::digi>("digi");
     const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
 
@@ -546,7 +533,7 @@ namespace sand::drift {
   std::optional<tracker::digi::signal>
   drift_fast_digi::process_hits_for_wire(const std::vector<EDEPHit>& hits,
                                          const sand::geoinfo::drift_info::wire& wire) {
-    const auto& gi     = get<geoinfo>();
+    const auto& gi     = instance<geoinfo>();
     const auto* drift  = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
     double wire_time   = std::numeric_limits<double>::max();
     double drift_time  = std::numeric_limits<double>::max();
