@@ -98,7 +98,7 @@ namespace sand::ecal {
   }
 
   void cell_pair_builder::run() {
-    const auto& gi   = get<sand::geoinfo>();
+    const auto& gi   = instance<sand::geoinfo>();
     const auto& ecal = gi.ecal();
 
     const auto& digit_slices = get<sand::ecal::digit_slices_container>("digit_slices");
