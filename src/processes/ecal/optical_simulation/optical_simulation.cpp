@@ -1,11 +1,43 @@
-#include <optical_simulation.hpp>
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/ecal_info.hpp>
+#include <optical_simulation.hpp>
 #include <ecal/photo_electron.h>
 
 #include <ufw/factory.hpp>
 
 namespace sand::ecal {
+
+  /**
+   * \class sand::ecal::optical_simulation
+   *
+   * \brief Simulates optical light production and propagation in ECAL fibers.
+   *
+   * This process takes energy deposits from the \ref sand::edep_reader and simulates 
+   * the production of scintillation photons in the ECAL fibers. It accounts for 
+   * light yield, attenuation along the fiber length, and the scintillation time 
+   * distribution (using an acceptance-rejection method). The result is a collection 
+   * of photo-electrons (\c sand::ecal::pes_container) with arrival times at the 
+   * PMT ends.
+   *
+   * \subsection Configuration
+   * | Parameter Name | Type | Unit | Required/Default | Description |
+   * |----------------|------|------|------------------|-------------|
+   * | `light_yield`  | `double` | photons/MeV | Required         | Average number of photons produced per unit energy. |
+   *
+   * \subsection Dependencies
+   * | Type | Comment |
+   * |------|---------|
+   * | `sand::edep_reader` | Energy deposits of the event |
+   * | `sand::geoinfo`      | ECAL geometry and fiber info |
+   *
+   * \subsection Requirements
+   * None.
+   *
+   * \subsection Products
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `pes` | `sand::ecal::pes_container` | Photo-electrons produced |
+   */
 
   /// Configure the optical simulation process by loading parameters from config
   void optical_simulation::configure(const ufw::config& cfg) {
@@ -23,8 +55,8 @@ namespace sand::ecal {
   void optical_simulation::run() {
     UFW_DEBUG("Running ECAL optical simulation process at {}", fmt::ptr(this));
     // Get input energy deposit data and ECAL geometry information
-    const auto& tree  = get<sand::edep_reader>();
-    const auto& gecal = get<geoinfo>().ecal();
+    const auto& tree  = instance<sand::edep_reader>();
+    const auto& gecal = instance<geoinfo>().ecal();
     // Get output photo-electron collection
     auto& pes = set<sand::ecal::pes_container>("pes");
 

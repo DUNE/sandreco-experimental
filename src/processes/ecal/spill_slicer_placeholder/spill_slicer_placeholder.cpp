@@ -6,24 +6,40 @@
 
 namespace sand::ecal {
 
+  /**
+   * \class sand::ecal::spill_slicer_placeholder
+   *
+   * \brief Placeholder process for slicing digitized signals.
+   *
+   * This process acts as a placeholder for a future spill-slicing algorithm. 
+   * Currently, it simply takes the entire collection of digitized signals from 
+   * the \c digi input and passes it through to the \c digit_slices output.
+   *
+   * \subsection Requirements
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `digi` | `sand::ecal::digits_container` | Input digitized signals |
+   *
+   * \subsection Products
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `digit_slices` | `sand::ecal::digit_slices_container` | Sliced digitized signals |
+   */
+
   void spill_slicer_placeholder::configure(const ufw::config& cfg) { process::configure(cfg); }
 
   spill_slicer_placeholder::spill_slicer_placeholder()
-   : process({{"digi", "sand::ecal::digits_container"}},
-          {{"digit_slices", "sand::ecal::digit_slices_container"}}) {
+    : process({{"digi", "sand::ecal::digits_container"}}, {{"digit_slices", "sand::ecal::digit_slices_container"}}) {
     UFW_DEBUG("Creating ECAL digit spill slicer process at {}", fmt::ptr(this));
   }
 
   void spill_slicer_placeholder::run() {
     UFW_DEBUG("Running ECAL digit spill slicer process at {}", fmt::ptr(this));
-    auto& digi   = get<sand::ecal::digits_container>("digi");
+    auto& digi         = get<sand::ecal::digits_container>("digi");
     auto& digit_slices = set<sand::ecal::digit_slices_container>("digit_slices");
     digit_slices.collection.emplace_back(digi.digits);
-    UFW_INFO(
-    "ECAL digit spill slicer: input digits = {}, output slices = {}",
-    digi.digits.size(),
-    digit_slices.collection.size()
-  );
+    UFW_INFO("ECAL digit spill slicer: input digits = {}, output slices = {}", digi.digits.size(),
+             digit_slices.collection.size());
   }
 } // namespace sand::ecal
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::spill_slicer_placeholder)
