@@ -62,7 +62,6 @@ namespace ufw::data {
 
       reader.events_.push_back({j, EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
 
-      UFW_INFO("Filling genie event number: {}", EvtNum);
       reader.stdHeps_.emplace_back(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
                                    StdHepFd, StdHepLd, StdHepFm, StdHepLm);
 
@@ -124,7 +123,6 @@ namespace ufw::data {
     spills_boundaries.reserve(n_spills);
 
     for (Long64_t spill = 0; spill < n_spills; spill++) {
-      
       edep_tree->GetEntry(spill);
 
       if (event->Primaries.empty()) {
