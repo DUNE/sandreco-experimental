@@ -1,4 +1,3 @@
-
 #include <TFile.h>
 #include <TTree.h>
 
@@ -69,10 +68,11 @@ namespace sand::root {
     brid->SetAutoDelete(false);
   }
 
-  void tree_streamer::prepare(const ufw::public_id& id, const ufw::type_id& tp) {
-    TClass* tcl = TClass::GetClass(tp.c_str());
-    UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", tp);
-    ufw::streamer::prepare(id, tp);
+  void tree_streamer::prepare(const ufw::public_id& id, const ufw::type_id& type) {
+    TClass* tcl = TClass::GetClass(type.c_str(), true, false);
+    UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", type);
+    UFW_INFO("Found TClass for '{}'.", type);
+    ufw::streamer::prepare(id, type);
   }
 
   void tree_streamer::attach(ufw::data::data_base& d, const ufw::public_id& id) {
