@@ -124,7 +124,6 @@ namespace ufw::data {
     spills_boundaries.reserve(n_spills);
 
     for (Long64_t spill = 0; spill < n_spills; spill++) {
-      //UFW_INFO("Building boundary for spill {}", spill);
       
       edep_tree->GetEntry(spill);
 
@@ -137,7 +136,6 @@ namespace ufw::data {
       const Long64_t first_idx = event->Primaries.front().GetInteractionNumber();
       const Long64_t last_idx  = event->Primaries.back().GetInteractionNumber();
 
-      //UFW_INFO("  Boundaries: {} - {}", first_idx, last_idx);
       // Boundaries are [first, last+1) to match the original convention
       spills_boundaries.emplace_back(first_idx, last_idx + 1);
     }
