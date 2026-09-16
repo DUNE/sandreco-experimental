@@ -30,6 +30,7 @@ namespace genie {
 struct GRooTrackerEvent {
   GRooTrackerEvent() = default;
 
+  int EvtIdx_;  // this is necessary to maintain the genie-edpsim relation. It is not a native genie member.
   int EvtNum_;
   double EvtXSec_;
   double EvtDXSec_;

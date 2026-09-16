@@ -122,7 +122,7 @@ namespace sand::grain {
         if (signal.tdc() >= m_slice_times[img_idx] && signal.tdc() < m_slice_times[img_idx + 1]) {
           auto id = signal.channel().link;
           auto it = std::find_if(event_images_out.begin(), event_images_out.end(),
-                                [id](auto& img) { return img.camera_id == id; });
+                                 [id](auto& img) { return img.camera_id == id; });
           if (it == event_images_out.end()) {
             images::image img{id, m_slice_times[img_idx], m_slice_times[img_idx + 1]};
             event_images_out.emplace_back(img);
@@ -147,14 +147,15 @@ namespace sand::grain {
       }
       for (const auto& img : event_images_out) {
         size_t maxhits = 0;
-        double npe = 0.;
+        double npe     = 0.;
         for (int x = 0; x != camera_width; ++x) {
           for (int y = 0; y != camera_height; ++y) {
             maxhits = std::max(maxhits, img.pixels[x][y].true_hits().size());
             npe += img.pixels[x][y].amplitude;
           }
         }
-        UFW_DEBUG("Camera {} recorded a total of {} photons from {} different MC true hits", img.camera_id, npe, maxhits );
+        UFW_DEBUG("Camera {} recorded a total of {} photons from {} different MC true hits", img.camera_id, npe,
+                  maxhits);
       }
       spill_images_out.emplace_back(event_images_out);
     }

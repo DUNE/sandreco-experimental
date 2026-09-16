@@ -90,6 +90,7 @@ namespace sand {
       pos_3d top_south; ///< Top left (looking towards FD) of the sensitive volume
       pos_3d bottom_south;
       pos_3d bottom_north;
+      double thickness;
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
       dir_3d target_box;

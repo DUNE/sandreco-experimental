@@ -24,7 +24,22 @@ namespace sand::ecal {
    * | `dead_time_window`  | `double` | nanoseconds     | Required         | Electronics dead time after pulse detection.                  |
    * | `pe_threshold`      | `double` | photo-electrons | Required         | Minimum photo-electrons required to trigger a pulse output.   |
    * | `constant_fraction` | `double` | ratio [0.0-1.0] | Required         | CFD Threshold Fraction.                                       |
-   * 
+   *
+   * \subsection Dependencies
+   * | Type | Comment |
+   * |------|---------|
+   * | `geoinfo` | ECAL geometry information |
+   *
+   * \subsection Requirements
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `pes` | `sand::ecal::pes_container` | Input photo-electron data from PMTs |
+   *
+   * \subsection Products
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `digi` | `sand::ecal::digits_container` | Digitized signals after processing |
+   *
    */
 
   /// Configure digitization parameters from configuration file
@@ -50,7 +65,7 @@ namespace sand::ecal {
   void fast_digi::run() {
     UFW_DEBUG("Running a ecal fast digitization process at {}", fmt::ptr(this));
     // Get ECAL geometry information
-    const auto& gecal = get<geoinfo>().ecal();
+    const auto& gecal = instance<geoinfo>().ecal();
     // Get input photo-electron collection
     auto& pes = get<sand::ecal::pes_container>("pes");
     // Get output digitized signal collection
@@ -69,30 +84,31 @@ namespace sand::ecal {
       // Sliding window loop: collect PEs within integration window
       while (true) {
         // Find all photo-electrons within the integration time window
-        while (this_pe->arrival_time < start_int_window + m_int_time_window && this_pe != pe_collection.end()) {
+        const double end_int_window = start_int_window + m_int_time_window;
+        while (this_pe != pe_collection.end() && this_pe->arrival_time < end_int_window) {
           this_pe++;
         }
         // Count photo-electrons in current window
-        auto pe_count = std::distance(start_pe, this_pe) + 1; // +1 to include the boundary PE
-
+        auto pe_count = std::distance(start_pe, this_pe);
         // Check if pulse meets minimum threshold for digitization
         if (pe_count >= m_pe_threshold) {
           // Calculate timing using constant fraction discriminator method
           auto tdc = std::next(start_pe, int(m_constant_fraction * pe_count))->arrival_time;
 
           // Create digitized signal with PMT channel, timing window, and measurements
-          digits_container::digit signal(pmt,
-          // timing window for particle crossing is conservatively estimated taking into
-          // account a maximal path length for scintillation photons of 5 m, a velocity of
-          // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
-                                         {tdc - 35., tdc, tdc + 5.},
-          // Calculate ADC value proportional to collected photo-electrons
-          // for now, we just use the number of PEs as the ADC value.
-          // This can be improved by using a more realistic response function.
-                                         static_cast<double>(pe_count),
-          // We don't have a good way to estimate the TOT value, so we set it to NAN for now. This can
-          // be improved by using a more realistic response function that includes the pulse shape.
-                                         NAN);
+          digits_container::digit signal(
+              pmt,
+              // timing window for particle crossing is conservatively estimated taking into
+              // account a maximal path length for scintillation photons of 5 m, a velocity of
+              // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
+              {tdc - 35., tdc, tdc + 5.},
+              // Calculate ADC value proportional to collected photo-electrons
+              // for now, we just use the number of PEs as the ADC value.
+              // This can be improved by using a more realistic response function.
+              static_cast<double>(pe_count),
+              // We don't have a good way to estimate the TOT value, so we set it to NAN for now. This can
+              // be improved by using a more realistic response function that includes the pulse shape.
+              NAN);
           // Collect all truth hits from photo-electrons in this pulse
           auto it = start_pe;
 
@@ -101,28 +117,27 @@ namespace sand::ecal {
             signal.insert(*it);
             it++;
           }
-          // Include the boundary photo-electron if it exists
-          if (this_pe != pe_collection.end())
-            signal.insert(*this_pe);
-
           // Store the digitized signal in output collection
           digi.digits.push_back(signal);
 
           // Skip photo-electrons in the dead time window after signal detection
-          while (this_pe->arrival_time < start_int_window + m_int_time_window + m_dead_time_window
-                 && this_pe != pe_collection.end()) {
+          while (this_pe != pe_collection.end() && this_pe->arrival_time < end_int_window + m_dead_time_window) {
             this_pe++;
           }
           // Check if we've processed all photo-electrons
           if (this_pe == pe_collection.end())
             break;
           // Restart search from after dead time
-          start_pe = std::next(this_pe);
+          start_pe = this_pe;
+          if (start_pe == pe_collection.end()) {
+            break;
+          }
         } else {
           // Pulse below threshold: advance starting point and continue searching
-          if (start_pe == pe_collection.end())
-            break;
           start_pe = std::next(start_pe);
+          if (start_pe == pe_collection.end()) {
+            break;
+          }
         }
         // Update integration window with next starting photo-electron
         start_int_window = start_pe->arrival_time;
@@ -131,4 +146,5 @@ namespace sand::ecal {
     }
   }
 } // namespace sand::ecal
+
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::fast_digi)
