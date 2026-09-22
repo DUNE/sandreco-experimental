@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <cstdlib>
 #include <random>
 
@@ -122,9 +123,15 @@ namespace sand::common {
       return std::nullopt;
     }
 
-    auto const delta     = hit_pts.back() - hit_pts.front();
-    auto const lever_arm = mm_to_m(std::hypot(delta.Y(), delta.Z()));
-    auto const path      = path_len_over_x0(tgm, hit_pts);
+    double const lever_arm =
+        mm_to_m(std::inner_product(hit_pts.begin(), hit_pts.end() - 1, hit_pts.begin() + 1, 0., std::plus<>{},
+                                   [](sand::vec_4d const& a, sand::vec_4d const& b) {
+                                     auto const seg =
+                                         static_cast<sand::pos_3d>(b.Vect()) - static_cast<sand::pos_3d>(a.Vect());
+                                     return std::hypot(seg.Y(), seg.Z());
+                                   }));
+
+    auto const path = path_len_over_x0(tgm, hit_pts);
 
     return GlucksternGeometry{static_cast<int>(hit_pts.size()), lever_arm, path.full, path.transverse};
   }
