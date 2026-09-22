@@ -15,8 +15,8 @@ namespace sand::common {
   [[nodiscard]] ::caf::SRInteraction smear_interaction(::caf::SRInteraction const& reco_ixn, double energy_res,
                                                        double x_res, double y_res, double z_res);
 
-  [[nodiscard]] ::caf::SRRecoParticle smear_particle(::caf::SRRecoParticle const& reco_part, double energy_res,
-                                                     double momentum_res, double x_res, double y_res, double z_res);
+  [[nodiscard]] ::caf::SRRecoParticle smear_particle(::caf::SRRecoParticle const& reco_part, double momentum_res,
+                                                     double x_res, double y_res, double z_res);
 
   class gauss_smearing : public ufw::process {
     double m_energy_res{};

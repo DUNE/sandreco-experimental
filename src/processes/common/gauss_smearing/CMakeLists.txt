@@ -5,4 +5,4 @@ target_sources(sand_common_gauss_smearing
   gauss_smearing.cpp
 )
 
-target_link_libraries(sand_common_gauss_smearing PRIVATE ROOT::MathCore duneanaobj::StandardRecord)
+target_link_libraries(sand_common_gauss_smearing PRIVATE ROOT::MathCore ROOT::EG duneanaobj::StandardRecord)
