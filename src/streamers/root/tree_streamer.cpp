@@ -55,6 +55,7 @@ namespace sand::root {
     } else {
       m_tree = new TTree(treename.c_str(), "");
     }
+    UFW_ASSERT(m_tree != nullptr, "TTree '{}' not found.", treename);
     TBranch* brid = nullptr;
     if (operation() & ufw::op_type::ro) {
       // attach index branch

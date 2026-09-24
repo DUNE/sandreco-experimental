@@ -40,4 +40,5 @@ namespace sand::grain {
 
 } // namespace sand::grain
 
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::digi<sand::grain::hits::photon>)
 UFW_DECLARE_MANAGED_DATA(sand::grain::digi)

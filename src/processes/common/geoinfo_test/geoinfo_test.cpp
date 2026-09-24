@@ -50,6 +50,7 @@ namespace sand::common {
       ascii_grain += '\n';
       ascii_grain += '\n';
     }
+    // FIXME : use for_each for voxels and pixels 
     UFW_INFO("GRAIN was segmented in a fiducial of {} voxels:\n{}", voxels.size(), ascii_grain);
     for (size_t k = 0; k != voxels.size().z() && k < 100; ++k) { // Just few cycles for testing
       for (size_t j = 0; j != voxels.size().y() && j < 100; ++j) {
@@ -72,9 +73,9 @@ namespace sand::common {
       UFW_INFO("First camera details:");
       for (int i = 0; i != 32; ++i) {
         for (int j = 0; j != 32; ++j) {
-          UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas[i][j].left,
-                   pix_spam.sipm_active_areas[i][j].top, pix_spam.sipm_active_areas[i][j].right,
-                   pix_spam.sipm_active_areas[i][j].bottom);
+          UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas.at(i,j).left,
+                   pix_spam.sipm_active_areas.at(i,j).top, pix_spam.sipm_active_areas.at(i,j).right,
+                   pix_spam.sipm_active_areas.at(i,j).bottom);
         }
       }
       std::for_each(pix_spam.holes.begin(), pix_spam.holes.end(), [](auto r) {
@@ -92,9 +93,9 @@ namespace sand::common {
       UFW_INFO("First camera details:");
       for (int i = 0; i != 32; ++i) {
         for (int j = 0; j != 32; ++j) {
-          UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas[i][j].left,
-                   pix_spam.sipm_active_areas[i][j].top, pix_spam.sipm_active_areas[i][j].right,
-                   pix_spam.sipm_active_areas[i][j].bottom);
+          UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas.at(i,j).left,
+                   pix_spam.sipm_active_areas.at(i,j).top, pix_spam.sipm_active_areas.at(i,j).right,
+                   pix_spam.sipm_active_areas.at(i,j).bottom);
         }
       }
       UFW_INFO("Last camera info: distance lens-sensor = {}", pix_spam.z_lens);

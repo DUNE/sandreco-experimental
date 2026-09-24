@@ -132,7 +132,7 @@ namespace sand::grain {
           }
           //UFW_DEBUG("signal to be assigned to camera id {}, image {}", id, img_idx);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
-          auto& pixel = it->pixels.Array()[signal.channel().channel];
+          auto& pixel = it->pixels.data()[signal.channel().channel];
           pixel.insert(signal.true_hits());
           //UFW_DEBUG("adding {} photons to pixel.", signal.npe());
           pixel.amplitude += signal.npe();
@@ -150,8 +150,8 @@ namespace sand::grain {
         double npe     = 0.;
         for (int x = 0; x != camera_width; ++x) {
           for (int y = 0; y != camera_height; ++y) {
-            maxhits = std::max(maxhits, img.pixels[x][y].true_hits().size());
-            npe += img.pixels[x][y].amplitude;
+            maxhits = std::max(maxhits, img.pixels.at(x,y).true_hits().size());
+            npe += img.pixels.at(x,y).amplitude;
           }
         }
         UFW_DEBUG("Camera {} recorded a total of {} photons from {} different MC true hits", img.camera_id, npe,

@@ -92,3 +92,5 @@ namespace sand::reco {
   inline double overlap(const timerange& lhs, const timerange& rhs) { return -distance(lhs, rhs); }
 
 } // namespace sand::reco
+
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::timerange)

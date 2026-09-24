@@ -72,10 +72,10 @@ namespace sand::grain {
         bool channel_found = false;
         for (int i = 0; i != camera_height && !channel_found; ++i) {
           for (int j = 0; j != camera_width; ++j) {
-            if (photon.pos.X() > camera.sipm_active_areas[i][j].left
-                && photon.pos.X() < camera.sipm_active_areas[i][j].right
-                && photon.pos.Y() > camera.sipm_active_areas[i][j].bottom
-                && photon.pos.Y() < camera.sipm_active_areas[i][j].top) {
+            if (photon.pos.X() > camera.sipm_active_areas.at(i,j).left
+                && photon.pos.X() < camera.sipm_active_areas.at(i,j).right
+                && photon.pos.Y() > camera.sipm_active_areas.at(i,j).bottom
+                && photon.pos.Y() < camera.sipm_active_areas.at(i,j).top) {
               channel_id ch;
               ch.subdetector = GRAIN;
               ch.link        = photon.camera_id;

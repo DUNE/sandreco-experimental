@@ -122,7 +122,7 @@ namespace sand::grain {
       cl::buffer buf_sensor_rects;
       buf_sensor_rects.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
           platform.context(), sensor_rects_size * sizeof(geoinfo::grain_info::rect_f),
-          camera.sipm_active_areas.Array());
+          camera.sipm_active_areas.data());
 
       cl::buffer buf_mask_rects;
       buf_mask_rects.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
