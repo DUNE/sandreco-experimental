@@ -99,12 +99,13 @@ namespace sand::reco {
 
   inline double overlap(const timerange& lhs, const timerange& rhs) { return -distance(lhs, rhs); }
 
-  template <typename OStream>
-  inline OStream& operator<< (OStream& os, const timerange& tr) {
-    os << tr.best() << " [" << tr.earliest() << ", " << tr.latest() << ']';
-    return os;
-  }
-
 } // namespace sand::reco
 
-UFW_DECLARE_UNMANAGED_DATA(sand::reco::timerange)
+template <>
+struct fmt::formatter<sand::reco::timerange> : formatter<string_view> {
+  auto format(const sand::reco::timerange& tr, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "{:.2f} [{:.2f}, {:.2f}]", tr.best(), tr.earliest(), tr.latest());
+  }
+};
+
+SAND_DATA_COLLECTION(sand::reco, timerange, timeranges)

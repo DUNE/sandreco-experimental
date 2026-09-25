@@ -1,3 +1,4 @@
+#include "ufw/utils.hpp"
 #include <grain/digi.h>
 #include <grain/image.h>
 
@@ -25,6 +26,7 @@ namespace sand::grain {
    * | Parameter Name            | Type             | Unit   | Required/Default                 | Description                                        |
    * |---------------------------|------------------|--------|----------------------------------|----------------------------------------------------|
    * | `slice_times`             | vector\<double\> | ns     | Default: []                      | Predefined time slices for photon assignment.      |
+   * | `bin_width`               | double           | ns     | Default: 200.0                   | Bin size to use when histogramming arrival time    |
    * | `min_response_signal`     | double           | npe    | Required if slice_times is empty | Minimum photon response signal to trigger slicing. |
    * | `delta_ns_for_comparison` | double           | ns     | Required if slice_times is empty | **??**                                             |
    */
@@ -36,12 +38,13 @@ namespace sand::grain {
     void run() override;
 
    private:
+    double m_bin_width;
     double m_min_response_signal;
     double m_delta_ns_for_comparison;
     uint64_t m_stat_photons_processed;
     uint64_t m_stat_photons_accepted;
     uint64_t m_stat_photons_discarded;
-    std::vector<double> m_slice_times;
+    std::vector<double> m_slice_edges;
     int m_seed = 0;
     bool m_use_algo;
 
@@ -50,16 +53,17 @@ namespace sand::grain {
 
   void spill_slicer::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_slice_times.clear();
-    for (auto time : cfg.value("slice_times", m_slice_times)) {
-      m_slice_times.push_back(time);
+    m_slice_edges.clear();
+    for (auto time : cfg.value("slice_times", m_slice_edges)) {
+      m_slice_edges.push_back(time);
     }
-    if (m_slice_times.size() > 1) { // At least 2 edges for 1 slice
+    if (m_slice_edges.size() > 1) { // At least 2 edges for 1 slice
       UFW_DEBUG("Using slice times from parameters");
       m_use_algo = false;
     } else {
       UFW_DEBUG("Using slicing algorithm");
       m_use_algo                = true;
+      m_bin_width               = cfg.value("bin_width", 200.0);
       m_min_response_signal     = cfg.at("min_response_signal");
       m_delta_ns_for_comparison = cfg.at("delta_ns_for_comparison");
     }
@@ -67,81 +71,91 @@ namespace sand::grain {
 
   void spill_slicer::compute_slice_times() {
     // Place times into bins
-    const int n_bins{100};
     const double min_time{0.0};
     const double max_time{20000.0}; // ns
-    const double bin_width{(max_time - min_time) / n_bins};
+    const size_t n_bins = static_cast<size_t>(std::ceil((max_time - min_time) / m_bin_width));
 
-    std::array<double, n_bins> binned_times;
-    binned_times.fill(0.0);
+    std::vector<double> binned_times(n_bins, 0.0);
 
     const auto& digis_in = get<digi>("digi");
     for (auto& signal : digis_in) {
       double time{signal.tdc()};
       if (time >= min_time && time < max_time) {
-        size_t bin_index = static_cast<size_t>(std::floor((time - min_time) / bin_width));
+        size_t bin_index = static_cast<size_t>(std::floor((time - min_time) / m_bin_width));
         binned_times[bin_index] += signal.npe();
       } else {
-        UFW_WARN("Digi in channel {} is out of time window for slicing (t = {} ns)", signal.channel().raw, time);
+        UFW_WARN("Signal from {} is out of time window (t = {} ns)", signal.channel(), time);
       }
     }
 
     // Go through bins to find slice_edges
-    const size_t n_close_bins = static_cast<size_t>(m_delta_ns_for_comparison / bin_width);
-    m_slice_times.clear();
-    m_slice_times.push_back(min_time);
+    const size_t n_close_bins = static_cast<size_t>(m_delta_ns_for_comparison / m_bin_width);
+    m_slice_edges.clear();
+    m_slice_edges.push_back(min_time);
     for (size_t i = n_close_bins; i < n_bins - n_close_bins; ++i) {
       auto center        = binned_times.begin() + i;
       uint64_t left_max  = *std::max_element(center - n_close_bins, center);
       uint64_t right_max = *std::max_element(center + 1, center + n_close_bins + 1);
       if (binned_times[i] > left_max && binned_times[i] > right_max && binned_times[i] >= m_min_response_signal) {
-        m_slice_times.push_back(static_cast<double>(i) * bin_width);
+        m_slice_edges.push_back(static_cast<double>(i) * m_bin_width);
       }
     }
-    m_slice_times.push_back(max_time);
+    m_slice_edges.push_back(max_time);
   }
 
-  spill_slicer::spill_slicer() : process({{"digi", "sand::grain::digi"}}, {{"images", "sand::grain::images"}}) {
+  spill_slicer::spill_slicer() : process({{"digi", "sand::grain::digi"}},
+                                         {{"timeranges", "sand::reco::timeranges"},
+                                          {"images", "sand::grain::images"}}) {
     UFW_INFO("Creating a spill_slicer process at {}", fmt::ptr(this));
   }
 
   void spill_slicer::run() {
-    m_stat_photons_processed = 0;
-    m_stat_photons_accepted  = 0;
-    m_stat_photons_discarded = 0;
-    const auto& digis_in     = get<digi>("digi");
-    auto& spill_images_out   = set<images>("images").images;
+    const auto& digis_in   = get<digi>("digi");
+    auto& trs_out          = set<reco::timeranges>("timeranges");
+    auto& spill_images_out = set<images>("images");
     if (m_use_algo) {
-      m_slice_times.clear();
+      m_slice_edges.clear();
       compute_slice_times();
     }
-    for (int img_idx = 0; img_idx < m_slice_times.size() - 1; img_idx++) {
-      UFW_INFO("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx + 1]);
-      std::vector<images::image> event_images_out;
-      for (auto& signal : digis_in) {
-        if (signal.tdc() >= m_slice_times[img_idx] && signal.tdc() < m_slice_times[img_idx + 1]) {
-          auto id = signal.channel().link;
+    //convert edges to timeranges
+    if (m_slice_edges.size() < 2) {
+      return;
+    }
+    trs_out.reserve(m_slice_edges.size() - 1);
+    for (auto it = m_slice_edges.begin(); it != m_slice_edges.end() - 1; ++it) {
+      trs_out.emplace_back(*it + m_bin_width * 0.5, *it, *(it + 1)); //best value in the centre of the first bin
+      UFW_INFO("Found time interval {}", trs_out.back());
+    }
+    //use the timeranges
+    for (auto tr: trs_out) {
+      m_stat_photons_processed = 0;
+      m_stat_photons_accepted  = 0;
+      m_stat_photons_discarded = 0;
+      UFW_INFO("Building images in time interval {} ns", tr);
+      std::vector<image> event_images_out;
+      for (auto& sig : digis_in) {
+        if (tr.contains(sig.tdc())) {
+          auto id = sig.channel().link;
           auto it = std::find_if(event_images_out.begin(), event_images_out.end(),
                                  [id](auto& img) { return img.camera_id == id; });
           if (it == event_images_out.end()) {
-            images::image img{id, m_slice_times[img_idx], m_slice_times[img_idx + 1]};
+            //FIXME newer c++
+            image img{id, tr.earliest(), tr.latest()};
             event_images_out.emplace_back(img);
             it = event_images_out.end() - 1;
             it->blank();
-            UFW_DEBUG("Created image for camera id: {}, starting at time: {} ns", id, m_slice_times[img_idx]);
           }
           //UFW_DEBUG("signal to be assigned to camera id {}, image {}", id, img_idx);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
-          auto& pixel = it->pixels.data()[signal.channel().channel];
-          pixel.insert(signal.true_hits());
-          //UFW_DEBUG("adding {} photons to pixel.", signal.npe());
-          pixel.amplitude += signal.npe();
-          if (std::isnan(pixel.time_first) || (pixel.time_first > signal.tdc())) {
-            pixel.time_first = signal.tdc();
+          pixel& pix = it->pixels.data()[sig.channel().channel];
+          pix.insert(sig.true_hits());
+          pix.amplitude += sig.npe();
+          if (std::isnan(pix.time_first) || (pix.time_first > sig.tdc())) {
+            pix.time_first = sig.tdc();
           }
           m_stat_photons_accepted++;
         } else {
-          m_stat_photons_discarded++;
+          m_stat_photons_discarded++; //FIXME this is incorrect: should count only when discarded from all slices
         }
         m_stat_photons_processed++;
       }
@@ -157,10 +171,10 @@ namespace sand::grain {
         UFW_DEBUG("Camera {} recorded a total of {} photons from {} different MC true hits", img.camera_id, npe,
                   maxhits);
       }
-      spill_images_out.emplace_back(event_images_out);
+      spill_images_out.insert(spill_images_out.end(), event_images_out.begin(), event_images_out.end());
+      UFW_INFO("Processed {} photons; {} were accepted, {} discarded for this slice.", m_stat_photons_processed,
+               m_stat_photons_accepted, m_stat_photons_discarded);
     }
-    UFW_INFO("Processed {} photons; {} were accepted, {} discarded.", m_stat_photons_processed, m_stat_photons_accepted,
-             m_stat_photons_discarded);
   }
 
 } // namespace sand::grain

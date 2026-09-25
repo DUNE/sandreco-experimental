@@ -54,7 +54,7 @@
             "slice_times": [0.0, 2000.0, 20000.0]
         },
         "reqs" : {"digi" : "grain_digi"},
-        "prods" : {"images": "grain_images"}
+        "prods" : {"images": "grain_images", "timeranges": "grain_timeranges"}
       },
       {
         "sand::root::tree_streamer" : {
@@ -68,7 +68,7 @@
           "uri" : "test/lenses_big_.png",
           "scale" : 16
         },
-        "write" : ["grain_images"]
+        "write" : ["grain_images", "grain_timeranges"]
       }
   ]
 }

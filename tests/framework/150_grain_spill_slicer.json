@@ -25,19 +25,19 @@
             "delta_ns_for_comparison": 1000
         },
         "reqs" : {"digi" : "grain_digi"},
-        "prods" : {"images": "grain_images"}
+        "prods" : {"images": "grain_images", "timeranges": "grain_timeranges"}
       },
       {
         "sand::test::test_grain_spill_slicer" : {},
-        "reqs" : {"images": "grain_images"},
+        "reqs" : {"images": "grain_images", "timeranges": "grain_timeranges"},
         "prods" : {}
-      },      
+      },
       {
         "sand::root::tree_streamer" : { 
           "uri" : "test/images_masks.root",
           "tree" : "cameras"
         },
-        "write" : [ "grain_images" ]
+        "write" : ["grain_images", "grain_timeranges"]
       }
     ]
   }

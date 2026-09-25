@@ -17,4 +17,3 @@ namespace sand::grain {
 } // namespace sand::grain
 
 SAND_DATA_COLLECTION(sand::grain, photon, photons)
-UFW_DECLARE_UNMANAGED_DATA(sand::truth<sand::grain::photon>)

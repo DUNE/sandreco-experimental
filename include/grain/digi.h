@@ -33,4 +33,6 @@ namespace sand::grain {
 
 } // namespace sand::grain
 
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::digi<sand::grain::photon>)
+
 SAND_DATA_COLLECTION(sand::grain, signal, digi)

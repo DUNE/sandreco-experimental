@@ -43,10 +43,10 @@ namespace sand {
 namespace sand {
 
   struct truth_index {
-    std::size_t i;
+    std::size_t m_index;
   };
 
-  bool operator< (const truth_index& lhs, const truth_index& rhs) { return lhs.i < rhs.i; }
+  bool operator< (const truth_index& lhs, const truth_index& rhs) { return lhs.m_index < rhs.m_index; }
 
 } // namespace sand
 
@@ -85,6 +85,9 @@ UFW_DECLARE_UNMANAGED_DATA(ufw::data::data_base)
 UFW_DECLARE_UNMANAGED_DATA(ufw::data::managed_tag)
 UFW_DECLARE_UNMANAGED_DATA(ufw::data::instanced_tag)
 UFW_DECLARE_UNMANAGED_DATA(ufw::data::context_tag)
+UFW_DECLARE_UNMANAGED_DATA(ufw::data::managed_data_base)
+
+UFW_DECLARE_UNMANAGED_DATA(sand::truth_index)
 
 #define SAND_DATA_COLLECTION(NS, T, NAME)                                                                              \
   UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \

@@ -66,7 +66,7 @@
             "slice_times": [0.0, 2000.0, 20000.0]
         },
         "reqs" : {"digi" : "grain_digi"},
-        "prods" : {"images": "grain_images"}
+        "prods" : {"images": "grain_images", "timeranges": "grain_timeranges"}
       },
       {
         "sand::root::tree_streamer" : {
@@ -95,7 +95,7 @@
           "uri" : "test/volumereco.root",
           "tree" : "recos"
         },
-        "write" : ["grain_digi", "grain_lightmap"]
+        "write" : ["grain_digi", "grain_lightmap", "grain_timeranges"]
       }
   ]
 }

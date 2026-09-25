@@ -69,7 +69,7 @@ namespace sand::grain {
     std::vector<float> starting_maximization(n_voxels, 0.f);
 
     int i_event_in_spill{0};
-
+#if 0
     for (const auto& images_in : spill_images_in.images) {
       if (!images_in.empty()) {
         for (const auto& image : images_in) {
@@ -158,6 +158,7 @@ namespace sand::grain {
       }
       i_event_in_spill++;
     }
+#endif
   }
 } // namespace sand::grain
 
