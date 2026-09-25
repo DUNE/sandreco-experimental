@@ -23,12 +23,12 @@ namespace sand::reco {
    public:
     digi() : m_channel(), m_time(NAN), m_source(source::unknown) {}
 
-    digi(truth_type&& mc) : truth_type(mc), m_channel(), m_time(NAN), m_source(source::sim) {}
+    digi(truth_type mc) : truth_type(std::move(mc)), m_channel(), m_time(NAN), m_source(source::sim) {}
 
-    digi(channel_id c, const time& t, source src) : m_channel(c), m_time(t), m_source(src) {}
+    digi(channel_id c, time t, source src) : m_channel(c), m_time(t), m_source(src) {}
 
-    digi(truth_type&& mc, channel_id c, const time& t)
-      : truth_type(mc), m_channel(c), m_time(t), m_source(source::sim) {}
+    digi(truth_type mc, channel_id c, const time& t)
+      : truth_type(std::move(mc)), m_channel(c), m_time(t), m_source(source::sim) {}
 
     channel_id channel() const { return m_channel; }
 

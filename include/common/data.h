@@ -88,6 +88,5 @@ UFW_DECLARE_UNMANAGED_DATA(ufw::data::context_tag)
 
 #define SAND_DATA_COLLECTION(NS, T, NAME)                                                                              \
   UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \
-  UFW_DECLARE_UNMANAGED_DATA(sand::truth<NS::T>)                                                                       \
-  namespace NS { using NAME = sand::spill_data_collection<T>; }                                                        \
+  namespace NS { using NAME = sand::spill_data_collection<NS::T>; }                                                    \
   UFW_DECLARE_MANAGED_DATA(NS::NAME)

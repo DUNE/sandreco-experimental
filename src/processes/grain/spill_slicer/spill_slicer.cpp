@@ -76,7 +76,7 @@ namespace sand::grain {
     binned_times.fill(0.0);
 
     const auto& digis_in = get<digi>("digi");
-    for (auto& signal : digis_in.signals) {
+    for (auto& signal : digis_in) {
       double time{signal.tdc()};
       if (time >= min_time && time < max_time) {
         size_t bin_index = static_cast<size_t>(std::floor((time - min_time) / bin_width));
@@ -118,7 +118,7 @@ namespace sand::grain {
     for (int img_idx = 0; img_idx < m_slice_times.size() - 1; img_idx++) {
       UFW_INFO("Building images in time interval [{} - {}] ns", m_slice_times[img_idx], m_slice_times[img_idx + 1]);
       std::vector<images::image> event_images_out;
-      for (auto& signal : digis_in.signals) {
+      for (auto& signal : digis_in) {
         if (signal.tdc() >= m_slice_times[img_idx] && signal.tdc() < m_slice_times[img_idx + 1]) {
           auto id = signal.channel().link;
           auto it = std::find_if(event_images_out.begin(), event_images_out.end(),

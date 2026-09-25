@@ -81,7 +81,7 @@ namespace sand::grain {
               ch.link        = ph.camera_id;
               // consistent indexing: Row Major
               ch.channel = i * camera_width + j;
-              digi_out.signals.emplace_back(ph, ch, digi::signal::time{ph.pos.T()}, 1.0, NAN);
+              digi_out.emplace_back(ph, ch, ph.pos.T(), 1.0, NAN);
               m_stat_photons_accepted++;
               // UFW_DEBUG("Added photon to SiPM {},{}", i, j);
               channel_found = true;
