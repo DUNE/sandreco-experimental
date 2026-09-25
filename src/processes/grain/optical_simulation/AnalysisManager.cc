@@ -41,7 +41,7 @@ void AnalysisManager::EndOfEvent(const G4Event* pEvent) {
   G4HCofThisEvent* pHCofThisEvent = pEvent->GetHCofThisEvent();
   int eventID = pEvent->GetEventID();
   G4SDManager* pSDManager = G4SDManager::GetSDMpointer();
-  auto& hits = m_optmen_edepsim->set<sand::grain::hits>("hits");
+  auto& hits = m_optmen_edepsim->set<sand::grain::photons>("hits");
   const auto& geom = m_optmen_edepsim->instance<geoinfo>();
   geom.grain().lens_cameras();
   geom.grain().mask_cameras();
@@ -54,7 +54,7 @@ void AnalysisManager::EndOfEvent(const G4Event* pEvent) {
     if (totEntriesScint != 0) {
       for (int j = 0; j < totEntriesScint; j++) {
         sensorHit = (*sensorHitsCollection)[j];
-        sand::grain::hits::photon ph;
+        sand::grain::photon ph;
         ph.p.SetPx(sensorHit->direction().getX());
         ph.p.SetPy(sensorHit->direction().getY());
         ph.p.SetPz(sensorHit->direction().getZ());
@@ -68,7 +68,7 @@ void AnalysisManager::EndOfEvent(const G4Event* pEvent) {
         ph.inside_camera = (sensorHit->productionVolume() == sensorHit->camName());
         ph.camera_id = geom.grain().at(sensorHit->camName()).id;
         ph.reset(sensorHit->truth());
-        hits.photons.push_back(ph);
+        hits.push_back(ph);
       }
     }
   }

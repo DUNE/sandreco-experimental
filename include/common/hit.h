@@ -2,7 +2,6 @@
 
 #include <common/sand.h>
 #include <common/timerange.h>
-#include <common/truth.h>
 
 namespace sand::reco {
 

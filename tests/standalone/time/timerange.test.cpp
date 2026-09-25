@@ -1,5 +1,4 @@
-#include <boost/test/tools/old/interface.hpp>
-#define BOOST_TEST_MODULE hdf5
+#define BOOST_TEST_MODULE time
 #include <boost/test/included/unit_test.hpp>
 
 #include <common/digi.h>

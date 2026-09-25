@@ -1,15 +1,15 @@
 #pragma once
 
-#include <common/truth.h>
 #include <grain/grain.h>
 #include <grain/photons.h>
+
 #include <algorithm>
 #include <memory>
 
 namespace sand::grain {
 
   struct images : managed_data_base {
-    using truth = sand::truth<hits::photon>;
+    using truth = sand::truth<photon>;
     struct pixel : public truth {
       double amplitude;
       double time_first;

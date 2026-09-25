@@ -3,7 +3,6 @@
 
 #include <common/digi.h>
 #include <common/sand.h>
-#include <common/truth.h>
 
 namespace sand::tracker {
 

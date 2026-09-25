@@ -27,7 +27,7 @@ namespace sand::test {
 
   void test_grain_optical_simulation::configure(const ufw::config& cfg) {
     UFW_DEBUG("test_grain_optical_simulation configured at: {}", fmt::ptr(this));
-    const auto& gi = get<geoinfo>();
+    const auto& gi = instance<geoinfo>();
     auto xfrm      = gi.grain().transform();
     m_min_LAr      = pos_3d(-gi.grain().LAr_bbox());
     m_max_LAr      = pos_3d(gi.grain().LAr_bbox());
@@ -54,15 +54,15 @@ namespace sand::test {
     }
   }
 
-  test_grain_optical_simulation::test_grain_optical_simulation() : process({{"hits", "sand::grain::hits"}}, {}) {
+  test_grain_optical_simulation::test_grain_optical_simulation() : process({{"hits", "sand::grain::photons"}}, {}) {
     UFW_INFO("Creating a test_grain_optical_simulation process at {}", fmt::ptr(this));
   }
 
   void test_grain_optical_simulation::run() {
-    const auto& hits_in  = get<sand::grain::hits>("hits");
-    edep_reader& edep    = ufw::context::current()->instance<edep_reader>();
+    const auto& hits_in  = get<sand::grain::photons>("hits");
+    edep_reader& edep    = instance<edep_reader>();
     m_stat_photon_tested = 0;
-    for (const auto& photon : hits_in.photons) {
+    for (const auto& photon : hits_in) {
       UFW_ASSERT(photon.pos.t() >= 0., "Non-physical photon arrival time");
       // in gdml geometry X and Z are swapped
       UFW_ASSERT((m_min_LAr.z() <= photon.origin.x() && photon.origin.x() <= m_max_LAr.z()

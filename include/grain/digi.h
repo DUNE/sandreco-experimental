@@ -4,19 +4,18 @@
 
 #include <common/digi.h>
 #include <common/sand.h>
-#include <common/truth.h>
 #include <grain/grain.h>
 #include <grain/photons.h>
 
 namespace sand::grain {
 
   struct digi : managed_data_base {
-    struct signal : public reco::digi<hits::photon> {
-      using digi_base_type = reco::digi<hits::photon>;
+    struct signal : public reco::digi<photon> {
+      using digi_base_type = reco::digi<photon>;
       /// @brief Default constuctor produces an invalid digit, required by ROOT, do not use
       signal() : digi_base_type() {}
       /// @brief Constructor for a simulation digi
-      signal(hits::photon truth, channel_id ch, time t, double np, double tt)
+      signal(photon truth, channel_id ch, time t, double np, double tt)
         : digi_base_type(truth, ch, t), m_npe(np), m_tot(tt) {}
 
       /// @brief Amplitude in detected photons
@@ -39,5 +38,5 @@ namespace sand::grain {
 
 } // namespace sand::grain
 
-UFW_DECLARE_UNMANAGED_DATA(sand::reco::digi<sand::grain::hits::photon>)
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::digi<sand::grain::photon>)
 UFW_DECLARE_MANAGED_DATA(sand::grain::digi)

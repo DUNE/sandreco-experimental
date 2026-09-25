@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <memory>
 
 #include <common/sand.h>
 
@@ -35,7 +34,7 @@ namespace sand::grain {
     const T* data() const { return m_data.data(); }
 
     size_t size() const { return m_data.size(); }
-    static constexpr std::size_t width =  Width; 
+    static constexpr std::size_t width  = Width;
     static constexpr std::size_t height = Height;
 
     // For loops / iteration logic
