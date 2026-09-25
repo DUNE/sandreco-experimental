@@ -30,10 +30,9 @@ namespace sand::grain {
    * | `calib_intercept`    | double    | MeV        | Required          | Calibration intercept (q) for energy reconstruction. |
    */
 
-
   class mask_voxel_calorimetry : public ufw::process {
    public:
-   mask_voxel_calorimetry();
+    mask_voxel_calorimetry();
     void configure(const ufw::config& cfg) override;
     void run() override;
 
@@ -49,19 +48,18 @@ namespace sand::grain {
     m_calib_q = cfg.at("calib_intercept");
   }
 
-
-  mask_voxel_calorimetry::mask_voxel_calorimetry() : process({{"photon_amplitudes", "sand::grain::voxels"}},
-                                                             {{"total_deposited_energy", "sand::array<double>"}}) {
+  mask_voxel_calorimetry::mask_voxel_calorimetry()
+    : process({{"photon_amplitudes", "sand::grain::voxels"}}, {{"total_deposited_energy", "sand::array<double>"}}) {
     UFW_INFO("Creating a mask_voxel_calorimetry process at {}", fmt::ptr(this));
   }
 
   void mask_voxel_calorimetry::run() {
     const auto& photon_amplitude_in  = get<voxels>("photon_amplitudes");
     auto& total_deposited_energy_out = set<array<double>>("total_deposited_energy").values;
-    m_stat_events_processed = 0.;
+    m_stat_events_processed          = 0.;
     for (const auto& evt_voxels : photon_amplitude_in.voxels) {
       double total_amplitude = std::accumulate(evt_voxels.begin(), evt_voxels.end(), 0.);
-      total_deposited_energy_out.emplace_back( m_calib_m * total_amplitude + m_calib_q);
+      total_deposited_energy_out.emplace_back(m_calib_m * total_amplitude + m_calib_q);
       m_stat_events_processed++;
     };
     UFW_DEBUG("Processed {} events in spill", m_stat_events_processed);

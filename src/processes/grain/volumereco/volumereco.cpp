@@ -57,10 +57,10 @@ namespace sand::grain {
               {{"photon_amplitudes", "sand::grain::voxels"}}) {}
 
   void volumereco::run() {
-    const auto& images_in = get<images>("images");
-    const auto& slices_in = get<reco::timeranges>("slices");
-    auto& photon_amplitude_out  = set<voxels>("photon_amplitudes");
-    auto& cl_manager            = instance<volumereco_cl_manager>();
+    const auto& images_in      = get<images>("images");
+    const auto& slices_in      = get<reco::timeranges>("slices");
+    auto& photon_amplitude_out = set<voxels>("photon_amplitudes");
+    auto& cl_manager           = instance<volumereco_cl_manager>();
 
     auto voxels            = cl_manager.fiducial();
     const size_t n_voxels  = voxels.size().x() * voxels.size().y() * voxels.size().z();

@@ -103,9 +103,9 @@ namespace sand::grain {
     m_slice_edges.push_back(max_time);
   }
 
-  spill_slicer::spill_slicer() : process({{"digi", "sand::grain::digi"}},
-                                         {{"timeranges", "sand::reco::timeranges"},
-                                          {"images", "sand::grain::images"}}) {
+  spill_slicer::spill_slicer()
+    : process({{"digi", "sand::grain::digi"}},
+              {{"timeranges", "sand::reco::timeranges"}, {"images", "sand::grain::images"}}) {
     UFW_INFO("Creating a spill_slicer process at {}", fmt::ptr(this));
   }
 
@@ -127,7 +127,7 @@ namespace sand::grain {
       UFW_INFO("Found time interval {}", trs_out.back());
     }
     //use the timeranges
-    for (auto tr: trs_out) {
+    for (auto tr : trs_out) {
       m_stat_photons_processed = 0;
       m_stat_photons_accepted  = 0;
       m_stat_photons_discarded = 0;
@@ -164,8 +164,8 @@ namespace sand::grain {
         double npe     = 0.;
         for (int x = 0; x != camera_width; ++x) {
           for (int y = 0; y != camera_height; ++y) {
-            maxhits = std::max(maxhits, img.pixels.at(x,y).true_hits().size());
-            npe += img.pixels.at(x,y).amplitude;
+            maxhits = std::max(maxhits, img.pixels.at(x, y).true_hits().size());
+            npe += img.pixels.at(x, y).amplitude;
           }
         }
         UFW_DEBUG("Camera {} recorded a total of {} photons from {} different MC true hits", img.camera_id, npe,

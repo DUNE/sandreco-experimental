@@ -1,6 +1,6 @@
+#include <geoinfo/grain_info.hpp>
 #include <common/sand.h>
 #include <common/timerange.h>
-#include <geoinfo/grain_info.hpp>
 #include <grain/point_cloud.h>
 #include <grain/point_clusters.h>
 
@@ -9,8 +9,8 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
-#include <ocl/ocl.hpp>
 #include <hough3d.hpp>
+#include <ocl/ocl.hpp>
 
 #include <cmath>
 
@@ -107,8 +107,8 @@ namespace sand::grain {
     const float golden_angle = M_PI * (3.0 - std::sqrt(5.0));
 
     for (size_t i = 0; i < n_normals; ++i) {
-      const float z = 1.0 - 2.0 * (i + 0.5) / n_normals;
-      const float r = std::sqrt(1.0 - z * z);
+      const float z     = 1.0 - 2.0 * (i + 0.5) / n_normals;
+      const float r     = std::sqrt(1.0 - z * z);
       const float theta = golden_angle * i;
 
       normals.push_back({r * std::cos(theta), r * std::sin(theta), z, 0.0});
@@ -119,19 +119,19 @@ namespace sand::grain {
 
   void hough3d::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_n_normals_in_sphere = cfg.value("n_normals_in_sphere", 1000);
-    m_xy_plane_step = cfg.at("xy_plane_step");
+    m_n_normals_in_sphere     = cfg.value("n_normals_in_sphere", 1000);
+    m_xy_plane_step           = cfg.at("xy_plane_step");
     m_max_clustering_distance = cfg.at("max_clustering_distance");
-    m_min_points_per_track = cfg.value("min_points_per_track", 2);
-    m_max_tracks_per_event = cfg.value("max_tracks_per_event", 4);
+    m_min_points_per_track    = cfg.value("min_points_per_track", 2);
+    m_max_tracks_per_event    = cfg.value("max_tracks_per_event", 4);
 
     // Binning versors and x'y' plane
     const std::vector<cl_float4> normals = fibonacci_sphere_normals(m_n_normals_in_sphere);
-    m_unique_versors = select_unique_versors(normals);
-    const auto& gi = ufw::context::current()->instance<geoinfo>();
-    const dir_3d grain_dimensions = gi.grain().fiducial_bbox();
-    const double xy_half_range = grain_dimensions.R();
-    m_n_xy_bins = static_cast<size_t>(std::ceil(2.0 * xy_half_range / m_xy_plane_step));
+    m_unique_versors                     = select_unique_versors(normals);
+    const auto& gi                       = ufw::context::current()->instance<geoinfo>();
+    const dir_3d grain_dimensions        = gi.grain().fiducial_bbox();
+    const double xy_half_range           = grain_dimensions.R();
+    m_n_xy_bins                          = static_cast<size_t>(std::ceil(2.0 * xy_half_range / m_xy_plane_step));
 
     m_voting_array.assign(m_unique_versors.size() * m_n_xy_bins * m_n_xy_bins, 0);
     UFW_INFO("Size of voting array: {}", m_voting_array.size());
@@ -141,23 +141,21 @@ namespace sand::grain {
     configure_hough_vote(platform);
     configure_distance(platform);
 
-    m_buf_unique_versors.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(platform.context(),
-                                                                           m_unique_versors.size() * sizeof(cl_float4),
-                                                                           m_unique_versors.data());
-    m_buf_voting_array.allocate<CL_MEM_READ_WRITE>(platform.context(),
-                                                   m_voting_array.size() * sizeof(cl_uint));
+    m_buf_unique_versors.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
+        platform.context(), m_unique_versors.size() * sizeof(cl_float4), m_unique_versors.data());
+    m_buf_voting_array.allocate<CL_MEM_READ_WRITE>(platform.context(), m_voting_array.size() * sizeof(cl_uint));
   }
 
-  hough3d::hough3d() : process({{"point_cloud", "sand::grain::point_cloud"}},
-                               {{"point_clusters", "sand::grain::point_clusters"}}) {
+  hough3d::hough3d()
+    : process({{"point_cloud", "sand::grain::point_cloud"}}, {{"point_clusters", "sand::grain::point_clusters"}}) {
     UFW_DEBUG("Creating a hough3d process at {}.", fmt::ptr(this));
   }
 
   void hough3d::run() {
     UFW_DEBUG("Running a hough3d process at {}.", fmt::ptr(this));
-    auto& platform = instance<cl::platform>();
-    const auto& point_cloud_in  = get<point_cloud>("point_cloud");
-    auto& point_clusters_out = set<point_clusters>("point_clusters").clusters;
+    auto& platform             = instance<cl::platform>();
+    const auto& point_cloud_in = get<point_cloud>("point_cloud");
+    auto& point_clusters_out   = set<point_clusters>("point_clusters").clusters;
     // Loop on events in a spill
     for (const auto& ev_points : point_cloud_in.points) {
       if (ev_points.size() == 0) {
@@ -170,9 +168,8 @@ namespace sand::grain {
       uint n_found_tracks{0};
       while (true) {
         cl::buffer buf_points;
-        buf_points.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE>(platform.context(),
-                                                                      cl_points.size() * sizeof(cl_float4),
-                                                                      cl_points.data());
+        buf_points.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE>(
+            platform.context(), cl_points.size() * sizeof(cl_float4), cl_points.data());
 
         // Reset voting array
         std::fill(m_voting_array.begin(), m_voting_array.end(), 0);
@@ -202,17 +199,17 @@ namespace sand::grain {
         platform.queues().front().finish();
 
         // Find maximum
-        const size_t max_votes_index =  std::distance(m_voting_array.begin(),
-                                                      std::max_element(m_voting_array.begin(), m_voting_array.end()));
-        const cl_uint vote_count = m_voting_array[max_votes_index];
+        const size_t max_votes_index =
+            std::distance(m_voting_array.begin(), std::max_element(m_voting_array.begin(), m_voting_array.end()));
+        const cl_uint vote_count      = m_voting_array[max_votes_index];
         const size_t max_versor_index = max_votes_index / (m_n_xy_bins * m_n_xy_bins);
-        const size_t remainder = max_votes_index % (m_n_xy_bins * m_n_xy_bins);
-        const size_t max_x_index = remainder / m_n_xy_bins;
-        const size_t max_y_index = remainder % m_n_xy_bins;
+        const size_t remainder        = max_votes_index % (m_n_xy_bins * m_n_xy_bins);
+        const size_t max_x_index      = remainder / m_n_xy_bins;
+        const size_t max_y_index      = remainder % m_n_xy_bins;
 
-        const auto& max_versor = m_unique_versors[max_versor_index];
-        const float max_x = (0.5 + max_x_index - m_n_xy_bins / 2) * m_xy_plane_step;
-        const float max_y = (0.5 + max_y_index - m_n_xy_bins / 2) * m_xy_plane_step;
+        const auto& max_versor     = m_unique_versors[max_versor_index];
+        const float max_x          = (0.5 + max_x_index - m_n_xy_bins / 2) * m_xy_plane_step;
+        const float max_y          = (0.5 + max_y_index - m_n_xy_bins / 2) * m_xy_plane_step;
         const cl_float3 line_point = get_line_point(max_versor, max_x, max_y);
 
         UFW_DEBUG("Index of voting array maximum: {}, votes: {}, (versor,x,y): (({},{},{}),{},{})", max_votes_index,
@@ -241,8 +238,8 @@ namespace sand::grain {
         buf_distances.read(tmp_distances_ptr, platform.queues().front(), 0, -1, {});
         platform.queues().front().finish();
 
-        std::vector<cl_float4> clustered_points = filter_neighbouring_points(cl_points, points_distances,
-                                                                             m_max_clustering_distance);
+        std::vector<cl_float4> clustered_points =
+            filter_neighbouring_points(cl_points, points_distances, m_max_clustering_distance);
 
         if (clustered_points.size() < m_min_points_per_track) {
           break;
@@ -265,7 +262,6 @@ namespace sand::grain {
       UFW_INFO("Found {} tracks", n_found_tracks);
       point_clusters_out.push_back(ev_clusters_out);
     }
-
   }
 
 } // namespace sand::grain

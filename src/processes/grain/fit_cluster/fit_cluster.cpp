@@ -13,11 +13,11 @@
 #include <Fit/Fitter.h>
 #include <Math/Functor.h>
 
-#include <cmath>
-#include <vector>
-#include <array>
-#include <utility>
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <utility>
+#include <vector>
 
 namespace sand::grain {
 
@@ -65,12 +65,12 @@ namespace sand::grain {
   };
 
   std::pair<pos_3d, dir_3d> fit_cluster::weighted_linear_fit(const point_clusters::cluster& cluster) {
-
     const pos_3d starting_line_point = cluster.centre();
-    const dir_3d starting_line_dir = cluster.axis();
-    UFW_DEBUG("Starting track: point {} direction {} n_points {}", starting_line_point, starting_line_dir, cluster.points().size());
+    const dir_3d starting_line_dir   = cluster.axis();
+    UFW_DEBUG("Starting track: point {} direction {} n_points {}", starting_line_point, starting_line_dir,
+              cluster.points().size());
 
-    const std::array<double,4> starting_params = line_p_v_to_params(starting_line_point, starting_line_dir);
+    const std::array<double, 4> starting_params = line_p_v_to_params(starting_line_point, starting_line_dir);
 
     WeightedLineFitter sdist(cluster.points(), m_use_weights);
     ROOT::Math::Functor fcn(sdist, starting_params.size());
@@ -81,7 +81,7 @@ namespace sand::grain {
     }
 
     // Optional limits:
-    m_fitter.Config().ParSettings(0).SetLimits(0.0, TMath::Pi()/2.0);
+    m_fitter.Config().ParSettings(0).SetLimits(0.0, TMath::Pi() / 2.0);
     // m_fitter.Config().ParSettings(1).SetLimits(0.0, 2.0*TMath::Pi());
 
     // If fit fails, return starting hough3d estimate as is
@@ -92,8 +92,8 @@ namespace sand::grain {
 
     const ROOT::Fit::FitResult& result = m_fitter.Result();
 
-    std::array<double,4> fitted_params;
-    std::array<double,4> errors;
+    std::array<double, 4> fitted_params;
+    std::array<double, 4> errors;
 
     std::copy(result.Parameters().begin(), result.Parameters().end(), fitted_params.begin());
     std::copy(result.Errors().begin(), result.Errors().end(), errors.begin());
@@ -103,19 +103,20 @@ namespace sand::grain {
 
   void fit_cluster::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_use_weights = cfg.value("use_weights", true);
+    m_use_weights   = cfg.value("use_weights", true);
     m_fit_step_size = cfg.value("fit_step_size", 0.01);
   }
 
-  fit_cluster::fit_cluster() : process({{"point_clusters_in", "sand::grain::point_clusters"}},
-                               {{"point_clusters_out", "sand::grain::point_clusters"}}) {
+  fit_cluster::fit_cluster()
+    : process({{"point_clusters_in", "sand::grain::point_clusters"}},
+              {{"point_clusters_out", "sand::grain::point_clusters"}}) {
     UFW_DEBUG("Creating a fit_cluster process at {}.", fmt::ptr(this));
   }
 
   void fit_cluster::run() {
     UFW_DEBUG("Running a fit_cluster process at {}.", fmt::ptr(this));
     const auto& point_clusters_in = get<point_clusters>("point_clusters_in").clusters;
-    auto& point_clusters_out = set<point_clusters>("point_clusters_out").clusters;
+    auto& point_clusters_out      = set<point_clusters>("point_clusters_out").clusters;
     // Loop on events in a spill
     for (const auto& ev_clusters_in : point_clusters_in) {
       if (ev_clusters_in.size() == 0) {
@@ -134,11 +135,11 @@ namespace sand::grain {
         UFW_DEBUG("Fitted track: point {} direction {}", fitted_line_point, fitted_line_dir);
 
         // Using placeholder time
-        ev_clusters_out.emplace_back(fitted_line_point, fitted_line_dir, reco::timerange(0.0, 0.0), 0.0, clust.points());
+        ev_clusters_out.emplace_back(fitted_line_point, fitted_line_dir, reco::timerange(0.0, 0.0), 0.0,
+                                     clust.points());
       }
       point_clusters_out.push_back(ev_clusters_out);
     }
-
   }
 
 } // namespace sand::grain

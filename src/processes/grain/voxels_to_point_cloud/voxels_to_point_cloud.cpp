@@ -2,8 +2,8 @@
 #include <geoinfo/grain_info.hpp>
 #include <common/sand.h>
 #include <grain/grain.h>
-#include <grain/voxels.h>
 #include <grain/point_cloud.h>
+#include <grain/voxels.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -34,10 +34,9 @@ namespace sand::grain {
    * | `voxel_size`         | double    | mm         | Required          | Size of voxels.                                      |
    */
 
-
   class voxels_to_point_cloud : public ufw::process {
    public:
-   voxels_to_point_cloud();
+    voxels_to_point_cloud();
     void configure(const ufw::config& cfg) override;
     void run() override;
 
@@ -50,25 +49,25 @@ namespace sand::grain {
   void voxels_to_point_cloud::configure(const ufw::config& cfg) {
     process::configure(cfg);
     m_fiducial_distance = cfg.value("fiducial_distance", 0.0);
-    m_amp_thr = cfg.value("amp_thr", 0.0);
-    m_voxel_size = cfg.at("voxel_size");
+    m_amp_thr           = cfg.value("amp_thr", 0.0);
+    m_voxel_size        = cfg.at("voxel_size");
   }
 
-
-  voxels_to_point_cloud::voxels_to_point_cloud() : process({{"photon_amplitudes", "sand::grain::voxels"}}, {{"point_cloud", "sand::grain::point_cloud"}}) {
+  voxels_to_point_cloud::voxels_to_point_cloud()
+    : process({{"photon_amplitudes", "sand::grain::voxels"}}, {{"point_cloud", "sand::grain::point_cloud"}}) {
     UFW_INFO("Creating a voxels_to_point_cloud process at {}", fmt::ptr(this));
   }
 
   void voxels_to_point_cloud::run() {
-    const auto& gi = instance<geoinfo>();
-    const auto& photon_amplitude_in  = get<voxels>("photon_amplitudes");
-    auto& point_cloud_out = set<point_cloud>("point_cloud").points; 
+    const auto& gi                  = instance<geoinfo>();
+    const auto& photon_amplitude_in = get<voxels>("photon_amplitudes");
+    auto& point_cloud_out           = set<point_cloud>("point_cloud").points;
 
     int i_evt{0};
 
     for (const auto& evt_voxels : photon_amplitude_in.voxels) {
       std::vector<point_cloud::point> evt_points;
-      const size_3d sizes = evt_voxels.size();
+      const size_3d sizes      = evt_voxels.size();
       const xform_3d transform = evt_voxels.xform_id_to_fiducial(dir_3d(m_voxel_size, m_voxel_size, m_voxel_size));
       for (size_t i{0}; i < sizes.x(); ++i) {
         for (size_t j{0}; j < sizes.y(); ++j) {
@@ -76,12 +75,15 @@ namespace sand::grain {
             index_3d i_voxel(i, j, k);
             double amplitude = evt_voxels.at(i_voxel);
             // Apply threshold on amplitude
-            if (amplitude < m_amp_thr) continue;
+            if (amplitude < m_amp_thr)
+              continue;
             pos_3d position = transform * pos_3d(i, j, k);
             dir_3d absolute_position(std::abs(position.x()), std::abs(position.y()), std::abs(position.z()));
             dir_3d displacement_from_wall = gi.grain().fiducial_bbox() - absolute_position;
             // Apply threshold on position
-            if (displacement_from_wall.x() < m_fiducial_distance || displacement_from_wall.y() < m_fiducial_distance || displacement_from_wall.z() < m_fiducial_distance) continue;
+            if (displacement_from_wall.x() < m_fiducial_distance || displacement_from_wall.y() < m_fiducial_distance
+                || displacement_from_wall.z() < m_fiducial_distance)
+              continue;
             evt_points.emplace_back(point_cloud::point{position, amplitude});
             UFW_DEBUG("Index: {}, Position: {}, Amplitude {}", i_voxel, position, amplitude);
           }

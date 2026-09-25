@@ -12,7 +12,7 @@ namespace sand::ecal {
   /// Each slice contains reconstructed ECal cells built from the corresponding
   /// cell-pair slice.
   struct reco_cell_slices_container : managed_data_base {
-    using slice = std::vector<reco_cell>;
+    using slice            = std::vector<reco_cell>;
     using slice_collection = std::vector<slice>;
 
     slice_collection collection;

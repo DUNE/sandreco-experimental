@@ -91,5 +91,7 @@ UFW_DECLARE_UNMANAGED_DATA(sand::truth_index)
 
 #define SAND_DATA_COLLECTION(NS, T, NAME)                                                                              \
   UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \
-  namespace NS { using NAME = sand::spill_data_collection<NS::T>; }                                                    \
+  namespace NS {                                                                                                       \
+    using NAME = sand::spill_data_collection<NS::T>;                                                                   \
+  }                                                                                                                    \
   UFW_DECLARE_MANAGED_DATA(NS::NAME)

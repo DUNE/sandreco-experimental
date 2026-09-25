@@ -1,14 +1,14 @@
-#include <common/sand.h>
 #include <geoinfo/grain_info.hpp>
 #include <hdf5/hdf5.hpp>
+#include <common/sand.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
-#include <ocl/ocl.hpp>
 #include <mask_weights_computation.hpp>
+#include <ocl/ocl.hpp>
 
 namespace sand::grain {
 
@@ -48,8 +48,8 @@ namespace sand::grain {
 
   void mask_weights_computation::configure_frustum(cl::platform& platform) {
     const char* frustum_kernel_src =
-#include "cl_src/common_structs.cl"
 #include "cl_src/common_functions.cl"
+#include "cl_src/common_structs.cl"
 #include "cl_src/make_frustum.cl"
         ;
     platform.build_program(m_frustum_program, frustum_kernel_src);
@@ -58,8 +58,8 @@ namespace sand::grain {
 
   void mask_weights_computation::configure_solidangle(cl::platform& platform) {
     const char* solidangle_kernel_src =
-#include "cl_src/common_structs.cl"
 #include "cl_src/common_functions.cl"
+#include "cl_src/common_structs.cl"
 #include "cl_src/solidangle.cl"
         ;
     platform.build_program(m_solidangle_program, solidangle_kernel_src);
@@ -68,8 +68,7 @@ namespace sand::grain {
 
   void mask_weights_computation::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_solidangle_cfg = {cfg.at("voxel_size"), cfg.at("lar_attenuation_length"),
-                        cfg.at("minivoxels_per_side")};
+    m_solidangle_cfg = {cfg.at("voxel_size"), cfg.at("lar_attenuation_length"), cfg.at("minivoxels_per_side")};
     auto& platform   = instance<cl::platform>();
     configure_frustum(platform);
     configure_solidangle(platform);
@@ -90,15 +89,15 @@ namespace sand::grain {
     transform_t voxel_transform    = to_ocl_xform(voxels.xform_id_to_fiducial(voxel_sizes));
     const size_t sensor_rects_size = camera_height * camera_width;
     const size_t fiducial_size     = voxels.size().x() * voxels.size().y() * voxels.size().z();
-    const size_t solidangle_size   = fiducial_size * sensor_rects_size; 
+    const size_t solidangle_size   = fiducial_size * sensor_rects_size;
 
     cl::NDRange solidangle_global_size(voxels.size().x(), voxels.size().y(), voxels.size().z());
     UFW_DEBUG("Solidangle global work size: ({},{},{})", solidangle_global_size[0], solidangle_global_size[1],
-             solidangle_global_size[2]);
+              solidangle_global_size[2]);
 
     cl::buffer buf_fiducial;
-    buf_fiducial.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
-        platform.context(), fiducial_size * sizeof(cl_uchar), voxels.data());
+    buf_fiducial.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(platform.context(), fiducial_size * sizeof(cl_uchar),
+                                                                   voxels.data());
 
     // Setup output file
     auto& array = instance<sand::hdf5::ndarray>("angle_writer");
@@ -121,8 +120,7 @@ namespace sand::grain {
 
       cl::buffer buf_sensor_rects;
       buf_sensor_rects.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
-          platform.context(), sensor_rects_size * sizeof(geoinfo::grain_info::rect_f),
-          camera.sipm_active_areas.data());
+          platform.context(), sensor_rects_size * sizeof(geoinfo::grain_info::rect_f), camera.sipm_active_areas.data());
 
       cl::buffer buf_mask_rects;
       buf_mask_rects.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(
@@ -130,7 +128,6 @@ namespace sand::grain {
 
       cl::buffer buf_frustum;
       buf_frustum.allocate<CL_MEM_READ_WRITE>(platform.context(), frustum_array_size * sizeof(frustum_t));
-      
 
       // set kernel args
       try {
@@ -149,8 +146,8 @@ namespace sand::grain {
       cl::NDRange global_size(mask_rects_size, sensor_rects_size);
       UFW_DEBUG("Frustum global work size: ({},{})", global_size[0], global_size[1]);
       cl::Event ev_frustum_kernel_execution;
-      platform.queues().front().enqueueNDRangeKernel(m_frustum_kernel, cl::NullRange, global_size,
-                                                     cl::NullRange, nullptr, &ev_frustum_kernel_execution);
+      platform.queues().front().enqueueNDRangeKernel(m_frustum_kernel, cl::NullRange, global_size, cl::NullRange,
+                                                     nullptr, &ev_frustum_kernel_execution);
       void* frustum_p = h_frustum_array.get();
       cl::Event ev_copy_frustum_from_device =
           buf_frustum.read(frustum_p, platform.queues().front(), 0, -1, {ev_frustum_kernel_execution});
@@ -193,7 +190,7 @@ namespace sand::grain {
       // Write to hdf5
       array.write(camera.name, range, h_solidangle_array.get());
       array.set_attribute(camera.name, "camera_id", std::to_string(camera.id));
-      auto t_stop = std::chrono::high_resolution_clock::now();
+      auto t_stop         = std::chrono::high_resolution_clock::now();
       double elapsed_time = std::chrono::duration<double>(t_stop - t_start).count();
       UFW_INFO("{} completed, id: {}, time taken: {} s", camera.name, std::to_string(camera.id), elapsed_time);
     }
