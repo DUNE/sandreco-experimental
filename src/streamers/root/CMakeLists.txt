@@ -50,7 +50,7 @@ foreach(USER_TYPE_PATH ${USER_TYPES})
     string(REGEX MATCH "\\(([^,]*), ([^,]*), ([^,]*)\\)" _ ${LINE})
     list(APPEND USER_TYPES_LINKDEF "${CMAKE_MATCH_1}::${CMAKE_MATCH_2}")
     list(APPEND USER_TYPES_LINKDEF "sand::truth<${CMAKE_MATCH_1}::${CMAKE_MATCH_2}>")
-    list(APPEND USER_TYPES_LINKDEF "sand::spill_data_collection<${CMAKE_MATCH_1}::${CMAKE_MATCH_2}>")
+    list(APPEND USER_TYPES_LINKDEF "${CMAKE_MATCH_1}::${CMAKE_MATCH_3}")
   endforeach()
 endforeach()
 
