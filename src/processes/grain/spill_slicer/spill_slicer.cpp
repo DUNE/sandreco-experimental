@@ -140,7 +140,7 @@ namespace sand::grain {
                                  [id](auto& img) { return img.camera_id == id; });
           if (it == event_images_out.end()) {
             //FIXME newer c++
-            image img{id, tr.earliest(), tr.latest()};
+            image img{id, tr};
             event_images_out.emplace_back(img);
             it = event_images_out.end() - 1;
             it->blank();

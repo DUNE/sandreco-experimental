@@ -31,18 +31,18 @@
     "run" : [
       {
         "sand::root::tree_streamer" : { 
-          "uri" : "test/images.root",
+          "uri" : "test/images_masks.root",
           "tree" : "cameras"
         },
-        "read" : ["grain_images"]
+        "read" : ["grain_images", "grain_timeranges"]
       },
       {
         "sand::grain::volumereco" : {
-          "max_iterations" : 3,
+          "max_iterations" : 5,
           "pde" : 1.0,
           "write_to_hdf5" : false
         },
-        "reqs" : { "images" : "grain_images" },
+        "reqs" : { "images" : "grain_images", "slices": "grain_timeranges" },
         "prods" : { "photon_amplitudes" : "grain_lightmap" }
       },
       {

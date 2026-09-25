@@ -31,11 +31,9 @@ namespace sand::test {
     const auto& trs_in = get<sand::reco::timeranges>("timeranges");
     for (const auto& image : spill_images_in) {
       // check image time in spill
-      UFW_ASSERT(!std::isnan(image.time_begin) && !std::isnan(image.time_end), "Image begin time and/or end is NaN.");
-      UFW_ASSERT(image.time_begin >= 0. && image.time_begin < 25000. && image.time_end > 0.
-                     && image.time_end <= 25000.,
-                 "Image not in spill duration. time_begin : {}, time_end :{}", image.time_begin, image.time_end);
-      UFW_ASSERT(image.time_end > image.time_begin, "Image time_begin comes after time_end.");
+      UFW_ASSERT(image.range.earliest() >= 0. && image.range.earliest() < 25000. && image.range.latest() > 0.
+                     && image.range.latest() <= 25000.,
+                 "Image time {} not in spill duration", image.range);
       // check pixels
       for (const auto& pixel : image.pixels) {
         UFW_ASSERT(pixel.amplitude >= 0.0, "Non-physical pixel amplitude: {}", pixel.amplitude);
@@ -44,7 +42,7 @@ namespace sand::test {
         if (pixel.amplitude > 0.0) {
           UFW_ASSERT(!std::isnan(pixel.time_first),
                      "Time of first photon is NaN, yet {} photons were detected. time_first: {}", pixel.amplitude);
-          UFW_ASSERT(pixel.time_first >= image.time_begin && pixel.time_first <= image.time_end,
+          UFW_ASSERT(image.range.contains(pixel.time_first),
                      "Pixel time of first photon not in image declared time interval: {}", pixel.time_first);
         }
       }

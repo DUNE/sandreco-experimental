@@ -6,6 +6,7 @@
 
 #include <hdf5/hdf5.hpp>
 #include <common/sand.h>
+#include <common/timeslicer.h>
 #include <grain/grain.h>
 #include <grain/image.h>
 #include <grain/voxels.h>
@@ -52,10 +53,12 @@ namespace sand::grain {
   }
 
   volumereco::volumereco()
-    : process({{"images", "sand::grain::images"}}, {{"photon_amplitudes", "sand::grain::voxels"}}) {}
+    : process({{"images", "sand::grain::images"}, {"slices", "sand::reco::timeranges"}},
+              {{"photon_amplitudes", "sand::grain::voxels"}}) {}
 
   void volumereco::run() {
-    const auto& spill_images_in = get<images>("images");
+    const auto& images_in = get<images>("images");
+    const auto& slices_in = get<reco::timeranges>("slices");
     auto& photon_amplitude_out  = set<voxels>("photon_amplitudes");
     auto& cl_manager            = instance<volumereco_cl_manager>();
 
@@ -69,13 +72,14 @@ namespace sand::grain {
     std::vector<float> starting_maximization(n_voxels, 0.f);
 
     int i_event_in_spill{0};
-#if 0
-    for (const auto& images_in : spill_images_in.images) {
-      if (!images_in.empty()) {
-        for (const auto& image : images_in) {
+    reco::timeslicer ts(slices_in);
+    auto slices = ts.slice(images_in.begin(), images_in.end());
+    for (auto& slice : slices) {
+      if (!slice.empty()) {
+        for (const auto& image : slice) {
           // Sharing load evenly among GPUs, assuming camera ids range [0, n_cameras -1]
           const size_t idev = image.camera_id % m_n_devices;
-          UFW_DEBUG("Image id: {}, processing on device {}", image.camera_id, idev);
+          UFW_INFO("Image id: {}, processing on device {}", image.camera_id, idev);
           // Copy data to device buffer
           m_image_buffers[image.camera_id].write(image.amplitude_array<float>().data(),
                                                  cl_manager.platform().queues()[image.camera_id % m_n_devices]);
@@ -84,7 +88,7 @@ namespace sand::grain {
               starting_score.data(), cl_manager.platform().queues()[image.camera_id % m_n_devices]);
         }
         for (int iteration = 0; iteration < m_max_iterations; ++iteration) {
-          UFW_DEBUG("Iteration: {}", iteration);
+          UFW_INFO("Iteration: {}", iteration);
           // Fill maximization buffers with 0
           for (size_t idev = 0; idev < m_n_devices; ++idev) {
             cl_manager.maximization_buffers()[idev].write(starting_maximization, cl_manager.platform().queues()[idev]);
@@ -158,7 +162,6 @@ namespace sand::grain {
       }
       i_event_in_spill++;
     }
-#endif
   }
 } // namespace sand::grain
 

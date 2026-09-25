@@ -73,7 +73,7 @@
           "uri" : "test/full_images_masks.root",
           "tree" : "cameras"
         },
-        "write" : ["grain_images"]
+        "write" : ["grain_images", "grain_timeranges"]
       },
       {
         "sand::png::png_streamer" : {
@@ -87,7 +87,7 @@
           "max_iterations" : 3,
           "pde" : 1.0
         },
-        "reqs" : { "images" : "grain_images" },
+        "reqs" : { "images" : "grain_images", "slices": "grain_timeranges" },
         "prods" : { "photon_amplitudes" : "grain_lightmap" }
       },
       {

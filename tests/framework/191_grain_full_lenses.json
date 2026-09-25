@@ -61,14 +61,14 @@
           "uri" : "test/full_images_lenses.root",
           "tree" : "cameras"
         },
-        "write" : ["grain_images" ]
+        "write" : ["grain_images", "grain_timeranges"]
       },
       {
         "sand::png::png_streamer" : {
           "uri" : "test/lenses_big_.png",
           "scale" : 16
         },
-        "write" : ["grain_images", "grain_timeranges"]
+        "write" : ["grain_images"]
       }
   ]
 }

@@ -70,7 +70,7 @@ namespace sand::png {
     for (const auto& [id, info] : info_map()) {
       for (const auto& img : *static_cast<sand::grain::images*>(info.address)) {
         auto filename = folder + '/' + basename + id + '_' + std::to_string(ctx) + '_' + std::to_string(img.camera_id)
-                      + "_T" + std::to_string(long(img.time_begin)) + ext;
+                      + "_T" + std::to_string(long(img.range.earliest())) + ext;
         FILE* fp = fopen(filename.c_str(), "wb");
         UFW_DEBUG("Opening file for camera {} at {}, named {}", int(img.camera_id), ctx, filename);
         png_structp pngstruct = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);

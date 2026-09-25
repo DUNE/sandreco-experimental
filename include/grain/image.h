@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/timerange.h>
 #include <grain/digi.h>
 #include <grain/grain.h>
 #include <grain/photons.h>
@@ -16,11 +17,11 @@ namespace sand::grain {
 
   struct image {
     channel_id::link_t camera_id;
-    double time_begin; // begin of slice
-    double time_end;   // end of slice
+    reco::timerange range;
     pixel_array<pixel> pixels;
 
    public:
+    double t() const { return range.best(); }
     inline void blank(); // call blank if you are not already assigning every pixel
     template <typename T>
     pixel_array<T> amplitude_array() const;
