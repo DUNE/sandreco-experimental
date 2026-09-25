@@ -38,7 +38,7 @@ namespace sand::grain {
     void run() override;
 
    private:
-    double m_bin_width;
+    double m_bin_width = 200.0;
     double m_min_response_signal;
     double m_delta_ns_for_comparison;
     uint64_t m_stat_photons_processed;
@@ -63,7 +63,7 @@ namespace sand::grain {
     } else {
       UFW_DEBUG("Using slicing algorithm");
       m_use_algo                = true;
-      m_bin_width               = cfg.value("bin_width", 200.0);
+      m_bin_width               = cfg.value("bin_width", m_bin_width);
       m_min_response_signal     = cfg.at("min_response_signal");
       m_delta_ns_for_comparison = cfg.at("delta_ns_for_comparison");
     }
@@ -123,7 +123,6 @@ namespace sand::grain {
     }
     trs_out.reserve(m_slice_edges.size() - 1);
     for (auto it = m_slice_edges.begin(); it != m_slice_edges.end() - 1; ++it) {
-      UFW_INFO("trs {}, {}, {}", *it + m_bin_width * 0.5, *it, *(it + 1));
       trs_out.emplace_back(*it + m_bin_width * 0.5, *it, *(it + 1)); //best value in the centre of the first bin
       UFW_INFO("Found time interval {}", trs_out.back());
     }
