@@ -20,7 +20,7 @@ namespace sand::reco {
   template <typename T>
   constexpr bool is_time_ordered = time_ordered<T>::value;
 
-  class timeslices : managed_data_base {
+  class timeslicer {
    public:
     template <typename It>
     struct timeslice : public timerange {
@@ -31,7 +31,7 @@ namespace sand::reco {
     };
 
    public:
-    timeslices(std::vector<timerange> tr) : m_slices(std::move(tr)) {
+    timeslicer(std::vector<timerange> tr) : m_slices(std::move(tr)) {
       if (!std::is_sorted(m_slices.begin(), m_slices.end())) {
         UFW_ERROR("Slices must be sorted");
       }

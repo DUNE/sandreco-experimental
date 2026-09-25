@@ -2,7 +2,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <common/digi.h>
-#include <common/timeslice.h>
+#include <common/timeslicer.h>
 
 #include <random>
 
@@ -50,9 +50,9 @@ BOOST_AUTO_TEST_CASE(time_slice) {
     vec.push_back(gen_tr());
   }
   BOOST_TEST(!std::is_sorted(vec.begin(), vec.end()));
-  BOOST_REQUIRE_THROW(timeslices{vec}, ufw::exception);
+  BOOST_REQUIRE_THROW(timeslicer{vec}, ufw::exception);
   std::sort(vec.begin(), vec.end());
-  BOOST_REQUIRE_NO_THROW(timeslices{vec});
+  BOOST_REQUIRE_NO_THROW(timeslicer{vec});
 
   //check we have some coverage
   double total_range = 0.0;
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(time_slice) {
     digis.emplace_back(sand::channel_id{.raw = -1ul}, dist_centre(gen), digi::source::unknown);
   }
   std::sort(digis.begin(), digis.end(), [](auto lhs, auto rhs) { return lhs.t() < rhs.t(); });
-  timeslices ts{vec};
+  timeslicer ts{vec};
   auto slices = ts.slice(digis.begin(), digis.end());
   //check that we created some non empty slice
   BOOST_REQUIRE_GT(slices.size(), 0);
