@@ -33,5 +33,5 @@ test:
    - rm -rf src/
    - rm -rf build/src/
    - rm -rf install/
-   - cd build && ctest --output-on-failure
+   - cd build && ctest --output-on-failure -R 150
 

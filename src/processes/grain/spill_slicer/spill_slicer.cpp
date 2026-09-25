@@ -123,6 +123,7 @@ namespace sand::grain {
     }
     trs_out.reserve(m_slice_edges.size() - 1);
     for (auto it = m_slice_edges.begin(); it != m_slice_edges.end() - 1; ++it) {
+      UFW_INFO("trs {}, {}, {}", it + m_bin_width * 0.5, *it, *(it + 1));
       trs_out.emplace_back(*it + m_bin_width * 0.5, *it, *(it + 1)); //best value in the centre of the first bin
       UFW_INFO("Found time interval {}", trs_out.back());
     }
