@@ -60,7 +60,7 @@ namespace ufw::data {
       // Copy EvtCode string (handle null pointer)
       std::string evtCodeStr = EvtCode ? EvtCode->GetString().Data() : "";
 
-      reader.events_.push_back({EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+      reader.events_.push_back({j, EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
 
       reader.stdHeps_.emplace_back(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
                                    StdHepFd, StdHepLd, StdHepFm, StdHepLm);

@@ -77,7 +77,7 @@ namespace sand::grain {
           const size_t idev = image.camera_id % m_n_devices;
           UFW_DEBUG("Image id: {}, processing on device {}", image.camera_id, idev);
           // Copy data to device buffer
-          m_image_buffers[image.camera_id].write(image.amplitude_array<float>().Array(),
+          m_image_buffers[image.camera_id].write(image.amplitude_array<float>().data(),
                                                  cl_manager.platform().queues()[image.camera_id % m_n_devices]);
           // Start with uniform voxel score distribution
           cl_manager.previous_amplitudes()[image.camera_id % m_n_devices].write(

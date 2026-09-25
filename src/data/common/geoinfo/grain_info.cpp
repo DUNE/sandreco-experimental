@@ -37,10 +37,10 @@ namespace sand {
       for (int i = 0; i != cellcount; ++i) {
         float x = -sx + centre.x();
         for (int j = 0; j != cellcount; ++j) {
-          pixels[i][j].left   = x;
-          pixels[i][j].top    = y;
-          pixels[i][j].right  = x + cellsize;
-          pixels[i][j].bottom = y - cellsize;
+          pixels.at(i,j).left   = x;
+          pixels.at(i,j).top    = y;
+          pixels.at(i,j).right  = x + cellsize;
+          pixels.at(i,j).bottom = y - cellsize;
           x += cellsize + celledge;
         }
         y -= cellsize + celledge;

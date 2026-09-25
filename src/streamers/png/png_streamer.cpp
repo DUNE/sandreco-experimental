@@ -51,7 +51,7 @@ namespace sand::png {
     if (m_scale_factor < 1) {
       UFW_ERROR("Invalid scale factor {}: must be integer >= 1", m_scale_factor);
     }
-    m_scaled_row.resize(sand::grain::pixel_array<double>::kCols * m_scale_factor);
+    m_scaled_row.resize(sand::grain::pixel_array<double>::width * m_scale_factor);
   }
 
   void png_streamer::prepare(const ufw::public_id& id, const ufw::type_id& tp) {
@@ -81,19 +81,19 @@ namespace sand::png {
             UFW_ERROR("Error during png creation.");
           }
           png_init_io(pngstruct, fp);
-          png_set_IHDR(pngstruct, info, sand::grain::pixel_array<double>::kCols * m_scale_factor,
-                      sand::grain::pixel_array<double>::kRows * m_scale_factor, 8, PNG_COLOR_TYPE_GRAY,
+          png_set_IHDR(pngstruct, info, sand::grain::pixel_array<double>::width * m_scale_factor,
+                      sand::grain::pixel_array<double>::height * m_scale_factor, 8, PNG_COLOR_TYPE_GRAY,
                       PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
           png_set_swap(pngstruct);
           png_write_info(pngstruct, info);
           auto array = img.amplitude_array<uint8_t>();
           UFW_DEBUG("Writing image data for camera {} at {}, pixel average = {}", int(img.camera_id), ctx,
                     [&array]() { return std::accumulate(array.begin(), array.end(), 0.0); }());
-          for (int row = 0; row != sand::grain::pixel_array<double>::kRows; ++row) {
-            for (int col = 0; col != sand::grain::pixel_array<double>::kCols; ++col) {
+          for (int row = 0; row != sand::grain::pixel_array<double>::height; ++row) {
+            for (int col = 0; col != sand::grain::pixel_array<double>::width; ++col) {
               for (int fillc = 0; fillc != m_scale_factor; ++fillc) {
                 // consistent indexing: Row Major
-                m_scaled_row[col * m_scale_factor + fillc] = array(row, col);
+                m_scaled_row[col * m_scale_factor + fillc] = array.at(row, col);
               }
             }
             for (int fillr = 0; fillr != m_scale_factor; ++fillr) {

@@ -106,3 +106,5 @@ namespace sand::reco {
   }
 
 } // namespace sand::reco
+
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::timerange)
