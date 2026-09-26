@@ -128,7 +128,7 @@ namespace sand::grain {
     // Binning versors and x'y' plane
     const std::vector<cl_float4> normals = fibonacci_sphere_normals(m_n_normals_in_sphere);
     m_unique_versors                     = select_unique_versors(normals);
-    const auto& gi                       = ufw::context::current()->instance<geoinfo>();
+    const auto& gi                       = instance<geoinfo>();
     const dir_3d grain_dimensions        = gi.grain().fiducial_bbox();
     const double xy_half_range           = grain_dimensions.R();
     m_n_xy_bins                          = static_cast<size_t>(std::ceil(2.0 * xy_half_range / m_xy_plane_step));

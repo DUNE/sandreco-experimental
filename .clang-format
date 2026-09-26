@@ -71,36 +71,7 @@ ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
-IncludeBlocks:   Preserve
-IncludeCategories:
-# boost header
-  - Regex:           '^<boost/'
-    Priority:        15
-    SortPriority:    0
-# standard/third-party C header
-  - Regex:           '^<.*\.h>'
-    Priority:        18
-    SortPriority:    0
-# third-party header
-  - Regex:           '^<.*\.'
-    Priority:        10
-    SortPriority:    0
-# standard C++ header
-  - Regex:           '^<.*'
-    Priority:        20
-    SortPriority:    0
-# internal, other-package header
-  - Regex:           '^"[^/]*/'
-    Priority:        2
-    SortPriority:    0
-# internal, this-package header
-  - Regex:           '^"[^/]*\.hpp'
-    Priority:        1
-    SortPriority:    0
-# anything else
-  - Regex:           '.*'
-    Priority:        1
-    SortPriority:    0
+IncludeBlocks: Preserve
 IncludeIsMainRegex: '(Test)?$'
 IncludeIsMainSourceRegex: ''
 IndentCaseLabels: false
@@ -133,7 +104,7 @@ PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 60
 PointerAlignment: Left
 ReflowComments:  false
-SortIncludes:    CaseSensitive
+SortIncludes: false
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false

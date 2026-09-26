@@ -48,8 +48,8 @@ namespace sand::grain {
 
   void mask_weights_computation::configure_frustum(cl::platform& platform) {
     const char* frustum_kernel_src =
-#include "cl_src/common_functions.cl"
 #include "cl_src/common_structs.cl"
+#include "cl_src/common_functions.cl"
 #include "cl_src/make_frustum.cl"
         ;
     platform.build_program(m_frustum_program, frustum_kernel_src);
@@ -58,8 +58,8 @@ namespace sand::grain {
 
   void mask_weights_computation::configure_solidangle(cl::platform& platform) {
     const char* solidangle_kernel_src =
-#include "cl_src/common_functions.cl"
 #include "cl_src/common_structs.cl"
+#include "cl_src/common_functions.cl"
 #include "cl_src/solidangle.cl"
         ;
     platform.build_program(m_solidangle_program, solidangle_kernel_src);
