@@ -51,7 +51,7 @@
     {
       "sand::caf::caf_rntuple_streamer": {
         "uri": "test/output.caf.rntuple.root",
-        "ntuple": "cafTree"
+        "ntuple": "cafRNtuple"
       },
       "write": ["produced_truth", "produced_common", "produced_nd"]
     }
