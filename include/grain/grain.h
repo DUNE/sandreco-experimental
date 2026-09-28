@@ -6,14 +6,56 @@
 
 namespace sand::grain {
 
-  constexpr std::size_t camera_height = 32u;
-  constexpr std::size_t camera_width  = 32u;
-
   // We cannot quite use SMatrix as is because its default initialization does not support non-numeric types.
-  template <typename T>
-  class pixel_array : public ROOT::Math::SMatrix<T, camera_height, camera_width> {
+  template <typename T, std::size_t N = 1024>
+  class pixel_array {
    public:
-    pixel_array() : ROOT::Math::SMatrix<T, camera_height, camera_width>(ROOT::Math::SMatrixNoInit()) {}
+    // Default constructor sets the size to the template defaults
+    pixel_array(std::size_t r = 0, std::size_t c = 0) : m_rows(r), m_columns(c) {
+      UFW_ASSERT(m_rows * m_columns <= N, "Supports cameras up to {}", N);
+    }
+
+    // Standard copy/move behavior
+    pixel_array(const pixel_array&)             = default;
+    pixel_array(pixel_array&&)                  = default;
+    pixel_array& operator= (const pixel_array&) = default;
+    pixel_array& operator= (pixel_array&&)      = default;
+
+    std::size_t rows() const { return m_rows; }
+    std::size_t columns() const { return m_columns; }
+    // Helper to get the flat index
+    size_t linear(std::size_t x, std::size_t y) const { return (x * m_columns) + y; }
+
+    // Accessors
+    T& at(std::size_t x, std::size_t y) { return m_data[linear(x, y)]; }
+    const T& at(std::size_t x, std::size_t y) const { return m_data[linear(x, y)]; }
+
+    // Data access for bulk operations
+    T* data() { return m_data.data(); }
+    const T* data() const { return m_data.data(); }
+
+    size_t size() const { return m_rows * m_columns; }
+
+    // For loops / iteration logic
+    template <typename Func, typename... Args>
+    void for_each(Func&& f, Args&&... args) const {
+      for (std::size_t x = 0; x < m_columns; ++x) {
+        for (std::size_t y = 0; y < m_rows; ++y) {
+          f(x, y, m_data[linear(x, y)], std::forward<Args>(args)...);
+        }
+      }
+    }
+
+    typename std::array<T, N>::iterator begin() { return m_data.begin(); }
+    typename std::array<T, N>::iterator end() { return m_data.begin() + size(); }
+
+    typename std::array<T, N>::const_iterator begin() const { return m_data.begin(); }
+    typename std::array<T, N>::const_iterator end() const { return m_data.begin() + size(); }
+
+   private:
+    std::array<T, N> m_data;
+    const std::size_t m_rows;
+    const std::size_t m_columns;
   };
 
   enum optics_type : uint8_t {
@@ -26,7 +68,7 @@ namespace sand::grain {
   using index_3d = ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<size_t>>;
   using size_3d  = ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<size_t>>;
   // Has metric (-,-,-,+) but sould not be used in scalar products anyway
-  using size_4d  = ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<size_t>>;
+  using size_4d = ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<size_t>>;
 
   template <typename T>
   class voxel_array {
@@ -35,11 +77,9 @@ namespace sand::grain {
 
     voxel_array(size_3d sz, T init) : m_data(count(sz), init), m_size(sz) {}
 
-    voxel_array(size_3d sz, const T* raw) : m_data(count(sz)), m_size(sz) {
-      std::copy_n(raw, count(sz), data());
-    }
+    voxel_array(size_3d sz, const T* raw) : m_data(count(sz)), m_size(sz) { std::copy_n(raw, count(sz), data()); }
 
-    voxel_array() : m_data(), m_size(0,0,0) {}
+    voxel_array() : m_data(), m_size(0, 0, 0) {}
 
     voxel_array(const voxel_array&) = default;
 

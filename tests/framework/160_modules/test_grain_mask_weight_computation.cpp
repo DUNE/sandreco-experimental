@@ -51,7 +51,9 @@ namespace sand::test {
     }
 
     for (const auto& camera : weights.datasets()) {
-      grain::voxel_array<grain::pixel_array<float>> camera_weights(voxels.size());
+      const auto& sipms = gi.grain().at(camera).sipm_active_areas;
+      grain::pixel_array<float> empty(sipms.rows(), sipms.columns());
+      grain::voxel_array<grain::pixel_array<float>> camera_weights(voxels.size(), empty);
       UFW_ASSERT(sizeof(grain::pixel_array<float>) == 4096, "pixel array is not dense");
       weights.read(camera, camera_weights.data());
       UFW_DEBUG("camera name {}", camera);

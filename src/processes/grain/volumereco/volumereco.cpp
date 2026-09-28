@@ -47,7 +47,7 @@ namespace sand::grain {
     m_image_buffers = std::vector<sand::cl::buffer>(array.datasets().size());
     for (auto& image_buffer : m_image_buffers) {
       image_buffer.allocate<CL_MEM_READ_WRITE>(cl_manager.platform().context(),
-                                               camera_height * camera_width * sizeof(float));
+                                               cl_manager.pixels_count() * sizeof(float));
     }
   }
 
@@ -61,7 +61,7 @@ namespace sand::grain {
 
     auto voxels            = cl_manager.fiducial();
     const size_t n_voxels  = voxels.size().x() * voxels.size().y() * voxels.size().z();
-    const size_t n_sensors = camera_height * camera_width;
+    const size_t n_sensors = cl_manager.pixels_count();
     const cl::NDRange voxel_shape(voxels.size().x(), voxels.size().y(), voxels.size().z());
     const cl::NDRange sensors_shape(n_sensors);
 
@@ -77,7 +77,7 @@ namespace sand::grain {
           const size_t idev = image.camera_id % m_n_devices;
           UFW_DEBUG("Image id: {}, processing on device {}", image.camera_id, idev);
           // Copy data to device buffer
-          m_image_buffers[image.camera_id].write(image.amplitude_array<float>().Array(),
+          m_image_buffers[image.camera_id].write(image.amplitude_array<float>().data(),
                                                  cl_manager.platform().queues()[image.camera_id % m_n_devices]);
           // Start with uniform voxel score distribution
           cl_manager.previous_amplitudes()[image.camera_id % m_n_devices].write(

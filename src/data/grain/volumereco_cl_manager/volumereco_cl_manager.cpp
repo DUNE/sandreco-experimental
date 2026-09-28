@@ -20,7 +20,7 @@ namespace sand::grain {
     const auto& gi       = ufw::context::current()->instance<geoinfo>();
     m_fiducial           = gi.grain().fiducial_voxels(sand::dir_3d(m_voxel_size, m_voxel_size, m_voxel_size));
     m_voxels_count       = m_fiducial.size().x() * m_fiducial.size().y() * m_fiducial.size().z();
-    m_pixels_count       = camera_height * camera_width;
+    m_pixels_count       = gi.grain().at(0).sipm_active_areas.size();
     size_t voxels_bytes  = m_voxels_count * sizeof(float);
     size_t weights_bytes = m_voxels_count * m_pixels_count * sizeof(float);
     UFW_INFO("Will allocate {} MB for voxel buffers", voxels_bytes / 1024 / 1024);
