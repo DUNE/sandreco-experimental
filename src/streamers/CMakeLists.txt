@@ -14,5 +14,6 @@ function(sandreco_add_streamer tgt)
 endfunction()
 
 add_subdirectory(caf_streamer)
+add_subdirectory(caf_rntuple_streamer)
 add_subdirectory(png)
 add_subdirectory(root)
