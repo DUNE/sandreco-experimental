@@ -22,25 +22,27 @@ namespace sand {
 
     grain::pixel_array<geoinfo::grain_info::rect_f> parse_pixels(const G4VPhysicalVolume* sipms,
                                                                  const G4GDMLAuxMapType* auxmap) {
-      grain::pixel_array<geoinfo::grain_info::rect_f> pixels;
       pos_3d centre(sipms->GetObjectTranslation());
-      auto sipms_lv  = sipms->GetLogicalVolume();
-      auto auxlist   = auxmap->find(sipms_lv)->second;
-      auxlist        = *auxlist.at(0).auxList;
-      auto cellcount = std::atoi(auxlist.at(0).value);
-      auto cellsize  = std::atof(auxlist.at(1).value);
-      auto celledge  = std::atof(auxlist.at(2).value);
-      auto box       = dynamic_cast<G4Box*>(sipms_lv->GetSolid());
-      float sx       = box->GetXHalfLength();
-      float sy       = box->GetYHalfLength();
-      float y        = sy + centre.y();
-      for (int i = 0; i != cellcount; ++i) {
+      auto sipms_lv = sipms->GetLogicalVolume();
+      auto auxlist  = auxmap->find(sipms_lv)->second;
+      auxlist       = *auxlist.at(0).auxList;
+      //FIXME parse better
+      auto cellcount_x = std::atoi(auxlist.at(0).value); //columns
+      auto cellcount_y = std::atoi(auxlist.at(1).value); //rows
+      auto cellsize    = std::atof(auxlist.at(2).value);
+      auto celledge    = std::atof(auxlist.at(3).value);
+      auto box         = dynamic_cast<G4Box*>(sipms_lv->GetSolid());
+      float sx         = box->GetXHalfLength();
+      float sy         = box->GetYHalfLength();
+      float y          = sy + centre.y();
+      grain::pixel_array<geoinfo::grain_info::rect_f> pixels(cellcount_y, cellcount_x);
+      for (int i = 0; i != cellcount_y; ++i) {
         float x = -sx + centre.x();
-        for (int j = 0; j != cellcount; ++j) {
-          pixels[i][j].left   = x;
-          pixels[i][j].top    = y;
-          pixels[i][j].right  = x + cellsize;
-          pixels[i][j].bottom = y - cellsize;
+        for (int j = 0; j != cellcount_x; ++j) {
+          pixels.at(i, j).left   = x;
+          pixels.at(i, j).top    = y;
+          pixels.at(i, j).right  = x + cellsize;
+          pixels.at(i, j).bottom = y - cellsize;
           x += cellsize + celledge;
         }
         y -= cellsize + celledge;

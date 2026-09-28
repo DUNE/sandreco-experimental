@@ -6,9 +6,11 @@
 #include <data.h>
 
 #include <ufw/config.hpp>
+#include <ufw/context.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/streamer.hpp>
 
+#include <geoinfo/grain_info.hpp>
 #include <grain/image.h>
 
 namespace sand::png {
@@ -30,6 +32,7 @@ namespace sand::png {
    private:
     int m_scale_factor;
     std::vector<uint8_t> m_scaled_row;
+    std::size_t m_rows;
   };
 
 } // namespace sand::png
@@ -51,7 +54,10 @@ namespace sand::png {
     if (m_scale_factor < 1) {
       UFW_ERROR("Invalid scale factor {}: must be integer >= 1", m_scale_factor);
     }
-    m_scaled_row.resize(sand::grain::pixel_array<double>::kCols * m_scale_factor);
+    const auto& gi = ufw::context::current()->instance<sand::geoinfo>();
+    const auto& c  = gi.grain().at(0);
+    m_scaled_row.resize(c.sipm_active_areas.columns() * m_scale_factor);
+    m_rows = c.sipm_active_areas.rows();
   }
 
   void png_streamer::prepare(const ufw::public_id& id, const ufw::type_id& tp) {
@@ -72,7 +78,7 @@ namespace sand::png {
         for (const auto& img : event) {
           auto filename = folder + '/' + basename + id + '_' + std::to_string(ctx) + '_' + std::to_string(img.camera_id)
                         + "_T" + std::to_string(long(img.time_begin)) + ext;
-          FILE* fp = fopen(filename.c_str(), "wb");
+          FILE* fp      = fopen(filename.c_str(), "wb");
           UFW_DEBUG("Opening file for camera {} at {}, named {}", int(img.camera_id), ctx, filename);
           png_structp pngstruct = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
           png_infop info        = png_create_info_struct(pngstruct);
@@ -81,19 +87,18 @@ namespace sand::png {
             UFW_ERROR("Error during png creation.");
           }
           png_init_io(pngstruct, fp);
-          png_set_IHDR(pngstruct, info, sand::grain::pixel_array<double>::kCols * m_scale_factor,
-                      sand::grain::pixel_array<double>::kRows * m_scale_factor, 8, PNG_COLOR_TYPE_GRAY,
-                      PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+          png_set_IHDR(pngstruct, info, m_scaled_row.size() * m_scale_factor, m_rows * m_scale_factor, 8,
+                       PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
           png_set_swap(pngstruct);
           png_write_info(pngstruct, info);
           auto array = img.amplitude_array<uint8_t>();
           UFW_DEBUG("Writing image data for camera {} at {}, pixel average = {}", int(img.camera_id), ctx,
                     [&array]() { return std::accumulate(array.begin(), array.end(), 0.0); }());
-          for (int row = 0; row != sand::grain::pixel_array<double>::kRows; ++row) {
-            for (int col = 0; col != sand::grain::pixel_array<double>::kCols; ++col) {
+          for (int row = 0; row != m_rows; ++row) {
+            for (int col = 0; col != m_scaled_row.size(); ++col) {
               for (int fillc = 0; fillc != m_scale_factor; ++fillc) {
                 // consistent indexing: Row Major
-                m_scaled_row[col * m_scale_factor + fillc] = array(row, col);
+                m_scaled_row[col * m_scale_factor + fillc] = array.at(row, col);
               }
             }
             for (int fillr = 0; fillr != m_scale_factor; ++fillr) {
