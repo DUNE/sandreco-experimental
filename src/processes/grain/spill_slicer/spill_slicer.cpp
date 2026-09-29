@@ -135,8 +135,7 @@ namespace sand::grain {
             it->blank();
             UFW_DEBUG("Created image for camera id: {}, starting at time: {} ns", id, m_slice_times[img_idx]);
           }
-          UFW_DEBUG("signal to be assigned to camera id {} ({} x {}), image {} at channel {}", id, sipms.rows(),
-                    sipms.columns(), img_idx, signal.channel().channel);
+          UFW_DEBUG("signal to be assigned to camera id {}, image {} at channel {}", id, img_idx, signal.channel().channel);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
 
           auto& pixel = it->pixels.data()[signal.channel().channel];
