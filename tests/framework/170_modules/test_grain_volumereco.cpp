@@ -41,16 +41,13 @@ namespace sand::test {
           "Reconstructed photon distribution has NaN values");
 
       fiducial_voxels.for_each([&evt_voxels](const sand::grain::index_3d& idx, auto& fid_val) {
-        if (fid_val > 0) {
+        if (fid_val) {
           UFW_ASSERT(evt_voxels.at(idx) >= 0, "Invalid value in fiducial volume: {} at index {}", evt_voxels.at(idx),
                      idx);
         } else {
-          if (evt_voxels.at(idx)!= 0.){
-            UFW_WARN ("Non-zero reconstructed photon amplitude in voxel outside of fiducial volume: {} at index {}", evt_voxels.at(idx), idx);
-          }
-          // UFW_ASSERT(evt_voxels.at(idx) == 0.,
-          //            "Non-zero reconstructed photon amplitude in voxel outside of fiducial volume: {} at index {}",
-          //            evt_voxels.at(idx), idx);
+          UFW_ASSERT(evt_voxels.at(idx) == 0.,
+                     "Non-zero reconstructed photon amplitude in voxel outside of fiducial volume: {} at index {}",
+                     evt_voxels.at(idx), idx);
         }
       });
     }

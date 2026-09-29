@@ -1,3 +1,4 @@
+#include "ufw/utils.hpp"
 #include <geoinfo/grain_info.hpp>
 #include <grain/digi.h>
 #include <grain/image.h>
@@ -134,8 +135,10 @@ namespace sand::grain {
             it->blank();
             UFW_DEBUG("Created image for camera id: {}, starting at time: {} ns", id, m_slice_times[img_idx]);
           }
-          //UFW_DEBUG("signal to be assigned to camera id {}, image {}", id, img_idx);
+          UFW_DEBUG("signal to be assigned to camera id {} ({} x {}), image {} at channel {}", id, sipms.rows(),
+                    sipms.columns(), img_idx, signal.channel().channel);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
+
           auto& pixel = it->pixels.data()[signal.channel().channel];
           pixel.insert(signal.true_hits());
           //UFW_DEBUG("adding {} photons to pixel.", signal.npe());
