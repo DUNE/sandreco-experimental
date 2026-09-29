@@ -40,7 +40,7 @@
       "sand::grain::volumereco" : {
         "max_iterations" : 3,
         "pde" : 1.0,
-        "write_to_hdf5" : false
+        "write_to_hdf5" : true
       },
       "reqs" : { "images" : "grain_images" },
       "prods" : { "photon_amplitudes" : "grain_lightmap" }
