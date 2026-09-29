@@ -1,3 +1,4 @@
+#include "ufw/utils.hpp"
 #include <geoinfo/grain_info.hpp>
 #include <hdf5/hdf5.hpp>
 #include <grain/grain.h>
@@ -34,45 +35,47 @@ namespace sand::test {
     auto& weights  = instance<sand::hdf5::ndarray>("angle_reader");
     const auto& gi = instance<geoinfo>();
     dir_3d voxel_sizes(m_voxel_size, m_voxel_size, m_voxel_size);
-    auto voxels                   = gi.grain().fiducial_voxels(voxel_sizes);
-    const auto weights_dimensions = weights.range(weights.datasets().front());
-    const size_t weights_size =
-        weights_dimensions[0] * weights_dimensions[1] * weights_dimensions[2] * weights_dimensions[3];
-    UFW_DEBUG("weights shape: {}, {}, {}, {}", weights_dimensions[0], weights_dimensions[1], weights_dimensions[2],
-              weights_dimensions[3]);
-    if (weights.datasets().size() != gi.grain().mask_cameras().size()) {
-      UFW_ERROR("Mismatch between cameras in geometry ({}) and computed weight arrays ({})",
-                gi.grain().mask_cameras().size(), weights.datasets().size());
+    auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
+    const auto& in_weights_file = weights.datasets();
+    const auto& in_geometry = gi.grain().mask_cameras();
+    //check weights are consistent with geometry
+    if (in_weights_file.size() != in_geometry.size()) {
+      UFW_ERROR("Mismatch between camera count in geometry ({}) and computed weight arrays ({})",
+                in_geometry.size(), in_weights_file.size());
     }
-    if (weights_dimensions[0] != voxels.size().x() || weights_dimensions[1] != voxels.size().y()
-        || weights_dimensions[2] != voxels.size().z()) {
-      UFW_ERROR("hdf5 voxels shape: ({}, {}, {}). Geometry voxels shape: {}.", weights_dimensions[0],
-                weights_dimensions[1], weights_dimensions[2], voxels.size());
+    for (const auto& g_cam : in_geometry) {
+      auto it = std::find(in_weights_file.begin(), in_weights_file.end(), g_cam.name);
+      if (it == in_weights_file.end()) {
+        UFW_ERROR("Camera {} from geometry not found in file.");
+      }
+      auto ndr = weights.range(g_cam.name);
+      if (ndr[0] != voxels.size().x() || ndr[1] != voxels.size().y() ||
+          ndr[2] != voxels.size().z() || ndr[3] != g_cam.sipm_active_areas.size()) {
+        UFW_ERROR("Camera {} has mismatched sizes: geometry {} x {}, weights file {}",
+                  g_cam.name, voxels.size(), g_cam.sipm_active_areas.size(), ndr);
+      }
     }
-
-    for (const auto& camera : weights.datasets()) {
-      const auto& sipms = gi.grain().at(camera).sipm_active_areas;
-      grain::pixel_array<float> empty(sipms.rows(), sipms.columns());
-      grain::voxel_array<grain::pixel_array<float>> camera_weights(voxels.size(), empty);
-      UFW_ASSERT(sizeof(grain::pixel_array<float>) == 4096, "pixel array is not dense");
-      weights.read(camera, camera_weights.data());
-      UFW_DEBUG("camera name {}", camera);
-      float camera_w_sum = 0;
-      voxels.for_each([&camera_weights, &camera_w_sum](const sand::grain::index_3d idx, auto fid_val) {
-        for (float w : camera_weights.at(idx)) {
-          if (fid_val > 0) {
-            camera_w_sum += w;
-            if (w < 0 || w >= 1) {
-              UFW_WARN("Invalid weight {} in fiducial, at index {}", w, idx);
-            }
+    //check weights have reasonable values
+    for (const auto& g_cam : in_geometry) {
+      UFW_INFO("camera name {}", g_cam.name);
+      auto ws = weights.read<float>(g_cam.name);
+      std::size_t total_size = weights.range(g_cam.name).flat_size();
+      std::size_t cam_size = g_cam.sipm_active_areas.size();
+      const float* base_ptr = ws.get();
+      float w_sum = 0.f;
+      voxels.for_each([&](auto idx, auto fid_val) {
+        const float* cam_ptr = base_ptr + voxels.linear(idx) * cam_size;
+        for (std::size_t i = 0; i != cam_size; ++i) {
+          float w = cam_ptr[i];
+          if (fid_val) {
+            w_sum += w;
+            UFW_ASSERT(w >= 0.0 && w <= 1.0, "Invalid weight {} in fiducial, at index {}, {}", w, idx, i);
           } else {
-            if (w != 0) {
-              UFW_WARN("Invalid weight {} outside of fiducial, at index {}", w, idx);
-            }
+            UFW_ASSERT(w == 0.0, "Invalid weight {} outside of fiducial, at index {}, {}", w, idx, i);
           }
         }
       });
-      UFW_INFO("camera {} weights sum = {}", camera, camera_w_sum);
+      UFW_INFO("camera {} weights sum = {}", g_cam.name, w_sum);
     }
   }
 } // namespace sand::test
