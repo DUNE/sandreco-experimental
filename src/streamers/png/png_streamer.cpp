@@ -32,6 +32,7 @@ namespace sand::png {
    private:
     int m_scale_factor;
     std::vector<uint8_t> m_scaled_row;
+    std::size_t m_columns;
     std::size_t m_rows;
   };
 
@@ -57,6 +58,7 @@ namespace sand::png {
     const auto& gi = ufw::context::current()->instance<sand::geoinfo>();
     const auto& c  = gi.grain().at(0);
     m_scaled_row.resize(c.sipm_active_areas.columns() * m_scale_factor);
+    m_columns = c.sipm_active_areas.columns();
     m_rows = c.sipm_active_areas.rows();
   }
 
@@ -87,7 +89,7 @@ namespace sand::png {
             UFW_ERROR("Error during png creation.");
           }
           png_init_io(pngstruct, fp);
-          png_set_IHDR(pngstruct, info, m_scaled_row.size() * m_scale_factor, m_rows * m_scale_factor, 8,
+          png_set_IHDR(pngstruct, info, m_scaled_row.size(), m_rows * m_scale_factor, 8,
                        PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
           png_set_swap(pngstruct);
           png_write_info(pngstruct, info);
@@ -95,7 +97,7 @@ namespace sand::png {
           UFW_DEBUG("Writing image data for camera {} at {}, pixel average = {}", int(img.camera_id), ctx,
                     [&array]() { return std::accumulate(array.begin(), array.end(), 0.0); }());
           for (int row = 0; row != m_rows; ++row) {
-            for (int col = 0; col != m_scaled_row.size(); ++col) {
+            for (int col = 0; col != m_columns; ++col) {
               for (int fillc = 0; fillc != m_scale_factor; ++fillc) {
                 // consistent indexing: Row Major
                 m_scaled_row[col * m_scale_factor + fillc] = array.at(row, col);

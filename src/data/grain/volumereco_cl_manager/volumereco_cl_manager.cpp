@@ -48,10 +48,9 @@ namespace sand::grain {
     const size_4d weights_shape(weights_dim_tmp[0], weights_dim_tmp[1], weights_dim_tmp[2], weights_dim_tmp[3]);
 
     // Check that voxel shape matches between geometry and weights
-    UFW_ASSERT(weights_shape.X() == m_fiducial.size().x() && weights_shape.Y() == m_fiducial.size().y()
-                   && weights_shape.Z() == m_fiducial.size().z(),
-               "hdf5 voxels shape: ({}, {}, {}). Geometry voxels shape: {}.", weights_shape.X(), weights_shape.Y(),
-               weights_shape.Z(), m_fiducial.size());
+    UFW_ASSERT(weights_shape.X() == m_fiducial.size().x() && weights_shape.Y() == m_fiducial.size().y() &&
+               weights_shape.Z() == m_fiducial.size().z() && weights_shape.T() == m_pixels_count,
+               "hdf5 voxels shape: {}. Geometry voxels shape: {}, {}.", weights_shape, m_fiducial.size(), m_pixels_count);
 
     // Calculate combined sensitivity matrix
     std::vector<float> accumulate_sensitivity(m_voxels_count, 0.f);
