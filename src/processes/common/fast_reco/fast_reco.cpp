@@ -42,7 +42,7 @@ namespace sand::common {
       ++common_reco_branch.ixn.nsandreco;
 
       auto& nd_reco_ixn   = nd_reco_branch.sand.ixn.emplace_back();
-      nd_reco_ixn.tracker = reco_details::sand_tracker_from_true(true_ixn, tracker_ids, ixn_idx);
+      nd_reco_ixn.tracker = reco_details::sand_tracker_from_true(true_ixn, tracker_ids, ixn_idx, edep);
       ++nd_reco_branch.sand.nixn;
 
       UFW_ASSERT(common_reco_branch.ixn.sandreco.size() == common_reco_branch.ixn.nsandreco,

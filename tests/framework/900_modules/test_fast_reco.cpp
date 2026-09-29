@@ -190,6 +190,27 @@ namespace sand::test {
                      ixn_idx, p, track.E, true_part.p.E);
           UFW_ASSERT(track.Evis == track.E, "nu[{}].part[{}]: SRTrack::Evis ({}) doesn't match SRTrack::E ({})",
                      ixn_idx, p, track.Evis, track.E);
+
+          // fast_reco derives SRTrack::enddir from the edep-sim trajectory's last point
+          // (the direction at the endpoint, which bends in a magnetic field). Re-derive it
+          // here the slow way and check it matches.
+          auto trj = edep.GetTrajectory(true_part.G4ID);
+          if (trj != edep.end()) {
+            auto const pts = trj->GetTrajectoryPointsVect();
+            if (pts.size() >= 2) {
+              auto const& mom = pts.back().GetMomentum();
+              double const mm = std::hypot(mom.x(), mom.y(), mom.z());
+              if (mm > 1e-6) { // skip stopped particles (zero final momentum)
+                UFW_ASSERT(std::abs(track.enddir.x - mom.x() / mm) < 1e-4
+                               && std::abs(track.enddir.y - mom.y() / mm) < 1e-4
+                               && std::abs(track.enddir.z - mom.z() / mm) < 1e-4,
+                           "nu[{}].part[{}]: track enddir ({}, {}, {}) doesn't match the last trajectory momentum "
+                           "direction ({}, {}, {})",
+                           ixn_idx, p, track.enddir.x, track.enddir.y, track.enddir.z, mom.x() / mm, mom.y() / mm,
+                           mom.z() / mm);
+              }
+            }
+          }
           ++n_with_track;
         } else if (particle.origRecoObjType == ::caf::RecoObjType::kShower) {
           UFW_ASSERT(showerish, "nu[{}].part[{}]: pdg {} isn't shower-like but got a shower", ixn_idx, p, particle.pdg);

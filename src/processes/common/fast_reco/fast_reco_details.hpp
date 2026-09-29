@@ -55,7 +55,7 @@ namespace sand {
 
     /// \brief Perfect track, for a track-like particle that has tracker hits.
     [[nodiscard]] ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part,
-                                                 ::caf::TrueParticleID const& id);
+                                                 ::caf::TrueParticleID const& id, sand::edep_reader const& edep);
 
     /// \brief Perfect shower, for a shower-like particle that has tracker hits.
     [[nodiscard]] ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part,
@@ -71,7 +71,8 @@ namespace sand {
 
     /// \brief Perfect SAND tracker: one caf::SRTrack/caf::SRShower per particle that passed the gate.
     [[nodiscard]] ::caf::SRTracker sand_tracker_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                          TrackerG4IDs const& tracker_ids, int ixn_idx);
+                                                          TrackerG4IDs const& tracker_ids, int ixn_idx,
+                                                          sand::edep_reader const& edep);
 
   } // namespace common::reco_details
 } // namespace sand
