@@ -16,6 +16,7 @@
 
 #include <TDatabasePDG.h>
 #include <TParticlePDG.h>
+#include <duneanaobj/StandardRecord/SRVector3D.h>
 
 #include <algorithm>
 #include <cmath>
@@ -80,6 +81,32 @@ namespace sand::common::reco_details {
       default:
         return -1; // no parent, or prefsi (not modeled here)
       }
+    }
+
+    ::caf::SRVector3D end_direction_from_edep(sand::edep_reader const& edep, ::caf::SRTrueParticle const& true_part,
+                                              ::caf::SRVector3D const& start_dir) {
+      double constexpr stopped_momentum{1e-6};
+
+      auto trj = edep.GetTrajectory(true_part.G4ID);
+      if (trj == edep.end()) {
+        return start_dir;
+      }
+
+      auto const points = trj->GetTrajectoryPointsVect();
+      if (points.size() < 2) {
+        return start_dir;
+      }
+
+      auto const& last_mom = points.back().GetMomentum();
+      if (std::hypot(last_mom.x(), last_mom.y(), last_mom.z()) > stopped_momentum) {
+        return normalize_to_direction(static_cast<float>(last_mom.x()), static_cast<float>(last_mom.y()),
+                                      static_cast<float>(last_mom.z()));
+      }
+
+      auto const& prev = points[points.size() - 2].GetPosition();
+      auto const& last = points.back().GetPosition();
+      return normalize_to_direction(static_cast<float>(last.x() - prev.x()), static_cast<float>(last.y() - prev.y()),
+                                    static_cast<float>(last.z() - prev.z()));
     }
   } // namespace
 
@@ -183,13 +210,14 @@ namespace sand::common::reco_details {
     return reco_p;
   }
 
-  ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
+  ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,
+                                 sand::edep_reader const& edep) {
     ::caf::SRTrack track{};
 
     track.start  = true_part.start_pos;
     track.end    = true_part.end_pos;
     track.dir    = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
-    track.enddir = track.dir;
+    track.enddir = end_direction_from_edep(edep, true_part, track.dir);
     track.time   = true_part.time;
     track.E      = true_part.p.E;
     track.Evis   = track.E;
@@ -282,14 +310,14 @@ namespace sand::common::reco_details {
   }
 
   ::caf::SRTracker sand_tracker_from_true(::caf::SRTrueInteraction const& true_ixn, TrackerG4IDs const& tracker_ids,
-                                          int ixn_idx) {
+                                          int ixn_idx, sand::edep_reader const& edep) {
     ::caf::SRTracker tracker{};
 
     for (auto const& slot : particle_slots_from_true(true_ixn, tracker_ids, ixn_idx)) {
       auto const& true_part = true_particle_from_id(true_ixn, slot.id);
 
       if (slot.track_idx >= 0) {
-        auto track = track_from_true(true_part, slot.id);
+        auto track = track_from_true(true_part, slot.id, edep);
         track.part = {ixn_idx, ::caf::SRRecoParticleID::kSandreco, slot.part_idx};
         tracker.tracks.push_back(std::move(track));
         ++tracker.ntracks;
