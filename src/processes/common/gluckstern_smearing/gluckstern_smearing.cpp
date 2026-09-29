@@ -20,8 +20,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numeric>
 #include <cstdlib>
+#include <numeric>
 #include <random>
 
 namespace sand::common {
@@ -251,17 +251,16 @@ namespace sand::common {
 
         auto const smeared_p = smear_momentum_gluckstern(true_part.p, *geom, m_sigma_t, m_sigma_l, m_b_field);
         if (!smeared_p) {
-          ++n_out_of_range; // resolution not physically usable (see kMaxRelativePtResolution); left unsmeared
+          ++n_out_of_range; // resolution not physically usable, left unsmeared
           continue;
         }
 
         auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
         float const mass     = pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
 
-        track.dir    = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
-        track.enddir = track.dir;
-        track.E      = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass));
-        track.Evis   = track.E;
+        track.dir  = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
+        track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass));
+        track.Evis = track.E;
 
         ++n_smeared;
       }
