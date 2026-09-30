@@ -1,33 +1,29 @@
-#ifndef CAF_STREAMER_HPP
-#define CAF_STREAMER_HPP
+#ifndef SAND_CAF_CAF_STREAMER_HPP
+#define SAND_CAF_CAF_STREAMER_HPP
 
 #include <ufw/streamer.hpp>
+#include <duneanaobj/StandardRecord/StandardRecord.h>
 
-#include <caf/caf_wrapper.hpp>
+class TFile;
+class TTree;
 
-#include <TFile.h>
-#include <TTree.h>
+namespace caf {
+  class StandardRecord;
+}
 
 namespace sand::caf {
 
-  /**
-   * @brief Streamer for CAF (Common Analysis Format) ROOT files.
-   *
-   * Manages reading/writing standard_record_wrapper data to/from TTree branches.
-   */
   class caf_streamer : public ufw::streamer {
     std::unique_ptr<TFile> m_file;
-    TTree* m_tree                              = nullptr;
-    standard_record_wrapper* m_data            = nullptr;
-    truth_branch_wrapper const* m_truth_branch = nullptr;
-    standard_record_wrapper m_internal_sr;
-    ufw::type_id m_attached_type;
-    ::caf::StandardRecord* m_caf_ptr                 = nullptr;
-    ufw::context_id m_context_id                     = {};
-    long m_last_entry                                = 0;
-    bool m_has_context_id                            = false;
-    static constexpr const char* s_context_id_branch = "context_id";
-    static constexpr const char* s_data_branch       = "rec";
+    TTree* m_tree{nullptr};
+    ::caf::StandardRecord* m_caf_ptr{nullptr};
+
+    ufw::context_id m_context_id{};
+    long m_last_entry{};
+    bool m_has_context_id{false};
+
+    static constexpr const char* s_context_id_branch{"context_id"};
+    static constexpr const char* s_data_branch{"rec"};
 
    public:
     caf_streamer() = default;
