@@ -26,11 +26,27 @@ namespace sand {
       auto sipms_lv = sipms->GetLogicalVolume();
       auto auxlist  = auxmap->find(sipms_lv)->second;
       auxlist       = *auxlist.at(0).auxList;
-      //FIXME parse better
-      auto cellcount_x = std::atoi(auxlist.at(0).value); //columns
-      auto cellcount_y = std::atoi(auxlist.at(1).value); //rows
-      auto cellsize    = std::atof(auxlist.at(2).value);
-      auto celledge    = std::atof(auxlist.at(3).value);
+      int cellcount_x = 0;
+      int cellcount_y = 0;
+      float cellsize = 0.0;
+      float celledge = 0.0;
+      for (auto aux : auxlist) {
+        if (aux.type == "cellcount") {
+          cellcount_y = cellcount_x = std::atoi(aux.value);
+        }
+        if (aux.type == "cellcount_x") {
+          cellcount_x = std::atoi(aux.value);
+        }
+        if (aux.type == "cellcount_y") {
+          cellcount_y = std::atoi(aux.value);
+        }
+        if (aux.type == "cellsize") {
+          cellsize = std::atof(aux.value);
+        }
+        if (aux.type == "celledge") {
+          celledge = std::atof(aux.value);
+        }
+      }
       auto box         = dynamic_cast<G4Box*>(sipms_lv->GetSolid());
       float sx         = box->GetXHalfLength();
       float sy         = box->GetYHalfLength();
