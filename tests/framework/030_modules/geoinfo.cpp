@@ -49,7 +49,7 @@ namespace sand::test {
       UFW_INFO("Testing: {}", name);
       if (name == "grain_3mm") {
         test_grain(3.0);
-      if (name == "grain_4mm") {
+      } else if (name == "grain_4mm") {
         test_grain(4.0);
       } else if (name == "ecal") {
         test_ecal();
