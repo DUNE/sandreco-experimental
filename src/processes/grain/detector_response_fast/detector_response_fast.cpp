@@ -70,17 +70,17 @@ namespace sand::grain {
       if (interaction_probability < m_pde) {
         // UFW_DEBUG("processing photon with position: {}, {}", photon.pos.X(), photon.pos.Y());
         bool channel_found = false;
-        for (int i = 0; i != camera_height && !channel_found; ++i) {
-          for (int j = 0; j != camera_width; ++j) {
-            if (photon.pos.X() > camera.sipm_active_areas[i][j].left
-                && photon.pos.X() < camera.sipm_active_areas[i][j].right
-                && photon.pos.Y() > camera.sipm_active_areas[i][j].bottom
-                && photon.pos.Y() < camera.sipm_active_areas[i][j].top) {
+        for (int i = 0; i != camera.sipm_active_areas.rows() && !channel_found; ++i) {
+          for (int j = 0; j != camera.sipm_active_areas.columns(); ++j) {
+            if (photon.pos.X() > camera.sipm_active_areas.at(i, j).left
+                && photon.pos.X() < camera.sipm_active_areas.at(i, j).right
+                && photon.pos.Y() > camera.sipm_active_areas.at(i, j).bottom
+                && photon.pos.Y() < camera.sipm_active_areas.at(i, j).top) {
               channel_id ch;
               ch.subdetector = GRAIN;
               ch.link        = photon.camera_id;
               // consistent indexing: Row Major
-              ch.channel = i * camera_width + j;
+              ch.channel = camera.sipm_active_areas.linear(i, j);
               digi_out.signals.emplace_back(photon, ch, digi::signal::time{photon.pos.T()}, 1.0, NAN);
               m_stat_photons_accepted++;
               // UFW_DEBUG("Added photon to SiPM {},{}", i, j);

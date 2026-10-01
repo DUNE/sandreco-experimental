@@ -1,3 +1,5 @@
+#include "ufw/utils.hpp"
+#include <geoinfo/grain_info.hpp>
 #include <grain/digi.h>
 #include <grain/image.h>
 
@@ -111,6 +113,7 @@ namespace sand::grain {
     m_stat_photons_discarded = 0;
     const auto& digis_in     = get<digi>("digi");
     auto& spill_images_out   = set<images>("images").images;
+    auto& grain              = instance<geoinfo>().grain();
     if (m_use_algo) {
       m_slice_times.clear();
       compute_slice_times();
@@ -123,16 +126,19 @@ namespace sand::grain {
           auto id = signal.channel().link;
           auto it = std::find_if(event_images_out.begin(), event_images_out.end(),
                                  [id](auto& img) { return img.camera_id == id; });
+
           if (it == event_images_out.end()) {
-            images::image img{id, m_slice_times[img_idx], m_slice_times[img_idx + 1]};
+            const auto& sipms = grain.at(id).sipm_active_areas;
+            images::image img{id, m_slice_times[img_idx], m_slice_times[img_idx + 1], {sipms.rows(), sipms.columns()}};
             event_images_out.emplace_back(img);
             it = event_images_out.end() - 1;
             it->blank();
             UFW_DEBUG("Created image for camera id: {}, starting at time: {} ns", id, m_slice_times[img_idx]);
           }
-          //UFW_DEBUG("signal to be assigned to camera id {}, image {}", id, img_idx);
+          UFW_DEBUG("signal to be assigned to camera id {}, image {} at channel {}", id, img_idx, signal.channel().channel);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
-          auto& pixel = it->pixels.Array()[signal.channel().channel];
+
+          auto& pixel = it->pixels.data()[signal.channel().channel];
           pixel.insert(signal.true_hits());
           //UFW_DEBUG("adding {} photons to pixel.", signal.npe());
           pixel.amplitude += signal.npe();
@@ -145,18 +151,7 @@ namespace sand::grain {
         }
         m_stat_photons_processed++;
       }
-      for (const auto& img : event_images_out) {
-        size_t maxhits = 0;
-        double npe     = 0.;
-        for (int x = 0; x != camera_width; ++x) {
-          for (int y = 0; y != camera_height; ++y) {
-            maxhits = std::max(maxhits, img.pixels[x][y].true_hits().size());
-            npe += img.pixels[x][y].amplitude;
-          }
-        }
-        UFW_DEBUG("Camera {} recorded a total of {} photons from {} different MC true hits", img.camera_id, npe,
-                  maxhits);
-      }
+
       spill_images_out.emplace_back(event_images_out);
     }
     UFW_INFO("Processed {} photons; {} were accepted, {} discarded.", m_stat_photons_processed, m_stat_photons_accepted,
