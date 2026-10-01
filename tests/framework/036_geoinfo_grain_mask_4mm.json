@@ -19,7 +19,7 @@
   },
   "run" : [
     {
-      "sand::test::geoinfo" : { "init" : ["grain"], "test" : ["grain"] },
+      "sand::test::geoinfo" : { "init" : ["grain_4mm"], "test" : ["grain_4mm"] },
       "reqs" : {}
     }
   ]

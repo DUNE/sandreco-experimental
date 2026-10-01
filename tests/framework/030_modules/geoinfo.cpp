@@ -16,7 +16,7 @@ namespace sand::test {
     void run() override;
 
    private:
-    void test_grain();
+    void test_grain(float mm);
     void test_ecal();
     void test_tracker();
 
@@ -37,7 +37,7 @@ namespace sand::test {
     sand::geoinfo& gi = instance<sand::geoinfo>();
     for (auto name : m_init) {
       UFW_INFO("Initializing: {}", name);
-      if (name == "grain") {
+      if (name == "grain_3mm" || name == "grain_4mm") {
         gi.grain();
       } else if (name == "ecal") {
         gi.ecal();
@@ -47,8 +47,10 @@ namespace sand::test {
     }
     for (auto name : m_test) {
       UFW_INFO("Testing: {}", name);
-      if (name == "grain") {
-        test_grain();
+      if (name == "grain_3mm") {
+        test_grain(3.0);
+      if (name == "grain_4mm") {
+        test_grain(4.0);
       } else if (name == "ecal") {
         test_ecal();
       } else if (name == "tracker") {
@@ -57,7 +59,7 @@ namespace sand::test {
     }
   }
 
-  void geoinfo::test_grain() {
+  void geoinfo::test_grain(float mm) {
     auto close        = [](double x, double y) { return std::abs(x - y) < 1e-3; };
     auto area         = [](auto r) { return std::abs(r.top - r.bottom) * std::abs(r.right - r.left); };
     sand::geoinfo& gi = instance<sand::geoinfo>();
@@ -72,7 +74,7 @@ namespace sand::test {
       UFW_ASSERT(close(sum, expected_area), "Camera {} is not the expected area: {} square mm vs {}", lcam.name, sum,
                  expected_area);
     }
-    expected_area = 1024 * 3.0 * 3.0;
+    expected_area = mm == 4.0 ? 1008 * 4.0 * 4.0 : 1024 * 3.0 * 3.0;
     for (const auto& mcam : gi.grain().mask_cameras()) {
       UFW_ASSERT(mcam.z_mask > mcam.z_sipm, "Camera {} has the mask behind the sensor", mcam.name);
       double sum = 0.0;
