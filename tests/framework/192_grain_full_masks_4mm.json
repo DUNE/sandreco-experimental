@@ -24,15 +24,15 @@
     "sand::geoinfo" : { "grain" : { "inner_geometry" : "gdml-masks" } },
     "sand::grain::geant_run_manager" : {},
     "sand::grain::geant_gdml_parser" : {
-      "gdml-masks" : { "path" : "geometries/grain/grain-masks_3mm_32x32/main.gdml" }
+      "gdml-masks" : { "path" : "geometries/grain/grain-masks_4mm_42x24/main.gdml" }
     },
     "sand::hdf5::ndarray" : {
       "angle_reader" : {
-        "uri" : "test/voxel_weights_3mm.h5",
+        "uri" : "test/voxel_weights_4mm.h5",
         "io" : "read"
       },
       "score_writer" : {
-        "uri" : "test/volumereco_full_3mm.h5",
+        "uri" : "test/volumereco_4mm.h5",
         "io" : "overwrite"
       }
     }
@@ -93,7 +93,7 @@
     },
     {
       "sand::root::tree_streamer" : {
-        "uri" : "test/volumereco_full_4mm.root",
+        "uri" : "test/volumereco_4mm.root",
         "tree" : "recos"
       },
       "write" : ["grain_images", "grain_digi", "grain_lightmap"]
