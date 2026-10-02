@@ -1,5 +1,5 @@
-#include <geoinfo/geoinfo.hpp>
 #include <geoinfo/ecal_info.hpp>
+#include <geoinfo/geoinfo.hpp>
 #include <geoinfo/grain_info.hpp>
 #include <geoinfo/tracker_info.hpp>
 
@@ -73,9 +73,9 @@ namespace sand::common {
       UFW_INFO("First camera details:");
       for (int i = 0; i != 32; ++i) {
         for (int j = 0; j != 32; ++j) {
-          UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas.at(i,j).left,
-                   pix_spam.sipm_active_areas.at(i,j).top, pix_spam.sipm_active_areas.at(i,j).right,
-                   pix_spam.sipm_active_areas.at(i,j).bottom);
+          UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas.at(i, j).left,
+                   pix_spam.sipm_active_areas.at(i, j).top, pix_spam.sipm_active_areas.at(i, j).right,
+                   pix_spam.sipm_active_areas.at(i, j).bottom);
         }
       }
       std::for_each(pix_spam.holes.begin(), pix_spam.holes.end(), [](auto r) {
@@ -93,9 +93,9 @@ namespace sand::common {
       UFW_INFO("First camera details:");
       for (int i = 0; i != 32; ++i) {
         for (int j = 0; j != 32; ++j) {
-          UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas.at(i,j).left,
-                   pix_spam.sipm_active_areas.at(i,j).top, pix_spam.sipm_active_areas.at(i,j).right,
-                   pix_spam.sipm_active_areas.at(i,j).bottom);
+          UFW_INFO("SiPM rect top left = ({}, {}), bottom right = ({}, {})", pix_spam.sipm_active_areas.at(i, j).left,
+                   pix_spam.sipm_active_areas.at(i, j).top, pix_spam.sipm_active_areas.at(i, j).right,
+                   pix_spam.sipm_active_areas.at(i, j).bottom);
         }
       }
       UFW_INFO("Last camera info: distance lens-sensor = {}", pix_spam.z_lens);
@@ -207,15 +207,12 @@ namespace sand::common {
     auto off          = -(0.5 * lexp - l1exp);
     auto pobt         = cb.offset2position(off);
 
-    UFW_ASSERT(lexp == lobt,
-               "[ECAL BARREL] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt);
-    UFW_ASSERT(l1exp == l1obt,
-               "[ECAL BARREL] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt);
-    UFW_ASSERT(p == pobt,
-               "[ECAL BARREL] Points don't match!!! Expected point: {} - Obtained point: {}", p, pobt);
+    UFW_ASSERT(lexp == lobt, "[ECAL BARREL] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt);
+    UFW_ASSERT(l1exp == l1obt, "[ECAL BARREL] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt);
+    UFW_ASSERT(p == pobt, "[ECAL BARREL] Points don't match!!! Expected point: {} - Obtained point: {}", p, pobt);
     UFW_ASSERT(cb.is_inside(p), "[ECAL BARREL] Point: {} is expected to be inside!!", p);
-    UFW_ASSERT(cid.raw == obt_cid.raw,
-               "[ECAL BARREL] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw);
+    UFW_ASSERT(cid.raw == obt_cid.raw, "[ECAL BARREL] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw,
+               obt_cid.raw);
 
     cid.region        = sand::geo_id::region_t::ENDCAP_A;
     cid.module_number = 0;
@@ -232,13 +229,12 @@ namespace sand::common {
     lobt              = ce.total_pathlength();
     lexp              = l1exp + l2exp;
 
-    UFW_ASSERT(lexp == lobt,
-               "[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt);
+    UFW_ASSERT(lexp == lobt, "[ECAL ENDCAP] Total pathlength doesn't match!! Expected: {} - Obtained: {}", lexp, lobt);
     UFW_ASSERT(2. * (l1exp - l1obt) / (l1exp + l1obt) < 1.E-9,
                "[ECAL ENDCAP] Pathlength doesn't match!! Expected: {} - Obtained: {}", l1exp, l1obt);
     UFW_ASSERT(ce.is_inside(p), "[ECAL ENDCAP] Point: {} is expected to be inside!!", p);
-    UFW_ASSERT(cid.raw == obt_cid.raw,
-               "[ECAL ENDCAP] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw, obt_cid.raw);
+    UFW_ASSERT(cid.raw == obt_cid.raw, "[ECAL ENDCAP] Unexpected cell id!! Provided: {} - Obtained: {}", cid.raw,
+               obt_cid.raw);
 
     UFW_INFO("TRACKER path: '{}'", gi.tracker().path());
 

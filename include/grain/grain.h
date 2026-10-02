@@ -6,15 +6,14 @@
 
 namespace sand::grain {
 
-  constexpr std::size_t camera_height = 32u;
-  constexpr std::size_t camera_width  = 32u;
-
   // We cannot quite use SMatrix as is because its default initialization does not support non-numeric types.
-  template <typename T, std::size_t Height = camera_height, std::size_t Width = camera_width>
+  template <typename T, std::size_t N = 1024>
   class pixel_array {
    public:
     // Default constructor sets the size to the template defaults
-    pixel_array() {}
+    pixel_array(std::size_t r = 0, std::size_t c = 0) : m_rows(r), m_columns(c) {
+      UFW_ASSERT(m_rows * m_columns <= N, "Supports cameras up to {}", N);
+    }
 
     // Standard copy/move behavior
     pixel_array(const pixel_array&)             = default;
@@ -22,8 +21,10 @@ namespace sand::grain {
     pixel_array& operator= (const pixel_array&) = default;
     pixel_array& operator= (pixel_array&&)      = default;
 
+    std::size_t rows() const { return m_rows; }
+    std::size_t columns() const { return m_columns; }
     // Helper to get the flat index
-    size_t linear(std::size_t x, std::size_t y) const { return (x * Width) + y; }
+    size_t linear(std::size_t x, std::size_t y) const { return (x * m_columns) + y; }
 
     // Accessors
     T& at(std::size_t x, std::size_t y) { return m_data[linear(x, y)]; }
@@ -33,28 +34,28 @@ namespace sand::grain {
     T* data() { return m_data.data(); }
     const T* data() const { return m_data.data(); }
 
-    size_t size() const { return m_data.size(); }
-    static constexpr std::size_t width  = Width;
-    static constexpr std::size_t height = Height;
+    size_t size() const { return m_rows * m_columns; }
 
     // For loops / iteration logic
     template <typename Func, typename... Args>
     void for_each(Func&& f, Args&&... args) const {
-      for (std::size_t x = 0; x < Height; ++x) {
-        for (std::size_t y = 0; y < Width; ++y) {
+      for (std::size_t x = 0; x < m_columns; ++x) {
+        for (std::size_t y = 0; y < m_rows; ++y) {
           f(x, y, m_data[linear(x, y)], std::forward<Args>(args)...);
         }
       }
     }
 
-    typename std::array<T, Width * Height>::iterator begin() { return m_data.begin(); }
-    typename std::array<T, Width * Height>::iterator end() { return m_data.end(); }
+    typename std::array<T, N>::iterator begin() { return m_data.begin(); }
+    typename std::array<T, N>::iterator end() { return m_data.begin() + size(); }
 
-    typename std::array<T, Width * Height>::const_iterator begin() const { return m_data.begin(); }
-    typename std::array<T, Width * Height>::const_iterator end() const { return m_data.end(); }
+    typename std::array<T, N>::const_iterator begin() const { return m_data.begin(); }
+    typename std::array<T, N>::const_iterator end() const { return m_data.begin() + size(); }
 
    private:
-    std::array<T, Width * Height> m_data;
+    std::array<T, N> m_data;
+    const std::size_t m_rows;
+    const std::size_t m_columns;
   };
 
   enum optics_type : uint8_t {

@@ -87,13 +87,13 @@ namespace sand::grain {
     auto voxels = gi.grain().fiducial_voxels(voxel_sizes);
 
     transform_t voxel_transform    = to_ocl_xform(voxels.xform_id_to_fiducial(voxel_sizes));
-    const size_t sensor_rects_size = camera_height * camera_width;
+    const size_t sensor_rects_size = gi.grain().at(0).sipm_active_areas.size();
     const size_t fiducial_size     = voxels.size().x() * voxels.size().y() * voxels.size().z();
     const size_t solidangle_size   = fiducial_size * sensor_rects_size;
 
     cl::NDRange solidangle_global_size(voxels.size().x(), voxels.size().y(), voxels.size().z());
-    UFW_DEBUG("Solidangle global work size: ({},{},{})", solidangle_global_size[0], solidangle_global_size[1],
-              solidangle_global_size[2]);
+    UFW_INFO("Solidangle global work size: ({},{},{}), Sensors {}", solidangle_global_size[0], solidangle_global_size[1],
+              solidangle_global_size[2], sensor_rects_size);
 
     cl::buffer buf_fiducial;
     buf_fiducial.allocate<CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY>(platform.context(), fiducial_size * sizeof(cl_uchar),
@@ -188,6 +188,7 @@ namespace sand::grain {
       platform.queues().front().finish();
 
       // Write to hdf5
+      UFW_INFO("{} completed, range: {}", camera.name, range);
       array.write(camera.name, range, h_solidangle_array.get());
       array.set_attribute(camera.name, "camera_id", std::to_string(camera.id));
       auto t_stop         = std::chrono::high_resolution_clock::now();

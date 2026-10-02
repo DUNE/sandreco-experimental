@@ -34,14 +34,14 @@ namespace sand::grain {
 
   template <typename T>
   pixel_array<T> image::amplitude_array() const {
-    pixel_array<T> ret;
+    pixel_array<T> ret(pixels.rows(), pixels.columns());
     std::transform(pixels.begin(), pixels.end(), ret.begin(), [](const pixel& p) { return p.amplitude; });
     return ret;
   }
 
   template <typename T>
   pixel_array<T> image::time_array() const {
-    pixel_array<T> ret;
+    pixel_array<T> ret(pixels.rows(), pixels.columns());
     std::transform(pixels.begin(), pixels.end(), ret.begin(), [](const pixel& p) { return p.time_first; });
     return ret;
   }

@@ -285,6 +285,8 @@ namespace sand {
     const cell& at(cell_id cid) const;
     bool contains(cell_id cid) const;
     const std::vector<cell_ref>& cells(geo_id gid) const;
+    // Physical neighbours, including the cell itself.
+    const std::vector<cell_id>& neighbours(cell_id cid) const;
     inline pmt_id pmt(channel_id cid) const {
       pmt_id pid;
       pid.cell_.region        = static_cast<geo_id::region_t>(cid.link);
@@ -312,12 +314,16 @@ namespace sand {
     std::map<module_id, std::map<cell_id, cell>> m_modules_cells_maps;
     std::map<geo_id, std::vector<cell_ref>> m_cells_map;
 
+    // Physical cell IDs mapped to their neighbours, including the cell itself.
+    std::map<cell_id, std::vector<cell_id>> m_cells_cellneighbours_map;
+
    private:
     void find_modules(const geo_path& path);
     void find_active_volumes(const geo_path& path, const std::regex& re);
     void endcap_module_cells(const geo_path& path);
     void barrel_module_cells(const geo_path& path);
     void construct_module_cells(const module& m, const grid& g);
+    void create_neighbour_map();
   };
 
 } // namespace sand

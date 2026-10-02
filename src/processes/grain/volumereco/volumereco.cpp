@@ -48,7 +48,7 @@ namespace sand::grain {
     m_image_buffers = std::vector<sand::cl::buffer>(array.datasets().size());
     for (auto& image_buffer : m_image_buffers) {
       image_buffer.allocate<CL_MEM_READ_WRITE>(cl_manager.platform().context(),
-                                               camera_height * camera_width * sizeof(float));
+                                               cl_manager.pixels_count() * sizeof(float));
     }
   }
 
@@ -64,7 +64,7 @@ namespace sand::grain {
 
     auto voxels            = cl_manager.fiducial();
     const size_t n_voxels  = voxels.size().x() * voxels.size().y() * voxels.size().z();
-    const size_t n_sensors = camera_height * camera_width;
+    const size_t n_sensors = cl_manager.pixels_count();
     const cl::NDRange voxel_shape(voxels.size().x(), voxels.size().y(), voxels.size().z());
     const cl::NDRange sensors_shape(n_sensors);
 

@@ -1,4 +1,5 @@
 #include "ufw/utils.hpp"
+#include <geoinfo/grain_info.hpp>
 #include <grain/digi.h>
 #include <grain/image.h>
 
@@ -138,6 +139,7 @@ namespace sand::grain {
           auto id = sig.channel().link;
           auto it = std::find_if(event_images_out.begin(), event_images_out.end(),
                                  [id](auto& img) { return img.camera_id == id; });
+
           if (it == event_images_out.end()) {
             //FIXME newer c++
             image img{id, tr};
@@ -145,7 +147,7 @@ namespace sand::grain {
             it = event_images_out.end() - 1;
             it->blank();
           }
-          //UFW_DEBUG("signal to be assigned to camera id {}, image {}", id, img_idx);
+          UFW_DEBUG("signal to be assigned to camera id {}, image {} at channel {}", id, img_idx, signal.channel().channel);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
           pixel& pix = it->pixels.data()[sig.channel().channel];
           pix.insert(sig.true_hits());
@@ -159,18 +161,9 @@ namespace sand::grain {
         }
         m_stat_photons_processed++;
       }
-      for (const auto& img : event_images_out) {
-        size_t maxhits = 0;
-        double npe     = 0.;
-        for (int x = 0; x != camera_width; ++x) {
-          for (int y = 0; y != camera_height; ++y) {
+
             maxhits = std::max(maxhits, img.pixels.at(x, y).true_hits().size());
             npe += img.pixels.at(x, y).amplitude;
-          }
-        }
-        UFW_DEBUG("Camera {} recorded a total of {} photons from {} different MC true hits", img.camera_id, npe,
-                  maxhits);
-      }
       spill_images_out.insert(spill_images_out.end(), event_images_out.begin(), event_images_out.end());
       UFW_INFO("Processed {} photons; {} were accepted, {} discarded for this slice.", m_stat_photons_processed,
                m_stat_photons_accepted, m_stat_photons_discarded);
