@@ -54,7 +54,7 @@
     },
     {
       "sand::root::tree_streamer" : {
-        "uri" : "test/volumereco.root",
+        "uri" : "test/volumereco_3mm.root",
         "tree" : "recos"
       },
       "write" : ["grain_lightmap"]
