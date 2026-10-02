@@ -147,7 +147,6 @@ namespace sand::grain {
             it = event_images_out.end() - 1;
             it->blank();
           }
-          UFW_DEBUG("signal to be assigned to camera id {}, image {} at channel {}", id, img_idx, signal.channel().channel);
           // FIXME this assumes that channel ids and the pixel array are indexed consistently
           pixel& pix = it->pixels.data()[sig.channel().channel];
           pix.insert(sig.true_hits());
@@ -161,9 +160,6 @@ namespace sand::grain {
         }
         m_stat_photons_processed++;
       }
-
-            maxhits = std::max(maxhits, img.pixels.at(x, y).true_hits().size());
-            npe += img.pixels.at(x, y).amplitude;
       spill_images_out.insert(spill_images_out.end(), event_images_out.begin(), event_images_out.end());
       UFW_INFO("Processed {} photons; {} were accepted, {} discarded for this slice.", m_stat_photons_processed,
                m_stat_photons_accepted, m_stat_photons_discarded);

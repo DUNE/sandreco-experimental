@@ -63,10 +63,10 @@ namespace sand::grain {
     const auto& hits_in      = get<photons>("hits");
     UFW_DEBUG("Processing {} photon hits.", hits_in.size());
     auto& digi_out = set<digi>("digi");
-    for (const auto& ph : hits_in) {
+    for (const auto& photon : hits_in) {
       double interaction_probability = m_uniform(random_engine());
       m_stat_photons_processed++;
-      const geoinfo::grain_info::camera& camera = gi.grain().at(ph.camera_id);
+      const geoinfo::grain_info::camera& camera = gi.grain().at(photon.camera_id);
       if (interaction_probability < m_pde) {
         // UFW_DEBUG("processing photon with position: {}, {}", ph.pos.X(), ph.pos.Y());
         bool channel_found = false;
@@ -78,10 +78,10 @@ namespace sand::grain {
                 && photon.pos.Y() < camera.sipm_active_areas.at(i, j).top) {
               channel_id ch;
               ch.subdetector = GRAIN;
-              ch.link        = ph.camera_id;
+              ch.link        = photon.camera_id;
               // consistent indexing: Row Major
               ch.channel = camera.sipm_active_areas.linear(i, j);
-              digi_out.emplace_back(ph, ch, ph.pos.T(), 1.0, NAN);
+              digi_out.emplace_back(photon, ch, photon.pos.T(), 1.0, NAN);
               m_stat_photons_accepted++;
               // UFW_DEBUG("Added photon to SiPM {},{}", i, j);
               channel_found = true;

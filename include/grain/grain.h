@@ -54,8 +54,8 @@ namespace sand::grain {
 
    private:
     std::array<T, N> m_data;
-    const std::size_t m_rows;
-    const std::size_t m_columns;
+    std::size_t m_rows;
+    std::size_t m_columns;
   };
 
   enum optics_type : uint8_t {

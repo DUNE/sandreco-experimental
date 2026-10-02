@@ -95,21 +95,21 @@ namespace sand::png {
         auto array = img.amplitude_array<uint8_t>();
         UFW_DEBUG("Writing image data for camera {} at {}, pixel average = {}", int(img.camera_id), ctx,
                   [&array]() { return std::accumulate(array.begin(), array.end(), 0.0); }());
-          for (int row = 0; row != m_rows; ++row) {
-            for (int col = 0; col != m_columns; ++col) {
+        for (int row = 0; row != m_rows; ++row) {
+          for (int col = 0; col != m_columns; ++col) {
             for (int fillc = 0; fillc != m_scale_factor; ++fillc) {
               // consistent indexing: Row Major
-                m_scaled_row[col * m_scale_factor + fillc] = array.at(row, col);
-              }
-            }
-            for (int fillr = 0; fillr != m_scale_factor; ++fillr) {
-              png_write_row(pngstruct, m_scaled_row.data());
+              m_scaled_row.at(col * m_scale_factor + fillc) = array.at(row, col);
             }
           }
-          png_write_end(pngstruct, NULL);
-          png_destroy_write_struct(&pngstruct, &info);
-          fclose(fp);
+          for (int fillr = 0; fillr != m_scale_factor; ++fillr) {
+            png_write_row(pngstruct, m_scaled_row.data());
+          }
         }
+        png_write_end(pngstruct, NULL);
+        png_destroy_write_struct(&pngstruct, &info);
+        fclose(fp);
+
       }
     }
   }
