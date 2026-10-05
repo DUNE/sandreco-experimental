@@ -46,7 +46,7 @@
     },
     {
       "sand::png::png_streamer" : {
-        "uri" : "/home/sand/sandreco-experimental/data/"
+        "uri" : "test/grain_masks"
       },
         "write" : ["grain_images"]
     }
