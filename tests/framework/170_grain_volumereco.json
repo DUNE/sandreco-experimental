@@ -6,26 +6,26 @@
     "ufw-env" : {}
   },
   "globals" : {
-  "sand::cl::platform" : {},
-  "sand::grain::volumereco_cl_manager" : { "voxel_size" : 150.0 },
-  "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
-  "sand::geoinfo" : { "grain" : { "inner_geometry" : "gdml-masks" } },
-  "sand::grain::geant_gdml_parser" : {
-    "gdml-masks" : { "path" : "geometries/grain/grain-masks_3mm_32x32/main.gdml" }
-  },
-  "sand::hdf5::ndarray" : {
-    "angle_reader" : {
-      "uri" : "test/voxel_weights_3mm.h5",
-      "io" : "read"
+    "sand::cl::platform" : {},
+    "sand::grain::volumereco_cl_manager" : { "voxel_size" : 150.0 },
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
+    "sand::geoinfo" : { "grain" : { "inner_geometry" : "gdml-masks" } },
+    "sand::grain::geant_gdml_parser" : {
+      "gdml-masks" : { "path" : "geometries/grain/grain-masks_3mm_32x32/main.gdml" }
     },
-    "score_writer" : {
-      "uri" : "test/volumereco_3mm.h5",
-      "io" : "overwrite"
+    "sand::hdf5::ndarray" : {
+      "angle_reader" : {
+        "uri" : "test/voxel_weights_3mm.h5",
+        "io" : "read"
+      },
+      "score_writer" : {
+        "uri" : "test/volumereco_3mm.h5",
+        "io" : "overwrite"
+      }
     }
-  }
   },
   "contexts" : {
-    "keys" :  [0, 8, 15, 67],
+    "keys" : [0, 8, 15, 67],
     "locals" : {}
   },
   "run" : [

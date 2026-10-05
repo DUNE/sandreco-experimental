@@ -70,7 +70,8 @@
     },
     {
       "sand::grain::spill_slicer" : {
-          "slice_times": [0.0, 2000.0, 20000.0]
+        "min_response_signal": 8,
+        "delta_ns_for_comparison": 1000
       },
       "reqs" : {"digi" : "grain_digi"},
       "prods" : {"images": "grain_images", "timeranges": "grain_timeranges"}
