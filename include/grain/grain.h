@@ -1,12 +1,11 @@
 #pragma once
 
-#include <memory>
+#include <array>
 
 #include <common/sand.h>
 
 namespace sand::grain {
 
-  // We cannot quite use SMatrix as is because its default initialization does not support non-numeric types.
   template <typename T, std::size_t N = 1024>
   class pixel_array {
    public:
@@ -54,8 +53,8 @@ namespace sand::grain {
 
    private:
     std::array<T, N> m_data;
-    const std::size_t m_rows;
-    const std::size_t m_columns;
+    std::size_t m_rows;
+    std::size_t m_columns;
   };
 
   enum optics_type : uint8_t {
@@ -194,3 +193,9 @@ struct fmt::formatter<sand::grain::size_4d> : formatter<string_view> {
     return fmt::format_to(ctx.out(), "({}, {}, {}, {})", c.x(), c.y(), c.z(), c.t());
   }
 };
+
+UFW_DECLARE_UNMANAGED_DATA(ROOT::Math::Cartesian3D<size_t>)
+UFW_DECLARE_UNMANAGED_DATA(ROOT::Math::PxPyPzE4D<size_t>)
+UFW_DECLARE_UNMANAGED_DATA(ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<size_t>>)
+UFW_DECLARE_UNMANAGED_DATA(ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<size_t>>)
+UFW_DECLARE_UNMANAGED_DATA(ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<size_t>>)

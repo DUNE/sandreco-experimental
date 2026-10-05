@@ -50,6 +50,7 @@ namespace sand::common {
       ascii_grain += '\n';
       ascii_grain += '\n';
     }
+    // FIXME : use for_each for voxels and pixels 
     UFW_INFO("GRAIN was segmented in a fiducial of {} voxels:\n{}", voxels.size(), ascii_grain);
     for (size_t k = 0; k != voxels.size().z() && k < 100; ++k) { // Just few cycles for testing
       for (size_t j = 0; j != voxels.size().y() && j < 100; ++j) {

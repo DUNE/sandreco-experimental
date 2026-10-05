@@ -13,13 +13,13 @@
     }
   },
   "contexts" : {
-    "keys" :  [10,11,15,16],
+    "keys" :  [0, 8, 15, 67],
     "locals" : {}
   },
   "run" : [
     {
       "sand::root::tree_streamer" : {
-        "uri" : "test/volumereco.root",
+        "uri" : "test/volumereco_3mm.root",
         "tree" : "recos"
       },
       "read" : ["grain_lightmap"]

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/truth.h>
+#include <common/data.h>
 #include <edep_reader/EDEPTree.h>
 
 #include <EDepSim/TG4Event.h>

@@ -26,7 +26,7 @@
     }
   },
   "contexts" : {
-    "keys" : [10,11,15,16],
+    "keys" : [0, 8, 15, 67],
     "locals" : {
       "sand::edep_reader" : {"uri" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"}
     },
@@ -54,14 +54,14 @@
           "slice_times": [0.0, 2000.0, 20000.0]
       },
       "reqs" : {"digi" : "grain_digi"},
-      "prods" : {"images": "grain_images"}
+      "prods" : {"images": "grain_images", "timeranges": "grain_timeranges"}
     },
     {
       "sand::root::tree_streamer" : {
         "uri" : "test/full_images_lenses.root",
         "tree" : "cameras"
       },
-      "write" : ["grain_images" ]
+      "write" : ["grain_images", "grain_timeranges"]
     },
     {
       "sand::png::png_streamer" : {

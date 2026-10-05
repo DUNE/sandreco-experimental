@@ -1,13 +1,11 @@
 #pragma once
 
 #include <common/data.h>
-#include <common/truth.h>
 
 #include <genie_reader/GenieWrapper.h>
 
 #include <TBits.h>
 #include <TObjString.h>
-
 
 class TFile;
 class TTree;

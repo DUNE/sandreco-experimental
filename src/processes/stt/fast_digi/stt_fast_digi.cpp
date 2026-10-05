@@ -186,9 +186,7 @@ namespace sand::stt {
   tracker::digi::signal stt_fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
     std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc); // FIXME should be member
     auto ran = gaussian_error(random_engine());
-    // FIXME replace 200 with maximum drift + signal time
-    reco::digi<>::time trange{wire_time - 200., wire_time + ran, wire_time + 5. * m_sigma_tdc};
-    tracker::digi::signal signal(channel, trange, edep_total);
+    tracker::digi::signal signal(channel, wire_time + ran, edep_total);
 
     UFW_DEBUG("  Created signal: Channel(subdetector {}, channel {}), TDC = {}, ADC = {}",
               static_cast<int>(signal.channel().subdetector), static_cast<int>(signal.channel().channel), signal.tdc(),

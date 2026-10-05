@@ -1,69 +1,67 @@
 #pragma once
 
-#include <common/truth.h>
+#include <common/timerange.h>
+#include <grain/digi.h>
 #include <grain/grain.h>
 #include <grain/photons.h>
+
 #include <algorithm>
 #include <memory>
 
 namespace sand::grain {
 
-  struct images : managed_data_base {
-    using truth = sand::truth<hits::photon>;
-    struct pixel : public truth {
-      double amplitude;
-      double time_first;
-    };
-
-    struct image {
-      channel_id::link_t camera_id;
-      double time_begin; // begin of slice
-      double time_end;   // end of slice
-      pixel_array<pixel> pixels;
-
-     public:
-      inline void blank(); // call blank if you are not already assigning every pixel
-      template <typename T>
-      pixel_array<T> amplitude_array() const;
-      template <typename T>
-      pixel_array<T> time_array() const;
-      inline truth all_hits() const;
-    };
-
-    using image_list = std::vector<std::vector<image>>; // Outer vector containing events in one spill
-
-    image_list images;
+  struct pixel : public sand::truth<photon> {
+    double amplitude;
+    double time_first;
   };
 
-  inline void images::image::blank() { std::uninitialized_fill(pixels.begin(), pixels.end(), pixel{{}, 0., NAN}); }
+  struct image {
+    channel_id::link_t camera_id;
+    reco::timerange range;
+    pixel_array<pixel> pixels;
+
+   public:
+    image(channel_id::link_t cid = -1, reco::timerange tr = reco::timerange{NAN}, std::size_t r = 0, std::size_t c = 0) :
+    camera_id(cid), range(tr), pixels(r, c) {}
+
+    double t() const { return range.best(); }
+    inline void blank(); // call blank if you are not already assigning every pixel
+    template <typename T>
+    pixel_array<T> amplitude_array() const;
+    template <typename T>
+    pixel_array<T> time_array() const;
+    inline sand::truth<photon> all_hits() const;
+  };
+
+  inline void image::blank() { std::uninitialized_fill(pixels.begin(), pixels.end(), pixel{{}, 0., NAN}); }
 
   template <typename T>
-  pixel_array<T> images::image::amplitude_array() const {
+  pixel_array<T> image::amplitude_array() const {
     pixel_array<T> ret(pixels.rows(), pixels.columns());
     std::transform(pixels.begin(), pixels.end(), ret.begin(), [](const pixel& p) { return p.amplitude; });
     return ret;
   }
 
   template <typename T>
-  pixel_array<T> images::image::time_array() const {
+  pixel_array<T> image::time_array() const {
     pixel_array<T> ret(pixels.rows(), pixels.columns());
     std::transform(pixels.begin(), pixels.end(), ret.begin(), [](const pixel& p) { return p.time_first; });
     return ret;
   }
 
-  inline images::truth images::image::all_hits() const {
-    images::truth hits;
+  inline sand::truth<photon> image::all_hits() const {
+    sand::truth<photon> true_hits;
     for (const pixel& p : pixels) {
-      hits.insert(p.true_hits());
+      true_hits.insert(p.true_hits());
     }
-    return hits;
+    return true_hits;
   }
 
 } // namespace sand::grain
 
-UFW_DECLARE_MANAGED_DATA(sand::grain::images)
+SAND_DATA_COLLECTION(sand::grain, image, images)
 
 // For dictionaries
-UFW_DECLARE_UNMANAGED_DATA(sand::grain::images::pixel)
-
-UFW_DECLARE_UNMANAGED_DATA(sand::grain::pixel_array<sand::grain::images::pixel>)
+UFW_DECLARE_UNMANAGED_DATA(sand::truth<sand::grain::photon>)
+UFW_DECLARE_UNMANAGED_DATA(sand::grain::pixel)
+UFW_DECLARE_UNMANAGED_DATA(sand::grain::pixel_array<sand::grain::pixel>)

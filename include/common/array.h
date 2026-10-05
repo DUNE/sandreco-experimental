@@ -13,7 +13,6 @@ namespace sand {
 
 } // namespace sand
 
-
 template struct sand::array<bool>;
 UFW_DECLARE_MANAGED_DATA(sand::array<bool>)
 
