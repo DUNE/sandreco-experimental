@@ -127,6 +127,7 @@ namespace sand::grain {
       trs_out.emplace_back(*it + m_bin_width * 0.5, *it, *(it + 1)); //best value in the centre of the first bin
       UFW_INFO("Found time interval {}", trs_out.back());
     }
+    const auto& gi = instance<geoinfo>();
     //use the timeranges
     for (auto tr : trs_out) {
       m_stat_photons_processed = 0;
@@ -141,9 +142,8 @@ namespace sand::grain {
                                  [id](auto& img) { return img.camera_id == id; });
 
           if (it == event_images_out.end()) {
-            //FIXME newer c++
-            image img{id, tr};
-            event_images_out.emplace_back(img);
+            const auto& camera = gi.grain().at(id);
+            event_images_out.emplace_back(id, tr, camera.sipm_active_areas.rows(), camera.sipm_active_areas.columns());
             it = event_images_out.end() - 1;
             it->blank();
           }

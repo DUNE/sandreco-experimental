@@ -6,7 +6,6 @@
 
 namespace sand::grain {
 
-  // We cannot quite use SMatrix as is because its default initialization does not support non-numeric types.
   template <typename T, std::size_t N = 1024>
   class pixel_array {
    public:

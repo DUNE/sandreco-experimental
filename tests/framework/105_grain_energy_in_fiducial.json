@@ -5,7 +5,7 @@
     "ufw-ldpath" : [ "/usr/local/lib64" ]
   },
   "globals" : {
-    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_STT1.sand-events-in-sand_inner_volume.6.edep.root" },
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
     "sand::geoinfo" : { "grain" : { "inner_geometry" : "gdml-masks" } },
     "sand::grain::geant_run_manager" : {},
     "sand::grain::geant_gdml_parser" : {
@@ -13,9 +13,9 @@
     }
   },
   "contexts" : {
-    "keys" : 30,
+    "keys" : 100,
     "locals" : {
-      "sand::edep_reader" : {"uri" : "test/SAND_opt3_STT1.sand-events-in-sand_inner_volume.6.edep.root"}
+      "sand::edep_reader" : {"uri" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"}
     }
   },
   "run" : [

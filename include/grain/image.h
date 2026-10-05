@@ -21,6 +21,9 @@ namespace sand::grain {
     pixel_array<pixel> pixels;
 
    public:
+    image(channel_id::link_t cid = -1, reco::timerange tr = reco::timerange{NAN}, std::size_t r = 0, std::size_t c = 0) :
+    camera_id(cid), range(tr), pixels(r, c) {}
+
     double t() const { return range.best(); }
     inline void blank(); // call blank if you are not already assigning every pixel
     template <typename T>
