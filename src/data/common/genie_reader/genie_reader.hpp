@@ -35,13 +35,21 @@ class ufw::data::factory<sand::genie_reader> {
 
  private:
   sand::genie_reader reader;
-  std::unique_ptr<TFile> input_file;
-  TTree* input_tree;
+  std::unique_ptr<TFile> edep_input_file;
+  TTree* edep_input_tree;
+  TTree* spill_to_run_event;
+  std::unique_ptr<TFile> ghep_input_file;
   std::vector<std::pair<Long64_t, Long64_t>> spills_boundaries;
+  std::vector<int> run_numbers;
   ufw::context_id m_id;
+
+  std::map<unsigned long int, std::map<unsigned int, long long>> ghep_entries;
 
   bool hasNuParent = false;
   bool hasNumiFlux = false;
+
+  std::vector<int>* RunId = nullptr;
+  std::vector<int>* EventId = nullptr;
 
   int EvtNum{};
   TBits* EvtFlags{};
@@ -142,6 +150,7 @@ class ufw::data::factory<sand::genie_reader> {
   void check_gRooTracker_format();
   void populate_spills_boundaries();
   void attach_branches();
+  void create_ghep_map();
 
   void clear_reader(ufw::context_id i);
 };

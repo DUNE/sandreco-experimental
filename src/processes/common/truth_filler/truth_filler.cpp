@@ -35,6 +35,8 @@ namespace sand::common {
       auto const& event                 = genie.events_[ixn_idx];
       auto const& stdhep                = genie.stdHeps_[ixn_idx];
 
+      UFW_DEBUG("[first_prim_idx, prim_count] = [{},{}]", first_prim_idx, prim_count);
+      UFW_DEBUG("genie EvtNum {} StdHep N_={} P4_.size()={}", event.EvtNum_, stdhep.N_, stdhep.P4_.size());
       // Create and fill SRTrueInteraction from GENIE
       auto& true_ixn = truth_branch.nu.emplace_back(filler_details::true_interaction_from_genie(event, stdhep));
 

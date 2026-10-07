@@ -96,7 +96,7 @@ namespace sand::common::filler_details {
 
     auto summary = parse_evt_code(event.EvtCode_);
 
-    ixn.id        = event.EvtNum_;
+    ixn.id        = event.EvtIdx_;
     ixn.genieIdx  = event.EvtNum_;
     ixn.pdg       = summary.probe_pdg;
     ixn.pdgorig   = ixn.pdg;
@@ -112,6 +112,8 @@ namespace sand::common::filler_details {
     ixn.isvtxcont = true;
 
     const auto& nu_p4 = stdhep.P4_[static_cast<int>(StdHepIndex::nu)];
+    UFW_DEBUG("nu_p4.E(): {}", nu_p4.E());
+    
     ixn.E             = static_cast<float>(nu_p4.E());
     ixn.momentum.x    = static_cast<float>(nu_p4.Px());
     ixn.momentum.y    = static_cast<float>(nu_p4.Py());

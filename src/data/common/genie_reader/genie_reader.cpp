@@ -20,24 +20,31 @@ namespace sand {
 } // namespace sand
 
 namespace ufw::data {
-  factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_file{nullptr} {
-    const auto path = cfg.path_at("uri");
-    input_file.reset(TFile::Open(path.c_str()));
-    input_tree = input_file->Get<TTree>("gRooTracker");
-    if (input_tree == nullptr) {
-      UFW_DEBUG("gRooTracker tree not found in the root directory of file '{}'.", path.c_str());
-      UFW_DEBUG("Trying the edepsim path: {}/DetSimPassThru/gRooTracker.", path.c_str());
+  factory<sand::genie_reader>::factory(const ufw::config& cfg) : edep_input_file{nullptr}, ghep_input_file{nullptr} {
+    const auto edep_path = cfg.path_at("edep_uri");
+    const auto ghep_path = cfg.path_at("ghep_uri");
+    edep_input_file.reset(TFile::Open(edep_path.c_str()));
+    // ghep_input_file.reset(TFile::Open(ghep_path.c_str()));
+    // edep_input_tree = edep_input_file->Get<TTree>("gRooTracker");
+    // if (edep_input_tree == nullptr) {
+      // UFW_DEBUG("gRooTracker tree not found in the root directory of file '{}'.", edep_path.c_str());
+      // UFW_DEBUG("Trying the edepsim edep_path: {}/DetSimPassThru/gRooTracker.", edep_path.c_str());
 
-      input_tree = input_file->Get<TTree>("DetSimPassThru/gRooTracker");
-      if (input_tree == nullptr) {
-        UFW_ERROR("gRooTracker tree not found in file '{}'.", path.c_str());
+      edep_input_tree = edep_input_file->Get<TTree>("DetSimPassThru/gRooTracker");
+      if (edep_input_tree == nullptr) {
+        UFW_ERROR("gRooTracker tree not found in file '{}'.", edep_path.c_str());
+      }
+      spill_to_run_event = edep_input_file->Get<TTree>("spill_to_run_event");
+      if (spill_to_run_event == nullptr) {
+        UFW_ERROR("spill_to_run_event tree not found in file '{}'.", edep_path.c_str());
       }
       UFW_DEBUG("Found");
-    }
+    // }
 
     check_gRooTracker_format();
     populate_spills_boundaries();
     attach_branches();
+    create_ghep_map();
   }
 
   factory<sand::genie_reader>::~factory() = default;
@@ -50,8 +57,14 @@ namespace ufw::data {
     m_id = i;
     clear_reader(i);
 
-    for (Long64_t j = spills_boundaries[i].first; j < spills_boundaries[i].second; j++) {
-      input_tree->GetEntry(j);
+    int index_in_spill = 0;
+    spill_to_run_event->GetEntry(i);
+    for (int j = spills_boundaries[i].first; j < spills_boundaries[i].second; j++) {
+
+      UFW_DEBUG("N of trajectories: {}, size of spilltorun: {}", spills_boundaries[i].second - spills_boundaries[i].first, EventId->size());
+      edep_input_tree->GetEntry(j);
+      UFW_DEBUG("Getting entry {}", j);
+
 
       // Copy EvtVtx array to std::array
       std::array<double, 4> evtVtxCopy{};
@@ -60,7 +73,12 @@ namespace ufw::data {
       // Copy EvtCode string (handle null pointer)
       std::string evtCodeStr = EvtCode ? EvtCode->GetString().Data() : "";
 
-      reader.events_.push_back({j, EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+      reader.events_.push_back({RunId->at(index_in_spill)*10e6 + EventId->at(index_in_spill), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+
+      UFW_DEBUG("Added genie event with CAF idx: {}, {}, {}", RunId->at(index_in_spill), RunId->at(index_in_spill)*10e6 + EventId->at(index_in_spill), EventId->at(index_in_spill));
+      UFW_DEBUG("StdHepN {}", StdHepN);
+
+      index_in_spill++;
 
       reader.stdHeps_.emplace_back(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
                                    StdHepFd, StdHepLd, StdHepFm, StdHepLm);
@@ -89,17 +107,21 @@ namespace ufw::data {
   }
 
   void factory<sand::genie_reader>::check_gRooTracker_format() {
-    if (input_tree->GetBranch("NuParentPdg")) {
+    if (edep_input_tree->GetBranch("NuParentPdg")) {
       reader.nuParents_ = std::vector<NuParent>{};
     } else {
       UFW_DEBUG("NuParent branches missing — skipping NuParent setup.");
     }
 
-    if (input_tree->GetBranch("NumiFluxRun")) {
+    if (edep_input_tree->GetBranch("NumiFluxRun")) {
       reader.numiFluxes_ = std::vector<NumiFlux>{};
     } else {
       UFW_DEBUG("NumiFlux branches missing — skipping NumiFlux setup.");
     }
+  }
+
+  void factory<sand::genie_reader>::create_ghep_map() {
+
   }
 
   void factory<sand::genie_reader>::populate_spills_boundaries() {
@@ -108,7 +130,7 @@ namespace ufw::data {
     // InteractionNumber that corresponds to the entry index in gRooTracker.
 
     UFW_DEBUG("Looking for EDepSimEvents tree...");
-    auto* edep_tree = input_file->Get<TTree>("EDepSimEvents");
+    auto* edep_tree = edep_input_file->Get<TTree>("EDepSimEvents");
     if (edep_tree == nullptr) {
       UFW_ERROR("EDepSimEvents tree not found in file. Cannot determine spill boundaries.");
       return;
@@ -136,6 +158,8 @@ namespace ufw::data {
 
       // Boundaries are [first, last+1) to match the original convention
       spills_boundaries.emplace_back(first_idx, last_idx + 1);
+      run_numbers.emplace_back(event->RunId);
+      UFW_DEBUG("Added spill bundaries {}-{}, with runID {}",first_idx, last_idx+1, event->RunId);
     }
 
     delete event;
@@ -146,11 +170,16 @@ namespace ufw::data {
 
   void factory<sand::genie_reader>::attach_branches() {
     auto set = [&](const char* b, auto* addr) {
-      if (const auto br = input_tree->GetBranch(b)) {
+      if (const auto br = edep_input_tree->GetBranch(b)) {
         br->SetAddress(addr);
       } else
         UFW_WARN("Missing expected branch '{}'", b);
     };
+
+    if (spill_to_run_event->SetBranchAddress("RunId", &RunId) < 0)
+      UFW_ERROR("Cannot attach 'RunId'");
+    if (spill_to_run_event->SetBranchAddress("EventId", &EventId) < 0)
+      UFW_ERROR("Cannot attach 'EventId'");
 
     set("EvtNum", &EvtNum);
     set("EvtXSec", &EvtXSec);

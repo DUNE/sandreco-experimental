@@ -2,22 +2,23 @@
   "ufw": {
     "ufw-loglevel": "debug",
     "ufw-basepath": "/usr/local/share/sandreco/data",
-    "ufw-ldpath": ["/usr/local/lib64"],
+    "ufw-ldpath": ["/usr/local/lib64/", "/usr/local/lib/"],
     "ufw-env": {}
   },
   "globals": {
     "sand::root_tgeomanager": {
-      "geometry": "test/sand-spills.5.edep.root"
+      "geometry": "/home/sand/sandreco-experimental/MiniProdN5p1_NDComplex_FHC.convert2edepsim.spill.full.sanddrift.0000965.OVERLAY.root"
     }
   },
   "contexts": {
-    "keys": 2,
+    "keys": 1,
     "locals": {
       "sand::edep_reader": {
-        "uri": "test/sand-spills.5.edep.root"
+        "uri": "/home/sand/sandreco-experimental/MiniProdN5p1_NDComplex_FHC.convert2edepsim.spill.full.sanddrift.0000965.OVERLAY.root"
       },
       "sand::genie_reader": {
-        "uri": "test/sand-spills.5.edep.root"
+        "edep_uri": "/home/sand/sandreco-experimental/MiniProdN5p1_NDComplex_FHC.convert2edepsim.spill.full.sanddrift.0000965.OVERLAY.root",
+        "ghep_uri": "/home/sand/sandreco-experimental/sand-events.0000003.GHEP.root"
       }
     }
   },
@@ -50,7 +51,7 @@
     },
     {
       "sand::caf::caf_streamer": {
-        "uri": "test/output.caf.root",
+        "uri": "/home/sand/sandreco-experimental/output.caf.root",
         "tree": "cafTree"
       },
       "write": ["produced_truth", "produced_common", "produced_nd"]
