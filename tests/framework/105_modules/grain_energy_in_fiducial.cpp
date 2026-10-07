@@ -25,8 +25,8 @@ namespace sand::test {
     pos_3d m_max_LAr;
   };
 
-  grain_energy_in_fiducial::grain_energy_in_fiducial() : process({}, {{"inside", "sand::array<double>"},
-                                                                      {"outside", "sand::array<double>"}}) {
+  grain_energy_in_fiducial::grain_energy_in_fiducial() : process({}, {{"inside", "sand::scalar<double>"},
+                                                                      {"outside", "sand::scalar<double>"}}) {
   }
 
   void grain_energy_in_fiducial::configure(const ufw::config& cfg) {
@@ -89,8 +89,8 @@ namespace sand::test {
     }
     UFW_INFO("Found {} MeV inside, {} MeV outside, {} MeV total", inside, outside, total);
     //UFW_ASSERT(std::abs(total - outside - inside) < 1.e-6, "Total does not match");
-    set<sand::array<double>>("inside").values.push_back(inside);
-    set<sand::array<double>>("outside").values.push_back(outside);
+    set<sand::scalar<double>>("inside").value = inside;
+    set<sand::scalar<double>>("outside").value = outside;
   }
 
 } // namespace sand::test
