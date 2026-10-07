@@ -74,15 +74,15 @@ namespace sand::test {
           if (m_min_fiducial.x() <= hit.x() && hit.x() <= m_max_fiducial.x() &&
               m_min_fiducial.y() <= hit.y() && hit.y() <= m_max_fiducial.y() &&
               m_min_fiducial.z() <= hit.z() && hit.z() <= m_max_fiducial.z()) {
-            inside += dep.GetSecondaryDeposit();
+            inside += dep.GetEnergyDeposit();
           } else if (m_min_LAr.x() <= hit.x() && hit.x() <= m_max_LAr.x() &&
                      m_min_LAr.y() <= hit.y() && hit.y() <= m_max_LAr.y() &&
                      m_min_LAr.z() <= hit.z() && hit.z() <= m_max_LAr.z()) {
-            outside += dep.GetSecondaryDeposit();
+            outside += dep.GetEnergyDeposit();
           } else {
             UFW_WARN("Energy deposit for sand::subdetector_t GRAIN found outside GRAIN bounding box at {}.", hit);
           }
-          total += dep.GetSecondaryDeposit();
+          total += dep.GetEnergyDeposit();
         }
       }
     }
