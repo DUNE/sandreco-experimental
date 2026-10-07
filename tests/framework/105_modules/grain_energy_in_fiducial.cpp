@@ -1,6 +1,6 @@
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/grain_info.hpp>
-#include <common/array.h>
+#include <common/scalar.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -30,7 +30,7 @@ namespace sand::test {
   }
 
   void grain_energy_in_fiducial::configure(const ufw::config& cfg) {
-    const auto& gi = get<geoinfo>();
+    const auto& gi = instance<geoinfo>();
     auto xfrm = gi.grain().transform();
     UFW_INFO("Grain fiducial volume of size {} at {}", gi.grain().fiducial_bbox(), xfrm);
     m_min_fiducial = xfrm * pos_3d(-gi.grain().fiducial_bbox());
@@ -62,9 +62,8 @@ namespace sand::test {
     }
   }
 
-
   void grain_energy_in_fiducial::run() {
-    const auto& tree = get<sand::edep_reader>();
+    const auto& tree = instance<sand::edep_reader>();
     double inside = 0.0;
     double outside = 0.0;
     double total = 0.0;
