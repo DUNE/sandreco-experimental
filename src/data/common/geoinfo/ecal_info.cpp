@@ -1,3 +1,5 @@
+
+
 #include <ecal_info.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <ufw/context.hpp>
@@ -807,6 +809,7 @@ namespace sand {
   geoinfo::ecal_info::ecal_info(const geoinfo& gi, const geo_path& gp, const ufw::config& cfg)
     : subdetector_info(gi, gp) {
     find_modules(gi.root_path() / path());
+    create_neighbour_map();
   }
 
   geoinfo::ecal_info::~ecal_info() = default;
@@ -850,6 +853,10 @@ namespace sand {
     }
 
     return module_it->second.count(cid) != 0;
+  }
+
+  const std::vector<cell_id>& geoinfo::ecal_info::neighbours(cell_id cid) const {
+    return m_cells_cellneighbours_map.at(cid);
   }
 
   const std::vector<cell_ref>& geoinfo::ecal_info::cells(geo_id gid) const {
@@ -955,6 +962,234 @@ namespace sand {
       UFW_ERROR("Invalid ECAL region type");
     }
     return gp;
+  }
+
+  void geoinfo::ecal_info::create_neighbour_map() {
+    m_cells_cellneighbours_map.clear();
+
+    struct module_extent {
+      int max_row    = -1;
+      int max_column = -1;
+    };
+    std::map<module_id, module_extent> extents;
+
+    // Find the maximum number of rows and columns for each module.
+    for (const auto& module_entry : m_modules_cells_maps) {
+      const auto& map_id_cell = module_entry.second;
+      if (map_id_cell.empty()) {
+        UFW_ERROR("Cannot build ECAL neighbour map: module {} in region {} has no cells",
+                  module_entry.first.module_number, static_cast<int>(module_entry.first.region));
+      }
+      auto& extent = extents[module_entry.first];
+      for (const auto& cell_entry : map_id_cell) {
+        extent.max_row    = std::max(extent.max_row, int(cell_entry.first.row));
+        extent.max_column = std::max(extent.max_column, int(cell_entry.first.column));
+      }
+
+      // Now that we have the extents, we can find the neighbors for each cell WITHIN THE SAME MODULE.
+      for (const auto& cell_entry : map_id_cell) {
+        const auto cid      = cell_entry.first;
+        auto& neighbours_id = m_cells_cellneighbours_map[cid];
+        // Reserve for self and the eight surrounding cells.
+        neighbours_id.reserve(9);
+
+        const int first_row    = std::max(0, int(cid.row) - 1);
+        const int last_row     = std::min(extent.max_row, int(cid.row) + 1);
+        const int first_column = std::max(0, int(cid.column) - 1);
+        const int last_column  = std::min(extent.max_column, int(cid.column) + 1);
+
+        // Visit only valid grid positions, including the physical cell itself.
+        for (int row = first_row; row <= last_row; ++row) {
+          for (int column = first_column; column <= last_column; ++column) {
+            cell_id neighbour_id;
+            neighbour_id.region        = cid.region;
+            neighbour_id.module_number = cid.module_number;
+            neighbour_id.row           = static_cast<row_t>(row);
+            neighbour_id.column        = static_cast<column_t>(column);
+            if (map_id_cell.find(neighbour_id) == map_id_cell.end()) {
+              UFW_ERROR(
+                  "Cannot build ECAL neighbour map: cell at row {}, column {} is missing from module {} in region {}",
+                  row, column, neighbour_id.module_number, static_cast<int>(neighbour_id.region));
+            }
+            neighbours_id.push_back(neighbour_id);
+          }
+        }
+      }
+    }
+
+    // Process each neighbouring module pair once.
+    // For each matched cell pair A/B, add B to A's neighbour list and A to B's list.
+    for (const auto& module_entry : m_modules_cells_maps) {
+      const auto current_module_id = module_entry.first;
+      const int module_number      = current_module_id.module_number;
+      const bool is_barrel         = current_module_id.region == geo_id::region_t::BARREL;
+      module_id neighbour_module_id;
+      neighbour_module_id.region = current_module_id.region;
+      if (is_barrel) {
+        if (module_number >= 24) {
+          UFW_ERROR("Cannot build ECAL neighbour map: invalid barrel module {}", module_number);
+        }
+        neighbour_module_id.module_number = static_cast<module_t>((module_number + 1) % 24);
+      } else if (current_module_id.region == geo_id::region_t::ENDCAP_A
+                 || current_module_id.region == geo_id::region_t::ENDCAP_B) {
+        if (module_number >= 32) {
+          UFW_ERROR("Cannot build ECAL neighbour map: invalid endcap module {} in region {}", module_number,
+                    static_cast<int>(neighbour_module_id.region));
+        }
+        // 0, 1, 16, 17 central module connections are skipped here; modules 15 and 31 end the lateral chains.
+        if (!((module_number >= 2 && module_number < 15) || (module_number >= 18 && module_number < 31))) {
+          continue;
+        }
+        neighbour_module_id.module_number = static_cast<module_t>(module_number + 1);
+      } else {
+        UFW_ERROR("Cannot build ECAL neighbour map: invalid region {} for module {}",
+                  static_cast<int>(neighbour_module_id.region), module_number);
+      }
+
+      const auto neighbour_module_it = m_modules_cells_maps.find(neighbour_module_id);
+      if (neighbour_module_it == m_modules_cells_maps.end()) {
+        UFW_ERROR("Cannot build ECAL neighbour map: module {} in region {} is missing (required by module {})",
+                  neighbour_module_id.module_number, static_cast<int>(neighbour_module_id.region), module_number);
+      }
+      const auto& map_id_cell           = module_entry.second;
+      const auto& neighbour_map_id_cell = neighbour_module_it->second;
+      const auto& extent                = extents.at(current_module_id);
+      const auto& neighbour_extent      = extents.at(neighbour_module_id);
+      // Barrel: first column in the module is near last column of the previous module. Endcaps: first column in the module is near last column of the following module. The neighbour module is always the +1 in the chain. 
+      const int source_column = is_barrel ? extent.max_column : 0;
+      const int target_column = is_barrel ? 0 : neighbour_extent.max_column;
+
+      for (const auto& cell_entry : map_id_cell) {
+        const auto cid = cell_entry.first;
+        if (cid.column != source_column) {
+          continue;
+        }
+
+        auto& neighbours_id = m_cells_cellneighbours_map.at(cid);
+        const int first_row = std::max(0, int(cid.row) - 1);
+        const int last_row  = std::min(neighbour_extent.max_row, int(cid.row) + 1);
+        for (int row = first_row; row <= last_row; ++row) {
+          cell_id neighbour_id;
+          neighbour_id.region        = neighbour_module_id.region;
+          neighbour_id.module_number = neighbour_module_id.module_number;
+          neighbour_id.row           = static_cast<row_t>(row);
+          neighbour_id.column        = static_cast<column_t>(target_column);
+          if (neighbour_map_id_cell.find(neighbour_id) == neighbour_map_id_cell.end()) {
+            UFW_ERROR("Cannot build ECAL neighbour map: boundary cell at row {}, column {} is missing from module {} "
+                      "in region {}",
+                      row, target_column, neighbour_id.module_number, static_cast<int>(neighbour_id.region));
+          }
+          neighbours_id.push_back(neighbour_id);
+          m_cells_cellneighbours_map.at(neighbour_id).push_back(cid);
+        }
+      }
+    }
+
+    struct central_boundary {
+      module_t source_module;
+      module_t target_module;
+      column_t source_column;
+      column_t target_column;
+    };
+    // Central modules and their lateral neighbours, using only the long straight sections.
+    // These schematics omit bends and are not to scale. Numbers inside each module are column indices.
+    // Rows run through the endcap thickness and are omitted here; all indices are zero-based.
+    /////////////////////////////////////////////////////////////////////////////
+    //
+    //                      ECAL ENDCAP A - CENTRAL MODULES
+    //
+    // Columns are shown left to right in increasing global Z.            +Z -->
+    //
+    // +-------------+---------------------+---------------------+-------------+
+    // |             |       module 0      |       module 1      |             |
+    // |             |     0 1 2 3 4 5     |     0 1 2 3 4 5     |             |
+    // |             |                     |                     |             |
+    // |             +---------------------+---------------------+             |
+    // |  module 18  |No links between upper/lower central groups|   module 2  |
+    // |    0 1 2    |                                           |    2 1 0    |
+    // |             +---------------------+---------------------+             |
+    // |             |                     |                     |             |
+    // |             |      module 17      |      module 16      |             |
+    // |             |     5 4 3 2 1 0     |     5 4 3 2 1 0     |             |
+    // +-------------+---------------------+---------------------+-------------+
+    //
+    /////////////////////////////////////////////////////////////////////////////
+    //
+    /////////////////////////////////////////////////////////////////////////////
+    //
+    //                      ECAL ENDCAP B - CENTRAL MODULES
+    //
+    // Columns are shown left to right in increasing global Z.            +Z -->
+    //
+    // +-------------+---------------------+---------------------+-------------+
+    // |             |       module 1      |       module 0      |             |
+    // |             |     5 4 3 2 1 0     |     5 4 3 2 1 0     |             |
+    // |             |                     |                     |             |
+    // |             +---------------------+---------------------+             |
+    // |   module 2  |No links between upper/lower central groups|  module 18  |
+    // |    0 1 2    |                                           |    2 1 0    |
+    // |             +---------------------+---------------------+             |
+    // |             |                     |                     |             |
+    // |             |      module 16      |      module 17      |             |
+    // |             |     0 1 2 3 4 5     |     0 1 2 3 4 5     |             |
+    // +-------------+---------------------+---------------------+-------------+
+    //
+    /////////////////////////////////////////////////////////////////////////////
+    // At each vertical module boundary, connect the two edge columns shown above.
+    // For example, module 1 column 5 touches module 2 column 2 in both endcaps.
+    // Endcap B mirrors Z while preserving the same module/column pairs.
+    // Entries are {source module, target module, source column, target column}; connect rows r and r +/- 1.
+    constexpr central_boundary central_boundaries[] = {
+        {0, 1, 5, 0},
+        {16, 17, 5, 0},
+        {1, 2, 5, 2},
+        {16, 2, 0, 2},
+        {0, 18, 0, 2},
+        {17, 18, 5, 2}};
+    for (const auto region : {geo_id::region_t::ENDCAP_A, geo_id::region_t::ENDCAP_B}) {
+      for (const auto& boundary : central_boundaries) {
+        module_id source_module_id;
+        source_module_id.region        = region;
+        source_module_id.module_number = boundary.source_module;
+        module_id target_module_id;
+        target_module_id.region        = region;
+        target_module_id.module_number = boundary.target_module;
+        const auto source_it = m_modules_cells_maps.find(source_module_id);
+        const auto target_it = m_modules_cells_maps.find(target_module_id);
+        if (source_it == m_modules_cells_maps.end() && target_it == m_modules_cells_maps.end()) {
+          continue;
+        }
+        if (source_it == m_modules_cells_maps.end() || target_it == m_modules_cells_maps.end()) {
+          UFW_ERROR("Cannot build ECAL neighbour map: module {} in region {} is missing (required by module {})",
+                    source_it == m_modules_cells_maps.end() ? boundary.source_module : boundary.target_module,
+                    static_cast<int>(region),
+                    source_it == m_modules_cells_maps.end() ? boundary.target_module : boundary.source_module);
+        }
+
+        const auto& source_extent = extents.at(source_module_id);
+        const auto& target_extent = extents.at(target_module_id);
+        cell_id source_id;
+        source_id.region        = region;
+        source_id.module_number = boundary.source_module;
+        source_id.column        = boundary.source_column;
+        cell_id target_id;
+        target_id.region        = region;
+        target_id.module_number = boundary.target_module;
+        target_id.column        = boundary.target_column;
+
+        for (int row = 0; row <= source_extent.max_row; ++row) {
+          source_id.row       = static_cast<row_t>(row);
+          auto& neighbours_id = m_cells_cellneighbours_map.at(source_id);
+          const int first_row = std::max(0, row - 1);
+          const int last_row  = std::min(target_extent.max_row, row + 1);
+          for (int target_row = first_row; target_row <= last_row; ++target_row) {
+            target_id.row = static_cast<row_t>(target_row);
+            neighbours_id.push_back(target_id);
+            m_cells_cellneighbours_map.at(target_id).push_back(source_id);
+          }
+        }
+      }
+    }
   }
 
   void geoinfo::ecal_info::find_modules(const geo_path& path) {

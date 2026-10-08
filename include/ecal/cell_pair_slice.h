@@ -12,7 +12,7 @@ namespace sand::ecal {
   /// Each slice contains the cell-pair hypotheses reconstructed from the
   /// corresponding digit slice.
   struct cell_pair_slices_container : managed_data_base {
-    using slice = std::vector<cell_pair>;
+    using slice            = std::vector<cell_pair>;
     using slice_collection = std::vector<slice>;
 
     slice_collection collection;

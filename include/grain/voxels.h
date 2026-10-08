@@ -1,8 +1,6 @@
 #pragma once
 
-#include <common/truth.h>
 #include <grain/grain.h>
-
 
 namespace sand::grain {
 
@@ -11,9 +9,8 @@ namespace sand::grain {
     voxels_list voxels;
   };
 
-}
+} // namespace sand::grain
 
 UFW_DECLARE_MANAGED_DATA(sand::grain::voxels)
 
 UFW_DECLARE_UNMANAGED_DATA(sand::grain::voxel_array<float>)
-

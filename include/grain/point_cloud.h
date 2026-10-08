@@ -2,7 +2,6 @@
 
 #include <common/sand.h>
 
-
 namespace sand::grain {
 
   struct point_cloud : managed_data_base {
@@ -14,7 +13,6 @@ namespace sand::grain {
     point_cloud_list points;
   };
 
-}
+} // namespace sand::grain
 
 UFW_DECLARE_MANAGED_DATA(sand::grain::point_cloud)
-

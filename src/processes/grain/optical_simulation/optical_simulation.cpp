@@ -71,7 +71,7 @@ namespace sand::grain {
     run_manager.Initialize();
   }
 
-  optical_simulation::optical_simulation() : process({}, {{"hits", "sand::grain::hits"}}) {
+  optical_simulation::optical_simulation() : process({}, {{"hits", "sand::grain::photons"}}) {
     UFW_INFO("Creating a optical_simulation process at {}", fmt::ptr(this));
   }
 

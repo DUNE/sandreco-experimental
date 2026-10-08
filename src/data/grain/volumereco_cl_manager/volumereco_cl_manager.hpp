@@ -56,6 +56,8 @@ namespace sand::grain {
 
     std::vector<cl::buffer>& expectation_buffers() { return m_expectation_buffers; }
 
+    std::size_t pixels_count() const { return m_pixels_count; }
+
    private:
     void configure_expectation();
     void configure_maximization();

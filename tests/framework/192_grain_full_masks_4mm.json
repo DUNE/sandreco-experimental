@@ -18,11 +18,23 @@
     }
   },
   "globals" : {
+    "sand::cl::platform" : {},
+    "sand::grain::volumereco_cl_manager" : { "voxel_size" : 150.0 },
     "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
-    "sand::geoinfo" : { "grain" : { "inner_geometry" : "gdml-lenses" } },
+    "sand::geoinfo" : { "grain" : { "inner_geometry" : "gdml-masks" } },
     "sand::grain::geant_run_manager" : {},
     "sand::grain::geant_gdml_parser" : {
-      "gdml-lenses" : { "path" : "geometries/grain/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"}
+      "gdml-masks" : { "path" : "geometries/grain/grain-masks_4mm_42x24/main.gdml" }
+    },
+    "sand::hdf5::ndarray" : {
+      "angle_reader" : {
+        "uri" : "test/voxel_weights_4mm.h5",
+        "io" : "read"
+      },
+      "score_writer" : {
+        "uri" : "test/volumereco_4mm.h5",
+        "io" : "overwrite"
+      }
     }
   },
   "contexts" : {
@@ -34,9 +46,16 @@
   },
   "run" : [
     {
+      "sand::test::test_grain_mask_weight_computation" : {
+        "voxel_size" : 150.0
+      },
+      "reqs" : {},
+      "prods" : {}
+    },
+    {
       "sand::grain::optical_simulation" : {
         "seed" : 111,
-        "geometry" : "gdml-lenses",
+        "geometry" : "gdml-masks",
         "energy_split_threshold" : 100
       },
       "reqs" : {},
@@ -44,31 +63,41 @@
     },
     {
       "sand::grain::detector_response_fast" : {
-          "geometry" : "gdml-lenses",
+          "geometry": "gdml-masks",
           "pde": 0.999},
       "reqs" : {"hits" : "grain_hits"},
       "prods" : {"digi": "grain_digi"}
     },
     {
       "sand::grain::spill_slicer" : {
-          "slice_times": [0.0, 2000.0, 20000.0]
+        "min_response_signal": 8,
+        "delta_ns_for_comparison": 1000
       },
       "reqs" : {"digi" : "grain_digi"},
       "prods" : {"images": "grain_images", "timeranges": "grain_timeranges"}
     },
     {
-      "sand::root::tree_streamer" : {
-        "uri" : "test/full_images_lenses.root",
-        "tree" : "cameras"
+      "sand::grain::volumereco" : {
+        "max_iterations" : 3,
+        "pde" : 1.0,
+        "write_to_hdf5" : true
       },
-      "write" : ["grain_images", "grain_timeranges"]
+      "reqs" : { "images" : "grain_images", "slices": "grain_timeranges" },
+      "prods" : { "photon_amplitudes" : "grain_lightmap" }
     },
     {
-      "sand::png::png_streamer" : {
-        "uri" : "test/lenses_big_.png",
-        "scale" : 16
+      "sand::test::test_grain_volumereco" : {
+        "voxel_size" : 150.0
       },
-      "write" : ["grain_images"]
+      "reqs" : {"photon_amplitudes": "grain_lightmap"},
+      "prods" : {}
+    },
+    {
+      "sand::root::tree_streamer" : {
+        "uri" : "test/volumereco_full_4mm.root",
+        "tree" : "recos"
+      },
+      "write" : ["grain_digi", "grain_images", "grain_timeranges", "grain_lightmap"]
     }
   ]
 }

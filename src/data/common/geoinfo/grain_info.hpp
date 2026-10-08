@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
 
 #include <geoinfo/subdetector_info.hpp>
 
@@ -50,7 +51,6 @@ namespace sand {
       std::vector<rect_f> holes;
     };
 
-   
    public:
     grain_info(const geoinfo&, const geo_path&, const ufw::config&);
 

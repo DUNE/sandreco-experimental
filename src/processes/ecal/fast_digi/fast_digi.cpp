@@ -17,8 +17,8 @@ namespace sand::ecal {
    * It applies constant fraction discrimination to extract the best timing of the signal.
    *
    * \subsection Configuration
-   * 
-   * | Parameter Name      | Type     | Unit            | Required/Default | Description                                                   |
+   *
+   * | Parameter Name      | Type     | Unit            | Required/Default | Description |
    * |---------------------|----------|-----------------|------------------|---------------------------------------------------------------|
    * | `int_time_window`   | `double` | nanoseconds     | Required         | Integration window duration for accumulating photo-electrons. |
    * | `dead_time_window`  | `double` | nanoseconds     | Required         | Electronics dead time after pulse detection.                  |
@@ -39,7 +39,6 @@ namespace sand::ecal {
    * | Name | Type | Comment |
    * |------|------|---------|
    * | `digi` | `sand::ecal::digits_container` | Digitized signals after processing |
-   *
    */
 
   /// Configure digitization parameters from configuration file
@@ -97,11 +96,7 @@ namespace sand::ecal {
 
           // Create digitized signal with PMT channel, timing window, and measurements
           digits_container::digit signal(
-              pmt,
-              // timing window for particle crossing is conservatively estimated taking into
-              // account a maximal path length for scintillation photons of 5 m, a velocity of
-              // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
-              {tdc - 35., tdc, tdc + 5.},
+              pmt, tdc,
               // Calculate ADC value proportional to collected photo-electrons
               // for now, we just use the number of PEs as the ADC value.
               // This can be improved by using a more realistic response function.

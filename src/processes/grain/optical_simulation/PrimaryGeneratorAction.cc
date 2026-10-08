@@ -197,7 +197,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     // This ALREADY takes into account excitons and the fraction of recombinating ions
 
     // photons (excitons + recombinating ions)
-    G4double myphotons = m_hits_it->GetSecondaryDeposit() * m_optmen_edepsim->properties().m_scintillation_yield;
+    G4double myphotons = m_hits_it->GetEnergyDeposit() * m_optmen_edepsim->properties().m_scintillation_yield;
     m_optmen_edepsim->set_current_truth_id(m_hits_it->GetId());
 
     int myNumPhotons = 0;
@@ -205,7 +205,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event *event) {
     else                   myNumPhotons = int(G4RandGauss::shoot(myphotons, sqrt(myphotons))+0.5);
     if(myNumPhotons < 0)   myNumPhotons = 0 ;
 
-    UFW_DEBUG("Shooting {} photons for hit {} with {} MeV energy, deposited by PDG {}", myNumPhotons, m_hits_it->GetId(), m_hits_it->GetSecondaryDeposit(), myPDG);
+    UFW_DEBUG("Shooting {} photons for hit {} with {} MeV energy, deposited by PDG {}", myNumPhotons, m_hits_it->GetId(), m_hits_it->GetEnergyDeposit(), myPDG);
 
     //TODO: check better sources
     // Xe-DOPING --> Xe-doping increases the overall LY to 1.20 pure LAr

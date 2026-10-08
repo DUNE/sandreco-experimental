@@ -61,10 +61,10 @@ BOOST_AUTO_TEST_CASE(insertion) {
   UFW_DEBUG("Bias direction = {}", coarse);
   sand::dir_3d sum;
   for (int i = 0; i != 2000; ++i) {
-    auto ds = ranvec.biased_direction(0.5, coarse);
+    auto ds  = ranvec.biased_direction(0.5, coarse);
     auto q_r = ranvec.direction(1e-4);
     sum += ds;
-    track::segment s{ds, 0.0, q_r, 0.0, {0.0, 0.25, 0.5}};
+    track::segment s{ds, 0.0, q_r, 0.0, {0.25, 0.0, 0.5}};
     t.push(s);
   }
   UFW_DEBUG("Total displacement = {}", sum);
