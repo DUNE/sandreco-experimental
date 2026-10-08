@@ -245,10 +245,10 @@ namespace sand::common::reco_details {
   }
 
   ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn, TrackerG4IDs const& tracker_ids,
-                                         int ixn_idx) {
+                                         int ixn_idx, int first_track_idx, int first_shower_idx) {
     ParticleSlots slots;
-    int track_idx{};
-    int shower_idx{};
+    int track_idx{first_track_idx};
+    int shower_idx{first_shower_idx};
 
     auto has_tracker_hits = [&](::caf::SRTrueParticle const& p) {
       return p.G4ID >= 0 && std::binary_search(tracker_ids.begin(), tracker_ids.end(), p.G4ID);
@@ -279,11 +279,13 @@ namespace sand::common::reco_details {
   }
 
   ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                        TrackerG4IDs const& tracker_ids, int ixn_idx) {
+                                                        TrackerG4IDs const& tracker_ids, int ixn_idx,
+                                                        int first_track_idx, int first_shower_idx) {
     ::caf::SRRecoParticlesBranch part{};
     auto const n_prim = static_cast<int>(true_ixn.prim.size());
 
-    for (auto const& slot : particle_slots_from_true(true_ixn, tracker_ids, ixn_idx)) {
+    for (auto const& slot :
+         particle_slots_from_true(true_ixn, tracker_ids, ixn_idx, first_track_idx, first_shower_idx)) {
       auto const& true_part = true_particle_from_id(true_ixn, slot.id);
       auto reco_p           = reco_particle_from_true(true_part, slot.id);
 
@@ -309,11 +311,13 @@ namespace sand::common::reco_details {
     return part;
   }
 
-  ::caf::SRTracker sand_tracker_from_true(::caf::SRTrueInteraction const& true_ixn, TrackerG4IDs const& tracker_ids,
-                                          int ixn_idx, sand::edep_reader const& edep) {
-    ::caf::SRTracker tracker{};
+  void sand_tracker_from_true(::caf::SRTracker& tracker, ::caf::SRTrueInteraction const& true_ixn,
+                              TrackerG4IDs const& tracker_ids, int ixn_idx, sand::edep_reader const& edep) {
+    auto const first_track_idx  = static_cast<int>(tracker.tracks.size());
+    auto const first_shower_idx = static_cast<int>(tracker.showers.size());
 
-    for (auto const& slot : particle_slots_from_true(true_ixn, tracker_ids, ixn_idx)) {
+    for (auto const& slot :
+         particle_slots_from_true(true_ixn, tracker_ids, ixn_idx, first_track_idx, first_shower_idx)) {
       auto const& true_part = true_particle_from_id(true_ixn, slot.id);
 
       if (slot.track_idx >= 0) {
@@ -328,7 +332,6 @@ namespace sand::common::reco_details {
         ++tracker.nshowers;
       }
     }
-    return tracker;
   }
 
 } // namespace sand::common::reco_details

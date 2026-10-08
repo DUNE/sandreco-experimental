@@ -98,29 +98,28 @@ namespace sand::test {
                "common.ixn.sandreco.size() ({}) doesn't match truth.nu.size() ({})", common.ixn.sandreco.size(),
                truth.nu.size());
 
+    auto const& tracker = nd.sand.tracker;
+    UFW_ASSERT(tracker.tracks.size() == tracker.ntracks,
+               "tracker.ntracks ({}) doesn't match tracker.tracks.size() ({})", tracker.ntracks, tracker.tracks.size());
+    UFW_ASSERT(tracker.showers.size() == tracker.nshowers,
+               "tracker.nshowers ({}) doesn't match tracker.showers.size() ({})", tracker.nshowers,
+               tracker.showers.size());
+
+    std::size_t n_with_track{};
+    std::size_t n_with_shower{};
+
     for (std::size_t ixn_idx{}; ixn_idx != common.ixn.sandreco.size(); ++ixn_idx) {
       auto const& true_ixn = truth.nu[ixn_idx];
       auto const& reco_ixn = common.ixn.sandreco[ixn_idx];
-      auto const& sand_ixn = nd.sand.ixn[ixn_idx];
       auto const ixn_idx_i = static_cast<int>(ixn_idx);
       auto const n_prim    = true_ixn.prim.size();
 
       UFW_ASSERT(reco_ixn.part.sandreco.size() == static_cast<std::size_t>(reco_ixn.part.nsandreco),
                  "nu[{}]: part.nsandreco ({}) doesn't match part.sandreco.size() ({})", ixn_idx,
                  reco_ixn.part.nsandreco, reco_ixn.part.sandreco.size());
-      UFW_ASSERT(sand_ixn.tracker.tracks.size() == sand_ixn.tracker.ntracks,
-                 "nu[{}]: tracker.ntracks ({}) doesn't match tracker.tracks.size() ({})", ixn_idx,
-                 sand_ixn.tracker.ntracks, sand_ixn.tracker.tracks.size());
-      UFW_ASSERT(sand_ixn.tracker.showers.size() == sand_ixn.tracker.nshowers,
-                 "nu[{}]: tracker.nshowers ({}) doesn't match tracker.showers.size() ({})", ixn_idx,
-                 sand_ixn.tracker.nshowers, sand_ixn.tracker.showers.size());
-
       UFW_ASSERT(reco_ixn.part.sandreco.size() == n_prim + true_ixn.sec.size(),
                  "nu[{}]: part.sandreco.size() ({}) doesn't match prim ({}) + sec ({})", ixn_idx,
                  reco_ixn.part.sandreco.size(), n_prim, true_ixn.sec.size());
-
-      std::size_t n_with_track{};
-      std::size_t n_with_shower{};
 
       for (std::size_t p{}; p != reco_ixn.part.sandreco.size(); ++p) {
         auto const& particle = reco_ixn.part.sandreco[p];
@@ -178,9 +177,9 @@ namespace sand::test {
           UFW_ASSERT(particle.recoobj.ixn == ixn_idx_i, "nu[{}].part[{}]: recoobj.ixn doesn't match this interaction",
                      ixn_idx, p);
           UFW_ASSERT(particle.recoobj.irecoobj >= 0
-                         && static_cast<std::size_t>(particle.recoobj.irecoobj) < sand_ixn.tracker.tracks.size(),
+                         && static_cast<std::size_t>(particle.recoobj.irecoobj) < tracker.tracks.size(),
                      "nu[{}].part[{}]: recoobj.irecoobj out of range", ixn_idx, p);
-          auto const& track = sand_ixn.tracker.tracks[static_cast<std::size_t>(particle.recoobj.irecoobj)];
+          auto const& track = tracker.tracks[static_cast<std::size_t>(particle.recoobj.irecoobj)];
           UFW_ASSERT(track.part.type == ::caf::SRRecoParticleID::kSandreco && track.part.ixn == ixn_idx_i
                          && track.part.ipart == p_i,
                      "nu[{}].part[{}]: matched track's part doesn't point back to this particle", ixn_idx, p);
@@ -219,9 +218,9 @@ namespace sand::test {
           UFW_ASSERT(particle.recoobj.ixn == ixn_idx_i, "nu[{}].part[{}]: recoobj.ixn doesn't match this interaction",
                      ixn_idx, p);
           UFW_ASSERT(particle.recoobj.irecoobj >= 0
-                         && static_cast<std::size_t>(particle.recoobj.irecoobj) < sand_ixn.tracker.showers.size(),
+                         && static_cast<std::size_t>(particle.recoobj.irecoobj) < tracker.showers.size(),
                      "nu[{}].part[{}]: recoobj.irecoobj out of range", ixn_idx, p);
-          auto const& shower = sand_ixn.tracker.showers[static_cast<std::size_t>(particle.recoobj.irecoobj)];
+          auto const& shower = tracker.showers[static_cast<std::size_t>(particle.recoobj.irecoobj)];
           UFW_ASSERT(shower.part.type == ::caf::SRRecoParticleID::kSandreco && shower.part.ixn == ixn_idx_i
                          && shower.part.ipart == p_i,
                      "nu[{}].part[{}]: matched shower's part doesn't point back to this particle", ixn_idx, p);
@@ -244,17 +243,12 @@ namespace sand::test {
           UFW_ASSERT(found, "nu[{}].part[{}]: parent's daughters doesn't list it back", ixn_idx, p);
         }
       }
-
-      // Every track/shower is claimed by exactly one particle: the counts above already prove the
-      // particle -> object direction is injective, so matching sizes close it into a bijection.
-      // Catches duplicated or skipped track_idx/shower_idx, which the gate makes easy to get wrong.
-      UFW_ASSERT(n_with_track == sand_ixn.tracker.tracks.size(),
-                 "nu[{}]: {} particle(s) point to a track but tracker.tracks holds {}", ixn_idx, n_with_track,
-                 sand_ixn.tracker.tracks.size());
-      UFW_ASSERT(n_with_shower == sand_ixn.tracker.showers.size(),
-                 "nu[{}]: {} particle(s) point to a shower but tracker.showers holds {}", ixn_idx, n_with_shower,
-                 sand_ixn.tracker.showers.size());
     }
+
+    UFW_ASSERT(n_with_track == tracker.tracks.size(), "{} particle(s) point to a track but tracker.tracks holds {}",
+               n_with_track, tracker.tracks.size());
+    UFW_ASSERT(n_with_shower == tracker.showers.size(), "{} particle(s) point to a shower but tracker.showers holds {}",
+               n_with_shower, tracker.showers.size());
 
     UFW_INFO("fast_reco_test: verified {} interaction(s)", common.ixn.sandreco.size());
   }

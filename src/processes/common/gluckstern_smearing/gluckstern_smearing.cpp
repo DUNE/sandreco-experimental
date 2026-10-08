@@ -216,54 +216,49 @@ namespace sand::common {
     auto& edep           = instance<sand::edep_reader>();
     auto& tgm            = instance<sand::root_tgeomanager>();
 
-    out_nd.sand.nixn = in_nd.sand.nixn;
-    out_nd.sand.ixn.reserve(in_nd.sand.ixn.size());
+    out_nd.sand = in_nd.sand;
 
     int n_smeared{};
     int n_out_of_range{};
 
-    for (std::size_t ixn_idx{}, sand_ixn_size{in_nd.sand.ixn.size()}; ixn_idx != sand_ixn_size; ++ixn_idx) {
-      auto const& true_ixn = in_truth.nu[ixn_idx];
-      auto& out_ixn        = out_nd.sand.ixn.emplace_back(in_nd.sand.ixn[ixn_idx]);
+    for (auto& track : out_nd.sand.tracker.tracks) {
+      auto const& true_id   = track.truth[0];
+      auto const& true_part = true_particle_from_id(in_truth.nu[static_cast<std::size_t>(true_id.ixn)], true_id);
 
-      for (auto& track : out_ixn.tracker.tracks) {
-        auto const& true_part = true_particle_from_id(true_ixn, track.truth[0]);
-
-        if (std::abs(true_part.pdg) != 13) {
-          continue; // only muons get Gluckstern smearing
-        }
-
-        auto trj = edep.GetTrajectory(true_part.G4ID);
-        if (trj == edep.end()) {
-          continue;
-        }
-
-        auto const& hit_map = trj->GetHitMap();
-        auto const it       = find_tracker_hits(hit_map);
-        if (it == hit_map.end()) {
-          continue;
-        }
-
-        auto const geom = gluckstern_geometry_from_hits(tgm, it->second, m_hit_energy_thr);
-        if (!geom) {
-          continue;
-        }
-
-        auto const smeared_p = smear_momentum_gluckstern(true_part.p, *geom, m_sigma_t, m_sigma_l, m_b_field);
-        if (!smeared_p) {
-          ++n_out_of_range; // resolution not physically usable, left unsmeared
-          continue;
-        }
-
-        auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
-        float const mass     = pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
-
-        track.dir  = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
-        track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass));
-        track.Evis = track.E;
-
-        ++n_smeared;
+      if (std::abs(true_part.pdg) != 13) {
+        continue; // only muons get Gluckstern smearing
       }
+
+      auto trj = edep.GetTrajectory(true_part.G4ID);
+      if (trj == edep.end()) {
+        continue;
+      }
+
+      auto const& hit_map = trj->GetHitMap();
+      auto const it       = find_tracker_hits(hit_map);
+      if (it == hit_map.end()) {
+        continue;
+      }
+
+      auto const geom = gluckstern_geometry_from_hits(tgm, it->second, m_hit_energy_thr);
+      if (!geom) {
+        continue;
+      }
+
+      auto const smeared_p = smear_momentum_gluckstern(true_part.p, *geom, m_sigma_t, m_sigma_l, m_b_field);
+      if (!smeared_p) {
+        ++n_out_of_range; // resolution not physically usable, left unsmeared
+        continue;
+      }
+
+      auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
+      float const mass     = pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
+
+      track.dir  = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
+      track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass));
+      track.Evis = track.E;
+
+      ++n_smeared;
     }
 
     UFW_DEBUG("gluckstern_smearing: smeared {} muon tracks, {} left unsmeared (resolution out of range)", n_smeared,

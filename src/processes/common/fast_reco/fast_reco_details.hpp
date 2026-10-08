@@ -62,17 +62,22 @@ namespace sand {
                                                    ::caf::TrueParticleID const& id);
 
     /// \brief Indexes every true particle of an interaction, applying the tracker gate.
+    ///
+    /// The tracker collections are spill-level, so track/shower indices keep counting across interactions:
+    /// `first_track_idx`/`first_shower_idx` are the sizes of caf::SRTracker::tracks/showers before this interaction.
     [[nodiscard]] ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                         TrackerG4IDs const& tracker_ids, int ixn_idx);
+                                                         TrackerG4IDs const& tracker_ids, int ixn_idx,
+                                                         int first_track_idx, int first_shower_idx);
 
     /// \brief Perfect reco particles: one caf::SRRecoParticle per true `prim`/`sec`, cross-links resolved.
     [[nodiscard]] ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                                        TrackerG4IDs const& tracker_ids, int ixn_idx);
+                                                                        TrackerG4IDs const& tracker_ids, int ixn_idx,
+                                                                        int first_track_idx, int first_shower_idx);
 
-    /// \brief Perfect SAND tracker: one caf::SRTrack/caf::SRShower per particle that passed the gate.
-    [[nodiscard]] ::caf::SRTracker sand_tracker_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                          TrackerG4IDs const& tracker_ids, int ixn_idx,
-                                                          sand::edep_reader const& edep);
+    /// \brief Perfect SAND tracker: appends to the spill-level `tracker` one caf::SRTrack/caf::SRShower per particle
+    /// of this interaction that passed the gate.
+    void sand_tracker_from_true(::caf::SRTracker& tracker, ::caf::SRTrueInteraction const& true_ixn,
+                                TrackerG4IDs const& tracker_ids, int ixn_idx, sand::edep_reader const& edep);
 
   } // namespace common::reco_details
 } // namespace sand
