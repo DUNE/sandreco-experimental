@@ -7,7 +7,7 @@
 
 namespace sand::common {
 
-  /// Fills `out_truth_branch` (SRTruthBranch) from GENIE (genie_reader) and edep-sim (edep_reader).
+  /// Fills `out_truth_branch` (SRTruthBranch) from GENIE (genie_reader) and edep-sim (edep_reader_refactor).
   struct truth_filler : public ufw::process {
     truth_filler();
     void run() override;

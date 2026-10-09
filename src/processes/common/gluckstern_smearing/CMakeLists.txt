@@ -8,7 +8,7 @@ target_sources(sand_common_gluckstern_smearing
 target_link_libraries(sand_common_gluckstern_smearing
   PRIVATE
   sand_root_tgeomanager
-  sand_edep_reader
+  sand_edep_reader_refactor
   ROOT::MathCore
   ROOT::EG
   duneanaobj::StandardRecord

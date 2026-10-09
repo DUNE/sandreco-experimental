@@ -1,6 +1,6 @@
 #include <caf/caf_wrapper.hpp>
 
-#include <edep_reader/edep_reader.hpp>
+#include <edep_reader_refactor/edep_reader_refactor.hpp>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -18,7 +18,7 @@ namespace sand::test {
   /// resolves back to the node it claims to, every truth match resolves to a real
   /// SRTrueParticle with the same pdg, and every parent/daughters link round-trips.
   ///
-  /// It also re-derives, straight from sand::edep_reader, which particles were supposed to
+  /// It also re-derives, straight from sand::edep_reader_refactor, which particles were supposed to
   /// pass fast_reco's "has hits in the tracker" gate, and checks that exactly those got a reco
   /// object. The expectation is recomputed the slow way (EDEPTree::GetTrajectory) on
   /// purpose: it must not share code with the production gate, or it would verify nothing.
@@ -58,7 +58,7 @@ namespace sand::test {
       return abs_pdg == 22 || abs_pdg == 111;
     }
 
-    bool has_tracker_hits(sand::edep_reader const& edep, ::caf::SRTrueParticle const& true_part) {
+    bool has_tracker_hits(sand::edep_reader_refactor const& edep, ::caf::SRTrueParticle const& true_part) {
       if (true_part.G4ID < 0) {
         return false;
       }
@@ -84,7 +84,7 @@ namespace sand::test {
     auto const& truth  = get<sand::caf::truth_branch_wrapper>("in_truth");
     auto const& common = get<sand::caf::common_reco_branch_wrapper>("in_common");
     auto const& nd     = get<sand::caf::nd_reco_branch_wrapper>("in_nd");
-    auto const& edep   = instance<sand::edep_reader>();
+    auto const& edep   = instance<sand::edep_reader_refactor>();
 
     UFW_ASSERT(common.ixn.sandreco.size() == common.ixn.nsandreco,
                "common.ixn.nsandreco ({}) doesn't match common.ixn.sandreco.size() ({})", common.ixn.nsandreco,

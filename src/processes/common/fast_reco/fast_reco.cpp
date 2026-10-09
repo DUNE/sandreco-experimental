@@ -2,7 +2,7 @@
 #include "fast_reco_details.hpp"
 
 #include <caf/caf_wrapper.hpp>
-#include <edep_reader/edep_reader.hpp>
+#include <edep_reader_refactor/edep_reader_refactor.hpp>
 
 #include <duneanaobj/StandardRecord/SRInteraction.h>
 
@@ -16,7 +16,7 @@ namespace sand::common {
           {{"out_common", "sand::caf::common_reco_branch_wrapper"}, {"out_nd", "sand::caf::nd_reco_branch_wrapper"}}} {}
 
   void fast_reco::run() {
-    auto const& edep         = instance<sand::edep_reader>();
+    auto const& edep         = instance<sand::edep_reader_refactor>();
     auto const& truth_branch = get<sand::caf::truth_branch_wrapper>("in_truth");
     auto& common_reco_branch = set<sand::caf::common_reco_branch_wrapper>("out_common");
     auto& nd_reco_branch     = set<sand::caf::nd_reco_branch_wrapper>("out_nd");

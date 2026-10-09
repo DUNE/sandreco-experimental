@@ -50,7 +50,7 @@
     },
     {
       "sand::caf::caf_streamer": {
-        "uri": "/home/sand/sandreco-experimental/output.caf.root",
+        "uri": "/home/sand/sandreco-experimental/output_refactor.caf.root",
         "tree": "cafTree"
       },
       "write": ["produced_truth", "produced_common", "produced_nd"]

@@ -13,5 +13,5 @@ foreach(testSrc ${TEST_SRCS})
         ${CMAKE_SOURCE_DIR}/src/data/common
         ${CMAKE_SOURCE_DIR}/include
     )
-  add_test_with_libs(${testName} sand_common_truth_filler ufw::ufw ROOT::Core ROOT::EG duneanaobj::StandardRecord sand_edep_reader sand_genie_reader EDepSim::edepsim_io)
+  add_test_with_libs(${testName} sand_common_truth_filler ufw::ufw ROOT::Core ROOT::EG duneanaobj::StandardRecord sand_edep_reader_refactor sand_genie_reader EDepSim::edepsim_io)
 endforeach(testSrc)

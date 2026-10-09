@@ -7,5 +7,5 @@ target_sources(sand_common_truth_filler
   evtcode_parser.cpp
 )
 
-add_dependencies(sand_common_truth_filler sand_edep_reader sand_genie_reader)
-target_link_libraries(sand_common_truth_filler PRIVATE sand_edep_reader sand_genie_reader ROOT::RIO ROOT::Tree ROOT::EG duneanaobj::StandardRecord)
+add_dependencies(sand_common_truth_filler sand_edep_reader_refactor sand_genie_reader)
+target_link_libraries(sand_common_truth_filler PRIVATE sand_edep_reader_refactor sand_genie_reader ROOT::RIO ROOT::Tree ROOT::EG duneanaobj::StandardRecord)

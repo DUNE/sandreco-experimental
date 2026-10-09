@@ -21,7 +21,7 @@ namespace caf {
 
 namespace sand {
 
-  class edep_reader;
+  class edep_reader_refactor;
 
   namespace common::reco_details {
 
@@ -37,7 +37,7 @@ namespace sand {
     using TrackerG4IDs = std::vector<int>;
 
     /// \brief Collects the G4IDs of every trajectory with hits in the tracker.
-    [[nodiscard]] TrackerG4IDs tracker_g4ids_from_edep(sand::edep_reader const& tree);
+    [[nodiscard]] TrackerG4IDs tracker_g4ids_from_edep(sand::edep_reader_refactor const& tree);
 
     /// \brief Perfect classifier: one-hot CVN scores on the true interaction class.
     [[nodiscard]] ::caf::SRNeutrinoHypothesisBranch
@@ -55,7 +55,7 @@ namespace sand {
 
     /// \brief Perfect track, for a track-like particle that has tracker hits.
     [[nodiscard]] ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part,
-                                                 ::caf::TrueParticleID const& id, sand::edep_reader const& edep);
+                                                 ::caf::TrueParticleID const& id, sand::edep_reader_refactor const& edep);
 
     /// \brief Perfect shower, for a shower-like particle that has tracker hits.
     [[nodiscard]] ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part,
@@ -72,7 +72,7 @@ namespace sand {
     /// \brief Perfect SAND tracker: one caf::SRTrack/caf::SRShower per particle that passed the gate.
     [[nodiscard]] ::caf::SRTracker sand_tracker_from_true(::caf::SRTrueInteraction const& true_ixn,
                                                           TrackerG4IDs const& tracker_ids, int ixn_idx,
-                                                          sand::edep_reader const& edep);
+                                                          sand::edep_reader_refactor const& edep);
 
   } // namespace common::reco_details
 } // namespace sand

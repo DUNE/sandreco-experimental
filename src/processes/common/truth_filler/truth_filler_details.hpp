@@ -1,6 +1,8 @@
 #ifndef SAND_TRUTH_FILLER_DETAILS_HPP
 #define SAND_TRUTH_FILLER_DETAILS_HPP
 
+#include <edep_reader_refactor/EDEPTrajectory.h>
+
 #include <vector>
 
 namespace caf {
@@ -12,10 +14,9 @@ namespace caf {
 class StdHep;
 class GRooTrackerEvent;
 
-class EDEPTree;
-class EDEPTrajectory;
-
 namespace sand::common::filler_details {
+
+  using edep_refactor::EDEPTrajectory;
 
   /// One interaction's contiguous slice of the flat `Primaries` vector.
   struct InteractionRange {
@@ -24,7 +25,7 @@ namespace sand::common::filler_details {
   };
 
   /// All top-level (primary) edep-sim trajectories, in interaction order.
-  using Primaries = std::vector<EDEPTrajectory>;
+  using Primaries = edep_refactor::trajectory_range<const EDEPTrajectory>;
 
   /// Result of build_true_particle_tree(): one interaction's primaries and secondaries,
   /// fully cross-linked via caf::TrueParticleID, plus post-FSI primary particle counts.
@@ -77,6 +78,11 @@ namespace sand::common::filler_details {
   /// @param interaction_id  edep-sim vertex ID (-> SRTrueParticle::interaction_id).
   [[nodiscard]] TrueParticleTree build_true_particle_tree(Primaries const& primaries, std::size_t first_idx,
                                                           std::size_t count, int sr_ixn, long int interaction_id);
+
+                                                            /// Converts spill-wide edep-sim track ids (G4ID, parent, daughters) to per-interaction ids
+  /// (primaries 0..nprim-1, then secondaries), the numbering used by ND_CAFMaker and ML-reco.
+  void to_local_track_ids(TrueParticleTree& tree);
+
 
 } // namespace sand::common::filler_details
 

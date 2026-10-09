@@ -1,0 +1,7 @@
+sandreco_add_test_process(sand_test_edep_reader_comparison)
+
+find_package(ROOT REQUIRED COMPONENTS Physics)
+
+target_sources(sand_test_edep_reader_comparison PRIVATE test_edep_reader_comparison.cpp)
+
+target_link_libraries(sand_test_edep_reader_comparison PRIVATE sand_edep_reader sand_edep_reader_refactor ROOT::Physics)

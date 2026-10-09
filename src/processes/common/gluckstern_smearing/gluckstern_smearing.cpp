@@ -2,7 +2,7 @@
 
 #include <caf/caf_wrapper.hpp>
 
-#include <edep_reader/edep_reader.hpp>
+#include <edep_reader_refactor/edep_reader_refactor.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 
 #include <ufw/factory.hpp>
@@ -13,7 +13,7 @@
 #include <duneanaobj/StandardRecord/SRTrueParticle.h>
 #include <duneanaobj/StandardRecord/SRVector3D.h>
 
-#include <edep_reader/EDEPHit.h>
+#include <edep_reader_refactor/EDEPHit.h>
 
 #include <TDatabasePDG.h>
 #include <TParticlePDG.h>
@@ -48,6 +48,8 @@ namespace sand::common {
       float const mag = std::sqrt(px * px + py * py + pz * pz);
       return (mag > 0.f) ? ::caf::SRVector3D{px / mag, py / mag, pz / mag} : ::caf::SRVector3D{0.f, 0.f, 0.f};
     }
+
+    using edep_refactor::EDEPHitsMap;
 
     EDEPHitsMap::const_iterator find_tracker_hits(EDEPHitsMap const& hit_map) {
       if (auto it = hit_map.find(sand::subdetector_t::DRIFT); it != hit_map.end()) {
@@ -213,7 +215,7 @@ namespace sand::common {
     auto const& in_nd    = get<sand::caf::nd_reco_branch_wrapper>("in_nd");
     auto const& in_truth = get<sand::caf::truth_branch_wrapper>("in_truth");
     auto& out_nd         = set<sand::caf::nd_reco_branch_wrapper>("out_nd");
-    auto& edep           = instance<sand::edep_reader>();
+    auto& edep           = instance<sand::edep_reader_refactor>();
     auto& tgm            = instance<sand::root_tgeomanager>();
 
     out_nd.sand.nixn = in_nd.sand.nixn;

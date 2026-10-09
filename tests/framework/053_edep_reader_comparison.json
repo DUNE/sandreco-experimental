@@ -11,37 +11,22 @@
     }
   },
   "contexts": {
-    "keys": 2,
+    "keys": 5,
     "locals": {
-      "sand::edep_reader_refactor": {
+      "sand::edep_reader": {
         "uri": "test/sand-spills.5.edep.root"
       },
-      "sand::genie_reader": {
+      "sand::edep_reader_refactor": {
         "uri": "test/sand-spills.5.edep.root"
       }
     }
   },
   "run": [
     {
-      "sand::common::truth_filler": {},
+      "sand::test::edep_reader_comparison": {},
       "reqs": {},
-      "prods": {
-        "out_truth_branch": "produced_truth"
-      }
-    },
-    {
-      "sand::test::truth_filler_test": {},
-      "reqs": {
-        "in_truth": "produced_truth"
-      },
       "prods": {}
-    },
-    {
-      "sand::caf::caf_streamer": {
-        "uri": "test/output.truth.caf.root",
-        "tree": "cafTree"
-      },
-      "write": ["produced_truth"]
     }
   ]
 }
+

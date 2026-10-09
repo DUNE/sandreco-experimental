@@ -3,7 +3,7 @@
 
 #include <processes/common/fast_reco/fast_reco_details.hpp>
 
-#include <edep_reader/edep_reader.hpp>
+#include <edep_reader_refactor/edep_reader_refactor.hpp>
 #include <test_helpers.hpp>
 
 #include <duneanaobj/StandardRecord/SRDirectionBranch.h>
@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE(track_energy_direction_charge_and_length) {
   true_part.start_pos = ::caf::SRVector3D{0.f, 0.f, 0.f};
   true_part.end_pos   = ::caf::SRVector3D{3.f, 4.f, 0.f}; // distance == 5 cm (3-4-5)
 
-  sand::edep_reader edep; // empty tree -> enddir falls back to the start direction
+  sand::edep_reader_refactor edep; // empty tree -> enddir falls back to the start direction
   auto const track = track_from_true(true_part, make_id(), edep);
 
   BOOST_CHECK_CLOSE(track.E, 1.2f, tol_percent); // GeV, not 1200.f -- the regression this guards
@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(track_energy_direction_charge_and_length) {
 }
 
 BOOST_AUTO_TEST_CASE(track_charge_sign_follows_pdg) {
-  sand::edep_reader edep; // empty tree -> enddir falls back to the start direction
+  sand::edep_reader_refactor edep; // empty tree -> enddir falls back to the start direction
 
   ::caf::SRTrueParticle mu_plus;
   mu_plus.pdg              = -13; // mu+

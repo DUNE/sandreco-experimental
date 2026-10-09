@@ -13,7 +13,7 @@
   "contexts": {
     "keys": 2,
     "locals": {
-      "sand::edep_reader": {
+      "sand::edep_reader_refactor": {
         "uri": "test/sand-spills.5.edep.root"
       },
       "sand::genie_reader": {
