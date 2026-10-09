@@ -71,12 +71,12 @@ namespace ufw::data {
       std::string evtCodeStr = EvtCode ? EvtCode->GetString().Data() : "";
 
       if (spill_based) {
-        reader.events_.push_back({RunId->at(index_in_spill)*10e6 + EventId->at(index_in_spill), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
-        UFW_DEBUG("Added genie event with CAF idx: {}, {}, {}", RunId->at(index_in_spill), RunId->at(index_in_spill)*10e6 + EventId->at(index_in_spill), EventId->at(index_in_spill));
+        reader.events_.push_back({RunId->at(index_in_spill)*1e6 + EventId->at(index_in_spill), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+        UFW_DEBUG("Added genie event (spill-based) with CAF idx: {}, {}, {}", RunId->at(index_in_spill), RunId->at(index_in_spill)*1e6 + EventId->at(index_in_spill), EventId->at(index_in_spill));
         index_in_spill++;
       } else {
-        reader.events_.push_back({RunId->at(i)*10e6 + EventId->at(i), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
-        UFW_DEBUG("Added genie event with CAF idx: {}, {}, {}", RunId->at(i), RunId->at(i)*10e6 + EventId->at(i), EventId->at(i));
+        reader.events_.push_back({RunId->at(i)*1e6 + EventId->at(i), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+        UFW_DEBUG("Added genie event (event-based) with CAF idx: {}, {}, {}", RunId->at(i), RunId->at(i)*1e6 + EventId->at(i), EventId->at(i));
       }
 
       reader.stdHeps_.emplace_back(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
