@@ -16,6 +16,8 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
+#include "../../common/Timer.h"
+
 namespace sand::grain {
 
   class volumereco : public ufw::process {
@@ -56,6 +58,7 @@ namespace sand::grain {
     : process({{"images", "sand::grain::images"}}, {{"photon_amplitudes", "sand::grain::voxels"}}) {}
 
   void volumereco::run() {
+    Timer timer;
     const auto& spill_images_in = get<images>("images");
     auto& photon_amplitude_out  = set<voxels>("photon_amplitudes");
     auto& cl_manager            = instance<volumereco_cl_manager>();
@@ -159,6 +162,7 @@ namespace sand::grain {
       }
       i_event_in_spill++;
     }
+    UFW_INFO("[benchmark][volumereco][event {}] time taken (s): {}", ufw::context::current()->id(), timer.elapsed());
   }
 } // namespace sand::grain
 

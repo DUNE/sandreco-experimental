@@ -10,6 +10,8 @@
 #include <ocl/ocl.hpp>
 #include <mask_weights_computation.hpp>
 
+#include "../../common/Timer.h"
+
 namespace sand::grain {
 
   /**

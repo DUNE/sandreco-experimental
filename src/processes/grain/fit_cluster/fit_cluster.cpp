@@ -19,6 +19,8 @@
 #include <utility>
 #include <algorithm>
 
+#include "../../common/Timer.h"
+
 namespace sand::grain {
 
   /**
@@ -113,6 +115,7 @@ namespace sand::grain {
   }
 
   void fit_cluster::run() {
+    Timer timer;
     UFW_DEBUG("Running a fit_cluster process at {}.", fmt::ptr(this));
     const auto& point_clusters_in = get<point_clusters>("point_clusters_in").clusters;
     auto& point_clusters_out = set<point_clusters>("point_clusters_out").clusters;
@@ -138,6 +141,7 @@ namespace sand::grain {
       }
       point_clusters_out.push_back(ev_clusters_out);
     }
+    UFW_INFO("[benchmark][fit_cluster][event {}] time taken (s): {}", ufw::context::current()->id(), timer.elapsed());
 
   }
 

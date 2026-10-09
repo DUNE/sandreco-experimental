@@ -14,6 +14,8 @@
 
 #include <cmath>
 
+#include "../../common/Timer.h"
+
 namespace sand::grain {
 
   /**
@@ -154,6 +156,7 @@ namespace sand::grain {
   }
 
   void hough3d::run() {
+    Timer timer;
     UFW_DEBUG("Running a hough3d process at {}.", fmt::ptr(this));
     auto& platform = instance<cl::platform>();
     const auto& point_cloud_in  = get<point_cloud>("point_cloud");
@@ -265,6 +268,7 @@ namespace sand::grain {
       UFW_INFO("Found {} tracks", n_found_tracks);
       point_clusters_out.push_back(ev_clusters_out);
     }
+    UFW_INFO("[benchmark][hough3d][event {}] time taken (s): {}", ufw::context::current()->id(), timer.elapsed());
 
   }
 

@@ -10,6 +10,7 @@
 #include <ufw/context.hpp>
 #include <ufw/factory.hpp>
 
+#include "../../common/Timer.h"
 
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::grain::detector_response_fast)
 

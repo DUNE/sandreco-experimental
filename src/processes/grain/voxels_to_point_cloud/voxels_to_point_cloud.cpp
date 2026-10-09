@@ -12,6 +12,8 @@
 
 #include <cmath>
 
+#include "../../common/Timer.h"
+
 namespace sand::grain {
 
   /**
@@ -60,6 +62,7 @@ namespace sand::grain {
   }
 
   void voxels_to_point_cloud::run() {
+    Timer timer;
     const auto& gi = instance<geoinfo>();
     const auto& photon_amplitude_in  = get<voxels>("photon_amplitudes");
     auto& point_cloud_out = set<point_cloud>("point_cloud").points; 
@@ -83,7 +86,7 @@ namespace sand::grain {
             // Apply threshold on position
             if (displacement_from_wall.x() < m_fiducial_distance || displacement_from_wall.y() < m_fiducial_distance || displacement_from_wall.z() < m_fiducial_distance) continue;
             evt_points.emplace_back(point_cloud::point{position, amplitude});
-            UFW_DEBUG("Index: {}, Position: {}, Amplitude {}", i_voxel, position, amplitude);
+            // UFW_DEBUG("Index: {}, Position: {}, Amplitude {}", i_voxel, position, amplitude);
           }
         }
       }
@@ -91,6 +94,7 @@ namespace sand::grain {
       UFW_INFO("Spill {}, event {}, point cloud size: {}", ufw::context::current()->id(), i_evt, evt_points.size());
       i_evt++;
     };
+    UFW_INFO("[benchmark][voxels_to_point_cloud][event {}] time taken (s): {}", ufw::context::current()->id(), timer.elapsed());
   }
 
 } // namespace sand::grain

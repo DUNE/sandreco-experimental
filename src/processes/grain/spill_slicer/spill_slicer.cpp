@@ -10,6 +10,8 @@
 #include <array>
 #include <vector>
 
+#include "../../common/Timer.h"
+
 namespace sand::grain {
 
   /**
@@ -106,6 +108,7 @@ namespace sand::grain {
   }
 
   void spill_slicer::run() {
+    Timer timer;
     m_stat_photons_processed = 0;
     m_stat_photons_accepted  = 0;
     m_stat_photons_discarded = 0;
@@ -160,6 +163,7 @@ namespace sand::grain {
     }
     UFW_INFO("Processed {} photons; {} were accepted, {} discarded.", m_stat_photons_processed, m_stat_photons_accepted,
              m_stat_photons_discarded);
+    UFW_INFO("[benchmark][spill_slicer][event {}] time taken (s): {}", ufw::context::current()->id(), timer.elapsed());
   }
 
 } // namespace sand::grain

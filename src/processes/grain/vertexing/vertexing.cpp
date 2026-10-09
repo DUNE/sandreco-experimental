@@ -8,6 +8,11 @@
 #include <ufw/process.hpp>
 
 #include <vector>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+
+#include "../../common/Timer.h"
 
 namespace sand::grain {
 
@@ -88,9 +93,18 @@ namespace sand::grain {
   }
 
   void vertexing::run() {
+    Timer timer;
     UFW_DEBUG("Running a vertexing process at {}.", fmt::ptr(this));
     const auto& point_clusters_in = get<point_clusters>("point_clusters").clusters;
     auto& vertices_out = set<vertex>("vertices").vertices;
+
+    // Open CSV file for writing
+    // std::ofstream csv_file("/home/sand/roba_mia/grain_tracking_analysis/output/data/reco/merged_grain_vertices_0_79999_thr_300_d_30.csv", std::ios::app);
+    // // Only write header once
+    // if (csv_file.tellp() == 0) {
+    //     csv_file << "context_id,reco_v_x,reco_v_y,reco_v_z\n";
+    // }
+
     // Loop on events in a spill
     for (const auto& ev_clusters_in : point_clusters_in) {
       if (ev_clusters_in.size() < 2) {
@@ -100,9 +114,12 @@ namespace sand::grain {
       UFW_DEBUG("Processing {} tracks", ev_clusters_in.size());
       // For the moment, consider only the first 2 tracks, since they should be the most accurate
       pos_3d vertex = median_point_between_tracks(ev_clusters_in[0].centre(), ev_clusters_in[0].axis(), ev_clusters_in[1].centre(), ev_clusters_in[1].axis());
+      // Write vertex to CSV
+      // csv_file << ufw::context::current()->id() << "," << vertex.x() << "," << vertex.y() << "," << vertex.z() << std::endl;
       UFW_DEBUG("Vertex: {}", vertex);
       vertices_out.push_back(vertex);
     }
+    UFW_INFO("[benchmark][vertexing][event {}] time taken (s): {}", ufw::context::current()->id(), timer.elapsed());
 
   }
 
