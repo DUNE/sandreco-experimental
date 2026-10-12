@@ -34,10 +34,33 @@ namespace sand::common::filler_details {
       float t{std::numeric_limits<float>::quiet_NaN()}; ///< only for coherent events, see calculate_kinematics
     };
 
-    /// @param pion_p4  final-state pion of a coherent event. When given, also computes the squared four-momentum
-    ///                 transfer to the nucleus t = |(q - p_pi)^2|, the value GENIE stores as the selected t.
+    /// The t GENIE stores as the selected t of a coherent pion event (what ND_CAFMaker reads with Kine().t(true)).
+    ///
+    /// In the Berger-Sehgal and Rein-Sehgal COH models GENIE samples Q2, y and t, computes x = Q2 / (2 M_A nu) with
+    /// the nucleus mass M_A, and then builds the pion (E_pi = nu) at the angle to q given by t and x, but using the
+    /// nucleon mass m_N in place of M_A. That is, it uses Q2' = Q2 m_N / M_A instead of the real Q2, so the final state
+    /// has |(q - p_pi)^2| != t. Inverting that construction gives back the sampled t from the final state.
+    /// In the other COH models (Berger-Sehgal FM, Alvarez-Ruso) E_pi != nu and GENIE stores t = |(q - p_pi)^2|.
+    [[nodiscard]] double genie_coh_t(sand::mom_4d const& q, sand::mom_4d const& pion_p4, double target_mass) {
+      const double t_final_state = std::abs((q - pion_p4).M2());
+      const double nu            = q.E();
+      if (std::abs(nu - pion_p4.E()) > 1e-6 * nu) {
+        return t_final_state;
+      }
+
+      constexpr double nucleon_mass = 0.9389187; // genie::constants::kNucleonMass, average of proton and neutron
+      const double nu2  = nu * nu;
+      const double Q2   = -q.M2();
+      const double Q2p  = Q2 * nucleon_mass / target_mass;
+      const double mpi2 = pion_p4.M2();
+      return 2 * nu2 + Q2p - mpi2 - std::sqrt((nu2 + Q2p) / (nu2 + Q2)) * (2 * nu2 + Q2 - mpi2 - t_final_state);
+    }
+
+    /// @param pion_p4      final-state pion of a coherent event. When given, also computes t, the squared
+    ///                     four-momentum transfer to the nucleus, as GENIE stores it (see genie_coh_t).
+    /// @param target_mass  mass of the target nucleus, needed for t.
     [[nodiscard]] Kinematics calculate_kinematics(sand::mom_4d const& nu_p4, sand::mom_4d const& lep_p4,
-                                                  sand::mom_4d const* pion_p4 = nullptr) {
+                                                  sand::mom_4d const* pion_p4 = nullptr, double target_mass = 0) {
       // auto const nucleon_mass = static_cast<float>(TDatabasePDG::Instance()->GetParticle(2212)->Mass());
       auto const nucleon_mass = 0.939;
       auto q                  = nu_p4 - lep_p4;
@@ -53,7 +76,7 @@ namespace sand::common::filler_details {
       k.inelasticity = k.q0 / Enu;
 
       if (pion_p4 != nullptr) {
-        k.t = static_cast<float>(std::abs((q - *pion_p4).M2()));
+        k.t = static_cast<float>(genie_coh_t(q, *pion_p4, target_mass));
       }
 
       return k;
@@ -147,8 +170,9 @@ namespace sand::common::filler_details {
     if (ixn.mode == ::caf::kCoh && pion_idx < 0) {
       UFW_WARN("Coherent event {} has no final-state pion: t not filled", ixn.id);
     }
-    auto kinematics = calculate_kinematics(nu_p4, stdhep.P4_.at(find_final_lepton(stdhep)),
-                                           pion_idx >= 0 ? &stdhep.P4_.at(pion_idx) : nullptr);
+    const double target_mass = stdhep.P4_[static_cast<int>(StdHepIndex::tgt)].M();
+    auto kinematics          = calculate_kinematics(nu_p4, stdhep.P4_.at(find_final_lepton(stdhep)),
+                                                    pion_idx >= 0 ? &stdhep.P4_.at(pion_idx) : nullptr, target_mass);
     ixn.Q2           = kinematics.Q2;
     ixn.q0           = kinematics.q0;
     ixn.modq         = kinematics.modq;

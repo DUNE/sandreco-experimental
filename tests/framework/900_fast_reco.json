@@ -7,17 +7,17 @@
   },
   "globals": {
     "sand::root_tgeomanager": {
-      "geometry": "/home/sand/sandreco-experimental/MiniProdN5p1_NDComplex_FHC.convert2edepsim.spill.full.sanddrift.0000965.OVERLAY.root"
+      "geometry": "test/sand-spills.5.edep.root"
     }
   },
   "contexts": {
     "keys": 2,
     "locals": {
       "sand::edep_reader_refactor": {
-        "uri": "/home/sand/sandreco-experimental/MiniProdN5p1_NDComplex_FHC.convert2edepsim.spill.full.sanddrift.0000965.OVERLAY.root"
+        "uri": "test/sand-spills.5.edep.root"
       },
       "sand::genie_reader": {
-        "uri": "/home/sand/sandreco-experimental/MiniProdN5p1_NDComplex_FHC.convert2edepsim.spill.full.sanddrift.0000965.OVERLAY.root"
+        "uri": "test/sand-spills.5.edep.root"
       }
     }
   },
