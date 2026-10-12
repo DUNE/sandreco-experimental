@@ -33,7 +33,7 @@ class ufw::data::factory<sand::genie_reader> {
 
  private:
   sand::genie_reader reader;
-  std::unique_ptr<TFile> edep_input_file;
+  std::unique_ptr<TFile> input_file;
   TTree* edep_input_tree;
   TTree* spill_to_run_event;
   std::vector<std::pair<Long64_t, Long64_t>> spills_boundaries;

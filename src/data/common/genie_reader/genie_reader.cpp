@@ -20,15 +20,15 @@ namespace sand {
 } // namespace sand
 
 namespace ufw::data {
-  factory<sand::genie_reader>::factory(const ufw::config& cfg) : edep_input_file{nullptr}, spill_based(true) {
-    const auto edep_path = cfg.path_at("edep_uri");
-    edep_input_file.reset(TFile::Open(edep_path.c_str()));
+  factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_file{nullptr}, spill_based(true) {
+    const auto edep_path = cfg.path_at("uri");
+    input_file.reset(TFile::Open(edep_path.c_str()));
 
-    edep_input_tree = edep_input_file->Get<TTree>("DetSimPassThru/gRooTracker");
+    edep_input_tree = input_file->Get<TTree>("DetSimPassThru/gRooTracker");
     if (edep_input_tree == nullptr) {
       UFW_ERROR("gRooTracker tree not found in file '{}'.", edep_path.c_str());
     }
-    spill_to_run_event = edep_input_file->Get<TTree>("spill_to_run_event");
+    spill_to_run_event = input_file->Get<TTree>("spill_to_run_event");
     if (spill_to_run_event == nullptr) {
       UFW_DEBUG("spill_to_run_event tree not found in file '{}'.", edep_path.c_str());
       UFW_DEBUG("Assuming this is a event-based edepsim file.");
@@ -125,7 +125,7 @@ namespace ufw::data {
     // InteractionNumber that corresponds to the entry index in gRooTracker.
 
     UFW_DEBUG("Looking for EDepSimEvents tree...");
-    auto* edep_tree = edep_input_file->Get<TTree>("EDepSimEvents");
+    auto* edep_tree = input_file->Get<TTree>("EDepSimEvents");
     if (edep_tree == nullptr) {
       UFW_ERROR("EDepSimEvents tree not found in file. Cannot determine spill boundaries.");
       return;
