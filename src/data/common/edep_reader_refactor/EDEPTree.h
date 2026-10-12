@@ -77,18 +77,11 @@ namespace sand::edep_refactor {
     }
 
    private:
-    /// Classification of a geometry volume, from its name.
-    struct volume_class {
-      sand::subdetector_t comp = sand::subdetector_t::OTHER; ///< component used for first/last points
-      std::array<sand::subdetector_t, 2> route{};            ///< components receiving the trajectory points
-      int n_route = 0;
-      unsigned in_mask = 0; ///< bit i set if the volume is in component i
-    };
-
-    const volume_class& classify(const TGeoNode* node);
+    /// Bitmask of the subdetectors a geometry volume belongs to (bit i set if it is in component i), from its name.
+    unsigned classify(const TGeoNode* node);
     void fill_points(EDEPTrajectory& trj, const TG4Trajectory& g4trj, TGeoNavigator& nav);
-    void check_in_next(EDEPTrajectory& trj, const volume_class& in, const volume_class& next,
-                       const EDEPTrajectoryPoint& pt, const TG4TrajectoryPoint& next_pt) const;
+    void check_in_next(EDEPTrajectory& trj, unsigned in, unsigned next, const TG4TrajectoryPoint& pt,
+                       const TG4TrajectoryPoint& next_pt) const;
 
     int find_pos(int trj_id) const {
       auto it = id_to_pos_.find(trj_id);
@@ -105,7 +98,8 @@ namespace sand::edep_refactor {
     std::unordered_map<int, int> id_to_pos_;  ///< trajectory id -> position in order_
     std::vector<int> hit_to_pos_;             ///< hit id -> position in order_ of its trajectory, -1 if none
     std::vector<const EDEPHit*> hit_ptr_;     ///< hit id -> hit
-    std::unordered_map<const TGeoNode*, volume_class> volume_cache_; ///< survives across events
+    std::unordered_map<const TGeoNode*, unsigned> volume_cache_; ///< volume -> subdetector mask, survives across events
+    std::vector<unsigned> point_volumes_;     ///< scratch: subdetector mask of each point of the trajectory being filled
   };
 
 } // namespace sand::edep_refactor
