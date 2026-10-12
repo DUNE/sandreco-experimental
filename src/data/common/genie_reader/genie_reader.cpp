@@ -34,6 +34,9 @@ namespace ufw::data {
       UFW_DEBUG("Assuming this is a event-based edepsim file.");
 
       spill_based = false;
+      // no tree to attach RunId/EventId to, so ROOT won't allocate them
+      RunId   = new std::vector<int>;
+      EventId = new std::vector<int>;
     }
     UFW_DEBUG("Found");
 
@@ -42,7 +45,13 @@ namespace ufw::data {
     attach_branches();
   }
 
-  factory<sand::genie_reader>::~factory() = default;
+  factory<sand::genie_reader>::~factory() {
+    // in spill-based mode the vectors belong to ROOT
+    if (!spill_based) {
+      delete RunId;
+      delete EventId;
+    }
+  }
 
   sand::genie_reader& factory<sand::genie_reader>::instance(ufw::context_id i) {
     if (m_id == i) {

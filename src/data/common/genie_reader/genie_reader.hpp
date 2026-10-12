@@ -45,6 +45,10 @@ class ufw::data::factory<sand::genie_reader> {
 
   bool spill_based;
 
+  // Run and event ids.
+  // Spill-based files: attached to the spill_to_run_event tree, ROOT allocates and owns the vectors.
+  // Event-based files: there is no such tree, the constructor allocates them (and the destructor frees them) and
+  // populate_spills_boundaries fills them, one element per event.
   std::vector<int>* RunId = nullptr;
   std::vector<int>* EventId = nullptr;
 
