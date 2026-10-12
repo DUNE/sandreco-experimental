@@ -54,9 +54,9 @@ SRRecoParticle"]
     subgraph out_nd["out_nd (SRNDBranch)"]
         sandixn["sand.ixn[i]
 SRSANDInt"]
-        tracks["sand.ixn[i].tracker.tracks[k]
+        tracks["sand.tracker.tracks[k]
 SRTrack"]
-        showers["sand.ixn[i].tracker.showers[k]
+        showers["sand.tracker.showers[k]
 SRShower"]
     end
 
@@ -87,8 +87,10 @@ npip+npim, npi0, nneutron"| nhft -->|"nuhyp"| ixn
 
     tft -->|"per track"| stft
     sft -->|"per shower"| stft
-    stft -->|"tracker
-(SRTracker)"| sandixn
+    stft -->|"appended to sand.tracker
+(SRTracker, spill-level)"| tracks
+    stft -->|"appended to sand.tracker
+(SRTracker, spill-level)"| showers
     stft -.->|"part (SRRecoParticleID)"| tracks
     stft -.->|"part (SRRecoParticleID)"| showers
 
@@ -240,7 +242,7 @@ no containment query exists in the repo yet.
 
 ## 6. `caf::SRTrack` — one per track-like particle with tracker hits
 
-Stored in `nd_reco_branch.sand.ixn[i].tracker.tracks[k]`, one per primary/secondary
+Stored in the spill-level `nd_reco_branch.sand.tracker.tracks[k]`, one per primary/secondary
 whose PDG is track-like (μ, π±, K±, p) **and** that left hits in the tracker (§0). Filled
 by `track_from_true()` (+ `part` set in `sand_tracker_from_true()`).
 
@@ -267,7 +269,7 @@ density integration along the track, not derivable from truth alone).
 
 ## 7. `caf::SRShower` — one per shower-like particle with tracker hits
 
-Stored in `nd_reco_branch.sand.ixn[i].tracker.showers[k]`, one per primary/secondary
+Stored in the spill-level `nd_reco_branch.sand.tracker.showers[k]`, one per primary/secondary
 whose PDG is shower-like (e±, γ, π0) **and** that left hits in the tracker (§0) — in
 practice e± only, see §0. Filled by `shower_from_true()` (+ `part` set in
 `sand_tracker_from_true()`).
@@ -292,12 +294,15 @@ conversion point), not derivable from a truth copy.
 | Link | ID type | Direction | Resolution |
 |------|---------|-----------|------------|
 | `SRTrack`/`SRShower::part` | `SRRecoParticleID` (`{ixn, type=kSandreco, ipart}`) | Track/Shower → Particle | `sr.common.ixn.sandreco[ixn].part.sandreco[ipart]` |
-| `SRRecoParticle::recoobj` | `SRRecoBaseID` (`{ixn, type=kSANDTrackerTrack\|kSANDTrackerShower, irecoobj}`) | Particle → Track/Shower | `sr.nd.sand.ixn[ixn].tracker.tracks\|showers[irecoobj]` |
+| `SRRecoParticle::recoobj` | `SRRecoBaseID` (`{ixn, type=kSANDTrackerTrack\|kSANDTrackerShower, irecoobj}`) | Particle → Track/Shower | `sr.nd.sand.tracker.tracks\|showers[irecoobj]` — spill-level, `ixn` is not used to resolve it |
 | `*.truth[i]` (all three) | `TrueParticleID` (`{ixn, type=kPrimary\|kSecondary, part}`) | any reco object → truth | `truth_branch.nu[ixn].prim\|sec[part]` |
 
 All three share the same `ixn` value across `common`/`nd` branches by construction:
 `fast_reco` appends one `SRInteraction` and one `SRSANDInt` per `truth_branch.nu[i]` in
-the same loop, so they stay index-aligned. `nd_reco_branch.sand.ixn` has no equivalent
+the same loop, so they stay index-aligned. The `SRSANDInt` itself is left empty (no
+cross-subdetector `trkmatch`): the tracks/showers of every interaction are appended to the
+single spill-level `sand.tracker`, so `irecoobj` keeps counting across interactions.
+`nd_reco_branch.sand.ixn` has no equivalent
 of `.grain`'s ID scheme wired up (out of scope — `.grain` itself is untouched).
 
 ---
