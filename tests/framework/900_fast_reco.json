@@ -7,17 +7,17 @@
   },
   "globals": {
     "sand::root_tgeomanager": {
-      "geometry": "test/sand-spills.5.edep.root"
+      "geometry": "/home/sand/sandreco-experimental/MiniProdN5p1_NDComplex_FHC.convert2edepsim.spill.full.sanddrift.0000965.OVERLAY.root"
     }
   },
   "contexts": {
-    "keys": 13,
+    "keys": 2,
     "locals": {
       "sand::edep_reader_refactor": {
-        "uri": "test/sand-spills.5.edep.root"
+        "uri": "/home/sand/sandreco-experimental/MiniProdN5p1_NDComplex_FHC.convert2edepsim.spill.full.sanddrift.0000965.OVERLAY.root"
       },
       "sand::genie_reader": {
-        "uri": "test/sand-spills.5.edep.root"
+        "uri": "/home/sand/sandreco-experimental/MiniProdN5p1_NDComplex_FHC.convert2edepsim.spill.full.sanddrift.0000965.OVERLAY.root"
       }
     }
   },
@@ -50,7 +50,7 @@
     },
     {
       "sand::caf::caf_streamer": {
-        "uri": "test/output.caf.root",
+        "uri": "/home/sand/sandreco-experimental/output.caf.root",
         "tree": "cafTree"
       },
       "write": ["produced_truth", "produced_common", "produced_nd"]
