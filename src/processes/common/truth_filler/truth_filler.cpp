@@ -46,9 +46,12 @@ namespace sand::common {
       true_ixn.prefsi  = std::move(prefsi);
 
       // Create primaries and secondaries tree
+      // filler_details::print_edep_track_ids(primaries, first_prim_idx, prim_count, static_cast<int>(ixn_idx));
       auto tree = filler_details::build_true_particle_tree(primaries, first_prim_idx, prim_count,
                                                            static_cast<int>(ixn_idx), true_ixn.id);
+      // filler_details::print_tree_track_ids(tree, "truth tree", static_cast<int>(ixn_idx));
       filler_details::to_local_track_ids(tree);
+      // filler_details::print_tree_track_ids(tree, "reordered", static_cast<int>(ixn_idx));
 
       // Fill CAF fields
       true_ixn.prim     = std::move(tree.prim);

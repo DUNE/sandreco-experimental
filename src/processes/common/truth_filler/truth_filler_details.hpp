@@ -83,6 +83,14 @@ namespace sand::common::filler_details {
   /// (primaries 0..nprim-1, then secondaries), the numbering used by ND_CAFMaker and ML-reco.
   void to_local_track_ids(TrueParticleTree& tree);
 
+  /// Debug print of the track ids found walking the edep-sim trajectories of one interaction
+  /// (primaries, then secondaries in the pre-order used to fill `sec`).
+  void print_edep_track_ids(Primaries const& primaries, std::size_t first_idx, std::size_t count, int sr_ixn);
+
+  /// Debug print of the track ids (G4ID) of the primaries and secondaries stored in `tree`.
+  /// @param stage  label identifying when the print happens (e.g. "truth tree", "reordered").
+  void print_tree_track_ids(TrueParticleTree const& tree, char const* stage, int sr_ixn);
+
 
 } // namespace sand::common::filler_details
 

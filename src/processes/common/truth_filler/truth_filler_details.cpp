@@ -15,7 +15,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <numeric>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -29,9 +31,13 @@ namespace sand::common::filler_details {
       float W{};
       float bjorkenX{};
       float inelasticity{};
+      float t{std::numeric_limits<float>::quiet_NaN()}; ///< only for coherent events, see calculate_kinematics
     };
 
-    [[nodiscard]] Kinematics calculate_kinematics(sand::mom_4d const& nu_p4, sand::mom_4d const& lep_p4) {
+    /// @param pion_p4  final-state pion of a coherent event. When given, also computes the squared four-momentum
+    ///                 transfer to the nucleus t = |(q - p_pi)^2|, the value GENIE stores as the selected t.
+    [[nodiscard]] Kinematics calculate_kinematics(sand::mom_4d const& nu_p4, sand::mom_4d const& lep_p4,
+                                                  sand::mom_4d const* pion_p4 = nullptr) {
       // auto const nucleon_mass = static_cast<float>(TDatabasePDG::Instance()->GetParticle(2212)->Mass());
       auto const nucleon_mass = 0.939;
       auto q                  = nu_p4 - lep_p4;
@@ -45,6 +51,10 @@ namespace sand::common::filler_details {
       const auto Enu = static_cast<float>(nu_p4.E());
       k.bjorkenX     = k.Q2 / (2.0f * nucleon_mass * k.q0);
       k.inelasticity = k.q0 / Enu;
+
+      if (pion_p4 != nullptr) {
+        k.t = static_cast<float>(std::abs((q - *pion_p4).M2()));
+      }
 
       return k;
     }
@@ -75,6 +85,17 @@ namespace sand::common::filler_details {
       return pclass && std::string_view{pclass} == "Lepton";
     }
     return false;
+  }
+
+  /// @return index (in `stdhep`) of the stable final-state pion of a coherent event, -1 if there is none.
+  static int find_final_pion(StdHep const& stdhep) {
+    for (int i{}; i != stdhep.N_; ++i) {
+      const int abs_pdg = std::abs(stdhep.Pdg_[i]);
+      if (stdhep.Status_[i] == genie::kIStStableFinalState && (abs_pdg == 211 || abs_pdg == 111)) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   int find_final_lepton(StdHep const& stdhep) {
@@ -121,13 +142,22 @@ namespace sand::common::filler_details {
     ixn.momentum.y    = static_cast<float>(nu_p4.Py());
     ixn.momentum.z    = static_cast<float>(nu_p4.Pz());
 
-    auto kinematics  = calculate_kinematics(nu_p4, stdhep.P4_.at(find_final_lepton(stdhep)));
+    // t is defined for coherent events only (as in ND_CAFMaker); it needs the final-state pion
+    const int pion_idx = ixn.mode == ::caf::kCoh ? find_final_pion(stdhep) : -1;
+    if (ixn.mode == ::caf::kCoh && pion_idx < 0) {
+      UFW_WARN("Coherent event {} has no final-state pion: t not filled", ixn.id);
+    }
+    auto kinematics = calculate_kinematics(nu_p4, stdhep.P4_.at(find_final_lepton(stdhep)),
+                                           pion_idx >= 0 ? &stdhep.P4_.at(pion_idx) : nullptr);
     ixn.Q2           = kinematics.Q2;
     ixn.q0           = kinematics.q0;
     ixn.modq         = kinematics.modq;
     ixn.W            = kinematics.W;
     ixn.bjorkenX     = kinematics.bjorkenX;
     ixn.inelasticity = kinematics.inelasticity;
+    if (pion_idx >= 0) {
+      ixn.t = kinematics.t;
+    }
 
     ixn.ischarm    = summary.is_charm_event;
     ixn.isseaquark = summary.scattering_type == ::caf::kDIS && summary.hit_sea_quark;
@@ -340,5 +370,44 @@ namespace sand::common::filler_details {
     }
   }
 
+
+  namespace {
+    template <typename Range, typename Proj>
+    std::string join_ids(Range const& range, Proj proj) {
+      std::string s;
+      for (auto const& x : range) {
+        if (!s.empty())
+          s += ", ";
+        s += std::to_string(proj(x));
+      }
+      return s;
+    }
+
+    /// Appends the ids of `traj`'s descendants in pre-order (same order used to fill `sec`).
+    void collect_edep_ids(EDEPTrajectory const& traj, std::vector<int>& out) {
+      for (auto const& child : traj.GetChildrenTrajectories()) {
+        out.push_back(static_cast<int>(child.GetId()));
+        collect_edep_ids(child, out);
+      }
+    }
+  } // namespace
+
+  void print_edep_track_ids(Primaries const& primaries, std::size_t first_idx, std::size_t count, int sr_ixn) {
+    std::vector<int> prim_ids, sec_ids;
+    for (std::size_t i{}; i != count; ++i) {
+      auto const& prim = primaries[first_idx + i];
+      prim_ids.push_back(static_cast<int>(prim.GetId()));
+      collect_edep_ids(prim, sec_ids);
+    }
+    auto const id = [](int x) { return x; };
+    UFW_INFO("ixn {} [edep tree] primaries ({}): [{}]", sr_ixn, prim_ids.size(), join_ids(prim_ids, id));
+    UFW_INFO("ixn {} [edep tree] secondaries ({}): [{}]", sr_ixn, sec_ids.size(), join_ids(sec_ids, id));
+  }
+
+  void print_tree_track_ids(TrueParticleTree const& tree, char const* stage, int sr_ixn) {
+    auto const g4id = [](::caf::SRTrueParticle const& p) { return p.G4ID; };
+    UFW_INFO("ixn {} [{}] primaries ({}): [{}]", sr_ixn, stage, tree.prim.size(), join_ids(tree.prim, g4id));
+    UFW_INFO("ixn {} [{}] secondaries ({}): [{}]", sr_ixn, stage, tree.sec.size(), join_ids(tree.sec, g4id));
+  }
 
 } // namespace sand::common::filler_details
