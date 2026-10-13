@@ -394,44 +394,4 @@ namespace sand::common::filler_details {
     }
   }
 
-
-  namespace {
-    template <typename Range, typename Proj>
-    std::string join_ids(Range const& range, Proj proj) {
-      std::string s;
-      for (auto const& x : range) {
-        if (!s.empty())
-          s += ", ";
-        s += std::to_string(proj(x));
-      }
-      return s;
-    }
-
-    /// Appends the ids of `traj`'s descendants in pre-order (same order used to fill `sec`).
-    void collect_edep_ids(EDEPTrajectory const& traj, std::vector<int>& out) {
-      for (auto const& child : traj.GetChildrenTrajectories()) {
-        out.push_back(static_cast<int>(child.GetId()));
-        collect_edep_ids(child, out);
-      }
-    }
-  } // namespace
-
-  void print_edep_track_ids(Primaries const& primaries, std::size_t first_idx, std::size_t count, int sr_ixn) {
-    std::vector<int> prim_ids, sec_ids;
-    for (std::size_t i{}; i != count; ++i) {
-      auto const& prim = primaries[first_idx + i];
-      prim_ids.push_back(static_cast<int>(prim.GetId()));
-      collect_edep_ids(prim, sec_ids);
-    }
-    auto const id = [](int x) { return x; };
-    UFW_INFO("ixn {} [edep tree] primaries ({}): [{}]", sr_ixn, prim_ids.size(), join_ids(prim_ids, id));
-    UFW_INFO("ixn {} [edep tree] secondaries ({}): [{}]", sr_ixn, sec_ids.size(), join_ids(sec_ids, id));
-  }
-
-  void print_tree_track_ids(TrueParticleTree const& tree, char const* stage, int sr_ixn) {
-    auto const g4id = [](::caf::SRTrueParticle const& p) { return p.G4ID; };
-    UFW_INFO("ixn {} [{}] primaries ({}): [{}]", sr_ixn, stage, tree.prim.size(), join_ids(tree.prim, g4id));
-    UFW_INFO("ixn {} [{}] secondaries ({}): [{}]", sr_ixn, stage, tree.sec.size(), join_ids(tree.sec, g4id));
-  }
-
 } // namespace sand::common::filler_details
