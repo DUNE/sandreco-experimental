@@ -42,8 +42,8 @@ namespace {
         std::cout << "    ";
         full_out += "    ";
       }
-      std::cout << sand::component_to_string[el.first] << " " << el.second.size() << "; " << std::endl;
-      full_out += sand::component_to_string[el.first] + " " + std::to_string(el.second.size()) + "; \n";
+      std::cout << sand::component_to_string.at(el.first) << " " << el.second.size() << "; " << std::endl;
+      full_out += sand::component_to_string.at(el.first) + " " + std::to_string(el.second.size()) + "; \n";
     }
     for (const auto* child : children_) {
       child->Print(full_out, depth, current_depth + 1);

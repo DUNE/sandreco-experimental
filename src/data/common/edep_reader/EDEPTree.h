@@ -59,7 +59,7 @@ public:
   const_iterator GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t c) const;
   /// The hit with global index @p id, nullptr if it does not belong to any trajectory.
   const EDEPHit* GetHit(int id) const {
-    return (id >= 0 && static_cast<std::size_t>(id) < hit_ptr_.size()) ? hit_ptr_[id] : nullptr;
+    return (id >= 0 && static_cast<std::size_t>(id) < hit_ptr_.size()) ? hit_ptr_.at(id) : nullptr;
   }
 
   /// Copies the trajectories satisfying @p funct to @p out_it.
@@ -86,7 +86,7 @@ public:
     return it == id_to_pos_.end() ? -1 : it->second;
   }
   int hit_pos(int hit_id) const {
-    return (hit_id >= 0 && static_cast<std::size_t>(hit_id) < hit_to_pos_.size()) ? hit_to_pos_[hit_id] : -1;
+    return (hit_id >= 0 && static_cast<std::size_t>(hit_id) < hit_to_pos_.size()) ? hit_to_pos_.at(hit_id) : -1;
   }
   iterator at_pos(int pos) { return pos < 0 ? end() : begin() + pos; }
   const_iterator at_pos(int pos) const { return pos < 0 ? end() : begin() + pos; }

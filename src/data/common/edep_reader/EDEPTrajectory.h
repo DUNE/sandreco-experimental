@@ -74,7 +74,7 @@ class EDEPTrajectory;
     iterator end() const { return iterator(v_->end()); }
     std::size_t size() const { return v_->size(); }
     bool empty() const { return v_->empty(); }
-    T& operator[] (std::size_t i) const { return *(*v_)[i]; }
+    T& operator[] (std::size_t i) const { return *(*v_).at(i); }
     T& at(std::size_t i) const { return *v_->at(i); }
     T& front() const { return *v_->front(); }
     T& back() const { return *v_->back(); }
@@ -190,13 +190,13 @@ class EDEPTrajectory {
    */
   int GetPDGCode() const { return pdg_code_; };
 
-  std::vector<EDEPTrajectoryPoint>& GetFirstPointsInDetector(sand::subdetector_t c) { return first_points_[c]; }
+  std::vector<EDEPTrajectoryPoint>& GetFirstPointsInDetector(sand::subdetector_t c) { return first_points_.at(c); }
   const std::vector<EDEPTrajectoryPoint>& GetFirstPointsInDetector(sand::subdetector_t c) const {
-    return first_points_[c];
+    return first_points_.at(c);
   }
-  std::vector<EDEPTrajectoryPoint>& GetLastPointsInDetector(sand::subdetector_t c) { return last_points_[c]; }
+  std::vector<EDEPTrajectoryPoint>& GetLastPointsInDetector(sand::subdetector_t c) { return last_points_.at(c); }
   const std::vector<EDEPTrajectoryPoint>& GetLastPointsInDetector(sand::subdetector_t c) const {
-    return last_points_[c];
+    return last_points_.at(c);
   }
 
   /**
@@ -252,8 +252,8 @@ class EDEPTrajectory {
   
   std::string Print(std::string& full_out, int depth = 100, int current_depth = 0) const;
 
-  bool IsEntering(sand::subdetector_t c) const { return entering_[c]; };
-  bool IsExiting(sand::subdetector_t c) const { return exiting_[c]; };
+  bool IsEntering(sand::subdetector_t c) const { return entering_.at(c); };
+  bool IsExiting(sand::subdetector_t c) const { return exiting_.at(c); };
 
   template <typename Funct>
   bool HasHitWhere(Funct&& f) const {

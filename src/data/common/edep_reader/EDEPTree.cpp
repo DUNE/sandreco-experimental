@@ -93,10 +93,10 @@ void EDEPTree::check_in_next(EDEPTrajectory& trj, unsigned in, unsigned next, co
       if (!(next & bit(j)) || i == j || (is_tracker(i) && is_tracker(j))) {
         continue;
       }
-      trj.last_points_[i].emplace_back(pt);
-      trj.first_points_[j].emplace_back(next_pt);
-      trj.exiting_[i]  = true;
-      trj.entering_[j] = true;
+      trj.last_points_.at(i).emplace_back(pt);
+      trj.first_points_.at(j).emplace_back(next_pt);
+      trj.exiting_.at(i)  = true;
+      trj.entering_.at(j) = true;
       return; // one transition per step
     }
   }
@@ -117,23 +117,23 @@ void EDEPTree::fill_points(EDEPTrajectory& trj, const TG4Trajectory& g4trj, TGeo
 
   // 2. Store each point in its subdetector.
   for (std::size_t k = 0; k < pts.size(); k++) {
-    trj.trajectory_points_[main_comp(vol[k])].emplace_back(pts[k]);
-    //if vol[k] is "TRACKER" -> STT and DRIFT, main_comp returns always DRIFT, add STT as well
-    if (is_stt_and_drift(vol[k])) {
-      trj.trajectory_points_[sand::subdetector_t::STT].emplace_back(pts[k]);
+    trj.trajectory_points_[main_comp(vol.at(k))].emplace_back(pts.at(k));
+    //if vol.at(k) is "TRACKER" -> STT and DRIFT, main_comp returns always DRIFT, add STT as well
+    if (is_stt_and_drift(vol.at(k))) {
+      trj.trajectory_points_[sand::subdetector_t::STT].emplace_back(pts.at(k));
     }
   }
 
   // 3. First point of the trajectory.
-  trj.first_points_[main_comp(vol.front())].emplace_back(pts.front());
+  trj.first_points_.at(main_comp(vol.front())).emplace_back(pts.front());
 
   // 4. Transitions between consecutive points.
   for (std::size_t k = 0; k + 1 < pts.size(); k++) {
-    check_in_next(trj, vol[k], vol[k + 1], pts[k], pts[k + 1]);
+    check_in_next(trj, vol.at(k), vol.at(k + 1), pts.at(k), pts.at(k + 1));
   }
 
   // 5. Last point of the trajectory (after the transitions, so every list stays in time order).
-  trj.last_points_[main_comp(vol.back())].emplace_back(pts.back());
+  trj.last_points_.at(main_comp(vol.back())).emplace_back(pts.back());
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -185,8 +185,8 @@ void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
       const auto comp = comp_it == sand::string_to_component.end() ? sand::subdetector_t::OTHER : comp_it->second;
       for (const auto& hit : hits) {
         if (!hit.Contrib.empty()) {
-          if (auto node = id_to_node.find(hit.Contrib[0]); node != id_to_node.end()) {
-            nodes_[node->second].hit_map_[comp].emplace_back(hit, ind);
+          if (auto node = id_to_node.find(hit.Contrib.at(0)); node != id_to_node.end()) {
+            nodes_.at(node->second).hit_map_[comp].emplace_back(hit, ind);
           }
         }
         ind++;
@@ -209,7 +209,7 @@ void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
     EDEPTrajectory* parent = this;
     if (trj.parent_id_ != -1 && trj.parent_id_ != trj.id_) {
       if (auto p = id_to_node.find(trj.parent_id_); p != id_to_node.end()) {
-        parent = &nodes_[p->second];
+        parent = &nodes_.at(p->second);
       } else {
         UFW_ERROR("Trajectory {} has parent {}, which is not in the event: attaching it to the root", trj.id_,
                   trj.parent_id_);
@@ -245,8 +245,8 @@ void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
   for (std::size_t pos = 0; pos < order_.size(); pos++) {
     for (const auto& [comp, hits] : order_[pos]->hit_map_) {
       for (const auto& hit : hits) {
-        hit_to_pos_[hit.GetId()] = static_cast<int>(pos);
-        hit_ptr_[hit.GetId()]    = &hit;
+        hit_to_pos_.at(hit.GetId()) = static_cast<int>(pos);
+        hit_ptr_.at(hit.GetId())    = &hit;
       }
     }
   }
@@ -255,7 +255,7 @@ void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
   auto& tgm = ufw::context::current()->instance<sand::root_tgeomanager>();
   auto nav  = tgm.navigator();
   for (std::size_t i = 0; i < n_trj; i++) {
-    fill_points(nodes_[i], edep_event.Trajectories[i], *nav);
+    fill_points(nodes_.at(i), edep_event.Trajectories.at(i), *nav);
   }
 }
 
@@ -265,26 +265,26 @@ void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
 
 EDEPTree::iterator EDEPTree::GetParentOf(int trj_id) {
   const int pos = find_pos(trj_id);
-  if (pos < 0 || order_[pos]->parent_trajectory_ == this) {
+  if (pos < 0 || order_.at(pos)->parent_trajectory_ == this) {
     return end();
   }
-  return at_pos(find_pos(order_[pos]->parent_trajectory_->id_));
+  return at_pos(find_pos(order_.at(pos)->parent_trajectory_->id_));
 }
 
 EDEPTree::const_iterator EDEPTree::GetParentOf(int trj_id) const {
   const int pos = find_pos(trj_id);
-  if (pos < 0 || order_[pos]->parent_trajectory_ == this) {
+  if (pos < 0 || order_.at(pos)->parent_trajectory_ == this) {
     return end();
   }
-  return at_pos(find_pos(order_[pos]->parent_trajectory_->id_));
+  return at_pos(find_pos(order_.at(pos)->parent_trajectory_->id_));
 }
 
 EDEPTree::iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t c) {
   const int pos = hit_pos(id);
-  return (pos >= 0 && order_[pos]->HasHitWithIdInDetector(id, c)) ? at_pos(pos) : end();
+  return (pos >= 0 && order_.at(pos)->HasHitWithIdInDetector(id, c)) ? at_pos(pos) : end();
 }
 
 EDEPTree::const_iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t c) const {
   const int pos = hit_pos(id);
-  return (pos >= 0 && order_[pos]->HasHitWithIdInDetector(id, c)) ? at_pos(pos) : end();
+  return (pos >= 0 && order_.at(pos)->HasHitWithIdInDetector(id, c)) ? at_pos(pos) : end();
 }

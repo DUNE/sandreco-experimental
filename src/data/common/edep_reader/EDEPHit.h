@@ -28,7 +28,7 @@ class EDEPHit {
       energy_deposit_(hit.GetEnergyDeposit()),
       secondary_deposit_(hit.GetSecondaryDeposit()),
       track_length_(hit.GetTrackLength()),
-      contrib_(hit.Contrib[0]),
+      contrib_(hit.Contrib.at(0)),
       primary_id_(hit.GetPrimaryId()),
       h_index(i) {};
   /**
