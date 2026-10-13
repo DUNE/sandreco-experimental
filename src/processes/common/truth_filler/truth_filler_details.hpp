@@ -1,7 +1,7 @@
 #ifndef SAND_TRUTH_FILLER_DETAILS_HPP
 #define SAND_TRUTH_FILLER_DETAILS_HPP
 
-#include <edep_reader_refactor/EDEPTrajectory.h>
+#include <edep_reader/EDEPTrajectory.h>
 
 #include <vector>
 
@@ -16,8 +16,6 @@ class GRooTrackerEvent;
 
 namespace sand::common::filler_details {
 
-  using edep_refactor::EDEPTrajectory;
-
   /// One interaction's contiguous slice of the flat `Primaries` vector.
   struct InteractionRange {
     std::size_t first_primary_index;
@@ -25,7 +23,7 @@ namespace sand::common::filler_details {
   };
 
   /// All top-level (primary) edep-sim trajectories, in interaction order.
-  using Primaries = edep_refactor::trajectory_range<const EDEPTrajectory>;
+  using Primaries = trajectory_range<const EDEPTrajectory>;
 
   /// Result of build_true_particle_tree(): one interaction's primaries and secondaries,
   /// fully cross-linked via caf::TrueParticleID, plus post-FSI primary particle counts.

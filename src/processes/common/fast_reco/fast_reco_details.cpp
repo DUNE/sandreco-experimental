@@ -1,6 +1,6 @@
 #include "fast_reco_details.hpp"
 
-#include <edep_reader_refactor/edep_reader_refactor.hpp>
+#include <edep_reader/edep_reader.hpp>
 
 #include <duneanaobj/StandardRecord/SRDirectionBranch.h>
 #include <duneanaobj/StandardRecord/SREnums.h>
@@ -83,7 +83,7 @@ namespace sand::common::reco_details {
       }
     }
 
-    ::caf::SRVector3D end_direction_from_edep(sand::edep_reader_refactor const& edep, ::caf::SRTrueParticle const& true_part,
+    ::caf::SRVector3D end_direction_from_edep(sand::edep_reader const& edep, ::caf::SRTrueParticle const& true_part,
                                               ::caf::SRVector3D const& start_dir) {
       double constexpr stopped_momentum{1e-6};
 
@@ -110,7 +110,7 @@ namespace sand::common::reco_details {
     }
   } // namespace
 
-  TrackerG4IDs tracker_g4ids_from_edep(sand::edep_reader_refactor const& tree) {
+  TrackerG4IDs tracker_g4ids_from_edep(sand::edep_reader const& tree) {
     TrackerG4IDs ids;
     for (auto const& trj : tree) {
       // "Straw" in STT geometries, "DriftVolume" in the drift ones (see sand::string_to_component)
@@ -211,7 +211,7 @@ namespace sand::common::reco_details {
   }
 
   ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,
-                                 sand::edep_reader_refactor const& edep) {
+                                 sand::edep_reader const& edep) {
     ::caf::SRTrack track{};
 
     track.start  = true_part.start_pos;
@@ -312,7 +312,7 @@ namespace sand::common::reco_details {
   }
 
   void sand_tracker_from_true(::caf::SRTracker& tracker, ::caf::SRTrueInteraction const& true_ixn,
-                              TrackerG4IDs const& tracker_ids, int ixn_idx, sand::edep_reader_refactor const& edep) {
+                              TrackerG4IDs const& tracker_ids, int ixn_idx, sand::edep_reader const& edep) {
     auto const first_track_idx  = static_cast<int>(tracker.tracks.size());
     auto const first_shower_idx = static_cast<int>(tracker.showers.size());
 

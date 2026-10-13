@@ -3,8 +3,8 @@
 
 #include <sand.h>
 
-#include <edep_reader_refactor/EDEPTrajectory.h>
-#include <edep_reader_refactor/EDEPTree.h>
+#include <edep_reader/EDEPTrajectory.h>
+#include <edep_reader/EDEPTree.h>
 #include <genie_reader/GenieWrapper.h>
 
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>

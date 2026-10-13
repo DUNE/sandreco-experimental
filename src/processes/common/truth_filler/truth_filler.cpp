@@ -2,7 +2,7 @@
 #include "truth_filler_details.hpp"
 
 #include <caf/caf_wrapper.hpp>
-#include <edep_reader_refactor/edep_reader_refactor.hpp>
+#include <edep_reader/edep_reader.hpp>
 #include <genie_reader/genie_reader.hpp>
 
 #include <ufw/factory.hpp>
@@ -16,7 +16,7 @@ namespace sand::common {
   /// pre-FSI hadrons from StdHep, primaries + secondaries from the edep-sim particle tree.
   void truth_filler::run() {
     auto const& genie  = instance<genie_reader>();
-    auto const& edep   = instance<edep_reader_refactor>();
+    auto const& edep   = instance<edep_reader>();
     auto& truth_branch = set<sand::caf::truth_branch_wrapper>("out_truth_branch");
 
     auto const& primaries   = edep.GetChildrenTrajectories();

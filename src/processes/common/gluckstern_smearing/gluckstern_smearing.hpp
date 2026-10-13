@@ -17,13 +17,9 @@ namespace caf {
   class SRVector3D;
 } // namespace caf
 
-namespace sand::edep_refactor {
-  class EDEPHit;
-}
+class EDEPHit;
 
 namespace sand::common {
-
-  using edep_refactor::EDEPHit;
 
   struct GlucksternGeometry {
     int n_hits;

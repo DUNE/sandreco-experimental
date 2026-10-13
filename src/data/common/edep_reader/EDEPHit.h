@@ -4,6 +4,9 @@
 #include <TG4Event.h>
 #include <common/sand.h>
 
+#include <map>
+#include <vector>
+
 /**
  * @class EDEPHit
  * @brief Represents a hit in a detector.
@@ -19,21 +22,7 @@ class EDEPHit {
    */
   EDEPHit() = default;
   
-  EDEPHit(TG4HitSegment hit)
-    : start_(hit.GetStart()),
-      stop_(hit.GetStop()),
-      energy_deposit_(hit.GetEnergyDeposit()),
-      secondary_deposit_(hit.GetSecondaryDeposit()),
-      track_length_(hit.GetTrackLength()),
-      contrib_(hit.Contrib[0]),
-      primary_id_(hit.GetPrimaryId()),
-      h_index(-1) {};
-  /**
-   * @brief Constructor for EDEPHit.
-   * @param hit The TG4HitSegment object containing hit information.
-   * @param i The index of the hit.
-   */
-  EDEPHit(TG4HitSegment hit, int i)
+  explicit EDEPHit(const TG4HitSegment& hit, int i = -1)
     : start_(hit.GetStart()),
       stop_(hit.GetStop()),
       energy_deposit_(hit.GetEnergyDeposit()),
@@ -53,8 +42,8 @@ class EDEPHit {
    * @param primary_id The ID of the primary particle generating the hit.
    * @param i The index of the hit.
    */
-  EDEPHit(sand::vec_4d start,
-          sand::vec_4d stop,
+  EDEPHit(const sand::vec_4d& start,
+          const sand::vec_4d& stop,
           double energy_deposit,
           double secondary_deposit,
           double track_length,
@@ -123,14 +112,14 @@ class EDEPHit {
   const int& GetId() const { return h_index; };
 
  private:
-  sand::vec_4d start_;     ///< Start position of the hit.
-  sand::vec_4d stop_;      ///< Stop position of the hit.
-  double energy_deposit_;    ///< Energy deposited by the hit.
-  double secondary_deposit_; ///< Secondary deposition of the hit.
-  double track_length_;      ///< Track length of the hit.
-  int contrib_;              ///< Main contributor of the hit.
-  int primary_id_;           ///< ID of primary particle generating the hit.
-  int h_index;               ///< ID of the hit.
+  sand::vec_4d start_{};      ///< Start position of the hit.
+  sand::vec_4d stop_{};       ///< Stop position of the hit.
+  double energy_deposit_{};   ///< Energy deposited by the hit.
+  double secondary_deposit_{};///< Secondary deposition of the hit.
+  double track_length_{};     ///< Track length of the hit.
+  int contrib_{-1};           ///< Main contributor of the hit.
+  int primary_id_{-1};        ///< ID of primary particle generating the hit.
+  int h_index{-1};            ///< ID of the hit.
 };
 
 /**
