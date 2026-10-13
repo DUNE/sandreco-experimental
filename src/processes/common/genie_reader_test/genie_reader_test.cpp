@@ -24,7 +24,7 @@ namespace sand::common {
   }
 
   void genie_reader_test::run() {
-    const auto& reader     = get<sand::genie_reader>();
+    const auto& reader     = instance<sand::genie_reader>();
     const auto& events     = reader.events_;
     const auto& stdHeps    = reader.stdHeps_;
     const auto& nuParents  = reader.nuParents_;

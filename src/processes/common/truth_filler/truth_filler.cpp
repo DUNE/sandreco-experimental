@@ -35,6 +35,8 @@ namespace sand::common {
       auto const& event                 = genie.events_[ixn_idx];
       auto const& stdhep                = genie.stdHeps_[ixn_idx];
 
+      UFW_DEBUG("[first_prim_idx, prim_count] = [{},{}]", first_prim_idx, prim_count);
+      UFW_DEBUG("genie EvtNum {} StdHep N_={} P4_.size()={}", event.EvtNum_, stdhep.N_, stdhep.P4_.size());
       // Create and fill SRTrueInteraction from GENIE
       auto& true_ixn = truth_branch.nu.emplace_back(filler_details::true_interaction_from_genie(event, stdhep));
 
@@ -44,8 +46,12 @@ namespace sand::common {
       true_ixn.prefsi  = std::move(prefsi);
 
       // Create primaries and secondaries tree
+      // filler_details::print_edep_track_ids(primaries, first_prim_idx, prim_count, static_cast<int>(ixn_idx));
       auto tree = filler_details::build_true_particle_tree(primaries, first_prim_idx, prim_count,
                                                            static_cast<int>(ixn_idx), true_ixn.id);
+      // filler_details::print_tree_track_ids(tree, "truth tree", static_cast<int>(ixn_idx));
+      filler_details::to_local_track_ids(tree);
+      // filler_details::print_tree_track_ids(tree, "reordered", static_cast<int>(ixn_idx));
 
       // Fill CAF fields
       true_ixn.prim     = std::move(tree.prim);

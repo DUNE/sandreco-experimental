@@ -11,7 +11,7 @@
     }
   },
   "contexts": {
-    "keys": 2,
+    "keys": 5,
     "locals": {
       "sand::edep_reader": {
         "uri": "test/sand-spills.5.edep.root"

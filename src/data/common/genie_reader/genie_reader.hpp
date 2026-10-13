@@ -35,11 +35,22 @@ class ufw::data::factory<sand::genie_reader> {
   sand::genie_reader reader;
   std::unique_ptr<TFile> input_file;
   TTree* input_tree;
+  TTree* spill_to_run_event;
   std::vector<std::pair<Long64_t, Long64_t>> spills_boundaries;
   ufw::context_id m_id;
 
+
   bool hasNuParent = false;
   bool hasNumiFlux = false;
+
+  bool spill_based;
+
+  // Run and event ids.
+  // Spill-based files: attached to the spill_to_run_event tree, ROOT allocates and owns the vectors.
+  // Event-based files: there is no such tree, the constructor allocates them (and the destructor frees them) and
+  // populate_spills_boundaries fills them, one element per event.
+  std::vector<int>* RunId = nullptr;
+  std::vector<int>* EventId = nullptr;
 
   int EvtNum{};
   TBits* EvtFlags{};

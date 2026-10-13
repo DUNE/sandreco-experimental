@@ -3,6 +3,10 @@
 #include <TG4Event.h>
 #include <common/sand.h>
 
+#include <map>
+#include <vector>
+
+
 /**
  * @class EDEPTrajectoryPoint
  * @brief Represents a point on a trajectory.
@@ -16,20 +20,20 @@ class EDEPTrajectoryPoint {
    * @brief Constructor for EDEPTrajectoryPoint.
    * @param trajectory_hit The TG4TrajectoryPoint object containing hit information.
    */
-  EDEPTrajectoryPoint(const TG4TrajectoryPoint& trajectory_hit)
-    : position_(trajectory_hit.GetPosition()),
-      momentum_(trajectory_hit.GetMomentum()),
-      process_(trajectory_hit.GetProcess()),
-      sub_process_(trajectory_hit.GetSubprocess()) {};
+  explicit EDEPTrajectoryPoint(const TG4TrajectoryPoint& p)
+    : position_(p.GetPosition()),
+      momentum_(p.GetMomentum().X(), p.GetMomentum().Y(), p.GetMomentum().Z()),
+      process_(p.GetProcess()),
+      sub_process_(p.GetSubprocess()) {}
 
   /**
    * @brief Destructor for EDEPTrajectoryPoint.
    */
   ~EDEPTrajectoryPoint() {};
 
-  bool operator== (const EDEPTrajectoryPoint& p) {
-    return (this->position_ == p.GetPosition() && this->momentum_ == p.GetMomentum() && this->process_ == p.GetProcess()
-            && this->sub_process_ == p.GetSubprocess());
+  bool operator== (const EDEPTrajectoryPoint& p) const {
+    return position_ == p.position_ && momentum_ == p.momentum_ && process_ == p.process_
+          && sub_process_ == p.sub_process_;
   };
 
   /**
@@ -57,8 +61,8 @@ class EDEPTrajectoryPoint {
   const int& GetSubprocess() const { return sub_process_; };
 
  private:
-  sand::vec_4d position_; ///< Position of the trajectory point.
-  sand::mom_3d momentum_;       ///< Momentum of the trajectory point.
+  sand::vec_4d position_;   ///< Position of the trajectory point.
+  sand::mom_3d momentum_;   ///< Momentum of the trajectory point.
   int process_;             ///< Process associated with the trajectory point.
   int sub_process_;         ///< Subprocess associated with the trajectory point.
 };

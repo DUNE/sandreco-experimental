@@ -15,7 +15,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <numeric>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -29,10 +31,38 @@ namespace sand::common::filler_details {
       float W{};
       float bjorkenX{};
       float inelasticity{};
+      float t{std::numeric_limits<float>::quiet_NaN()}; ///< only for coherent events, see calculate_kinematics
     };
 
-    [[nodiscard]] Kinematics calculate_kinematics(sand::mom_4d const& nu_p4, sand::mom_4d const& lep_p4) {
-      auto const nucleon_mass = static_cast<float>(TDatabasePDG::Instance()->GetParticle(2212)->Mass());
+    /// The t GENIE stores as the selected t of a coherent pion event (what ND_CAFMaker reads with Kine().t(true)).
+    ///
+    /// In the Berger-Sehgal and Rein-Sehgal COH models GENIE samples Q2, y and t, computes x = Q2 / (2 M_A nu) with
+    /// the nucleus mass M_A, and then builds the pion (E_pi = nu) at the angle to q given by t and x, but using the
+    /// nucleon mass m_N in place of M_A. That is, it uses Q2' = Q2 m_N / M_A instead of the real Q2, so the final state
+    /// has |(q - p_pi)^2| != t. Inverting that construction gives back the sampled t from the final state.
+    /// In the other COH models (Berger-Sehgal FM, Alvarez-Ruso) E_pi != nu and GENIE stores t = |(q - p_pi)^2|.
+    [[nodiscard]] double genie_coh_t(sand::mom_4d const& q, sand::mom_4d const& pion_p4, double target_mass) {
+      const double t_final_state = std::abs((q - pion_p4).M2());
+      const double nu            = q.E();
+      if (std::abs(nu - pion_p4.E()) > 1e-6 * nu) {
+        return t_final_state;
+      }
+
+      constexpr double nucleon_mass = 0.9389187; // genie::constants::kNucleonMass, average of proton and neutron
+      const double nu2  = nu * nu;
+      const double Q2   = -q.M2();
+      const double Q2p  = Q2 * nucleon_mass / target_mass;
+      const double mpi2 = pion_p4.M2();
+      return 2 * nu2 + Q2p - mpi2 - std::sqrt((nu2 + Q2p) / (nu2 + Q2)) * (2 * nu2 + Q2 - mpi2 - t_final_state);
+    }
+
+    /// @param pion_p4      final-state pion of a coherent event. When given, also computes t, the squared
+    ///                     four-momentum transfer to the nucleus, as GENIE stores it (see genie_coh_t).
+    /// @param target_mass  mass of the target nucleus, needed for t.
+    [[nodiscard]] Kinematics calculate_kinematics(sand::mom_4d const& nu_p4, sand::mom_4d const& lep_p4,
+                                                  sand::mom_4d const* pion_p4 = nullptr, double target_mass = 0) {
+      // auto const nucleon_mass = static_cast<float>(TDatabasePDG::Instance()->GetParticle(2212)->Mass());
+      auto const nucleon_mass = 0.939;
       auto q                  = nu_p4 - lep_p4;
 
       Kinematics k{};
@@ -44,6 +74,10 @@ namespace sand::common::filler_details {
       const auto Enu = static_cast<float>(nu_p4.E());
       k.bjorkenX     = k.Q2 / (2.0f * nucleon_mass * k.q0);
       k.inelasticity = k.q0 / Enu;
+
+      if (pion_p4 != nullptr) {
+        k.t = static_cast<float>(genie_coh_t(q, *pion_p4, target_mass));
+      }
 
       return k;
     }
@@ -76,6 +110,17 @@ namespace sand::common::filler_details {
     return false;
   }
 
+  /// @return index (in `stdhep`) of the stable final-state pion of a coherent event, -1 if there is none.
+  static int find_final_pion(StdHep const& stdhep) {
+    for (int i{}; i != stdhep.N_; ++i) {
+      const int abs_pdg = std::abs(stdhep.Pdg_[i]);
+      if (stdhep.Status_[i] == genie::kIStStableFinalState && (abs_pdg == 211 || abs_pdg == 111)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   int find_final_lepton(StdHep const& stdhep) {
     const auto daughters = stdhep.daughters_indexes_of_part(static_cast<int>(StdHepIndex::nu));
     if (daughters.empty()) {
@@ -96,7 +141,7 @@ namespace sand::common::filler_details {
 
     auto summary = parse_evt_code(event.EvtCode_);
 
-    ixn.id        = event.EvtNum_;
+    ixn.id        = event.EvtIdx_;
     ixn.genieIdx  = event.EvtNum_;
     ixn.pdg       = summary.probe_pdg;
     ixn.pdgorig   = ixn.pdg;
@@ -105,25 +150,38 @@ namespace sand::common::filler_details {
     ixn.targetPDG = summary.target_pdg;
     ixn.hitnuc    = summary.hit_nucleon_pdg.value_or(0);
 
-    ixn.vtx.x     = static_cast<float>(event.EvtVtx_[0]);
-    ixn.vtx.y     = static_cast<float>(event.EvtVtx_[1]);
-    ixn.vtx.z     = static_cast<float>(event.EvtVtx_[2]);
+    constexpr double m_to_cm = 100.;
+    ixn.vtx.x     = static_cast<float>(event.EvtVtx_[0] * m_to_cm);
+    ixn.vtx.y     = static_cast<float>(event.EvtVtx_[1] * m_to_cm);
+    ixn.vtx.z     = static_cast<float>(event.EvtVtx_[2] * m_to_cm);
     ixn.time      = static_cast<float>(event.EvtVtx_[3]);
-    ixn.isvtxcont = true;
+    ixn.isvtxcont = false;
 
     const auto& nu_p4 = stdhep.P4_[static_cast<int>(StdHepIndex::nu)];
+    UFW_DEBUG("nu_p4.E(): {}", nu_p4.E());
+    
     ixn.E             = static_cast<float>(nu_p4.E());
     ixn.momentum.x    = static_cast<float>(nu_p4.Px());
     ixn.momentum.y    = static_cast<float>(nu_p4.Py());
     ixn.momentum.z    = static_cast<float>(nu_p4.Pz());
 
-    auto kinematics  = calculate_kinematics(nu_p4, stdhep.P4_.at(find_final_lepton(stdhep)));
+    // t is defined for coherent events only (as in ND_CAFMaker); it needs the final-state pion
+    const int pion_idx = ixn.mode == ::caf::kCoh ? find_final_pion(stdhep) : -1;
+    if (ixn.mode == ::caf::kCoh && pion_idx < 0) {
+      UFW_WARN("Coherent event {} has no final-state pion: t not filled", ixn.id);
+    }
+    const double target_mass = stdhep.P4_[static_cast<int>(StdHepIndex::tgt)].M();
+    auto kinematics          = calculate_kinematics(nu_p4, stdhep.P4_.at(find_final_lepton(stdhep)),
+                                                    pion_idx >= 0 ? &stdhep.P4_.at(pion_idx) : nullptr, target_mass);
     ixn.Q2           = kinematics.Q2;
     ixn.q0           = kinematics.q0;
     ixn.modq         = kinematics.modq;
     ixn.W            = kinematics.W;
     ixn.bjorkenX     = kinematics.bjorkenX;
     ixn.inelasticity = kinematics.inelasticity;
+    if (pion_idx >= 0) {
+      ixn.t = kinematics.t;
+    }
 
     ixn.ischarm    = summary.is_charm_event;
     ixn.isseaquark = summary.scattering_type == ::caf::kDIS && summary.hit_sea_quark;
@@ -133,7 +191,9 @@ namespace sand::common::filler_details {
 
     ixn.xsec       = static_cast<float>(event.EvtXSec_);
     ixn.genweight  = static_cast<float>(event.EvtWght_);
-    ixn.generator  = ::caf::kGENIE;
+    // gRooTracker stores the cross section in 1e-38 cm2; CAF (GENIE XSec()) wants GeV^-2
+    constexpr double xsec_1e38cm2_to_GeVm2 = 1e-38 / 3.893793e-28;   // 1 GeV^-2 = 0.3893793 mb
+    ixn.xsec       = static_cast<float>(event.EvtXSec_ * xsec_1e38cm2_to_GeVm2);
     ixn.xsec_cvwgt = 1.0f;
 
     return ixn;
@@ -289,6 +349,49 @@ namespace sand::common::filler_details {
     }
 
     return out_tree;
+  }
+
+    void to_local_track_ids(TrueParticleTree& tree) {
+    if (tree.prim.empty())
+      return;
+
+    auto const by_g4id = [](auto const& a, auto const& b) { return a.G4ID < b.G4ID; };
+
+    // primaries and secondaries of one interaction are two contiguous blocks of spill-wide ids
+    auto const nprim   = static_cast<int>(tree.prim.size());
+    auto const prim_lo = std::min_element(tree.prim.begin(), tree.prim.end(), by_g4id)->G4ID;
+    auto const prim_hi = std::max_element(tree.prim.begin(), tree.prim.end(), by_g4id)->G4ID;
+    if (prim_hi - prim_lo + 1 != nprim)
+      UFW_ERROR("Primary track ids [{}, {}] are not contiguous for {} primaries", prim_lo, prim_hi, nprim);
+
+    auto const nsec = static_cast<int>(tree.sec.size());
+    int sec_lo      = 0;
+    if (nsec > 0) {
+      sec_lo            = std::min_element(tree.sec.begin(), tree.sec.end(), by_g4id)->G4ID;
+      auto const sec_hi = std::max_element(tree.sec.begin(), tree.sec.end(), by_g4id)->G4ID;
+      if (sec_hi - sec_lo + 1 != nsec)
+        UFW_ERROR("Secondary track ids [{}, {}] are not contiguous for {} secondaries", sec_lo, sec_hi, nsec);
+    }
+
+    // spill-wide id -> per-interaction id (primaries 0..nprim-1, then secondaries), as in ND_CAFMaker
+    auto const to_local = [=](int g) {
+      if (g < 0)
+        return g;
+      if (g >= prim_lo && g < prim_lo + nprim)
+        return g - prim_lo;
+      if (nsec > 0 && g >= sec_lo && g < sec_lo + nsec)
+        return nprim + g - sec_lo;
+      UFW_ERROR("Track id {} does not belong to this interaction", g);
+    };
+
+    for (auto* particles : {&tree.prim, &tree.sec}) {
+      for (auto& p : *particles) {
+        p.G4ID   = to_local(p.G4ID);
+        p.parent = to_local(p.parent);
+        for (auto& d : p.daughters)
+          d = static_cast<unsigned int>(to_local(static_cast<int>(d)));
+      }
+    }
   }
 
 } // namespace sand::common::filler_details

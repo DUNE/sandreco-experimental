@@ -1,430 +1,290 @@
 #include "EDEPTree.h"
 
-// Iterators
+#include <ufw/context.hpp>
 
-/**
- * @brief Constructor for iterator class.
- * @param parent_trj Pointer to the parent trajectory.
- * @param child_it Iterator pointing to a child trajectory.
- */
-EDEPTree::iterator::iterator(value_type* parent_trj, child_iterator child_it) {
-  this->current_it_ = child_it;
-  this->parent_trj_ = parent_trj;
+#include <root_tgeomanager/root_tgeomanager.hpp>
+
+#include <TGeoManager.h>
+#include <TGeoNavigator.h>
+#include <TGeoNode.h>
+
+#include <algorithm>
+#include <cstddef>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
+
+
+namespace {
+
+  /// The volume a trajectory point is in, or is about to enter if it sits on a boundary.
+  TGeoNode* get_node(TGeoNavigator& nav, const TG4TrajectoryPoint& tpoint) {
+    const auto& pos = tpoint.GetPosition();
+    const auto& mom = tpoint.GetMomentum();
+
+    TGeoNode* node = nav.FindNode(pos.X(), pos.Y(), pos.Z());
+
+    // At rest: no direction, so no boundary to look for.
+    if (mom.X() == 0 && mom.Y() == 0 && mom.Z() == 0) {
+      return node;
+    }
+
+    nav.SetCurrentDirection(mom.X(), mom.Y(), mom.Z());
+    nav.FindNextBoundary(1000);
+    if (nav.GetStep() < 1E-5) { // on a boundary: take the volume being entered
+      nav.Step();
+      node = nav.GetCurrentNode();
+    }
+    return node;
+  }
+
+  constexpr unsigned bit(unsigned c) { return 1u << c; }
+
+  /// Main subdetector of a volume: the highest-precedence match, as in the legacy code.
+  sand::subdetector_t main_comp(unsigned mask) {
+    for (sand::subdetector_t c : {sand::subdetector_t::DRIFT, sand::subdetector_t::STT, sand::subdetector_t::WORLD, sand::subdetector_t::MAGNET, sand::subdetector_t::ECAL, sand::subdetector_t::GRAIN}) {
+      if (mask & bit(c)) {
+        return c;
+      }
+    }
+    return sand::subdetector_t::OTHER;
+  }
+
+  /// STT and DRIFT share volume names: a volume matching only those two feeds both point lists.
+  bool is_stt_and_drift(unsigned mask) { return mask == (bit(sand::subdetector_t::STT) | bit(sand::subdetector_t::DRIFT)); }
+
+  /// STT and DRIFT overlap in the geometry, so a transition between them is not a real one.
+  bool is_tracker(unsigned c) { return c == sand::subdetector_t::STT || c == sand::subdetector_t::DRIFT; }
+
+} // namespace
+
+// ---------------------------------------------------------------------------------------------
+// Geometry
+// ---------------------------------------------------------------------------------------------
+
+/// Bitmask of the subdetectors a volume belongs to, from its name. Cached: the geometry never changes.
+unsigned EDEPTree::classify(const TGeoNode* node) {
+  if (auto it = volume_cache_.find(node); it != volume_cache_.end()) {
+    return it->second;
+  }
+
+  const std::string_view name = node ? std::string_view(node->GetName()) : std::string_view();
+
+  unsigned mask = 0;
+  if (Match(name, sand::grain_names)) mask |= bit(sand::subdetector_t::GRAIN);
+  if (Match(name, sand::ecal_names)) mask |= bit(sand::subdetector_t::ECAL);
+  if (Match(name, sand::magnet_names)) mask |= bit(sand::subdetector_t::MAGNET);
+  if (Match(name, sand::world_names)) mask |= bit(sand::subdetector_t::WORLD);
+  if (Match(name, sand::stt_names)) mask |= bit(sand::subdetector_t::STT);
+  if (Match(name, sand::drift_names) || Match(name, sand::generic_drift_names)) mask |= bit(sand::subdetector_t::DRIFT);
+  if (mask == 0) mask = bit(sand::subdetector_t::OTHER);
+
+  return volume_cache_.emplace(node, mask).first->second;
 }
 
-/**
- * @brief Prefix increment operator for the iterator class.
- * @details Increments the iterator to the next trajectory in the tree.
- * @return Reference to the updated iterator.
- */
-EDEPTree::iterator& EDEPTree::iterator::operator++ () {
-  if (!current_it_->GetChildrenTrajectories().empty()) {
-    parent_trj_ = &(*current_it_);
-    current_it_ = current_it_->GetChildrenTrajectories().begin();
-
-  } else {
-    ++current_it_;
-    while (parent_trj_ && (current_it_ == parent_trj_->GetChildrenTrajectories().end())) {
-      auto grand_parent = parent_trj_->GetParent();
-      if (!grand_parent) {
-        current_it_ = parent_trj_->GetChildrenTrajectories().end();
-        parent_trj_ = nullptr;
-        break;
+/// Records the first subdetector change between two consecutive points, if any.
+void EDEPTree::check_in_next(EDEPTrajectory& trj, unsigned in, unsigned next, const TG4TrajectoryPoint& pt,
+                              const TG4TrajectoryPoint& next_pt) const {
+  for (unsigned i = sand::subdetector_t::kSandBegin; i < sand::subdetector_t::kLoopableEnd; i++) {
+    if (!(in & bit(i))) {
+      continue;
+    }
+    for (unsigned j = sand::subdetector_t::kSandBegin; j < sand::subdetector_t::kLoopableEnd; j++) {
+      if (!(next & bit(j)) || i == j || (is_tracker(i) && is_tracker(j))) {
+        continue;
       }
+      trj.last_points_.at(i).emplace_back(pt);
+      trj.first_points_.at(j).emplace_back(next_pt);
+      trj.exiting_.at(i)  = true;
+      trj.entering_.at(j) = true;
+      return; // one transition per step
+    }
+  }
+}
 
-      auto b = grand_parent->GetChildrenTrajectories().begin();
+void EDEPTree::fill_points(EDEPTrajectory& trj, const TG4Trajectory& g4trj, TGeoNavigator& nav) {
+  const auto& pts = g4trj.Points;
+  if (pts.empty()) {
+    return;
+  }
 
-      // syntax for doing parent_trj_ + 1
-      ptrdiff_t diff = parent_trj_ - &(*b); // granted by std::vector
+  // 1. Where is each point? Each point is located exactly once.
+  auto& vol = point_volumes_; // member scratch buffer: keeps its capacity between calls
+  vol.clear();
+  for (const auto& p : pts) {
+    vol.push_back(classify(get_node(nav, p)));
+  }
 
-      parent_trj_ = grand_parent;
-      current_it_ = b + diff + 1;
+  // 2. Store each point in its subdetector.
+  for (std::size_t k = 0; k < pts.size(); k++) {
+    trj.trajectory_points_[main_comp(vol.at(k))].emplace_back(pts.at(k));
+    //if vol.at(k) is "TRACKER" -> STT and DRIFT, main_comp returns always DRIFT, add STT as well
+    if (is_stt_and_drift(vol.at(k))) {
+      trj.trajectory_points_[sand::subdetector_t::STT].emplace_back(pts.at(k));
     }
   }
 
-  return *this;
-}
+  // 3. First point of the trajectory.
+  trj.first_points_.at(main_comp(vol.front())).emplace_back(pts.front());
 
-/**
- * @brief Constructor for const_iterator class.
- * @param parent_trj Pointer to the parent trajectory.
- * @param child_it Iterator pointing to a child trajectory.
- */
-EDEPTree::const_iterator::const_iterator(value_type* parent_trj, const_child_iterator child_it) {
-  this->current_it_ = child_it;
-  this->parent_trj_ = parent_trj;
-}
-
-/**
- * @brief Prefix increment operator for the const_iterator class.
- * @details Increments the const_iterator to the next trajectory in the tree.
- * @return Reference to the updated const_iterator.
- */
-EDEPTree::const_iterator& EDEPTree::const_iterator::operator++ () {
-  if (!current_it_->GetChildrenTrajectories().empty()) {
-    parent_trj_ = &(*current_it_);
-    current_it_ = current_it_->GetChildrenTrajectories().begin();
-
-  } else {
-    ++current_it_;
-    while (parent_trj_ && (current_it_ == parent_trj_->GetChildrenTrajectories().end())) {
-      auto grand_parent = parent_trj_->GetParent();
-      if (!grand_parent) {
-        current_it_ = parent_trj_->GetChildrenTrajectories().end();
-        parent_trj_ = nullptr;
-        break;
-      }
-
-      auto b = grand_parent->GetChildrenTrajectories().begin();
-
-      // syntax for doing parent_trj_ + 1
-      ptrdiff_t diff = parent_trj_ - &(*b); // granted by std::vector
-
-      parent_trj_ = grand_parent;
-      current_it_ = b + diff + 1;
-    }
+  // 4. Transitions between consecutive points.
+  for (std::size_t k = 0; k + 1 < pts.size(); k++) {
+    check_in_next(trj, vol.at(k), vol.at(k + 1), pts.at(k), pts.at(k + 1));
   }
 
-  return *this;
+  // 5. Last point of the trajectory (after the transitions, so every list stays in time order).
+  trj.last_points_.at(main_comp(vol.back())).emplace_back(pts.back());
 }
 
-/**
- * @brief Constructor for the EDEPTree class.
- * @details Initializes the tree with default values.
- */
-EDEPTree::EDEPTree() {
-  this->SetId(-1);
-  this->SetParent(nullptr);
-  this->SetDepth(-1);
-}
+// ---------------------------------------------------------------------------------------------
+// Tree construction
+// ---------------------------------------------------------------------------------------------
 
-/**
- * @brief Creates the tree structure from a vector of trajectories.
- * @param trajectories_vect Vector of trajectories.
- */
-void EDEPTree::CreateTree(const std::vector<EDEPTrajectory>& trajectories_vect) {
-  bool complete = true;
-  while (complete) {
-    complete = true;
-    for (auto it = trajectories_vect.begin(); it != trajectories_vect.end(); it++) {
-      if (!HasTrajectory((*it).GetId())) {
-        complete  = false;
-        int depth = 0;
-        AddTrajectory((*it));
-      }
-    }
-  }
-  std::for_each(this->begin(), this->end(), [](EDEPTrajectory& trj) { trj.ComputeDepth(); });
-}
-
-/**
- * @brief Initializes the tree from a TG4Event
- * @param edep_event TG4Event object.
- */
 void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
-  this->GetChildrenTrajectories().clear();
-  std::map<int, std::map<sand::subdetector_t, std::vector<EDEPHit>>> hit_map;
-  int ind = 0;
-  for (auto hmap : edep_event.SegmentDetectors) {
-    for (uint i = 0; i < hmap.second.size(); i++) {
-      auto h = hmap.second[i];
-      if(sand::string_to_component.find(hmap.first) == sand::string_to_component.end()) {
-        hit_map[h.Contrib[0]][sand::subdetector_t::OTHER].push_back(EDEPHit(h, ind));
-      } else {
-        hit_map[h.Contrib[0]][sand::string_to_component[hmap.first]].push_back(EDEPHit(h, ind));
+  // Reset. Containers keep their capacity, so a steady-state event allocates little.
+  nodes_.clear();
+  order_.clear();
+  id_to_pos_.clear();
+  hit_to_pos_.clear();
+  hit_ptr_.clear();
+  children_.clear();
+
+  const std::size_t n_trj = edep_event.Trajectories.size();
+  nodes_.reserve(n_trj); // addresses must stay stable from here on
+  std::unordered_map<int, int> id_to_node;
+  id_to_node.reserve(n_trj);
+
+  // 1. Trajectories, in event order.
+  for (const auto& g4trj : edep_event.Trajectories) {
+    id_to_node.emplace(g4trj.GetTrackId(), static_cast<int>(nodes_.size()));
+    nodes_.emplace_back(g4trj);
+  }
+
+  // 2. Interaction number and reaction of the primaries.
+  {
+    std::unordered_map<int, const TG4PrimaryVertex*> primary_vertex;
+    for (const auto& vertex : edep_event.Primaries) {
+      for (const auto& particle : vertex.Particles) {
+        primary_vertex.emplace(particle.GetTrackId(), &vertex); // first vertex wins
       }
-      ind++;
+    }
+    for (auto& trj : nodes_) {
+      if (auto it = primary_vertex.find(trj.id_); it != primary_vertex.end()) {
+        trj.interaction_number_ = it->second->GetInteractionNumber();
+        trj.reaction_           = it->second->GetReaction();
+      }
     }
   }
-  std::vector<EDEPTrajectory> trajectories;
-  for (auto trj : edep_event.Trajectories) {
-    trajectories.push_back(EDEPTrajectory(trj, hit_map, edep_event.Primaries));
+
+  // 3. Hits, straight into their trajectory. The hit index is global over all detectors.
+  std::size_t n_hits = 0;
+  {
+    int ind = 0;
+    for (const auto& [det_name, hits] : edep_event.SegmentDetectors) {
+      auto comp_it    = sand::string_to_component.find(det_name);
+      const auto comp = comp_it == sand::string_to_component.end() ? sand::subdetector_t::OTHER : comp_it->second;
+      for (const auto& hit : hits) {
+        if (!hit.Contrib.empty()) {
+          if (auto node = id_to_node.find(hit.Contrib.at(0)); node != id_to_node.end()) {
+            nodes_.at(node->second).hit_map_[comp].emplace_back(hit, ind);
+          }
+        }
+        ind++;
+      }
+    }
+    n_hits = static_cast<std::size_t>(ind);
   }
-  CreateTree(trajectories);
-}
 
-/**
- * @brief Initializes the tree from a vector of trajectories.
- * @param trajectories_vect Vector of trajectories.
- */
-void EDEPTree::InizializeFromTrj(const std::vector<EDEPTrajectory>& trajectories_vect) {
-  this->GetChildrenTrajectories().clear();
-  CreateTree(trajectories_vect);
-}
+  const auto by_time = [](const EDEPHit& a, const EDEPHit& b) { return a.GetStart().T() < b.GetStart().T(); };
+  for (auto& trj : nodes_) {
+    for (auto& [comp, hits] : trj.hit_map_) {
+      if (!std::is_sorted(hits.begin(), hits.end(), by_time)) {
+        std::stable_sort(hits.begin(), hits.end(), by_time);
+      }
+    }
+  }
 
-/**
- * @brief Adds a trajectory to the tree.
- * @param trajectory The trajectory to add.
- */
-void EDEPTree::AddTrajectory(const EDEPTrajectory& trajectory) {
-  int parent_id = trajectory.GetParentId();
-  if (parent_id == -1) {
-    this->AddChild(trajectory);
-  } else {
-    std::find_if(this->begin(), this->end(), [parent_id](const EDEPTrajectory& trj) {
-      return parent_id == trj.GetId();
-    })->AddChild(trajectory);
+  // 4. Relations. A trajectory whose parent was not saved is attached to the root.
+  for (auto& trj : nodes_) {
+    EDEPTrajectory* parent = this;
+    if (trj.parent_id_ != -1 && trj.parent_id_ != trj.id_) {
+      if (auto p = id_to_node.find(trj.parent_id_); p != id_to_node.end()) {
+        parent = &nodes_.at(p->second);
+      } else {
+        UFW_ERROR("Trajectory {} has parent {}, which is not in the event: attaching it to the root", trj.id_,
+                  trj.parent_id_);
+      }
+    }
+    trj.parent_trajectory_ = parent;
+    parent->children_.push_back(&trj);
+  }
+
+  // 5. Depth-first pre-order, depth and id lookup.
+  order_.reserve(n_trj);
+  id_to_pos_.reserve(n_trj);
+  {
+    std::vector<EDEPTrajectory*> stack(children_.rbegin(), children_.rend());
+    depth_ = -1;
+    while (!stack.empty()) {
+      EDEPTrajectory* t = stack.back();
+      stack.pop_back();
+      t->depth_ = t->parent_trajectory_->depth_ + 1;
+      id_to_pos_.emplace(t->id_, static_cast<int>(order_.size()));
+      order_.push_back(t);
+      stack.insert(stack.end(), t->children_.rbegin(), t->children_.rend());
+    }
+  }
+  if (order_.size() != n_trj) {
+    UFW_ERROR("Only {} of {} trajectories are reachable from the root: the parent relations contain a cycle",
+              order_.size(), n_trj);
+  }
+
+  // 6. Hit lookup tables.
+  hit_to_pos_.assign(n_hits, -1);
+  hit_ptr_.assign(n_hits, nullptr);
+  for (std::size_t pos = 0; pos < order_.size(); pos++) {
+    for (const auto& [comp, hits] : order_[pos]->hit_map_) {
+      for (const auto& hit : hits) {
+        hit_to_pos_.at(hit.GetId()) = static_cast<int>(pos);
+        hit_ptr_.at(hit.GetId())    = &hit;
+      }
+    }
+  }
+
+  // 7. Trajectory points: the expensive part, needs the geometry.
+  auto& tgm = ufw::context::current()->instance<sand::root_tgeomanager>();
+  auto nav  = tgm.navigator();
+  for (std::size_t i = 0; i < n_trj; i++) {
+    fill_points(nodes_.at(i), edep_event.Trajectories.at(i), *nav);
   }
 }
 
-/**
- * @brief Adds a trajectory to the tree at a specified position.
- * @param trajectory The trajectory to add.
- * @param it Iterator pointing to the position where the trajectory should be added.
- */
-void EDEPTree::AddTrajectoryTo(const EDEPTrajectory& trajectory, iterator it) {
-  int parent_id = trajectory.GetParentId();
-  if (parent_id == -1) {
-    this->AddChild(trajectory);
-  } else {
-    EDEPTree::iterator end_it = GetTrajectoryEnd(it);
-    std::find_if(it, end_it, [parent_id](const EDEPTrajectory& trj) {
-      return parent_id == trj.GetId();
-    })->AddChild(trajectory);
-  }
-}
+// ---------------------------------------------------------------------------------------------
+// Queries
+// ---------------------------------------------------------------------------------------------
 
-/**
- * @brief Removes a trajectory from the tree.
- * @param trj_id ID of the trajectory to remove.
- */
-void EDEPTree::RemoveTrajectory(int trj_id) { GetParentOf(trj_id)->RemoveChildWithId(trj_id); }
-
-/**
- * @brief Removes a trajectory from the tree at a specified position.
- * @param trj_id ID of the trajectory to remove.
- * @param it Iterator pointing to the position of the trajectory to remove.
- */
-void EDEPTree::RemoveTrajectoryFrom(int trj_id, iterator it) { GetParentOf(trj_id, it)->RemoveChildWithId(trj_id); }
-
-/**
- * @brief Moves a trajectory to a new parent trajectory.
- * @param id_to_move ID of the trajectory to move.
- * @param next_parent_id ID of the new parent trajectory.
- */
-void EDEPTree::MoveTrajectoryTo(int id_to_move, int next_parent_id) {
-  EDEPTrajectory trjToMove = *GetTrajectory(id_to_move);
-  RemoveTrajectory(id_to_move);
-  GetTrajectory(next_parent_id)->AddChild(trjToMove);
-  std::for_each(this->begin(), this->end(), [](EDEPTrajectory& trj) { trj.ComputeDepth(); });
-}
-
-/**
- * @brief Checks if the tree contains a trajectory with the given ID.
- * @param trj_id ID of the trajectory to check.
- * @return True if the trajectory is found, otherwise false.
- */
-bool EDEPTree::HasTrajectory(int trj_id) const {
-  return std::find_if(this->begin(), this->end(), [trj_id](const EDEPTrajectory& trj) { return trj_id == trj.GetId(); })
-      != this->end();
-}
-
-/**
- * @brief Checks if a trajectory is in a specified subtree.
- * @param trj_id ID of the trajectory to check.
- * @param it Iterator pointing to the subtree.
- * @return True if the trajectory is found in the subtree, otherwise false.
- */
-bool EDEPTree::IsTrajectoryIn(int trj_id, iterator it) {
-  EDEPTree::iterator end_it = GetTrajectoryEnd(it);
-  EDEPTree::iterator found_it =
-      std::find_if(it, end_it, [trj_id](const EDEPTrajectory& trj) { return trj_id == trj.GetId(); });
-  return (found_it != end_it) ? true : false;
-}
-
-/**
- * @brief Checks if a trajectory is in a specified subtree.
- * @param trj_id ID of the trajectory to check.
- * @param it Iterator pointing to the subtree.
- * @return True if the trajectory is found in the subtree, otherwise false.
- */
-bool EDEPTree::IsTrajectoryIn(int trj_id, const_iterator it) const {
-  EDEPTree::const_iterator end_it = GetTrajectoryEnd(it);
-  EDEPTree::const_iterator found_it =
-      std::find_if(it, end_it, [trj_id](const EDEPTrajectory& trj) { return trj_id == trj.GetId(); });
-  return (found_it != end_it) ? true : false;
-}
-
-/**
- * @brief Retrieves the parent trajectory of a trajectory with the given ID.
- * @param trj_id ID of the trajectory.
- * @return Iterator pointing to the parent trajectory.
- */
 EDEPTree::iterator EDEPTree::GetParentOf(int trj_id) {
-  auto f = [trj_id](const EDEPTrajectory& trj) {
-    for (const auto& t : trj.GetChildrenTrajectories()) {
-      if (trj_id == t.GetId())
-        return true;
-    };
-    return false;
-  };
-  return std::find_if(this->begin(), this->end(), f);
+  const int pos = find_pos(trj_id);
+  if (pos < 0 || order_.at(pos)->parent_trajectory_ == this) {
+    return end();
+  }
+  return at_pos(find_pos(order_.at(pos)->parent_trajectory_->id_));
 }
 
-/**
- * @brief Retrieves the parent trajectory of a trajectory with the given ID.
- * @param trj_id ID of the trajectory.
- * @return Iterator pointing to the parent trajectory.
- */
 EDEPTree::const_iterator EDEPTree::GetParentOf(int trj_id) const {
-  auto f = [trj_id](const EDEPTrajectory& trj) {
-    for (const auto& t : trj.GetChildrenTrajectories()) {
-      if (trj_id == t.GetId())
-        return true;
-    };
-    return false;
-  };
-  return std::find_if(this->begin(), this->end(), f);
-}
-
-/**
- * @brief Retrieves the parent trajectory of a trajectory with the given ID within a specified subtree.
- * @param trj_id ID of the trajectory.
- * @param it Iterator pointing to the subtree.
- * @return Iterator pointing to the parent trajectory.
- */
-EDEPTree::iterator EDEPTree::GetParentOf(int trj_id, iterator it) {
-  EDEPTree::iterator end_it = GetTrajectoryEnd(it);
-  auto f                    = [trj_id](const EDEPTrajectory& trj) {
-    for (const auto& t : trj.GetChildrenTrajectories()) {
-      if (trj_id == t.GetId())
-        return true;
-    };
-    return false;
-  };
-  EDEPTree::iterator found_it = std::find_if(it, end_it, f);
-  return (found_it != end_it) ? found_it : this->end();
-}
-
-/**
- * @brief Retrieves the parent trajectory of a trajectory with the given ID within a specified subtree.
- * @param trj_id ID of the trajectory.
- * @param it Iterator pointing to the subtree.
- * @return Iterator pointing to the parent trajectory.
- */
-EDEPTree::const_iterator EDEPTree::GetParentOf(int tid, const_iterator it) const {
-  EDEPTree::const_iterator end_it = GetTrajectoryEnd(it);
-  auto f                          = [tid](const EDEPTrajectory& trj) {
-    for (const auto& t : trj.GetChildrenTrajectories()) {
-      if (tid == t.GetId())
-        return true;
-    };
-    return false;
-  };
-  EDEPTree::const_iterator found_it = std::find_if(it, end_it, f);
-  return (found_it != end_it) ? found_it : this->end();
-}
-
-/**
- * @brief Retrieves the iterator to the trajectory with the given ID within a specified subtree.
- * @param trj_id ID of the trajectory.
- * @param it Iterator pointing to the subtree.
- * @return Iterator pointing to the trajectory with the given ID.
- */
-EDEPTree::iterator EDEPTree::GetTrajectoryFrom(int trj_id, iterator it) {
-  EDEPTree::iterator end_it = GetTrajectoryEnd(it);
-  EDEPTree::iterator found_it =
-      std::find_if(it, end_it, [trj_id](const EDEPTrajectory& trj) { return trj_id == trj.GetId(); });
-  return (found_it != end_it) ? found_it : end_it;
-}
-
-/**
- * @brief Retrieves the iterator to the trajectory with the given ID within a specified subtree.
- * @param trj_id ID of the trajectory.
- * @param it Iterator pointing to the subtree.
- * @return Iterator pointing to the trajectory with the given ID.
- */
-EDEPTree::const_iterator EDEPTree::GetTrajectoryFrom(int trj_id, const_iterator it) const {
-  EDEPTree::const_iterator end_it = GetTrajectoryEnd(it);
-  EDEPTree::const_iterator found_it =
-      std::find_if(it, end_it, [trj_id](const EDEPTrajectory& trj) { return trj_id == trj.GetId(); });
-  return (found_it != end_it) ? found_it : this->end();
-}
-
-/**
- * @brief Returns an iterator to the trajectory containing a hit with the specified ID.
- *
- * This function searches through the tree for a trajectory that contains a hit
- * with the given ID and returns an iterator to the matching trajectory.
- *
- * @param id The ID of the hit to search for.
- * @return An iterator to the trajectory containing the hit, or the end iterator if no match is found.
- */
-EDEPTree::iterator EDEPTree::GetTrajectoryWithHitId(int id) {
-  EDEPTree::iterator found_it =
-      std::find_if(this->begin(), this->end(), [id](const EDEPTrajectory& trj) { return trj.HasHitWithId(id); });
-  return (found_it != this->end()) ? found_it : this->end();
-}
-
-/**
- * @brief Returns a const iterator to the trajectory containing a hit with the specified ID.
- *
- * This function searches through the tree for a trajectory that contains a hit
- * with the given ID and returns a const iterator to the matching trajectory.
- *
- * @param id The ID of the hit to search for.
- * @return A const iterator to the trajectory containing the hit, or the end iterator if no match is found.
- */
-EDEPTree::const_iterator EDEPTree::GetTrajectoryWithHitId(int id) const {
-  EDEPTree::const_iterator found_it =
-      std::find_if(this->begin(), this->end(), [id](const EDEPTrajectory& trj) { return trj.HasHitWithId(id); });
-  return (found_it != this->end()) ? found_it : this->end();
-}
-
-/**
- * @brief Retrieves the iterator to the trajectory containing a hit with the given ID in the specified sand::subdetector_t.
- * @param id ID of the hit.
- * @param component_name Name of the sand::subdetector_t.
- * @return Iterator pointing to the trajectory containing the hit.
- */
-EDEPTree::iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t component_name) {
-  EDEPTree::iterator found_it =
-      std::find_if(this->begin(), this->end(), [id, component_name](const EDEPTrajectory& trj) {
-        return trj.HasHitWithIdInDetector(id, component_name);
-      });
-  return (found_it != this->end()) ? found_it : this->end();
-}
-
-/**
- * @brief Retrieves the iterator to the trajectory containing a hit with the given ID in the specified sand::subdetector_t.
- * @param id ID of the hit.
- * @param component_name Name of the sand::subdetector_t.
- * @return Iterator pointing to the trajectory containing the hit.
- */
-EDEPTree::const_iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t component_name) const {
-  EDEPTree::const_iterator found_it =
-      std::find_if(this->begin(), this->end(), [id, component_name](const EDEPTrajectory& trj) {
-        return trj.HasHitWithIdInDetector(id, component_name);
-      });
-  return (found_it != this->end()) ? found_it : this->end();
-}
-
-/**
- * @brief Retrieves the iterator to the end of the subtree starting from the specified iterator position.
- * @param start Iterator pointing to the start of the subtree.
- * @return Iterator pointing to the end of the subtree.
- */
-EDEPTree::iterator EDEPTree::GetTrajectoryEnd(iterator start) {
-  EDEPTree::iterator end_it = start;
-  if (!start->GetChildrenTrajectories().empty()) {
-    end_it = ++iterator(start->Get(), --(start->GetChildrenTrajectories().end()));
-  } else {
-    end_it = ++start;
+  const int pos = find_pos(trj_id);
+  if (pos < 0 || order_.at(pos)->parent_trajectory_ == this) {
+    return end();
   }
-  return end_it;
+  return at_pos(find_pos(order_.at(pos)->parent_trajectory_->id_));
 }
 
-/**
- * @brief Retrieves the iterator to the end of the subtree starting from the specified iterator position.
- * @param start Iterator pointing to the start of the subtree.
- * @return Iterator pointing to the end of the subtree.
- */
-EDEPTree::const_iterator EDEPTree::GetTrajectoryEnd(const_iterator start) const {
-  EDEPTree::const_iterator end_it = start;
-  if (!start->GetChildrenTrajectories().empty()) {
-    end_it = ++const_iterator(start->Get(), --(start->GetChildrenTrajectories().end()));
-  } else {
-    end_it = ++start;
-  }
-  return end_it;
+EDEPTree::iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t c) {
+  const int pos = hit_pos(id);
+  return (pos >= 0 && order_.at(pos)->HasHitWithIdInDetector(id, c)) ? at_pos(pos) : end();
+}
+
+EDEPTree::const_iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t c) const {
+  const int pos = hit_pos(id);
+  return (pos >= 0 && order_.at(pos)->HasHitWithIdInDetector(id, c)) ? at_pos(pos) : end();
 }
