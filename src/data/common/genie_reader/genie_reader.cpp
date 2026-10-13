@@ -80,11 +80,11 @@ namespace ufw::data {
       std::string evtCodeStr = EvtCode ? EvtCode->GetString().Data() : "";
 
       if (spill_based) {
-        reader.events_.push_back({static_cast<long>(RunId->at(index_in_spill))*1000000L + EventId->at(index_in_spill), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+        reader.events_.push_back({j, static_cast<long>(RunId->at(index_in_spill))*1000000L + EventId->at(index_in_spill), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
         UFW_DEBUG("Added genie event (spill-based) with CAF idx: {}, {}, {}", RunId->at(index_in_spill), static_cast<long>(RunId->at(index_in_spill))*1000000L + EventId->at(index_in_spill), EventId->at(index_in_spill));
         index_in_spill++;
       } else {
-        reader.events_.push_back({static_cast<long>(RunId->at(i))*1000000L + EventId->at(i), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+        reader.events_.push_back({j, static_cast<long>(RunId->at(i))*1000000L + EventId->at(i), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
         UFW_DEBUG("Added genie event (event-based) with CAF idx: {}, {}, {}", RunId->at(i), static_cast<long>(RunId->at(i))*1000000L + EventId->at(i), EventId->at(i));
       }
 
