@@ -101,7 +101,9 @@ class EDEPTrajectory {
     : p0_(trajectory.GetInitialMomentum()),
       id_(trajectory.GetTrackId()),
       parent_id_(trajectory.GetParentId()),
-      pdg_code_(trajectory.GetPDGCode()) {};
+      pdg_code_(trajectory.GetPDGCode()) {
+        UFW_ASSERT(id_ != parent_id_, "Trajectory is its own parent");
+      };
 
   EDEPTrajectory(const EDEPTrajectory&)            = default;
   EDEPTrajectory(EDEPTrajectory&&)                 = default;

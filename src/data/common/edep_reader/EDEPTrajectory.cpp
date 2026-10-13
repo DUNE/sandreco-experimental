@@ -195,8 +195,8 @@ const EDEPHit* EDEPTrajectory::GetHitNear4DPoint(sand::vec_4d point, double dist
  */
 const EDEPHit& EDEPTrajectory::GetHitWithId(int id) const {
   const EDEPHit* hit = FindHit(id);
-    if (hit == nullptr) {
-  UFW_ERROR("Hit with id {} not found", id);
+  if (hit == nullptr) {
+    UFW_ERROR("Hit with id {} not found", id);
   }
   return *hit;
 }

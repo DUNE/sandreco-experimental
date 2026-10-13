@@ -17,8 +17,6 @@
 
 namespace {
 
-  using sd = sand::subdetector_t;
-
   /// The volume a trajectory point is in, or is about to enter if it sits on a boundary.
   TGeoNode* get_node(TGeoNavigator& nav, const TG4TrajectoryPoint& tpoint) {
     const auto& pos = tpoint.GetPosition();
@@ -43,20 +41,20 @@ namespace {
   constexpr unsigned bit(unsigned c) { return 1u << c; }
 
   /// Main subdetector of a volume: the highest-precedence match, as in the legacy code.
-  sd main_comp(unsigned mask) {
-    for (sd c : {sd::DRIFT, sd::STT, sd::WORLD, sd::MAGNET, sd::ECAL, sd::GRAIN}) {
+  sand::subdetector_t main_comp(unsigned mask) {
+    for (sand::subdetector_t c : {sand::subdetector_t::DRIFT, sand::subdetector_t::STT, sand::subdetector_t::WORLD, sand::subdetector_t::MAGNET, sand::subdetector_t::ECAL, sand::subdetector_t::GRAIN}) {
       if (mask & bit(c)) {
         return c;
       }
     }
-    return sd::OTHER;
+    return sand::subdetector_t::OTHER;
   }
 
   /// STT and DRIFT share volume names: a volume matching only those two feeds both point lists.
-  bool is_stt_and_drift(unsigned mask) { return mask == (bit(sd::STT) | bit(sd::DRIFT)); }
+  bool is_stt_and_drift(unsigned mask) { return mask == (bit(sand::subdetector_t::STT) | bit(sand::subdetector_t::DRIFT)); }
 
   /// STT and DRIFT overlap in the geometry, so a transition between them is not a real one.
-  bool is_tracker(unsigned c) { return c == sd::STT || c == sd::DRIFT; }
+  bool is_tracker(unsigned c) { return c == sand::subdetector_t::STT || c == sand::subdetector_t::DRIFT; }
 
 } // namespace
 
@@ -73,13 +71,13 @@ unsigned EDEPTree::classify(const TGeoNode* node) {
   const std::string_view name = node ? std::string_view(node->GetName()) : std::string_view();
 
   unsigned mask = 0;
-  if (Match(name, sand::grain_names)) mask |= bit(sd::GRAIN);
-  if (Match(name, sand::ecal_names)) mask |= bit(sd::ECAL);
-  if (Match(name, sand::magnet_names)) mask |= bit(sd::MAGNET);
-  if (Match(name, sand::world_names)) mask |= bit(sd::WORLD);
-  if (Match(name, sand::stt_names)) mask |= bit(sd::STT);
-  if (Match(name, sand::drift_names) || Match(name, sand::generic_drift_names)) mask |= bit(sd::DRIFT);
-  if (mask == 0) mask = bit(sd::OTHER);
+  if (Match(name, sand::grain_names)) mask |= bit(sand::subdetector_t::GRAIN);
+  if (Match(name, sand::ecal_names)) mask |= bit(sand::subdetector_t::ECAL);
+  if (Match(name, sand::magnet_names)) mask |= bit(sand::subdetector_t::MAGNET);
+  if (Match(name, sand::world_names)) mask |= bit(sand::subdetector_t::WORLD);
+  if (Match(name, sand::stt_names)) mask |= bit(sand::subdetector_t::STT);
+  if (Match(name, sand::drift_names) || Match(name, sand::generic_drift_names)) mask |= bit(sand::subdetector_t::DRIFT);
+  if (mask == 0) mask = bit(sand::subdetector_t::OTHER);
 
   return volume_cache_.emplace(node, mask).first->second;
 }
@@ -87,11 +85,11 @@ unsigned EDEPTree::classify(const TGeoNode* node) {
 /// Records the first subdetector change between two consecutive points, if any.
 void EDEPTree::check_in_next(EDEPTrajectory& trj, unsigned in, unsigned next, const TG4TrajectoryPoint& pt,
                               const TG4TrajectoryPoint& next_pt) const {
-  for (unsigned i = sd::kSandBegin; i < sd::kLoopableEnd; i++) {
+  for (unsigned i = sand::subdetector_t::kSandBegin; i < sand::subdetector_t::kLoopableEnd; i++) {
     if (!(in & bit(i))) {
       continue;
     }
-    for (unsigned j = sd::kSandBegin; j < sd::kLoopableEnd; j++) {
+    for (unsigned j = sand::subdetector_t::kSandBegin; j < sand::subdetector_t::kLoopableEnd; j++) {
       if (!(next & bit(j)) || i == j || (is_tracker(i) && is_tracker(j))) {
         continue;
       }
@@ -120,8 +118,9 @@ void EDEPTree::fill_points(EDEPTrajectory& trj, const TG4Trajectory& g4trj, TGeo
   // 2. Store each point in its subdetector.
   for (std::size_t k = 0; k < pts.size(); k++) {
     trj.trajectory_points_[main_comp(vol[k])].emplace_back(pts[k]);
+    //if vol[k] is "TRACKER" -> STT and DRIFT, main_comp returns always DRIFT, add STT as well
     if (is_stt_and_drift(vol[k])) {
-      trj.trajectory_points_[sd::STT].emplace_back(pts[k]);
+      trj.trajectory_points_[sand::subdetector_t::STT].emplace_back(pts[k]);
     }
   }
 
@@ -183,7 +182,7 @@ void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
     int ind = 0;
     for (const auto& [det_name, hits] : edep_event.SegmentDetectors) {
       auto comp_it    = sand::string_to_component.find(det_name);
-      const auto comp = comp_it == sand::string_to_component.end() ? sd::OTHER : comp_it->second;
+      const auto comp = comp_it == sand::string_to_component.end() ? sand::subdetector_t::OTHER : comp_it->second;
       for (const auto& hit : hits) {
         if (!hit.Contrib.empty()) {
           if (auto node = id_to_node.find(hit.Contrib[0]); node != id_to_node.end()) {
@@ -212,7 +211,7 @@ void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
       if (auto p = id_to_node.find(trj.parent_id_); p != id_to_node.end()) {
         parent = &nodes_[p->second];
       } else {
-        UFW_WARN("Trajectory {} has parent {}, which is not in the event: attaching it to the root", trj.id_,
+        UFW_ERROR("Trajectory {} has parent {}, which is not in the event: attaching it to the root", trj.id_,
                   trj.parent_id_);
       }
     }
@@ -236,7 +235,7 @@ void EDEPTree::InizializeFromEdep(const TG4Event& edep_event) {
     }
   }
   if (order_.size() != n_trj) {
-    UFW_WARN("Only {} of {} trajectories are reachable from the root: the parent relations contain a cycle",
+    UFW_ERROR("Only {} of {} trajectories are reachable from the root: the parent relations contain a cycle",
               order_.size(), n_trj);
   }
 
@@ -288,4 +287,4 @@ EDEPTree::iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subd
 EDEPTree::const_iterator EDEPTree::GetTrajectoryWithHitIdInDetector(int id, sand::subdetector_t c) const {
   const int pos = hit_pos(id);
   return (pos >= 0 && order_[pos]->HasHitWithIdInDetector(id, c)) ? at_pos(pos) : end();
-  }
+}
