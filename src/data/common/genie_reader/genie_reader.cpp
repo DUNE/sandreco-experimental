@@ -24,8 +24,8 @@ namespace ufw::data {
     const auto edep_path = cfg.path_at("uri");
     input_file.reset(TFile::Open(edep_path.c_str()));
 
-    edep_input_tree = input_file->Get<TTree>("DetSimPassThru/gRooTracker");
-    if (edep_input_tree == nullptr) {
+    input_tree = input_file->Get<TTree>("DetSimPassThru/gRooTracker");
+    if (input_tree == nullptr) {
       UFW_ERROR("gRooTracker tree not found in file '{}'.", edep_path.c_str());
     }
     spill_to_run_event = input_file->Get<TTree>("spill_to_run_event");
@@ -68,7 +68,7 @@ namespace ufw::data {
     for (int j = spills_boundaries[i].first; j < spills_boundaries[i].second; j++) {
 
       UFW_DEBUG("N of trajectories: {}, size of spilltorun: {}", spills_boundaries[i].second - spills_boundaries[i].first, EventId->size());
-      edep_input_tree->GetEntry(j);
+      input_tree->GetEntry(j);
       UFW_DEBUG("Getting entry {}", j);
 
 
@@ -115,13 +115,13 @@ namespace ufw::data {
   }
 
   void factory<sand::genie_reader>::check_gRooTracker_format() {
-    if (edep_input_tree->GetBranch("NuParentPdg")) {
+    if (input_tree->GetBranch("NuParentPdg")) {
       reader.nuParents_ = std::vector<NuParent>{};
     } else {
       UFW_DEBUG("NuParent branches missing — skipping NuParent setup.");
     }
 
-    if (edep_input_tree->GetBranch("NumiFluxRun")) {
+    if (input_tree->GetBranch("NumiFluxRun")) {
       reader.numiFluxes_ = std::vector<NumiFlux>{};
     } else {
       UFW_DEBUG("NumiFlux branches missing — skipping NumiFlux setup.");
@@ -179,7 +179,7 @@ namespace ufw::data {
 
   void factory<sand::genie_reader>::attach_branches() {
     auto set = [&](const char* b, auto* addr) {
-      if (const auto br = edep_input_tree->GetBranch(b)) {
+      if (const auto br = input_tree->GetBranch(b)) {
         br->SetAddress(addr);
       } else
         UFW_WARN("Missing expected branch '{}'", b);
