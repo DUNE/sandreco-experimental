@@ -14,3 +14,4 @@ function(sandreco_add_filter tgt)
 endfunction()
 
 add_subdirectory(track_in_detector)
+add_subdirectory(primary_nu)
