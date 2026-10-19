@@ -91,7 +91,7 @@ namespace sand::ecal {
 	      break;
 	    }
 	  }
-	  double tot = std::count_if(waveform.begin(), waveform.end(), [](double value) {
+	  double tot = std::count_if(waveform.begin(), waveform.end(), [this](double value) {
 	    return (value > m_pe_threshold);});
 	  tot *= timeStep;
 
