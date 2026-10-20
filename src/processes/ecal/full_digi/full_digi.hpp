@@ -12,6 +12,9 @@ namespace sand::ecal {
    private:
 
    double single_pe_response(double, double, double);
+
+   void norm_waveform(std::vector<double>, double);
+   
   /// @brief Integration time window for signal accumulation
     double m_int_time_window;
 

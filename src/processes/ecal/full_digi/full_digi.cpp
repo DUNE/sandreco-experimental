@@ -22,6 +22,10 @@ namespace sand::ecal {
     m_pmt_sigma = cfg.at("pmt_sigma");
     // Decay time of the PMT signal
     m_pmt_tau = cfg.at("pmt_tau");
+    // Time offset for the integration of the PMT signal
+    m_time_offset = cfg.at("time_offset");
+    // Saturation level of the PMT signal (3.2 V)
+    m_saturation_level = cfg.at("saturation_level");
   }
 
   full_digi::full_digi() : process({{"pes", "sand::ecal::pes_container"}}, {{"digi", "sand::ecal::digits_container"}}) {
@@ -77,13 +81,14 @@ namespace sand::ecal {
 	    }
 	    waveform[is] = pmtSignal;
 	  }
-          // Calculate tdc and ToT with fixed threshold discriminator
+
+	  // Normalize waveform, and check saturation
+
+	  norm_waveform(waveform, timeStep);
+
+	  // Calculate tdc and ToT with fixed threshold discriminator
 	  double tdc = NAN;
-	  // Normalize waveform, assuming 1 pe ~ 1 mV, so peak in mV corresponds to the number of pe
-	  double maxwf = *std::max_element(waveform.begin(), waveform.end());
-	  int area = std::accumulate(waveform.begin(), waveform.end(), 0);
-	  double scaleFactor = maxwf/(area * timeStep);
-	  std::transform(waveform.begin(), waveform.end(), waveform.begin(), [scaleFactor](int x) {return x * scaleFactor;});
+
 	  for (int ip = 1; ip < waveform.size(); ++ip){
 	    if( waveform[ip-1] < m_pe_threshold && waveform[ip] > m_pe_threshold){
 	      tdc = ip * timeStep;
@@ -92,7 +97,7 @@ namespace sand::ecal {
 	    }
 	  }
 	  double tot = std::count_if(waveform.begin(), waveform.end(), [this](double value) {
-	    return (value > m_pe_threshold);});
+	    return value > m_pe_threshold;});
 	  tot *= timeStep;
 
 	  // Create digitized signal with PMT channel, timing window, and measurements
@@ -143,11 +148,34 @@ namespace sand::ecal {
       }
     }
   }
-
+  
   double full_digi::single_pe_response(double act_time, double pe_time, double t0){
     double signal = 1./ (m_pmt_sigma * sqrt(2.0 * M_PI)) * exp(-0.5 * pow((act_time - pe_time) / m_pmt_sigma, 2)) * exp(-(act_time - pe_time)/m_pmt_tau);
     //double signal = 1./ (m_pmt_sigma * sqrt(2.0 * M_PI)) * exp(-0.5 * pow((act_time - pe_time) / m_pmt_sigma, 2)) * exp(-(act_time-t0)/m_pmt_tau);
+
     return signal;
   }
+
+  void full_digi::norm_waveform(std::vector<double> signal, double DeltaT){
+	  //Normalize waveform assuming 1 pe ~ 1 mV, so peak in mV corresponds to the number of pe, and check signal saturation
+    double maxwf = *std::max_element(signal.begin(), signal.end());
+    int area = std::accumulate(signal.begin(), signal.end(), 0);
+    double scaleFactor = maxwf/(area * DeltaT);
+    std::transform(signal.begin(), signal.end(), signal.begin(), [scaleFactor](int x) {return x * scaleFactor;});
+	  
+    // Check saturation (at ~ 3.2 V)
+    std::vector<double>diff;
+    for (int is = 0; is < signal.size(); is++){
+      if( signal[is] > m_saturation_level){
+	signal[is] = m_saturation_level;
+	diff.push_back(signal[is] - m_saturation_level);
+      }
+    }
+    // for (int id = 0; id < diff.size(); id++){
+      
+    //} 
+    
+  }
+
 } // namespace sand::ecal
 UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::ecal::full_digi)
