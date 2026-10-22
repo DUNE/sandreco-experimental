@@ -1,0 +1,5 @@
+sandreco_add_process(sand_ecal_cell_pair_builder)
+
+target_sources(sand_ecal_cell_pair_builder PRIVATE cell_pair_builder.cpp)
+
+target_link_libraries(sand_ecal_cell_pair_builder PRIVATE sand_edep_reader sand_root_tgeomanager sand_geoinfo)

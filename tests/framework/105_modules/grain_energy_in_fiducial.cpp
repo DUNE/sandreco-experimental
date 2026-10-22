@@ -1,6 +1,6 @@
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/grain_info.hpp>
-#include <common/array.h>
+#include <common/scalar.h>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -25,12 +25,12 @@ namespace sand::test {
     pos_3d m_max_LAr;
   };
 
-  grain_energy_in_fiducial::grain_energy_in_fiducial() : process({}, {{"inside", "sand::array<double>"},
-                                                                      {"outside", "sand::array<double>"}}) {
+  grain_energy_in_fiducial::grain_energy_in_fiducial() : process({}, {{"inside", "sand::scalar<double>"},
+                                                                      {"outside", "sand::scalar<double>"}}) {
   }
 
   void grain_energy_in_fiducial::configure(const ufw::config& cfg) {
-    const auto& gi = get<geoinfo>();
+    const auto& gi = instance<geoinfo>();
     auto xfrm = gi.grain().transform();
     UFW_INFO("Grain fiducial volume of size {} at {}", gi.grain().fiducial_bbox(), xfrm);
     m_min_fiducial = xfrm * pos_3d(-gi.grain().fiducial_bbox());
@@ -62,9 +62,8 @@ namespace sand::test {
     }
   }
 
-
   void grain_energy_in_fiducial::run() {
-    const auto& tree = get<sand::edep_reader>();
+    const auto& tree = instance<sand::edep_reader>();
     double inside = 0.0;
     double outside = 0.0;
     double total = 0.0;
@@ -75,22 +74,22 @@ namespace sand::test {
           if (m_min_fiducial.x() <= hit.x() && hit.x() <= m_max_fiducial.x() &&
               m_min_fiducial.y() <= hit.y() && hit.y() <= m_max_fiducial.y() &&
               m_min_fiducial.z() <= hit.z() && hit.z() <= m_max_fiducial.z()) {
-            inside += dep.GetSecondaryDeposit();
+            inside += dep.GetEnergyDeposit();
           } else if (m_min_LAr.x() <= hit.x() && hit.x() <= m_max_LAr.x() &&
                      m_min_LAr.y() <= hit.y() && hit.y() <= m_max_LAr.y() &&
                      m_min_LAr.z() <= hit.z() && hit.z() <= m_max_LAr.z()) {
-            outside += dep.GetSecondaryDeposit();
+            outside += dep.GetEnergyDeposit();
           } else {
             UFW_WARN("Energy deposit for sand::subdetector_t GRAIN found outside GRAIN bounding box at {}.", hit);
           }
-          total += dep.GetSecondaryDeposit();
+          total += dep.GetEnergyDeposit();
         }
       }
     }
     UFW_INFO("Found {} MeV inside, {} MeV outside, {} MeV total", inside, outside, total);
     //UFW_ASSERT(std::abs(total - outside - inside) < 1.e-6, "Total does not match");
-    set<sand::array<double>>("inside").values.push_back(inside);
-    set<sand::array<double>>("outside").values.push_back(outside);
+    set<sand::scalar<double>>("inside").value = inside;
+    set<sand::scalar<double>>("outside").value = outside;
   }
 
 } // namespace sand::test

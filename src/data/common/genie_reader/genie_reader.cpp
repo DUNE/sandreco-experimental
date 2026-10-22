@@ -20,27 +20,38 @@ namespace sand {
 } // namespace sand
 
 namespace ufw::data {
-  factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_file{nullptr} {
-    const auto path = cfg.path_at("uri");
-    input_file.reset(TFile::Open(path.c_str()));
-    input_tree = input_file->Get<TTree>("gRooTracker");
-    if (input_tree == nullptr) {
-      UFW_DEBUG("gRooTracker tree not found in the root directory of file '{}'.", path.c_str());
-      UFW_DEBUG("Trying the edepsim path: {}/DetSimPassThru/gRooTracker.", path.c_str());
+  factory<sand::genie_reader>::factory(const ufw::config& cfg) : input_file{nullptr}, spill_based(true) {
+    const auto edep_path = cfg.path_at("uri");
+    input_file.reset(TFile::Open(edep_path.c_str()));
 
-      input_tree = input_file->Get<TTree>("DetSimPassThru/gRooTracker");
-      if (input_tree == nullptr) {
-        UFW_ERROR("gRooTracker tree not found in file '{}'.", path.c_str());
-      }
-      UFW_DEBUG("Found");
+    input_tree = input_file->Get<TTree>("DetSimPassThru/gRooTracker");
+    if (input_tree == nullptr) {
+      UFW_ERROR("gRooTracker tree not found in file '{}'.", edep_path.c_str());
     }
+    spill_to_run_event = input_file->Get<TTree>("spill_to_run_event");
+    if (spill_to_run_event == nullptr) {
+      UFW_DEBUG("spill_to_run_event tree not found in file '{}'.", edep_path.c_str());
+      UFW_DEBUG("Assuming this is a event-based edepsim file.");
+
+      spill_based = false;
+      // no tree to attach RunId/EventId to, so ROOT won't allocate them
+      RunId   = new std::vector<int>;
+      EventId = new std::vector<int>;
+    }
+    UFW_DEBUG("Found");
 
     check_gRooTracker_format();
     populate_spills_boundaries();
     attach_branches();
   }
 
-  factory<sand::genie_reader>::~factory() = default;
+  factory<sand::genie_reader>::~factory() {
+    // in spill-based mode the vectors belong to ROOT
+    if (!spill_based) {
+      delete RunId;
+      delete EventId;
+    }
+  }
 
   sand::genie_reader& factory<sand::genie_reader>::instance(ufw::context_id i) {
     if (m_id == i) {
@@ -50,8 +61,16 @@ namespace ufw::data {
     m_id = i;
     clear_reader(i);
 
-    for (Long64_t j = spills_boundaries[i].first; j < spills_boundaries[i].second; j++) {
+    int index_in_spill = 0;
+    if (spill_based) {
+      spill_to_run_event->GetEntry(i);
+    }
+    for (int j = spills_boundaries[i].first; j < spills_boundaries[i].second; j++) {
+
+      UFW_DEBUG("N of trajectories: {}, size of spilltorun: {}", spills_boundaries[i].second - spills_boundaries[i].first, EventId->size());
       input_tree->GetEntry(j);
+      UFW_DEBUG("Getting entry {}", j);
+
 
       // Copy EvtVtx array to std::array
       std::array<double, 4> evtVtxCopy{};
@@ -60,7 +79,14 @@ namespace ufw::data {
       // Copy EvtCode string (handle null pointer)
       std::string evtCodeStr = EvtCode ? EvtCode->GetString().Data() : "";
 
-      reader.events_.push_back({EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+      if (spill_based) {
+        reader.events_.push_back({j, static_cast<long>(RunId->at(index_in_spill))*1000000L + EventId->at(index_in_spill), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+        UFW_DEBUG("Added genie event (spill-based) with CAF idx: {}, {}, {}", RunId->at(index_in_spill), static_cast<long>(RunId->at(index_in_spill))*1000000L + EventId->at(index_in_spill), EventId->at(index_in_spill));
+        index_in_spill++;
+      } else {
+        reader.events_.push_back({j, static_cast<long>(RunId->at(i))*1000000L + EventId->at(i), EvtNum, EvtXSec, EvtDXSec, EvtKPS, EvtWght, EvtProb, evtVtxCopy, evtCodeStr, EvtFlags});
+        UFW_DEBUG("Added genie event (event-based) with CAF idx: {}, {}, {}", RunId->at(i), static_cast<long>(RunId->at(i))*1000000L + EventId->at(i), EventId->at(i));
+      }
 
       reader.stdHeps_.emplace_back(StdHepN, StdHepPdg, StdHepStatus, StdHepRescat, StdHepX4, StdHepP4, StdHepPolz,
                                    StdHepFd, StdHepLd, StdHepFm, StdHepLm);
@@ -136,6 +162,13 @@ namespace ufw::data {
 
       // Boundaries are [first, last+1) to match the original convention
       spills_boundaries.emplace_back(first_idx, last_idx + 1);
+
+      if(!spill_based) {
+        RunId->push_back(event->RunId);
+        EventId->push_back(event->EventId);
+      }
+
+      UFW_DEBUG("Added spill bundaries {}-{}, with runID {}",first_idx, last_idx+1, event->RunId);
     }
 
     delete event;
@@ -151,6 +184,13 @@ namespace ufw::data {
       } else
         UFW_WARN("Missing expected branch '{}'", b);
     };
+
+    if (spill_based) {
+      if (spill_to_run_event->SetBranchAddress("RunId", &RunId) < 0)
+        UFW_ERROR("Cannot attach 'RunId'");
+      if (spill_to_run_event->SetBranchAddress("EventId", &EventId) < 0)
+        UFW_ERROR("Cannot attach 'EventId'");
+    }
 
     set("EvtNum", &EvtNum);
     set("EvtXSec", &EvtXSec);

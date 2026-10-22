@@ -10,5 +10,16 @@ compile_commands.json
 src/streamers/**/*_linkdef.h
 src/streamers/**/*_types.hpp
 .vs/
+.gitlab-ci-local/
+.gitlab-ci-fast.yml
+docs/modules.md
 docs/html
 docs/latex
+*.pyc
+
+compareCAFs/CMakeLists.txt
+compareCAFs/MiniProdN5p1_NDComplex_FHC.0000965.CAF.root
+compareCAFs/MiniProdN5p1_NDComplex_FHC.caf.full.sanddrift.0000965.CAF.root
+compareCAFs/output.caf.root
+compareCAFs/readCAF.cpp
+*.root

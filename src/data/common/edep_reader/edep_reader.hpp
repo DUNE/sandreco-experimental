@@ -1,11 +1,10 @@
 #pragma once
 
-#include <common/truth.h>
+#include <common/data.h>
 #include <edep_reader/EDEPTree.h>
 
 #include <EDepSim/TG4Event.h>
 
-class TG4HitSegment;
 class TFile;
 class TTree;
 
@@ -43,6 +42,7 @@ class ufw::data::factory<sand::edep_reader> {
   sand::edep_reader reader;
   std::unique_ptr<TFile> input_file;
   TTree* input_tree;
+  std::unique_ptr<TG4Event> event_owner;
   TG4Event* event;
   ufw::context_id m_id;
 };

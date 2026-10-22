@@ -28,12 +28,12 @@ namespace sand::test {
   void test_grain_detector_response::run() {
     UFW_DEBUG("test_grain_detector_response run called with context_id: {}", ufw::context::current()->id());
     const auto& digi_in = get<sand::grain::digi>("digi");
-    for (auto& signal : digi_in.signals) {
+    for (auto& signal : digi_in) {
       UFW_ASSERT(signal.tdc() >= 0, "Non-physical time: {}", signal.tdc());
       UFW_ASSERT(signal.npe() >= 0, "Non-physical number of detected photons : {}", signal.npe());
       UFW_ASSERT(std::isnan(signal.tot()), "Unused ToT is not NaN: {}", signal.tot());
       // if data comes from simulation check that there is truth associated with signal, and it is valid
-      if (signal.data_source() == sand::grain::digi::signal::source::sim) {
+      if (signal.data_source() == sand::grain::signal::source::sim) {
         UFW_ASSERT(!signal.true_hits().empty(), "Simulated signal has no associated truth");
         for (auto& signal_truth : signal.true_hits()) {
           UFW_ASSERT(signal_truth, "Signal truth channel is invalid");
@@ -42,7 +42,7 @@ namespace sand::test {
         }
       }
       // if data comes from detector verify truth is empty
-      else if (signal.data_source() == sand::grain::digi::signal::source::det) {
+      else if (signal.data_source() == sand::grain::signal::source::det) {
         UFW_ASSERT(signal.true_hits().empty(), "Detected signal has associated mc truth");
       }
     }

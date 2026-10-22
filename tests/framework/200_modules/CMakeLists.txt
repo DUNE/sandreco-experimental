@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_test_ecal_fast_digi)
+
+target_sources(sand_test_test_ecal_fast_digi PRIVATE test_ecal_fast_digi.cpp)
+
+target_link_libraries(sand_test_test_ecal_fast_digi PRIVATE ROOT::MathCore )

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <common/sand.h>
-#include <common/truth.h>
 
 namespace sand::ecal {
   /// @brief Photo-electron data container for ECAL
