@@ -51,8 +51,8 @@
     },
     {
       "sand::root::tree_streamer": {
-        "uri": "test/ecal_fast_digi.root",
-        "tree": "ecal_fast_digi"
+        "uri": "test/ecal_full_digi.root",
+        "tree": "ecal_full_digi"
       },
       "write": [
         "ecal_digits"
