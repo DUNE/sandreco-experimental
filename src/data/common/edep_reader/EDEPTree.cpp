@@ -78,7 +78,7 @@ unsigned EDEPTree::classify(const TGeoNode* node) {
   if (Match(name, sand::magnet_names)) mask |= bit(sd::MAGNET);
   if (Match(name, sand::world_names)) mask |= bit(sd::WORLD);
   if (Match(name, sand::stt_names)) mask |= bit(sd::STT);
-  if (Match(name, sand::drift_names) || Match(name, sand::generic_drift_names)) mask |= bit(sd::DRIFT);
+  if (Match(name, sand::drift_names) || sand::is_generic_drift_name(name)) mask |= bit(sd::DRIFT);
   if (mask == 0) mask = bit(sd::OTHER);
 
   return volume_cache_.emplace(node, mask).first->second;
