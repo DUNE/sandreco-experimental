@@ -1,6 +1,7 @@
 #include "fast_reco_details.hpp"
 
 #include <edep_reader/edep_reader.hpp>
+#include <truth_filler/g4_id_map.hpp>
 
 #include <duneanaobj/StandardRecord/SRDirectionBranch.h>
 #include <duneanaobj/StandardRecord/SREnums.h>
@@ -83,12 +84,10 @@ namespace sand::common::reco_details {
       }
     }
 
-    ::caf::SRVector3D end_direction_from_edep(sand::edep_reader const& edep, ::caf::SRTrueParticle const& true_part,
-                                              ::caf::SRVector3D const& start_dir) {
+    ::caf::SRVector3D end_direction_from_edep(EDEPTrajectory const* trj, ::caf::SRVector3D const& start_dir) {
       double constexpr stopped_momentum{1e-6};
 
-      auto trj = edep.GetTrajectory(true_part.G4ID);
-      if (trj == edep.end()) {
+      if (trj == nullptr) {
         return start_dir;
       }
 
@@ -211,13 +210,13 @@ namespace sand::common::reco_details {
   }
 
   ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,
-                                 sand::edep_reader const& edep) {
+                                 EDEPTrajectory const* trj) {
     ::caf::SRTrack track{};
 
     track.start  = true_part.start_pos;
     track.end    = true_part.end_pos;
     track.dir    = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
-    track.enddir = end_direction_from_edep(edep, true_part, track.dir);
+    track.enddir = end_direction_from_edep(trj, track.dir);
     track.time   = true_part.time;
     track.E      = true_part.p.E;
     track.Evis   = track.E;
@@ -245,13 +244,14 @@ namespace sand::common::reco_details {
   }
 
   ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn, TrackerG4IDs const& tracker_ids,
-                                         int ixn_idx, int first_track_idx, int first_shower_idx) {
+                                         G4IdMap const& track_ids, int ixn_idx, int first_track_idx,
+                                         int first_shower_idx) {
     ParticleSlots slots;
     int track_idx{first_track_idx};
     int shower_idx{first_shower_idx};
 
     auto has_tracker_hits = [&](::caf::SRTrueParticle const& p) {
-      return p.G4ID >= 0 && std::binary_search(tracker_ids.begin(), tracker_ids.end(), p.G4ID);
+      return p.G4ID >= 0 && std::binary_search(tracker_ids.begin(), tracker_ids.end(), track_ids.to_edep(p.G4ID));
     };
 
     auto add = [&](::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
@@ -279,13 +279,13 @@ namespace sand::common::reco_details {
   }
 
   ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                        TrackerG4IDs const& tracker_ids, int ixn_idx,
-                                                        int first_track_idx, int first_shower_idx) {
+                                                        TrackerG4IDs const& tracker_ids, G4IdMap const& track_ids,
+                                                        int ixn_idx, int first_track_idx, int first_shower_idx) {
     ::caf::SRRecoParticlesBranch part{};
     auto const n_prim = static_cast<int>(true_ixn.prim.size());
 
     for (auto const& slot :
-         particle_slots_from_true(true_ixn, tracker_ids, ixn_idx, first_track_idx, first_shower_idx)) {
+         particle_slots_from_true(true_ixn, tracker_ids, track_ids, ixn_idx, first_track_idx, first_shower_idx)) {
       auto const& true_part = true_particle_from_id(true_ixn, slot.id);
       auto reco_p           = reco_particle_from_true(true_part, slot.id);
 
@@ -312,17 +312,19 @@ namespace sand::common::reco_details {
   }
 
   void sand_tracker_from_true(::caf::SRTracker& tracker, ::caf::SRTrueInteraction const& true_ixn,
-                              TrackerG4IDs const& tracker_ids, int ixn_idx, sand::edep_reader const& edep) {
+                              TrackerG4IDs const& tracker_ids, G4IdMap const& track_ids, int ixn_idx,
+                              sand::edep_reader const& edep) {
     auto const first_track_idx  = static_cast<int>(tracker.tracks.size());
     auto const first_shower_idx = static_cast<int>(tracker.showers.size());
 
     for (auto const& slot :
-         particle_slots_from_true(true_ixn, tracker_ids, ixn_idx, first_track_idx, first_shower_idx)) {
+         particle_slots_from_true(true_ixn, tracker_ids, track_ids, ixn_idx, first_track_idx, first_shower_idx)) {
       auto const& true_part = true_particle_from_id(true_ixn, slot.id);
 
       if (slot.track_idx >= 0) {
-        auto track = track_from_true(true_part, slot.id, edep);
-        track.part = {ixn_idx, ::caf::SRRecoParticleID::kSandreco, slot.part_idx};
+        auto const trj = edep.GetTrajectory(track_ids.to_edep(true_part.G4ID));
+        auto track     = track_from_true(true_part, slot.id, trj != edep.end() ? &*trj : nullptr);
+        track.part     = {ixn_idx, ::caf::SRRecoParticleID::kSandreco, slot.part_idx};
         tracker.tracks.push_back(std::move(track));
         ++tracker.ntracks;
       } else if (slot.shower_idx >= 0) {

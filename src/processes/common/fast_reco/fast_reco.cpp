@@ -3,6 +3,7 @@
 
 #include <caf/caf_wrapper.hpp>
 #include <edep_reader/edep_reader.hpp>
+#include <truth_filler/g4_id_map.hpp>
 
 #include <duneanaobj/StandardRecord/SRInteraction.h>
 
@@ -26,6 +27,7 @@ namespace sand::common {
     nd_reco_branch.sand.ixn.reserve(truth_branch.nu.size());
 
     auto const tracker_ids = reco_details::tracker_g4ids_from_edep(edep);
+    auto const track_ids   = g4_id_maps(edep.GetChildrenTrajectories());
 
     auto& sand_tracker = nd_reco_branch.sand.tracker;
 
@@ -41,13 +43,13 @@ namespace sand::common {
       common_reco_ixn.dir   = reco_details::direction_from_true(true_ixn);
       common_reco_ixn.nuhyp = reco_details::neutrino_hypothesis_from_true(true_ixn);
       common_reco_ixn.Enu   = reco_details::energy_from_true(true_ixn);
-      common_reco_ixn.part =
-          reco_details::reco_particles_from_true(true_ixn, tracker_ids, ixn_idx, first_track_idx, first_shower_idx);
-      common_reco_ixn.truth        = {ixn_idx};
+      common_reco_ixn.part  = reco_details::reco_particles_from_true(true_ixn, tracker_ids, track_ids.at(ixn_idx),
+                                                                     ixn_idx, first_track_idx, first_shower_idx);
+      common_reco_ixn.truth = {ixn_idx};
       common_reco_ixn.truthOverlap = {1.f};
       ++common_reco_branch.ixn.nsandreco;
 
-      reco_details::sand_tracker_from_true(sand_tracker, true_ixn, tracker_ids, ixn_idx, edep);
+      reco_details::sand_tracker_from_true(sand_tracker, true_ixn, tracker_ids, track_ids.at(ixn_idx), ixn_idx, edep);
 
       // No cross-subdetector matching here: the SAND interaction is kept only to stay index-aligned with sandreco
       nd_reco_branch.sand.ixn.emplace_back();
