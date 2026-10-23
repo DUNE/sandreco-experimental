@@ -28,7 +28,7 @@ namespace sand::ecal {
     m_saturation_level = cfg.at("saturation_level");
   }
 
-  full_digi::full_digi() : process({{"pes", "sand::ecal::pes_container"}}, {{"digi", "sand::ecal::digits_container"}}) {
+  full_digi::full_digi() : process({{"pes", "sand::ecal::pes_container"}}, {{"digi", "sand::ecal::digits_container"}, {"waveforms", "sand::reco::waveforms"}}) {
     UFW_DEBUG("Creating a ecal full digitization process at {}", fmt::ptr(this));
   }
 
@@ -40,6 +40,7 @@ namespace sand::ecal {
     auto& pes = get<sand::ecal::pes_container>("pes");
     // Get output digitized signal collection
     auto& digi = set<sand::ecal::digits_container>("digi");
+    auto& waveforms = set<sand::reco::waveforms>("waveforms");
 
     // Process photo-electrons for each PMT channel
     for (auto [pmt, pe_collection] : pes.collection) {
@@ -65,8 +66,11 @@ namespace sand::ecal {
         // Check if pulse meets minimum threshold for digitization
         if (pe_count >= m_pe_threshold) {
         // Simulate PMT waveform, to get tdc and ToT
-	  std::vector<double> waveform(m_samples);
-	  double timeStep = m_pmt_signal_length/m_samples;
+	  
+    double t_start = start_int_window - m_time_offset;
+    reco::waveform waveform(pmt, t_start, t_start + m_pmt_signal_length, reco::waveform::source::sim, m_samples);
+	  
+    double timeStep = m_pmt_signal_length/m_samples;
 	  double actTime = start_int_window - m_time_offset;
 	  for (int is = 0; is < m_samples; is++) {
 	    actTime += is * timeStep;
@@ -79,7 +83,7 @@ namespace sand::ecal {
 	    if (this_pe != pe_collection.end()) {
 	      pmtSignal += single_pe_response(actTime, this_pe->arrival_time, start_int_window - m_time_offset);
 	    }
-	    waveform[is] = pmtSignal;
+	    waveform.at(is) = pmtSignal;
 	  }
 
 	  // Normalize waveform, and check saturation
@@ -90,7 +94,7 @@ namespace sand::ecal {
 	  double tdc = NAN;
 
 	  for (int ip = 1; ip < waveform.size(); ++ip){
-	    if( waveform[ip-1] < m_pe_threshold && waveform[ip] > m_pe_threshold){
+	    if( waveform.at(ip-1) < m_pe_threshold && waveform.at(ip) > m_pe_threshold){
 	      tdc = ip * timeStep;
 	  // Only the first threshold crossing
 	      break;
@@ -125,6 +129,8 @@ namespace sand::ecal {
 
           // Store the digitized signal in output collection
           digi.digits.push_back(signal);
+          // Store the waveform in output collection
+          waveforms.push_back(std::move(waveform));
 
           // Skip photo-electrons in the dead time window after signal detection
           while (this_pe->arrival_time < start_int_window + m_int_time_window + m_dead_time_window
@@ -156,7 +162,7 @@ namespace sand::ecal {
     return signal;
   }
 
-  void full_digi::norm_waveform(std::vector<double> signal, double DeltaT){
+  void full_digi::norm_waveform(reco::waveform signal, double DeltaT){
 	  //Normalize waveform assuming 1 pe ~ 1 mV, so peak in mV corresponds to the number of pe, and check signal saturation
     double maxwf = *std::max_element(signal.begin(), signal.end());
     int area = std::accumulate(signal.begin(), signal.end(), 0);
@@ -166,9 +172,9 @@ namespace sand::ecal {
     // Check saturation (at ~ 3.2 V)
     std::vector<double>diff;
     for (int is = 0; is < signal.size(); is++){
-      if( signal[is] > m_saturation_level){
-	signal[is] = m_saturation_level;
-	diff.push_back(signal[is] - m_saturation_level);
+      if( signal.at(is) > m_saturation_level){
+	signal.at(is) = m_saturation_level;
+	diff.push_back(signal.at(is) - m_saturation_level);
       }
     }
     // for (int id = 0; id < diff.size(); id++){

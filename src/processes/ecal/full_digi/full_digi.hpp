@@ -1,4 +1,5 @@
 #include <common/data.h>
+#include <common/waveform.h>
 
 #include <ufw/process.hpp>
 
@@ -13,7 +14,7 @@ namespace sand::ecal {
 
    double single_pe_response(double, double, double);
 
-   void norm_waveform(std::vector<double>, double);
+   void norm_waveform(reco::waveform, double);
    
   /// @brief Integration time window for signal accumulation
     double m_int_time_window;
