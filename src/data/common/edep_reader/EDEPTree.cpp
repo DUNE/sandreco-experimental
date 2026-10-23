@@ -73,13 +73,13 @@ unsigned EDEPTree::classify(const TGeoNode* node) {
   const std::string_view name = node ? std::string_view(node->GetName()) : std::string_view();
 
   unsigned mask = 0;
-  if (Match(name, sand::grain_names)) mask |= bit(sd::GRAIN);
-  if (Match(name, sand::ecal_names)) mask |= bit(sd::ECAL);
-  if (Match(name, sand::magnet_names)) mask |= bit(sd::MAGNET);
-  if (Match(name, sand::world_names)) mask |= bit(sd::WORLD);
-  if (Match(name, sand::stt_names)) mask |= bit(sd::STT);
-  if (Match(name, sand::drift_names) || sand::is_generic_drift_name(name)) mask |= bit(sd::DRIFT);
-  if (mask == 0) mask = bit(sd::OTHER);
+  if (Match(name, sand::grain_names)) mask |= bit(sand::subdetector_t::GRAIN);
+  if (Match(name, sand::ecal_names)) mask |= bit(sand::subdetector_t::ECAL);
+  if (Match(name, sand::magnet_names)) mask |= bit(sand::subdetector_t::MAGNET);
+  if (Match(name, sand::world_names)) mask |= bit(sand::subdetector_t::WORLD);
+  if (Match(name, sand::stt_names)) mask |= bit(sand::subdetector_t::STT);
+  if (Match(name, sand::drift_names) || sand::is_generic_drift_name(name)) mask |= bit(sand::subdetector_t::DRIFT);
+  if (mask == 0) mask = bit(sand::subdetector_t::OTHER);
 
   return volume_cache_.emplace(node, mask).first->second;
 }
