@@ -35,7 +35,7 @@ namespace sand::ecal {
   void full_digi::run() {
     UFW_DEBUG("Running a ecal full digitization process at {}", fmt::ptr(this));
     // Get ECAL geometry information
-    const auto& gecal = get<geoinfo>().ecal();
+    const auto& gecal = instance<geoinfo>().ecal();
     // Get input photo-electron collection
     auto& pes = get<sand::ecal::pes_container>("pes");
     // Get output digitized signal collection
@@ -72,8 +72,8 @@ namespace sand::ecal {
 	  
     double timeStep = m_pmt_signal_length/m_samples;
 	  double actTime = start_int_window - m_time_offset;
-	  for (int is = 0; is < m_samples; is++) {
-	    actTime += is * timeStep;
+	  for (double& sample : waveform) {
+	    actTime += timeStep;
 	    double pmtSignal = 0.0;
 	    auto ipe = start_pe;
 	    while (ipe != this_pe) {
@@ -83,12 +83,12 @@ namespace sand::ecal {
 	    if (this_pe != pe_collection.end()) {
 	      pmtSignal += single_pe_response(actTime, this_pe->arrival_time, start_int_window - m_time_offset);
 	    }
-	    waveform.at(is) = pmtSignal;
+	    sample = pmtSignal;
 	  }
 
 	  // Normalize waveform, and check saturation
 
-	  norm_waveform(waveform, timeStep);
+	  //norm_waveform(waveform, timeStep);
 
 	  // Calculate tdc and ToT with fixed threshold discriminator
 	  double tdc = NAN;
@@ -126,7 +126,10 @@ namespace sand::ecal {
           // Store the digitized signal in output collection
           digi.digits.push_back(signal);
           // Store the waveform in output collection
-          waveforms.push_back(std::move(waveform));
+          
+          
+          UFW_INFO("waveform sum: {}", std::accumulate(waveform.begin(), waveform.end(), 0.));
+          waveforms.emplace_back(std::move(waveform));
 
           // Skip photo-electrons in the dead time window after signal detection
           while (this_pe->arrival_time < start_int_window + m_int_time_window + m_dead_time_window
