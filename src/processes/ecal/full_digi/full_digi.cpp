@@ -88,7 +88,7 @@ namespace sand::ecal {
 
 	  // Normalize waveform, and check saturation
 
-	  //norm_waveform(waveform, timeStep);
+	  norm_waveform(waveform, timeStep);
 
 	  // Calculate tdc and ToT with fixed threshold discriminator
 	  double tdc = NAN;
