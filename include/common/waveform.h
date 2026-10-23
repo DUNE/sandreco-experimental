@@ -46,3 +46,4 @@ namespace sand::reco {
 } // namespace sand::reco
 
 SAND_DATA_COLLECTION(sand::reco, waveform, waveforms)
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::digi<sand::truth_index>)

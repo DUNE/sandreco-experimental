@@ -88,6 +88,7 @@ UFW_DECLARE_UNMANAGED_DATA(ufw::data::context_tag)
 
 UFW_DECLARE_UNMANAGED_DATA(sand::managed_data_base)
 UFW_DECLARE_UNMANAGED_DATA(sand::truth_index)
+UFW_DECLARE_UNMANAGED_DATA(sand::truth<sand::truth_index>)
 
 #define SAND_DATA_COLLECTION(NS, T, NAME)                                                                              \
   UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \
