@@ -25,6 +25,13 @@ namespace sand::reco {
     double& at(size_t idx) { return m_samples.at(idx); }
     double at(size_t idx) const { return m_samples.at(idx); }
 
+    size_t size() const { return m_samples.size(); }
+
+    auto begin() { return m_samples.begin(); }
+    auto end() { return m_samples.end(); }
+    auto begin() const { return m_samples.begin(); }
+    auto end() const { return m_samples.end(); }
+
     double sample_period() const {
       if (m_samples.empty()) {
         return NAN;
