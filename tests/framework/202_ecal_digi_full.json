@@ -35,18 +35,19 @@
         "int_time_window": 30.0,
         "dead_time_window": 0.0,
         "pe_threshold": 2.5,
-	"pmt_signal_length": 35.0,
-	"samples": 10000,
-	"pmt_sigma": 600.0,
-	"pmt_tau": 4.0,
-	"time_offset": 5.0,
-	"saturation_level" 3200.0
+	      "pmt_signal_length": 35.0,
+	      "samples": 10000,
+	      "pmt_sigma": 600.0,
+	      "pmt_tau": 4.0,
+        "time_offset": 5.0,
+        "saturation_level": 3200.0
       },
       "reqs": {
         "pes": "ecal_photo_electrons"
       },
       "prods": {
-        "digi": "ecal_digits"
+        "digi": "ecal_digits",
+        "waveforms": "ecal_waveforms"
       }
     },
     {
@@ -55,7 +56,8 @@
         "tree": "ecal_full_digi"
       },
       "write": [
-        "ecal_digits"
+        "ecal_digits",
+        "ecal_waveforms"
       ]
     }
   ]
