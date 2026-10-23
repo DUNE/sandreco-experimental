@@ -105,11 +105,7 @@ namespace sand::ecal {
 	  tot *= timeStep;
 
 	  // Create digitized signal with PMT channel, timing window, and measurements
-          digits_container::digit signal(pmt,
-          // timing window for particle crossing is conservatively estimated taking into
-          // account a maximal path length for scintillation photons of 5 m, a velocity of
-          // 5.85 ns/m and a scintillation time of 3.08 ns, which gives a total of about 35 ns.
-                                         {tdc - 35., tdc, tdc + 5.},
+          digits_container::digit signal(pmt, tdc,
           // Calculate ADC value proportional to collected photo-electrons
           // for now, we just use the number of PEs as the ADC value.
           // This can be improved by using a more realistic response function.
