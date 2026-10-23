@@ -34,7 +34,7 @@ namespace sand::filter {
       const auto& tree      = instance<sand::edep_reader>();
       const auto& primaries = tree.GetChildrenTrajectories();
 
-      auto interaction_ranges = common::filler_details::make_interaction_ranges(primaries);
+      auto interaction_ranges = common::make_interaction_ranges(primaries);
 
       auto const n_ixn = genie.events_.size();
 
