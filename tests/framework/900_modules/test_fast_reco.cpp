@@ -134,7 +134,7 @@ namespace sand::test {
                    particle.pdg, true_part.pdg);
 
         // G4ID -> edep-sim trajectory: must be the same particle, or every lookup by G4ID reads the wrong hits
-        auto const trj = edep.GetTrajectory(track_ids.at(ixn_idx).to_edep(true_part.G4ID));
+        auto const trj = edep.GetTrajectory(track_ids.at(ixn_idx).to_spill_id(true_part.G4ID));
         if (trj != edep.end() && !trj->GetTrajectoryPoints().empty()) {
           auto const start = trj->GetTrajectoryPointsVect().front().GetPosition();
           UFW_ASSERT(trj->GetPDGCode() == true_part.pdg && std::abs(start.X() * 0.1 - true_part.start_pos.x) < 1e-3

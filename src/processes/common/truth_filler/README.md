@@ -77,6 +77,28 @@ npim, npi0"| tb
 ```
 ---
 
+## Track ids: interaction vs spill
+
+The same edep-sim trajectory has two ids:
+
+- **spill id**: the Geant4 track id from edep-sim, unique over the whole spill. This is what
+  `EDEPTree::GetTrajectory()` expects.
+- **interaction id**: what ends up in `SRTrueParticle::G4ID`, `parent` and `daughters`. It restarts
+  from 0 in every interaction: primaries first (`0..nprim-1`), then secondaries, as in ND_CAFMaker.
+
+For example, an interaction whose primaries have spill ids 2, 3, 4 and whose secondaries have spill
+ids 8, 9, 10 gets interaction ids 0, 1, 2 and 3, 4, 5.
+
+`G4IdMap` (`g4_id_map.hpp`) converts between the two, one map per interaction:
+
+```cpp
+auto const g4_ids = sand::common::g4_id_maps(edep.GetChildrenTrajectories()); // one per SRTruthBranch::nu
+auto const trj    = edep.GetTrajectory(g4_ids.at(ixn).to_spill_id(true_part.G4ID));
+```
+
+**Never pass `SRTrueParticle::G4ID` to `GetTrajectory()` directly**: it only works by chance for the
+primaries of the first interaction, and silently returns another particle's trajectory otherwise.
+
 ## 1. `caf::SRTrueInteraction` — the neutrino vertex
 
 Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from_genie()`.
@@ -142,10 +164,10 @@ Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from
 | Field | Type | Source | Units | Notes |
 |-------|------|--------|-------|-------|
 | `pdg` | `int` | `EDEPTrajectory::GetPDGCode()` | — | |
-| `G4ID` | `int` | `EDEPTrajectory::GetId()` | — | Geant4 track ID |
+| `G4ID` | `int` | `G4IdMap::to_interaction_id(EDEPTrajectory::GetId())` | — | Interaction id, see [Track ids](#track-ids-interaction-vs-spill) |
 | `interaction_id` | `long int` | Parameter (`ixn_id`) | — | |
 | `ancestor_id` | `TrueParticleID` | Parameter | — | For `prim`: itself, `{sr_ixn, kPrimary, i}`. For `sec`: the root primary's ID, propagated unchanged through the whole subtree |
-| `parent` | `int` | `EDEPTrajectory::GetParentId()` | — | Geant4 parent track ID (raw) |
+| `parent` | `int` | `G4IdMap::to_interaction_id(EDEPTrajectory::GetParentId())` | — | Interaction id of the parent, `-1` for primaries |
 | `p` | `SRLorentzVector` | `GetInitialMomentum() × 1e−3` | **GeV/c**, **GeV** | edep-sim stores momentum in MeV |
 | `time` | `double` | First `TrajectoryPoint::GetPosition().T()` | **ns** | No conversion needed |
 | `start_pos` | `SRVector3D` | First `TrajectoryPoint::GetPosition() × 0.1` | **cm** | edep-sim stores positions in mm |
@@ -167,7 +189,7 @@ without ever nesting `SRTrueParticle` objects.
 |-------|------|--------|-------|
 | `parentID` | `TrueParticleID` | The caller's own ID, passed down before recursing | Left unset (`kUnknown`) for `prim` (no SR parent); set for every `sec` |
 | `daughtersID` | `vector<TrueParticleID>` | Return values of the recursive `add_secondary_subtree()` calls on direct children | Direct children only (one level down) |
-| `daughters` | `vector<unsigned int>` | `EDEPTrajectory::GetId()` of direct children | Raw Geant4 track IDs, redundant with `daughtersID` but kept for debugging |
+| `daughters` | `vector<unsigned int>` | `G4IdMap::to_interaction_id()` of the direct children's `GetId()` | Interaction ids, redundant with `daughtersID` but kept for debugging |
 
 **Filled:** 3 fields (on top of the 13 above)
 

@@ -223,10 +223,10 @@ namespace sand::common::filler_details {
     ::caf::SRTrueParticle p{};
 
     p.pdg            = traj.GetPDGCode();
-    p.G4ID           = ids.to_local(traj.GetId());
+    p.G4ID           = ids.to_interaction_id(traj.GetId());
     p.interaction_id = ixn_id;
     p.ancestor_id    = ancestor_id;
-    p.parent         = ids.to_local(traj.GetParentId());
+    p.parent         = ids.to_interaction_id(traj.GetParentId());
 
     auto const mom = traj.GetInitialMomentum();
     p.p.px         = static_cast<float>(mom.Px() * 1e-3); // MeV → GeV
@@ -281,7 +281,7 @@ namespace sand::common::filler_details {
       g4ids.reserve(children.size());
 
       std::transform(children.begin(), children.end(), std::back_inserter(dids), [&](auto const& child) {
-        g4ids.push_back(static_cast<unsigned int>(ids.to_local(child.GetId())));
+        g4ids.push_back(static_cast<unsigned int>(ids.to_interaction_id(child.GetId())));
         return add_secondary_subtree(child, my_id, ancestor_id, sr_ixn, interaction_id, ids, out);
       });
 
@@ -316,7 +316,7 @@ namespace sand::common::filler_details {
       g4ids.reserve(children.size());
 
       std::transform(children.begin(), children.end(), std::back_inserter(dids), [&](auto const& child) {
-        g4ids.push_back(static_cast<unsigned int>(ids.to_local(child.GetId())));
+        g4ids.push_back(static_cast<unsigned int>(ids.to_interaction_id(child.GetId())));
         return add_secondary_subtree(child, prim_id, prim_id, sr_ixn, interaction_id, ids, out_tree);
       });
 

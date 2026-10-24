@@ -118,7 +118,10 @@ hits in `sand::subdetector_t::STT` **or** `::DRIFT` — the two tracker technolo
 and `"DriftVolume"` in edep-sim's sensitive-detector names (`sand::string_to_component`,
 `include/common/sand.h`). Which one a file uses depends on the simulated geometry, so
 `fast_reco` accepts either. `particle_slots_from_true()` then looks each particle's `G4ID` up
-in that sorted vector with `std::binary_search`.
+in that sorted vector with `std::binary_search`, after converting it to a spill id with
+`G4IdMap::to_spill_id()`: `SRTrueParticle::G4ID` is per interaction, the edep-sim ids are per
+spill (see the truth_filler README, *Track ids: interaction vs spill*). The same conversion is
+used to find the trajectory `SRTrack::enddir` is taken from.
 
 Particles that fail the gate are **not** dropped: they still get their own `SRRecoParticle`
 (with kinematics, `parent`, `daughters`), only with `recoobj` and `origRecoObjType` left

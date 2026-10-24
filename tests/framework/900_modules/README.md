@@ -18,6 +18,9 @@ For every `SRRecoParticle` in `part.sandreco[i]`:
 - `part.nsandreco` matches the corresponding vector size.
 - **Truth match**: `truth[0]` resolves (via `truth.nu[ixn].prim`/`.sec`) to a real
   `SRTrueParticle` whose `pdg` matches the reco particle's `pdg`.
+- **Trajectory lookup**: the true particle's `G4ID`, converted with `G4IdMap::to_spill_id()`, resolves
+  to an edep-sim trajectory with the same `pdg` and start point. The test then uses that same
+  trajectory to re-derive which particles should pass the tracker gate and each track's `enddir`.
 - **`recoobj` <-> `part` round trip**: if `origRecoObjType == kTrack`, `recoobj` points to a
   valid `SRTrack` in `nd.sand.tracker.tracks`, and that track's own `part` points back to this
   exact particle (same `ixn`/`ipart`). Symmetric check for `kShower` against `tracker.showers`.

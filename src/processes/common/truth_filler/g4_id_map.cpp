@@ -55,31 +55,31 @@ namespace sand::common {
     }
   }
 
-  int G4IdMap::to_local(int edep_id) const {
-    if (edep_id < 0) {
-      return edep_id;
+  int G4IdMap::to_interaction_id(int spill_id) const {
+    if (spill_id < 0) {
+      return spill_id;
     }
-    if (auto const r = rank_of(m_prim_ids, edep_id); r >= 0) {
+    if (auto const r = rank_of(m_prim_ids, spill_id); r >= 0) {
       return r;
     }
-    if (auto const r = rank_of(m_sec_ids, edep_id); r >= 0) {
+    if (auto const r = rank_of(m_sec_ids, spill_id); r >= 0) {
       return static_cast<int>(m_prim_ids.size()) + r;
     }
-    UFW_ERROR("Track id {} does not belong to this interaction", edep_id);
+    UFW_ERROR("Track id {} does not belong to this interaction", spill_id);
   }
 
-  int G4IdMap::to_edep(int local_id) const {
-    if (local_id < 0) {
-      return local_id;
+  int G4IdMap::to_spill_id(int interaction_id) const {
+    if (interaction_id < 0) {
+      return interaction_id;
     }
-    auto const idx = static_cast<std::size_t>(local_id);
+    auto const idx = static_cast<std::size_t>(interaction_id);
     if (idx < m_prim_ids.size()) {
       return m_prim_ids[idx];
     }
     if (idx - m_prim_ids.size() < m_sec_ids.size()) {
       return m_sec_ids[idx - m_prim_ids.size()];
     }
-    UFW_ERROR("Local track id {} does not belong to this interaction", local_id);
+    UFW_ERROR("Interaction track id {} does not belong to this interaction", interaction_id);
   }
 
   std::vector<G4IdMap> g4_id_maps(Primaries const& primaries) {

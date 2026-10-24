@@ -232,7 +232,7 @@ namespace sand::common {
         continue; // only muons get Gluckstern smearing
       }
 
-      auto trj = edep.GetTrajectory(track_ids.at(static_cast<std::size_t>(true_id.ixn)).to_edep(true_part.G4ID));
+      auto trj = edep.GetTrajectory(track_ids.at(static_cast<std::size_t>(true_id.ixn)).to_spill_id(true_part.G4ID));
       if (trj == edep.end()) {
         continue;
       }

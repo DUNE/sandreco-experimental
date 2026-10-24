@@ -251,7 +251,7 @@ namespace sand::common::reco_details {
     int shower_idx{first_shower_idx};
 
     auto has_tracker_hits = [&](::caf::SRTrueParticle const& p) {
-      return p.G4ID >= 0 && std::binary_search(tracker_ids.begin(), tracker_ids.end(), track_ids.to_edep(p.G4ID));
+      return p.G4ID >= 0 && std::binary_search(tracker_ids.begin(), tracker_ids.end(), track_ids.to_spill_id(p.G4ID));
     };
 
     auto add = [&](::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
@@ -322,7 +322,7 @@ namespace sand::common::reco_details {
       auto const& true_part = true_particle_from_id(true_ixn, slot.id);
 
       if (slot.track_idx >= 0) {
-        auto const trj = edep.GetTrajectory(track_ids.to_edep(true_part.G4ID));
+        auto const trj = edep.GetTrajectory(track_ids.to_spill_id(true_part.G4ID));
         auto track     = track_from_true(true_part, slot.id, trj != edep.end() ? &*trj : nullptr);
         track.part     = {ixn_idx, ::caf::SRRecoParticleID::kSandreco, slot.part_idx};
         tracker.tracks.push_back(std::move(track));

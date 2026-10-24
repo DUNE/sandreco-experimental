@@ -59,21 +59,21 @@ namespace sand::test {
 
     // SRTrueParticle::G4ID (per interaction) -> spill-wide edep-sim track id
     auto const track_ids = sand::common::g4_id_maps(edep.GetChildrenTrajectories());
-    auto const to_edep   = [&](int ixn_idx, int g4id) {
-      return track_ids.at(static_cast<std::size_t>(ixn_idx)).to_edep(g4id);
+    auto const to_spill_id = [&](int ixn_idx, int g4id) {
+      return track_ids.at(static_cast<std::size_t>(ixn_idx)).to_spill_id(g4id);
     };
 
     // The trajectory a G4ID points to must be the one the particle was built from: same pdg, start and parent
     auto const check_trajectory = [&](::caf::SRTrueParticle const& p, std::size_t ixn_idx, char const* coll,
                                       std::size_t k) {
       auto const ixn_i = static_cast<int>(ixn_idx);
-      auto const trj   = edep.GetTrajectory(to_edep(ixn_i, p.G4ID));
+      auto const trj   = edep.GetTrajectory(to_spill_id(ixn_i, p.G4ID));
       UFW_ASSERT(trj != edep.end(), "nu[{}].{}[{}]: G4ID {} has no edep-sim trajectory", ixn_idx, coll, k, p.G4ID);
       UFW_ASSERT(trj->GetPDGCode() == p.pdg, "nu[{}].{}[{}]: G4ID {} resolves to pdg {}, but the particle is pdg {}",
                  ixn_idx, coll, k, p.G4ID, trj->GetPDGCode(), p.pdg);
-      UFW_ASSERT(to_edep(ixn_i, p.parent) == trj->GetParentId(),
+      UFW_ASSERT(to_spill_id(ixn_i, p.parent) == trj->GetParentId(),
                  "nu[{}].{}[{}]: parent {} resolves to edep-sim track {}, but the trajectory's parent is {}", ixn_idx,
-                 coll, k, p.parent, to_edep(ixn_i, p.parent), trj->GetParentId());
+                 coll, k, p.parent, to_spill_id(ixn_i, p.parent), trj->GetParentId());
       if (auto const points = trj->GetTrajectoryPointsVect(); !points.empty()) {
         auto const& start = points.front().GetPosition();
         UFW_ASSERT(std::abs(start.X() * 0.1 - p.start_pos.x) < 1e-3 && std::abs(start.Y() * 0.1 - p.start_pos.y) < 1e-3

@@ -21,17 +21,20 @@ namespace sand::common {
 
   /// Spill-wide edep-sim track ids <-> per-interaction ids (primaries first, then secondaries), as in ND_CAFMaker.
   ///
-  /// A local id is the rank of the edep-sim id among the interaction's primaries (then secondaries), sorted.
-  /// SRTrueParticle::G4ID, parent and daughters are local ids: go through to_edep() to look them up in the EDEPTree.
+  /// An interaction id is the rank of the spill id among the interaction's primaries (then secondaries), sorted.
+  /// SRTrueParticle::G4ID, parent and daughters are interaction ids: to look them up in the EDEPTree, go through
+  /// to_spill_id().
   class G4IdMap {
     std::vector<int> m_prim_ids; ///< spill-wide ids of the primaries, sorted
     std::vector<int> m_sec_ids;  ///< spill-wide ids of all their descendants, sorted
    public:
     G4IdMap(Primaries const& primaries, InteractionRange const& range);
 
-    [[nodiscard]] int to_local(int edep_id) const;
+    /// @return the per-interaction id of the spill-wide edep-sim `spill_id`; negative ids are returned unchanged.
+    [[nodiscard]] int to_interaction_id(int spill_id) const;
 
-    [[nodiscard]] int to_edep(int local_id) const;
+    /// @return the spill-wide edep-sim id of the per-interaction `interaction_id`; negative ids are returned unchanged.
+    [[nodiscard]] int to_spill_id(int interaction_id) const;
   };
 
   /// One G4IdMap per interaction of the spill, indexed like SRTruthBranch::nu.
