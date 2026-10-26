@@ -30,7 +30,9 @@
       }
     },
     {
-      "sand::tracker::fast_reco": {},
+      "sand::tracker::fast_reco": {
+        "min_energy_deposit": 0.04
+      },
       "reqs": {
         "in_truth": "produced_truth"
       },
