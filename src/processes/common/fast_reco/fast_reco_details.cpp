@@ -1,40 +1,24 @@
 #include "fast_reco_details.hpp"
 
-#include <edep_reader/edep_reader.hpp>
-#include <truth_filler/g4_id_map.hpp>
-
 #include <duneanaobj/StandardRecord/SRDirectionBranch.h>
 #include <duneanaobj/StandardRecord/SREnums.h>
 #include <duneanaobj/StandardRecord/SRNeutrinoEnergyBranch.h>
 #include <duneanaobj/StandardRecord/SRNeutrinoHypothesisBranch.h>
 #include <duneanaobj/StandardRecord/SRRecoParticle.h>
 #include <duneanaobj/StandardRecord/SRRecoParticlesBranch.h>
-#include <duneanaobj/StandardRecord/SRSAND.h>
-#include <duneanaobj/StandardRecord/SRShower.h>
-#include <duneanaobj/StandardRecord/SRTrack.h>
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
 #include <duneanaobj/StandardRecord/SRTrueParticle.h>
 
-#include <TDatabasePDG.h>
-#include <TParticlePDG.h>
 #include <duneanaobj/StandardRecord/SRVector3D.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 
 namespace sand::common::reco_details {
 
   namespace {
-    bool is_track_like(int pdg) {
-      int const abs_pdg = std::abs(pdg);
-      return abs_pdg == 13 || abs_pdg == 211 || abs_pdg == 321 || abs_pdg == 2212;
-    }
-
-    bool is_shower_like(int pdg) {
-      int const abs_pdg = std::abs(pdg);
-      return abs_pdg == 11 || abs_pdg == 22 || abs_pdg == 111;
-    }
 
     ::caf::SRVector3D normalize_to_direction(float px, float py, float pz) {
       float const mag = std::sqrt(px * px + py * py + pz * pz);
@@ -46,26 +30,6 @@ namespace sand::common::reco_details {
       std::array bucket{0.f, 0.f, 0.f, 0.f};
       bucket[static_cast<std::size_t>(std::min(count, 3))] = 1.f;
       return bucket;
-    }
-
-    short charge_from_pdg(int pdg) {
-      if (auto const* p = TDatabasePDG::Instance()->GetParticle(pdg)) {
-        double const q = p->Charge() / 3.0;
-        if (q > 0.5) {
-          return 1;
-        }
-        if (q < -0.5) {
-          return -1;
-        }
-      }
-      return 0;
-    }
-
-    float distance(::caf::SRVector3D const& a, ::caf::SRVector3D const& b) {
-      float const dx = b.x - a.x;
-      float const dy = b.y - a.y;
-      float const dz = b.z - a.z;
-      return std::sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     ::caf::SRTrueParticle const& true_particle_from_id(::caf::SRTrueInteraction const& true_ixn,
@@ -83,43 +47,7 @@ namespace sand::common::reco_details {
         return -1; // no parent, or prefsi (not modeled here)
       }
     }
-
-    ::caf::SRVector3D end_direction_from_edep(EDEPTrajectory const* trj, ::caf::SRVector3D const& start_dir) {
-      double constexpr stopped_momentum{1e-6};
-
-      if (trj == nullptr) {
-        return start_dir;
-      }
-
-      auto const points = trj->GetTrajectoryPointsVect();
-      if (points.size() < 2) {
-        return start_dir;
-      }
-
-      auto const& last_mom = points.back().GetMomentum();
-      if (std::hypot(last_mom.x(), last_mom.y(), last_mom.z()) > stopped_momentum) {
-        return normalize_to_direction(static_cast<float>(last_mom.x()), static_cast<float>(last_mom.y()),
-                                      static_cast<float>(last_mom.z()));
-      }
-
-      auto const& prev = points[points.size() - 2].GetPosition();
-      auto const& last = points.back().GetPosition();
-      return normalize_to_direction(static_cast<float>(last.x() - prev.x()), static_cast<float>(last.y() - prev.y()),
-                                    static_cast<float>(last.z() - prev.z()));
-    }
   } // namespace
-
-  TrackerG4IDs tracker_g4ids_from_edep(sand::edep_reader const& tree) {
-    TrackerG4IDs ids;
-    for (auto const& trj : tree) {
-      // "Straw" in STT geometries, "DriftVolume" in the drift ones (see sand::string_to_component)
-      if (trj.HasHitInDetector(sand::subdetector_t::STT) || trj.HasHitInDetector(sand::subdetector_t::DRIFT)) {
-        ids.push_back(trj.GetId());
-      }
-    }
-    std::sort(ids.begin(), ids.end());
-    return ids;
-  }
 
   ::caf::SRNeutrinoHypothesisBranch neutrino_hypothesis_from_true(::caf::SRTrueInteraction const& true_ixn) {
     ::caf::SRNeutrinoHypothesisBranch nuhyp{};
@@ -209,131 +137,29 @@ namespace sand::common::reco_details {
     return reco_p;
   }
 
-  ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,
-                                 EDEPTrajectory const* trj) {
-    ::caf::SRTrack track{};
-
-    track.start  = true_part.start_pos;
-    track.end    = true_part.end_pos;
-    track.dir    = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
-    track.enddir = end_direction_from_edep(trj, track.dir);
-    track.time   = true_part.time;
-    track.E      = true_part.p.E;
-    track.Evis   = track.E;
-    track.len_cm = distance(track.start, track.end);
-    track.charge = charge_from_pdg(true_part.pdg);
-    track.qual   = 1.f;
-
-    track.truth.push_back(id);
-    track.truthOverlap.push_back(1.f);
-
-    return track;
-  }
-
-  ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
-    ::caf::SRShower shower{};
-
-    shower.start     = true_part.start_pos;
-    shower.direction = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
-    shower.Evis      = true_part.p.E;
-
-    shower.truth.push_back(id);
-    shower.truthOverlap.push_back(1.f);
-
-    return shower;
-  }
-
-  ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn, TrackerG4IDs const& tracker_ids,
-                                         G4IdMap const& track_ids, int ixn_idx, int first_track_idx,
-                                         int first_shower_idx) {
-    ParticleSlots slots;
-    int track_idx{first_track_idx};
-    int shower_idx{first_shower_idx};
-
-    auto has_tracker_hits = [&](::caf::SRTrueParticle const& p) {
-      return p.G4ID >= 0 && std::binary_search(tracker_ids.begin(), tracker_ids.end(), track_ids.to_spill_id(p.G4ID));
-    };
-
-    auto add = [&](::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
-      ParticleSlot slot{id, static_cast<int>(slots.size())};
-      if (has_tracker_hits(true_part)) {
-        if (is_track_like(true_part.pdg)) {
-          slot.track_idx = track_idx++;
-        } else if (is_shower_like(true_part.pdg)) {
-          slot.shower_idx = shower_idx++;
-        }
-      }
-      slots.push_back(slot);
-    };
+  ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx) {
+    ::caf::SRRecoParticlesBranch part{};
+    auto const n_prim = static_cast<int>(true_ixn.prim.size());
 
     auto add_all = [&](std::vector<::caf::SRTrueParticle> const& particles, ::caf::TrueParticleID::PartType type) {
       for (std::size_t i{}; i != particles.size(); ++i) {
-        add(particles[i], {ixn_idx, type, static_cast<int>(i)});
+        ::caf::TrueParticleID const id{ixn_idx, type, static_cast<int>(i)};
+        auto reco_p = reco_particle_from_true(particles[i], id);
+
+        int const parent_idx = reco_idx_from_id(particles[i].parentID, n_prim);
+        if (parent_idx >= 0) {
+          reco_p.parent = parent_idx;
+          part.sandreco[parent_idx].daughters.push_back(static_cast<unsigned int>(part.sandreco.size()));
+        }
+
+        part.sandreco.push_back(std::move(reco_p));
+        ++part.nsandreco;
       }
     };
 
     add_all(true_ixn.prim, ::caf::TrueParticleID::kPrimary);
     add_all(true_ixn.sec, ::caf::TrueParticleID::kSecondary);
-
-    return slots;
-  }
-
-  ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                        TrackerG4IDs const& tracker_ids, G4IdMap const& track_ids,
-                                                        int ixn_idx, int first_track_idx, int first_shower_idx) {
-    ::caf::SRRecoParticlesBranch part{};
-    auto const n_prim = static_cast<int>(true_ixn.prim.size());
-
-    for (auto const& slot :
-         particle_slots_from_true(true_ixn, tracker_ids, track_ids, ixn_idx, first_track_idx, first_shower_idx)) {
-      auto const& true_part = true_particle_from_id(true_ixn, slot.id);
-      auto reco_p           = reco_particle_from_true(true_part, slot.id);
-
-      int const parent_idx = reco_idx_from_id(true_part.parentID, n_prim);
-      if (parent_idx >= 0) {
-        reco_p.parent = parent_idx;
-        part.sandreco[parent_idx].daughters.push_back(static_cast<unsigned int>(slot.part_idx));
-      }
-
-      // origRecoObjType and recoobj are set together, from the slot and never from the pdg alone: a
-      // particle without hits in the tracker gets no reco object, so it keeps origRecoObjType unset too.
-      if (slot.track_idx >= 0) {
-        reco_p.origRecoObjType = ::caf::RecoObjType::kTrack;
-        reco_p.recoobj         = {ixn_idx, ::caf::SRRecoBaseID::kSANDTrackerTrack, slot.track_idx};
-      } else if (slot.shower_idx >= 0) {
-        reco_p.origRecoObjType = ::caf::RecoObjType::kShower;
-        reco_p.recoobj         = {ixn_idx, ::caf::SRRecoBaseID::kSANDTrackerShower, slot.shower_idx};
-      }
-
-      part.sandreco.push_back(std::move(reco_p));
-      ++part.nsandreco;
-    }
     return part;
-  }
-
-  void sand_tracker_from_true(::caf::SRTracker& tracker, ::caf::SRTrueInteraction const& true_ixn,
-                              TrackerG4IDs const& tracker_ids, G4IdMap const& track_ids, int ixn_idx,
-                              sand::edep_reader const& edep) {
-    auto const first_track_idx  = static_cast<int>(tracker.tracks.size());
-    auto const first_shower_idx = static_cast<int>(tracker.showers.size());
-
-    for (auto const& slot :
-         particle_slots_from_true(true_ixn, tracker_ids, track_ids, ixn_idx, first_track_idx, first_shower_idx)) {
-      auto const& true_part = true_particle_from_id(true_ixn, slot.id);
-
-      if (slot.track_idx >= 0) {
-        auto const trj = edep.GetTrajectory(track_ids.to_spill_id(true_part.G4ID));
-        auto track     = track_from_true(true_part, slot.id, trj != edep.end() ? &*trj : nullptr);
-        track.part     = {ixn_idx, ::caf::SRRecoParticleID::kSandreco, slot.part_idx};
-        tracker.tracks.push_back(std::move(track));
-        ++tracker.ntracks;
-      } else if (slot.shower_idx >= 0) {
-        auto shower = shower_from_true(true_part, slot.id);
-        shower.part = {ixn_idx, ::caf::SRRecoParticleID::kSandreco, slot.part_idx};
-        tracker.showers.push_back(std::move(shower));
-        ++tracker.nshowers;
-      }
-    }
   }
 
 } // namespace sand::common::reco_details
