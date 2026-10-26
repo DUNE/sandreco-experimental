@@ -1,0 +1,42 @@
+{
+  "ufw": {
+    "ufw-loglevel": "debug",
+    "ufw-basepath": "/usr/local/share/sandreco/data",
+    "ufw-ldpath": ["/usr/local/lib64"],
+    "ufw-env": {}
+  },
+  "globals": {
+    "sand::root_tgeomanager": {
+      "geometry": "test/sand-spills.5.edep.root"
+    }
+  },
+  "contexts": {
+    "keys": 5,
+    "locals": {
+      "sand::edep_reader": {
+        "uri": "test/sand-spills.5.edep.root"
+      },
+      "sand::genie_reader": {
+        "uri": "test/sand-spills.5.edep.root"
+      }
+    }
+  },
+  "run": [
+    {
+      "sand::common::truth_filler": {},
+      "reqs": {},
+      "prods": {
+        "out_truth_branch": "produced_truth"
+      }
+    },
+    {
+      "sand::tracker::fast_reco": {},
+      "reqs": {
+        "in_truth": "produced_truth"
+      },
+      "prods": {
+        "out_tracker": "produced_tracker"
+      }
+    }
+  ]
+}
