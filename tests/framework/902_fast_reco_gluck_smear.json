@@ -30,9 +30,19 @@
       }
     },
     {
-      "sand::common::fast_reco": {},
+      "sand::tracker::fast_reco": {},
       "reqs": {
         "in_truth": "produced_truth"
+      },
+      "prods": {
+        "out_tracker": "produced_tracker"
+      }
+    },
+    {
+      "sand::common::fast_reco": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_tracker": "produced_tracker"
       },
       "prods": {
         "out_common": "produced_common",
