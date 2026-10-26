@@ -4,6 +4,7 @@
 
 #include <edep_reader/edep_reader.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
+#include <truth_filler/g4_id_map.hpp>
 
 #include <ufw/factory.hpp>
 
@@ -213,10 +214,12 @@ namespace sand::common {
     auto const& in_nd    = get<sand::caf::nd_reco_branch_wrapper>("in_nd");
     auto const& in_truth = get<sand::caf::truth_branch_wrapper>("in_truth");
     auto& out_nd         = set<sand::caf::nd_reco_branch_wrapper>("out_nd");
-    auto& edep           = instance<sand::edep_reader>();
+    auto const& edep     = instance<sand::edep_reader>();
     auto& tgm            = instance<sand::root_tgeomanager>();
 
     out_nd.sand = in_nd.sand;
+
+    auto const track_ids = g4_id_maps(edep.GetChildrenTrajectories());
 
     int n_smeared{};
     int n_out_of_range{};
@@ -229,7 +232,7 @@ namespace sand::common {
         continue; // only muons get Gluckstern smearing
       }
 
-      auto trj = edep.GetTrajectory(true_part.G4ID);
+      auto trj = edep.GetTrajectory(track_ids.at(static_cast<std::size_t>(true_id.ixn)).to_spill_id(true_part.G4ID));
       if (trj == edep.end()) {
         continue;
       }

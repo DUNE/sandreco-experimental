@@ -1,6 +1,7 @@
 #include <caf/caf_wrapper.hpp>
 
 #include <edep_reader/edep_reader.hpp>
+#include <truth_filler/g4_id_map.hpp>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -21,7 +22,8 @@ namespace sand::test {
   /// It also re-derives, straight from sand::edep_reader, which particles were supposed to
   /// pass fast_reco's "has hits in the tracker" gate, and checks that exactly those got a reco
   /// object. The expectation is recomputed the slow way (EDEPTree::GetTrajectory) on
-  /// purpose: it must not share code with the production gate, or it would verify nothing.
+  /// purpose: it must not share code with the production gate, or it would verify nothing. The only shared piece
+  /// is the G4ID -> edep-sim id conversion (G4IdMap), which test_truth_filler verifies on its own.
   struct fast_reco_test : public ufw::process {
     fast_reco_test();
     ~fast_reco_test() override;
@@ -30,7 +32,7 @@ namespace sand::test {
    private:
     std::size_t m_gated_in{};         ///< track-/shower-like particles that did get a reco object
     std::size_t m_gated_out{};        ///< track-/shower-like particles the tracker gate rejected
-    std::size_t m_neutral_gated_in{}; ///< gamma/pi0 with a reco object (expected 0, see PLAN.md section 7)
+    std::size_t m_neutral_gated_in{}; ///< gamma/pi0 with a reco object (expected 0)
   };
 
   fast_reco_test::fast_reco_test()
@@ -52,17 +54,13 @@ namespace sand::test {
       return abs_pdg == 11 || abs_pdg == 22 || abs_pdg == 111;
     }
 
-    /// @return true for gamma, pi0: neutrals, which leave no hits of their own (PLAN.md section 7).
+    /// @return true for gamma, pi0: neutrals, which leave no hits of their own.
     bool is_neutral_shower_like(int pdg) {
       int const abs_pdg = std::abs(pdg);
       return abs_pdg == 22 || abs_pdg == 111;
     }
 
-    bool has_tracker_hits(sand::edep_reader const& edep, ::caf::SRTrueParticle const& true_part) {
-      if (true_part.G4ID < 0) {
-        return false;
-      }
-      auto trj = edep.GetTrajectory(true_part.G4ID);
+    bool has_tracker_hits(sand::edep_reader const& edep, EDEPTree::const_iterator trj) {
       return trj != edep.end()
           && (trj->HasHitInDetector(sand::subdetector_t::STT) || trj->HasHitInDetector(sand::subdetector_t::DRIFT));
     }
@@ -85,6 +83,8 @@ namespace sand::test {
     auto const& common = get<sand::caf::common_reco_branch_wrapper>("in_common");
     auto const& nd     = get<sand::caf::nd_reco_branch_wrapper>("in_nd");
     auto const& edep   = instance<sand::edep_reader>();
+
+    auto const track_ids = sand::common::g4_id_maps(edep.GetChildrenTrajectories());
 
     UFW_ASSERT(common.ixn.sandreco.size() == common.ixn.nsandreco,
                "common.ixn.nsandreco ({}) doesn't match common.ixn.sandreco.size() ({})", common.ixn.nsandreco,
@@ -133,6 +133,19 @@ namespace sand::test {
         UFW_ASSERT(true_part.pdg == particle.pdg, "nu[{}].part[{}]: pdg mismatch, reco {} vs true {}", ixn_idx, p,
                    particle.pdg, true_part.pdg);
 
+        // G4ID -> edep-sim trajectory: must be the same particle, or every lookup by G4ID reads the wrong hits
+        auto const trj = edep.GetTrajectory(track_ids.at(ixn_idx).to_spill_id(true_part.G4ID));
+        if (trj != edep.end() && !trj->GetTrajectoryPoints().empty()) {
+          auto const start = trj->GetTrajectoryPointsVect().front().GetPosition();
+          UFW_ASSERT(trj->GetPDGCode() == true_part.pdg && std::abs(start.X() * 0.1 - true_part.start_pos.x) < 1e-3
+                         && std::abs(start.Y() * 0.1 - true_part.start_pos.y) < 1e-3
+                         && std::abs(start.Z() * 0.1 - true_part.start_pos.z) < 1e-3,
+                     "nu[{}].part[{}]: G4ID {} resolves to edep-sim trajectory pdg {} at ({}, {}, {}) cm, but the true "
+                     "particle is pdg {} at ({}, {}, {}) cm",
+                     ixn_idx, p, true_part.G4ID, trj->GetPDGCode(), start.X() * 0.1, start.Y() * 0.1, start.Z() * 0.1,
+                     true_part.pdg, true_part.start_pos.x, true_part.start_pos.y, true_part.start_pos.z);
+        }
+
         UFW_ASSERT(particle.E == true_part.p.E,
                    "nu[{}].part[{}]: SRRecoParticle::E ({}) doesn't match true SRTrueParticle::p.E ({}) -- possible "
                    "GeV/MeV unit mismatch",
@@ -148,7 +161,7 @@ namespace sand::test {
 
         bool const trackish   = is_track_like(true_part.pdg);
         bool const showerish  = is_shower_like(true_part.pdg);
-        bool const in_tracker = has_tracker_hits(edep, true_part);
+        bool const in_tracker = has_tracker_hits(edep, trj);
         bool const expected   = in_tracker && (trackish || showerish);
         bool const has_obj    = static_cast<bool>(particle.recoobj);
 
@@ -193,7 +206,6 @@ namespace sand::test {
           // fast_reco derives SRTrack::enddir from the edep-sim trajectory's last point
           // (the direction at the endpoint, which bends in a magnetic field). Re-derive it
           // here the slow way and check it matches.
-          auto trj = edep.GetTrajectory(true_part.G4ID);
           if (trj != edep.end()) {
             auto const pts = trj->GetTrajectoryPointsVect();
             if (pts.size() >= 2) {
@@ -263,8 +275,7 @@ namespace sand::test {
                                 "gate inactive, or wrong input file?");
 
     if (m_neutral_gated_in != 0) {
-      UFW_INFO("fast_reco_test: {} gamma/pi0 got a reco object -- unexpected, worth a look (PLAN.md section 7)",
-               m_neutral_gated_in);
+      UFW_INFO("fast_reco_test: {} gamma/pi0 got a reco object -- unexpected, worth a look", m_neutral_gated_in);
     }
   }
 

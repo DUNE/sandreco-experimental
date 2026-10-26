@@ -23,11 +23,26 @@ namespace sand::caf {
     : public ::caf::SRNDBranch
     , public sand::managed_data_base {};
 
+  struct grain_reco_wrapper
+    : public ::caf::SRGRAIN
+    , public sand::managed_data_base {};
+
+  struct tracker_reco_wrapper
+    : public ::caf::SRTracker
+    , public sand::managed_data_base {};
+
+  struct ecal_reco_wrapper
+    : public ::caf::SREcal
+    , public sand::managed_data_base {};
+
 } // namespace sand::caf
 
 UFW_DECLARE_MANAGED_DATA(sand::caf::standard_record_wrapper);
 UFW_DECLARE_MANAGED_DATA(sand::caf::truth_branch_wrapper);
 UFW_DECLARE_MANAGED_DATA(sand::caf::common_reco_branch_wrapper);
 UFW_DECLARE_MANAGED_DATA(sand::caf::nd_reco_branch_wrapper);
+UFW_DECLARE_MANAGED_DATA(sand::caf::grain_reco_wrapper);
+UFW_DECLARE_MANAGED_DATA(sand::caf::tracker_reco_wrapper);
+UFW_DECLARE_MANAGED_DATA(sand::caf::ecal_reco_wrapper);
 
 #endif // SANDRECO_CAF_WRAPPER_HPP
