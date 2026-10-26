@@ -14,7 +14,7 @@
 
 namespace sand::test {
 
-  /// Verifies that sand::common::fast_reco's output is internally consistent and
+  /// Verifies that sand::common::fast_matching's output is internally consistent and
   /// round-trip navigable: every SRRecoParticle <-> SRTrack/SRShower link (recoobj/part)
   /// resolves back to the node it claims to, every truth match resolves to a real
   /// SRTrueParticle with the same pdg, and every parent/daughters link round-trips.

@@ -1,7 +1,7 @@
 # 900_fast_reco test
 
 Consumes the `SRTruthBranch`, `SRCommonRecoBranch` and `SRNDBranch` produced by
-`sand::common::truth_filler`/`sand::common::fast_reco` and checks that the output is
+`sand::common::truth_filler`/`sand::common::fast_matching` and checks that the output is
 internally consistent and round-trip navigable, not just crash-free.
 
 Interaction-level:

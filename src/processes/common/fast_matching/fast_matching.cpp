@@ -1,5 +1,5 @@
-#include "fast_reco.hpp"
-#include "fast_reco_details.hpp"
+#include "fast_matching.hpp"
+#include "fast_matching_details.hpp"
 
 #include <caf/caf_wrapper.hpp>
 
@@ -9,12 +9,12 @@
 
 namespace sand::common {
 
-  fast_reco::fast_reco()
+  fast_matching::fast_matching()
     : process{
           {{"in_truth", "sand::caf::truth_branch_wrapper"}, {"in_tracker", "sand::caf::tracker_reco_wrapper"}},
           {{"out_common", "sand::caf::common_reco_branch_wrapper"}, {"out_nd", "sand::caf::nd_reco_branch_wrapper"}}} {}
 
-  void fast_reco::run() {
+  void fast_matching::run() {
     auto const& truth_branch = get<sand::caf::truth_branch_wrapper>("in_truth");
     auto const& tracker_reco = get<sand::caf::tracker_reco_wrapper>("in_tracker");
     auto& common_reco_branch = set<sand::caf::common_reco_branch_wrapper>("out_common");
@@ -81,4 +81,4 @@ namespace sand::common {
 
 } // namespace sand::common
 
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::common::fast_reco);
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::common::fast_matching);

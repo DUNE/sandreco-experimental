@@ -41,7 +41,7 @@
       }
     },
     {
-      "sand::common::fast_reco": {},
+      "sand::common::fast_matching": {},
       "reqs": {
         "in_truth": "produced_truth",
         "in_tracker": "produced_tracker"

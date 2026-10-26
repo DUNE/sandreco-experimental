@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE fast_reco_details_values
 #include <boost/test/included/unit_test.hpp>
 
-#include <processes/common/fast_reco/fast_reco_details.hpp>
+#include <processes/common/fast_matching/fast_matching_details.hpp>
 
 #include <test_helpers.hpp>
 
