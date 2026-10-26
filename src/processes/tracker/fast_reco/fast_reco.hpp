@@ -3,6 +3,7 @@
 
 #include <edep_reader/edep_reader.hpp>
 
+#include <ufw/config.hpp>
 #include <ufw/process.hpp>
 
 #include <duneanaobj/StandardRecord/SRTrack.h>
@@ -13,9 +14,8 @@
 
 namespace sand::tracker {
 
-  using TrackerG4IDs = std::vector<int>;
-
-  [[nodiscard]] TrackerG4IDs g4ids_from_edep(sand::edep_reader const& tree);
+  /// @return the energy [MeV] the trajectory deposited in the tracker (STT or drift chambers).
+  [[nodiscard]] double total_energy_deposit(EDEPTrajectory const& trj);
 
   [[nodiscard]] ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,
                                                EDEPTrajectory const* trj);
@@ -23,8 +23,18 @@ namespace sand::tracker {
   [[nodiscard]] ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part,
                                                  ::caf::TrueParticleID const& id);
 
-  struct fast_reco : public ufw::process {
+  /// \brief Perfect tracker reco: one SRTrack/SRShower per true particle seen by the tracker.
+  ///
+  /// Config:
+  /// - `min_energy_deposit` [MeV, default 0]: minimum energy a particle must deposit in the tracker to get an object.
+  ///   Single sub-threshold deposits that Geant4 attributes to photons are a few keV (at most ~30 keV in the test
+  ///   sample), while the softest real tracks deposit ~50 keV or more.
+  class fast_reco : public ufw::process {
+    double m_min_energy_deposit{};
+
+   public:
     fast_reco();
+    void configure(ufw::config const& cfg) override;
     void run() override;
   };
 

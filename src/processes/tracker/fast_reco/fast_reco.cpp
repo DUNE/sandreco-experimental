@@ -78,15 +78,16 @@ namespace sand::tracker {
     }
   } // namespace
 
-  TrackerG4IDs g4ids_from_edep(sand::edep_reader const& tree) {
-    TrackerG4IDs ids;
-    for (auto const& trj : tree) {
-      if (has_tracker_hits(trj)) {
-        ids.push_back(trj.GetId());
+  double total_energy_deposit(EDEPTrajectory const& trj) {
+    double edep{};
+    for (auto const det : {sand::subdetector_t::STT, sand::subdetector_t::DRIFT}) {
+      if (auto const it = trj.GetHitMap().find(det); it != trj.GetHitMap().end()) {
+        for (auto const& hit : it->second) {
+          edep += hit.GetEnergyDeposit();
+        }
       }
     }
-    std::sort(ids.begin(), ids.end());
-    return ids;
+    return edep;
   }
 
   ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,
@@ -127,30 +128,35 @@ namespace sand::tracker {
     : process{{{"in_truth", "sand::caf::truth_branch_wrapper"}}, {{"out_tracker", "sand::caf::tracker_reco_wrapper"}}} {
   }
 
+  void fast_reco::configure(ufw::config const& cfg) {
+    process::configure(cfg);
+    m_min_energy_deposit = cfg.value("min_energy_deposit", 0.);
+
+    UFW_ASSERT(m_min_energy_deposit >= 0., "tracker::fast_reco: min_energy_deposit must be >= 0, got {}",
+               m_min_energy_deposit);
+  }
+
   void fast_reco::run() {
     auto const& edep         = instance<sand::edep_reader>();
     auto const& truth_branch = get<sand::caf::truth_branch_wrapper>("in_truth");
     auto& tracker_reco       = set<sand::caf::tracker_reco_wrapper>("out_tracker");
 
-    auto const tracker_ids = g4ids_from_edep(edep);
-    auto const g4_ids      = sand::common::g4_id_maps(edep.GetChildrenTrajectories());
+    auto const g4_ids = sand::common::g4_id_maps(edep.GetChildrenTrajectories());
 
     for (std::size_t ixn{}, nu_size{truth_branch.nu.size()}; ixn != nu_size; ++ixn) {
       auto const& ids = g4_ids.at(ixn);
 
       auto add_all = [&](std::vector<::caf::SRTrueParticle> const& particles, ::caf::TrueParticleID::PartType type) {
         for (std::size_t idx{}, particles_size{particles.size()}; idx != particles_size; ++idx) {
-          auto const& p         = particles[idx];
-          auto const spill_id   = ids.to_spill_id(p.G4ID);
-          auto const in_tracker = p.G4ID >= 0 && std::binary_search(tracker_ids.begin(), tracker_ids.end(), spill_id);
-          if (!in_tracker) {
+          auto const& p  = particles[idx];
+          auto const trj = edep.GetTrajectory(ids.to_spill_id(p.G4ID));
+          if (trj == edep.end() || !has_tracker_hits(*trj) || total_energy_deposit(*trj) < m_min_energy_deposit) {
             continue;
           }
 
           ::caf::TrueParticleID const id{static_cast<int>(ixn), type, static_cast<int>(idx)};
           if (is_track_like(p.pdg)) {
-            auto const trj = edep.GetTrajectory(spill_id);
-            tracker_reco.tracks.push_back(track_from_true(p, id, trj != edep.end() ? &*trj : nullptr));
+            tracker_reco.tracks.push_back(track_from_true(p, id, &*trj));
             ++tracker_reco.ntracks;
           } else if (is_shower_like(p.pdg)) {
             tracker_reco.showers.push_back(shower_from_true(p, id));

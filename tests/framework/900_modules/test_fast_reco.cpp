@@ -27,9 +27,11 @@ namespace sand::test {
   struct fast_reco_test : public ufw::process {
     fast_reco_test();
     ~fast_reco_test() override;
+    void configure(ufw::config const& cfg) override;
     void run() override;
 
    private:
+    double m_min_energy_deposit{};    ///< same `min_energy_deposit` [MeV] as sand::tracker::fast_reco
     std::size_t m_gated_in{};         ///< track-/shower-like particles that did get a reco object
     std::size_t m_gated_out{};        ///< track-/shower-like particles the tracker gate rejected
     std::size_t m_neutral_gated_in{}; ///< gamma/pi0 with a reco object (expected 0)
@@ -65,6 +67,19 @@ namespace sand::test {
           && (trj->HasHitInDetector(sand::subdetector_t::STT) || trj->HasHitInDetector(sand::subdetector_t::DRIFT));
     }
 
+    /// @return the energy [MeV] deposited in the tracker. Deliberately a local copy of tracker::fast_reco's own.
+    double total_energy_deposit(EDEPTrajectory const& trj) {
+      double edep{};
+      for (auto const& [det, hits] : trj.GetHitMap()) {
+        if (det == sand::subdetector_t::STT || det == sand::subdetector_t::DRIFT) {
+          for (auto const& hit : hits) {
+            edep += hit.GetEnergyDeposit();
+          }
+        }
+      }
+      return edep;
+    }
+
     ::caf::SRTrueParticle const& resolve_true(::caf::SRTruthBranch const& truth, ::caf::TrueParticleID const& id) {
       UFW_ASSERT(id.ixn >= 0 && static_cast<std::size_t>(id.ixn) < truth.nu.size(),
                  "TrueParticleID::ixn {} out of range", id.ixn);
@@ -77,6 +92,11 @@ namespace sand::test {
       return collection[static_cast<std::size_t>(id.part)];
     }
   } // namespace
+
+  void fast_reco_test::configure(ufw::config const& cfg) {
+    process::configure(cfg);
+    m_min_energy_deposit = cfg.value("min_energy_deposit", 0.);
+  }
 
   void fast_reco_test::run() {
     auto const& truth  = get<sand::caf::truth_branch_wrapper>("in_truth");
@@ -161,7 +181,7 @@ namespace sand::test {
 
         bool const trackish   = is_track_like(true_part.pdg);
         bool const showerish  = is_shower_like(true_part.pdg);
-        bool const in_tracker = has_tracker_hits(edep, trj);
+        bool const in_tracker = has_tracker_hits(edep, trj) && total_energy_deposit(*trj) >= m_min_energy_deposit;
         bool const expected   = in_tracker && (trackish || showerish);
         bool const has_obj    = static_cast<bool>(particle.recoobj);
 
