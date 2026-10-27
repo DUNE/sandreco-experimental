@@ -7,17 +7,14 @@
 
 #include <TDatabasePDG.h>
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <numeric>
+#include <vector>
 
 namespace sand::tracker {
 
   namespace {
-    // "Straw" in STT geometries, "DriftVolume" in the drift ones (see sand::string_to_component)
-    bool has_tracker_hits(EDEPTrajectory const& trj) {
-      return trj.HasHitInDetector(sand::subdetector_t::STT) || trj.HasHitInDetector(sand::subdetector_t::DRIFT);
-    }
-
     ::caf::SRVector3D normalize_to_direction(float px, float py, float pz) {
       float const mag = std::sqrt(px * px + py * py + pz * pz);
       return (mag > 0.f) ? ::caf::SRVector3D{px / mag, py / mag, pz / mag} : ::caf::SRVector3D{0.f, 0.f, 0.f};
@@ -78,16 +75,21 @@ namespace sand::tracker {
     }
   } // namespace
 
-  double total_energy_deposit(EDEPTrajectory const& trj) {
-    double edep{};
+  std::vector<EDEPHit> tracker_hits(EDEPHitsMap const& hit_map) {
+    std::vector<EDEPHit> hits;
     for (auto const det : {sand::subdetector_t::STT, sand::subdetector_t::DRIFT}) {
-      if (auto const it = trj.GetHitMap().find(det); it != trj.GetHitMap().end()) {
-        for (auto const& hit : it->second) {
-          edep += hit.GetEnergyDeposit();
-        }
+      if (auto const it = hit_map.find(det); it != hit_map.end()) {
+        hits.insert(hits.end(), it->second.begin(), it->second.end());
       }
     }
-    return edep;
+    std::stable_sort(hits.begin(), hits.end(),
+                     [](EDEPHit const& a, EDEPHit const& b) { return a.GetStart().T() < b.GetStart().T(); });
+    return hits;
+  }
+
+  double total_energy_deposit(std::vector<EDEPHit> const& hits) {
+    return std::accumulate(hits.begin(), hits.end(), 0.,
+                           [](double sum, EDEPHit const& hit) { return sum + hit.GetEnergyDeposit(); });
   }
 
   ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,

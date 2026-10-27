@@ -11,12 +11,29 @@
 #include <duneanaobj/StandardRecord/SRTrueParticle.h>
 #include <duneanaobj/StandardRecord/SRVector3D.h>
 
+#include <vector>
+
 namespace {
 
   using sand::tracker::shower_from_true;
+  using sand::tracker::total_energy_deposit;
   using sand::tracker::track_from_true;
+  using sand::tracker::tracker_hits;
 
   ::caf::TrueParticleID make_id(int part = 0) { return {0, ::caf::TrueParticleID::kPrimary, part}; }
+
+  /// A hit starting at time `t` [ns] and depositing `edep` [MeV]; the hit index `id` tells hits apart.
+  EDEPHit make_hit(double t, double edep, int id = 0) {
+    return EDEPHit{sand::vec_4d{0., 0., 0., t}, sand::vec_4d{0., 0., 1., t + 1.}, edep, 0., 1., 1, 1, id};
+  }
+
+  std::vector<double> start_times(std::vector<EDEPHit> const& hits) {
+    std::vector<double> times;
+    for (auto const& hit : hits) {
+      times.push_back(hit.GetStart().T());
+    }
+    return times;
+  }
 
   double constexpr tol_percent = 1e-4;
 
@@ -80,6 +97,52 @@ BOOST_AUTO_TEST_CASE(shower_evis_stays_in_gev_and_direction_is_normalized) {
   BOOST_CHECK_SMALL(shower.direction.y, 1e-6f);
   BOOST_REQUIRE_EQUAL(shower.truth.size(), 1u);
   BOOST_CHECK_EQUAL(shower.truthOverlap.at(0), 1.f);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(tracker_hits_selection)
+
+BOOST_AUTO_TEST_CASE(hits_come_out_sorted_by_start_time) {
+  EDEPHitsMap hit_map;
+  hit_map[sand::subdetector_t::STT] = {make_hit(3., 0.1), make_hit(1., 0.1), make_hit(2., 0.1)};
+
+  auto const hits = tracker_hits(hit_map);
+
+  std::vector<double> const expected{1., 2., 3.};
+  auto const times = start_times(hits);
+  BOOST_CHECK_EQUAL_COLLECTIONS(times.begin(), times.end(), expected.begin(), expected.end());
+}
+
+BOOST_AUTO_TEST_CASE(only_stt_and_drift_hits_are_kept_and_merged_in_time) {
+  EDEPHitsMap hit_map;
+  hit_map[sand::subdetector_t::STT]   = {make_hit(4., 0.1), make_hit(1., 0.1)};
+  hit_map[sand::subdetector_t::DRIFT] = {make_hit(3., 0.1), make_hit(2., 0.1)};
+  hit_map[sand::subdetector_t::ECAL]  = {make_hit(0.5, 10.)};
+  hit_map[sand::subdetector_t::GRAIN] = {make_hit(0.1, 10.)};
+
+  auto const hits = tracker_hits(hit_map);
+
+  std::vector<double> const expected{1., 2., 3., 4.}; // no ECAL (0.5) or GRAIN (0.1) hit
+  auto const times = start_times(hits);
+  BOOST_CHECK_EQUAL_COLLECTIONS(times.begin(), times.end(), expected.begin(), expected.end());
+}
+
+BOOST_AUTO_TEST_CASE(no_tracker_hits_gives_nothing) {
+  EDEPHitsMap hit_map;
+  hit_map[sand::subdetector_t::ECAL] = {make_hit(1., 10.)};
+
+  auto const hits = tracker_hits(hit_map);
+
+  BOOST_CHECK(hits.empty());
+  BOOST_CHECK_EQUAL(total_energy_deposit(hits), 0.);
+  BOOST_CHECK(tracker_hits(EDEPHitsMap{}).empty());
+}
+
+BOOST_AUTO_TEST_CASE(total_energy_deposit_is_the_sum_of_the_hits) {
+  std::vector<EDEPHit> const hits{make_hit(1., 1.), make_hit(2., 2.), make_hit(3., 3.)}; // MeV
+
+  BOOST_CHECK_CLOSE(total_energy_deposit(hits), 6., tol_percent);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

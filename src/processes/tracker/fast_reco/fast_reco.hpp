@@ -14,8 +14,12 @@
 
 namespace sand::tracker {
 
-  /// @return the energy [MeV] the trajectory deposited in the tracker (STT or drift chambers).
-  [[nodiscard]] double total_energy_deposit(EDEPTrajectory const& trj);
+  /// @return the hits of a trajectory in the tracker (STT or drift chambers), sorted by start time.
+  /// Takes the hit map rather than the trajectory, so that it can be fed hand-made hits.
+  [[nodiscard]] std::vector<EDEPHit> tracker_hits(EDEPHitsMap const& hit_map);
+
+  /// @return the energy [MeV] deposited by `hits`.
+  [[nodiscard]] double total_energy_deposit(std::vector<EDEPHit> const& hits);
 
   [[nodiscard]] ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,
                                                EDEPTrajectory const* trj);
