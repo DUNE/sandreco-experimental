@@ -145,6 +145,7 @@ namespace sand::tracker {
 
     auto const g4_ids = sand::common::g4_id_maps(edep.GetChildrenTrajectories());
 
+    int n_no_hits{}, n_below_threshold{}, n_unclassified{};
     for (std::size_t ixn{}, nu_size{truth_branch.nu.size()}; ixn != nu_size; ++ixn) {
       auto const& ids = g4_ids.at(ixn);
 
@@ -152,7 +153,17 @@ namespace sand::tracker {
         for (std::size_t idx{}, particles_size{particles.size()}; idx != particles_size; ++idx) {
           auto const& p  = particles[idx];
           auto const trj = edep.GetTrajectory(ids.to_spill_id(p.G4ID));
-          if (trj == edep.end() || !has_tracker_hits(*trj) || total_energy_deposit(*trj) < m_min_energy_deposit) {
+          if (trj == edep.end()) {
+            UFW_ERROR("nu[{}]: true particle G4ID {} (spill id {}) has no edep-sim trajectory", ixn, p.G4ID,
+                      ids.to_spill_id(p.G4ID));
+          }
+          auto const hits = tracker_hits(trj->GetHitMap());
+          if (hits.empty()) {
+            ++n_no_hits;
+            continue;
+          }
+          if (total_energy_deposit(hits) < m_min_energy_deposit) {
+            ++n_below_threshold;
             continue;
           }
 
@@ -163,12 +174,18 @@ namespace sand::tracker {
           } else if (is_shower_like(p.pdg)) {
             tracker_reco.showers.push_back(shower_from_true(p, id));
             ++tracker_reco.nshowers;
+          } else {
+            ++n_unclassified;
           }
         }
       };
       add_all(truth_branch.nu[ixn].prim, ::caf::TrueParticleID::kPrimary);
       add_all(truth_branch.nu[ixn].sec, ::caf::TrueParticleID::kSecondary);
     }
+    UFW_DEBUG("tracker::fast_reco: {} tracks, {} showers; {} particles without tracker hits, {} below "
+              "min_energy_deposit ({} MeV), {} above it but neither track- nor shower-like",
+              tracker_reco.ntracks, tracker_reco.nshowers, n_no_hits, n_below_threshold, m_min_energy_deposit,
+              n_unclassified);
   }
 
 } // namespace sand::tracker
