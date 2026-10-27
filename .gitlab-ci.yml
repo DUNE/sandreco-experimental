@@ -7,10 +7,11 @@ image: baltig.infn.it:4567/dune/sand-ci/sandreco-ci
 build:
  stage: build
  script:
-   - mkdir install
-   - mkdir build
+   - mkdir -p install
+   - mkdir -p build
    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=ON -DCMAKE_INSTALL_PREFIX=./install
-   - cd build && make -j8 install
+   - cmake --build build -j8
+   - cmake --install build
 
  artifacts:
    paths:
@@ -33,5 +34,5 @@ test:
    - rm -rf src/
    - rm -rf build/src/
    - rm -rf install/
-   - cd build && ctest --output-on-failure
+   - cd build && ctest --output-on-failure --parallel 4
 
