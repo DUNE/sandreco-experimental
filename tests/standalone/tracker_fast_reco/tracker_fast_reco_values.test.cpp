@@ -22,7 +22,7 @@ namespace {
 
 } // namespace
 
-BOOST_AUTO_TEST_SUITE(gev_not_mev)
+BOOST_AUTO_TEST_SUITE(mev_not_gev)
 
 BOOST_AUTO_TEST_CASE(track_energy_direction_charge_and_length) {
   ::caf::SRTrueParticle true_part;
@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(track_energy_direction_charge_and_length) {
 
   auto const track = track_from_true(true_part, make_id(), nullptr); // no trajectory -> enddir == start direction
 
-  BOOST_CHECK_CLOSE(track.E, 1.2f, tol_percent); // GeV, not 1200.f -- the regression this guards
+  BOOST_CHECK_CLOSE(track.E, 1200.f, tol_percent); // MeV, not 1.2f GeV -- the regression this guards
   BOOST_CHECK_CLOSE(track.Evis, track.E, tol_percent);
   BOOST_CHECK_CLOSE(track.dir.x, 0.6f, tol_percent); // normalize_to_direction(0.3, 0.4, 0)
   BOOST_CHECK_CLOSE(track.dir.y, 0.8f, tol_percent);
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(shower_evis_stays_in_gev_and_direction_is_normalized) {
 
   auto const shower = shower_from_true(true_part, make_id());
 
-  BOOST_CHECK_CLOSE(shower.Evis, 0.8f, tol_percent); // GeV, not 800.f
+  BOOST_CHECK_CLOSE(shower.Evis, 800.f, tol_percent); // MeV, not 0.8f GeV
   BOOST_CHECK_CLOSE(shower.direction.x, 1.f, tol_percent);
   BOOST_CHECK_SMALL(shower.direction.y, 1e-6f);
   BOOST_REQUIRE_EQUAL(shower.truth.size(), 1u);

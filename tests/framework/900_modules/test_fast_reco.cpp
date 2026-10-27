@@ -216,8 +216,9 @@ namespace sand::test {
           UFW_ASSERT(track.part.type == ::caf::SRRecoParticleID::kSandreco && track.part.ixn == ixn_idx_i
                          && track.part.ipart == p_i,
                      "nu[{}].part[{}]: matched track's part doesn't point back to this particle", ixn_idx, p);
-          UFW_ASSERT(track.E == true_part.p.E,
-                     "nu[{}].part[{}]: SRTrack::E ({}) doesn't match true SRTrueParticle::p.E ({}) -- possible "
+          // SRTrack::E is in MeV, SRTrueParticle::p in GeV
+          UFW_ASSERT(track.E == static_cast<float>(true_part.p.E * 1000.),
+                     "nu[{}].part[{}]: SRTrack::E ({} MeV) doesn't match true SRTrueParticle::p.E ({} GeV) -- possible "
                      "GeV/MeV unit mismatch",
                      ixn_idx, p, track.E, true_part.p.E);
           UFW_ASSERT(track.Evis == track.E, "nu[{}].part[{}]: SRTrack::Evis ({}) doesn't match SRTrack::E ({})",
@@ -256,11 +257,10 @@ namespace sand::test {
           UFW_ASSERT(shower.part.type == ::caf::SRRecoParticleID::kSandreco && shower.part.ixn == ixn_idx_i
                          && shower.part.ipart == p_i,
                      "nu[{}].part[{}]: matched shower's part doesn't point back to this particle", ixn_idx, p);
-          // Same units regression guard as above, on the nd branch: shower_from_true() also
-          // copies true_part.p.E verbatim into SRShower::Evis.
-          UFW_ASSERT(shower.Evis == true_part.p.E,
-                     "nu[{}].part[{}]: SRShower::Evis ({}) doesn't match true SRTrueParticle::p.E ({}) -- possible "
-                     "GeV/MeV unit mismatch",
+          // Same units regression guard as above: SRShower::Evis is in MeV, like SRTrack::E.
+          UFW_ASSERT(shower.Evis == static_cast<float>(true_part.p.E * 1000.),
+                     "nu[{}].part[{}]: SRShower::Evis ({} MeV) doesn't match true SRTrueParticle::p.E ({} GeV) -- "
+                     "possible GeV/MeV unit mismatch",
                      ixn_idx, p, shower.Evis, true_part.p.E);
           ++n_with_shower;
         }

@@ -258,7 +258,8 @@ namespace sand::common {
       float const mass     = pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
 
       track.dir  = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
-      track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass));
+      // smeared_p and mass are in GeV, SRTrack::E is in MeV
+      track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass)) * 1000.;
       track.Evis = track.E;
 
       ++n_smeared;

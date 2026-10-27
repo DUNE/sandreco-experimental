@@ -321,7 +321,8 @@ change upstream.
 
 ## Unit note
 
-`SRTrack::E` is documented upstream as MeV (`SRTrack.h`: `///< Track energy estimate in
-MeV`); `fast_reco` keeps it in **GeV** instead, consistent with `SRRecoParticle::E` and
-every other energy field it fills — a deliberate choice, not an oversight. Anything consuming 
-`SRTrack::E` downstream expecting MeV per the upstream doc will read a value 1000× too small.
+Subdetector objects are in **MeV**, reco particles in **GeV**, as documented upstream:
+`SRTrack::E` (`///< Track energy estimate in MeV`), `SRECALCluster::E` (`[MeV]`),
+`SRRecoParticle::E` (`[GeV]`). `SRTrack::Evis` and `SRShower::Evis` are not documented upstream;
+they are in MeV too, like the other subdetector energies. `SRTrueParticle::p` is in GeV, so
+`sand::tracker::fast_reco` and `gluckstern_smearing` multiply by 1000 when filling them.

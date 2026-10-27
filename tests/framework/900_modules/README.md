@@ -26,10 +26,10 @@ For every `SRRecoParticle` in `part.sandreco[i]`:
   exact particle (same `ixn`/`ipart`). Symmetric check for `kShower` against `tracker.showers`.
 - **`parent`/`daughters` round trip**: if `parent >= 0`, the parent particle's `daughters`
   contains this particle's own index.
-- **Units**: `SRRecoParticle::E`, and `SRTrack::E`/`Evis`/`SRShower::Evis` when there's a
-  matching track/shower, all equal the true particle's `SRTrueParticle::p.E` exactly (GeV,
-  fast_reco applies no smearing). Catches a stray unit conversion (e.g. an accidental
-  GeV->MeV factor) that would otherwise pass every structural check above unnoticed.
+- **Units**: `SRRecoParticle::E` equals the true particle's `SRTrueParticle::p.E` (both GeV);
+  `SRTrack::E`/`Evis` and `SRShower::Evis`, when there's a matching track/shower, equal it
+  times 1000 (MeV; no smearing before this test). Catches a missing or doubled unit conversion
+  that would otherwise pass every structural check above unnoticed.
 
 Wired into `900_fast_reco_test.json` between `fast_reco` and `caf_streamer`; any violation
 aborts via `UFW_ASSERT`, failing the ctest.

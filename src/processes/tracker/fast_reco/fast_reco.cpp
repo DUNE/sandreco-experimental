@@ -99,7 +99,7 @@ namespace sand::tracker {
     track.dir    = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
     track.enddir = end_direction_from_edep(trj, track.dir);
     track.time   = true_part.time;
-    track.E      = true_part.p.E;
+    track.E      = true_part.p.E * 1000.; // SRTrack::E is in MeV, SRTrueParticle::p in GeV
     track.Evis   = track.E;
     track.len_cm = distance(track.start, track.end);
     track.charge = charge_from_pdg(true_part.pdg);
@@ -116,7 +116,7 @@ namespace sand::tracker {
 
     shower.start     = true_part.start_pos;
     shower.direction = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
-    shower.Evis      = true_part.p.E;
+    shower.Evis      = true_part.p.E * 1000.; // MeV, like SRTrack::E (SRTrueParticle::p is in GeV)
 
     shower.truth.push_back(id);
     shower.truthOverlap.push_back(1.f);
