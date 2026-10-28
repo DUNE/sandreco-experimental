@@ -5,11 +5,15 @@
 
 #include <ufw/factory.hpp>
 
+#include <duneanaobj/StandardRecord/SRTrack.h>
+#include <duneanaobj/StandardRecord/SRVector3D.h>
+
 #include <TDatabasePDG.h>
 
 #include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <utility>
 #include <vector>
 
 namespace sand::tracker {
@@ -18,13 +22,6 @@ namespace sand::tracker {
     ::caf::SRVector3D normalize_to_direction(float px, float py, float pz) {
       float const mag = std::sqrt(px * px + py * py + pz * pz);
       return (mag > 0.f) ? ::caf::SRVector3D{px / mag, py / mag, pz / mag} : ::caf::SRVector3D{0.f, 0.f, 0.f};
-    }
-
-    float distance(::caf::SRVector3D const& a, ::caf::SRVector3D const& b) {
-      float const dx = b.x - a.x;
-      float const dy = b.y - a.y;
-      float const dz = b.z - a.z;
-      return std::sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     short charge_from_pdg(int pdg) {
@@ -40,26 +37,46 @@ namespace sand::tracker {
       return 0;
     }
 
-    ::caf::SRVector3D end_direction_from_edep(EDEPTrajectory const* trj, ::caf::SRVector3D const& start_dir) {
+    /// @return the last two points in time (last, previous); nullptr where there are not enough points.
+    ///
+    /// Scans the per-subdetector points in place instead of flattening and sorting them
+    /// (EDEPTrajectory::GetTrajectoryPointsVect copies every point). On equal times the later point in
+    /// iteration order wins, as in GetTrajectoryPointsVect's stable sort.
+    std::pair<EDEPTrajectoryPoint const*, EDEPTrajectoryPoint const*>
+    last_two_points(EDEPTrajectoryPoints const& points) {
+      EDEPTrajectoryPoint const* last{};
+      EDEPTrajectoryPoint const* prev{};
+      for (auto const& [det, det_points] : points) {
+        for (auto const& point : det_points) {
+          auto const t = point.GetPosition().T();
+          if (last == nullptr || t >= last->GetPosition().T()) {
+            prev = last;
+            last = &point;
+          } else if (prev == nullptr || t >= prev->GetPosition().T()) {
+            prev = &point;
+          }
+        }
+      }
+      return {last, prev};
+    }
+
+    /// @return the direction at the last trajectory point in time, `start_dir` if there are fewer than two points.
+    ::caf::SRVector3D end_direction(EDEPTrajectoryPoints const& points, ::caf::SRVector3D const& start_dir) {
       double constexpr stopped_momentum{1e-6};
 
-      if (trj == nullptr) {
+      auto const [last_point, prev_point] = last_two_points(points);
+      if (prev_point == nullptr) {
         return start_dir;
       }
 
-      auto const points = trj->GetTrajectoryPointsVect();
-      if (points.size() < 2) {
-        return start_dir;
-      }
-
-      auto const& last_mom = points.back().GetMomentum();
+      auto const& last_mom = last_point->GetMomentum();
       if (std::hypot(last_mom.x(), last_mom.y(), last_mom.z()) > stopped_momentum) {
         return normalize_to_direction(static_cast<float>(last_mom.x()), static_cast<float>(last_mom.y()),
                                       static_cast<float>(last_mom.z()));
       }
 
-      auto const& prev = points[points.size() - 2].GetPosition();
-      auto const& last = points.back().GetPosition();
+      auto const& prev = prev_point->GetPosition();
+      auto const& last = last_point->GetPosition();
       return normalize_to_direction(static_cast<float>(last.x() - prev.x()), static_cast<float>(last.y() - prev.y()),
                                     static_cast<float>(last.z() - prev.z()));
     }
@@ -72,6 +89,11 @@ namespace sand::tracker {
     bool is_shower_like(int pdg) {
       int const abs_pdg = std::abs(pdg);
       return abs_pdg == 11 || abs_pdg == 22 || abs_pdg == 111;
+    }
+
+    /// edep-sim positions are in mm, CAF positions in cm.
+    ::caf::SRVector3D position_cm(sand::vec_4d const& v) {
+      return {static_cast<float>(v.X() * 0.1), static_cast<float>(v.Y() * 0.1), static_cast<float>(v.Z() * 0.1)};
     }
   } // namespace
 
@@ -92,18 +114,29 @@ namespace sand::tracker {
                            [](double sum, EDEPHit const& hit) { return sum + hit.GetEnergyDeposit(); });
   }
 
-  ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,
-                                 EDEPTrajectory const* trj) {
+  ::caf::SRTrack track_from_hits(std::vector<EDEPHit> const& hits, EDEPTrajectoryPoints const& points,
+                                 ::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
+    UFW_ASSERT(!hits.empty(), "track_from_hits: a track needs at least one tracker hit");
+
+    auto const& first = hits.front().GetStart();
+    auto const& last  = hits.back().GetStop();
+
     ::caf::SRTrack track{};
 
-    track.start  = true_part.start_pos;
-    track.end    = true_part.end_pos;
+    // from the tracker hits
+    track.start = position_cm(first);
+    track.end   = position_cm(last);
+    track.time  = first.T();
+    track.len_cm =
+        static_cast<float>(std::accumulate(hits.begin(), hits.end(), 0.,
+                                           [](double sum, EDEPHit const& h) { return sum + h.GetTrackLength(); })
+                           * 0.1);
+    track.Evis = static_cast<float>(total_energy_deposit(hits)); // MeV
+
+    // still from the truth (directions and energy at tracker entry: next step)
     track.dir    = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
-    track.enddir = end_direction_from_edep(trj, track.dir);
-    track.time   = true_part.time;
+    track.enddir = end_direction(points, track.dir);
     track.E      = true_part.p.E * 1000.; // SRTrack::E is in MeV, SRTrueParticle::p in GeV
-    track.Evis   = track.E;
-    track.len_cm = distance(track.start, track.end);
     track.charge = charge_from_pdg(true_part.pdg);
     track.qual   = 1.f;
 
@@ -113,12 +146,21 @@ namespace sand::tracker {
     return track;
   }
 
-  ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
+  ::caf::SRShower shower_from_hits(std::vector<EDEPHit> const& hits, ::caf::SRTrueParticle const& true_part,
+                                   ::caf::TrueParticleID const& id) {
+    UFW_ASSERT(!hits.empty(), "shower_from_hits: a shower needs at least one tracker hit");
+
+    auto const& first = hits.front().GetStart();
+
     ::caf::SRShower shower{};
 
-    shower.start     = true_part.start_pos;
+    // from the tracker hits
+    shower.start = position_cm(first);
+    shower.time  = first.T();
+    shower.Evis  = static_cast<float>(total_energy_deposit(hits)); // MeV
+
+    // still from the truth (direction at tracker entry: next step)
     shower.direction = normalize_to_direction(true_part.p.px, true_part.p.py, true_part.p.pz);
-    shower.Evis      = true_part.p.E * 1000.; // MeV, like SRTrack::E (SRTrueParticle::p is in GeV)
 
     shower.truth.push_back(id);
     shower.truthOverlap.push_back(1.f);
@@ -169,10 +211,10 @@ namespace sand::tracker {
 
           ::caf::TrueParticleID const id{static_cast<int>(ixn), type, static_cast<int>(idx)};
           if (is_track_like(p.pdg)) {
-            tracker_reco.tracks.push_back(track_from_true(p, id, &*trj));
+            tracker_reco.tracks.push_back(track_from_hits(hits, trj->GetTrajectoryPoints(), p, id));
             ++tracker_reco.ntracks;
           } else if (is_shower_like(p.pdg)) {
-            tracker_reco.showers.push_back(shower_from_true(p, id));
+            tracker_reco.showers.push_back(shower_from_hits(hits, p, id));
             ++tracker_reco.nshowers;
           } else {
             ++n_unclassified;

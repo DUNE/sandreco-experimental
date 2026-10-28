@@ -21,10 +21,17 @@ namespace sand::tracker {
   /// @return the energy [MeV] deposited by `hits`.
   [[nodiscard]] double total_energy_deposit(std::vector<EDEPHit> const& hits);
 
-  [[nodiscard]] ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id,
-                                               EDEPTrajectory const* trj);
+  /// \brief Perfect track from the particle's tracker hits (sorted by time): position, time, length and visible
+  /// energy as the tracker sees them; charge from the pdg; E and directions still from the truth.
+  /// `points` are the particle's trajectory points per subdetector (EDEPTrajectory::GetTrajectoryPoints), for the end
+  /// direction; with fewer than two points, enddir == dir.
+  [[nodiscard]] ::caf::SRTrack track_from_hits(std::vector<EDEPHit> const& hits, EDEPTrajectoryPoints const& points,
+                                               ::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id);
 
-  [[nodiscard]] ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part,
+  /// \brief Perfect shower from the particle's tracker hits (sorted by time): start, time and visible energy as the
+  /// tracker sees them; direction still from the truth.
+  [[nodiscard]] ::caf::SRShower shower_from_hits(std::vector<EDEPHit> const& hits,
+                                                 ::caf::SRTrueParticle const& true_part,
                                                  ::caf::TrueParticleID const& id);
 
   /// \brief Perfect tracker reco: one SRTrack/SRShower per true particle seen by the tracker.

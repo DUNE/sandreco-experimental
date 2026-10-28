@@ -27,9 +27,12 @@ For every `SRRecoParticle` in `part.sandreco[i]`:
 - **`parent`/`daughters` round trip**: if `parent >= 0`, the parent particle's `daughters`
   contains this particle's own index.
 - **Units**: `SRRecoParticle::E` equals the true particle's `SRTrueParticle::p.E` (both GeV);
-  `SRTrack::E`/`Evis` and `SRShower::Evis`, when there's a matching track/shower, equal it
-  times 1000 (MeV; no smearing before this test). Catches a missing or doubled unit conversion
-  that would otherwise pass every structural check above unnoticed.
+  `SRTrack::E` equals it times 1000 (MeV; no smearing before this test). Catches a missing or
+  doubled unit conversion that would otherwise pass every structural check above unnoticed.
+- **Tracker objects come from the tracker hits only**: `start` is the start of the earliest tracker
+  hit (STT/drift), `end` the stop of the latest, `time` the time of the earliest; `len_cm` is the
+  summed length of the tracker hits and `Evis` the energy deposited in the tracker (MeV). Same for
+  showers (`start`, `time`, `Evis`). Re-derived here without sorting, independently of the reco.
 
 Wired into `900_fast_reco_test.json` between `fast_reco` and `caf_streamer`; any violation
 aborts via `UFW_ASSERT`, failing the ctest.

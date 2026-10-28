@@ -80,6 +80,43 @@ namespace sand::test {
       return edep;
     }
 
+    /// The tracker hits a perfect tracker reco starts and ends with: the earliest and the latest by start time
+    /// (on equal times, the first and the last met). Deliberately a local copy, found without sorting.
+    struct tracker_ends {
+      EDEPHit const* first{};
+      EDEPHit const* last{};
+      double length_mm{};
+    };
+
+    tracker_ends find_tracker_ends(EDEPTrajectory const& trj) {
+      tracker_ends ends;
+      for (auto const& [det, hits] : trj.GetHitMap()) {
+        if (det != sand::subdetector_t::STT && det != sand::subdetector_t::DRIFT) {
+          continue;
+        }
+        for (auto const& hit : hits) {
+          auto const t = hit.GetStart().T();
+          if (ends.first == nullptr || t < ends.first->GetStart().T()) {
+            ends.first = &hit;
+          }
+          if (ends.last == nullptr || t >= ends.last->GetStart().T()) {
+            ends.last = &hit;
+          }
+          ends.length_mm += hit.GetTrackLength();
+        }
+      }
+      return ends;
+    }
+
+    /// edep-sim positions are in mm, CAF positions in cm (same expression as the reco, so equality is exact).
+    bool same_position_cm(::caf::SRVector3D const& reco, sand::vec_4d const& edep_mm) {
+      return reco.x == static_cast<float>(edep_mm.X() * 0.1) && reco.y == static_cast<float>(edep_mm.Y() * 0.1)
+          && reco.z == static_cast<float>(edep_mm.Z() * 0.1);
+    }
+
+    /// Sums may be done in a different order than in the reco: compare with a relative tolerance.
+    bool close(double a, double b) { return std::abs(a - b) <= 1e-5 * std::max(std::abs(a), std::abs(b)); }
+
     ::caf::SRTrueParticle const& resolve_true(::caf::SRTruthBranch const& truth, ::caf::TrueParticleID const& id) {
       UFW_ASSERT(id.ixn >= 0 && static_cast<std::size_t>(id.ixn) < truth.nu.size(),
                  "TrueParticleID::ixn {} out of range", id.ixn);
@@ -221,8 +258,25 @@ namespace sand::test {
                      "nu[{}].part[{}]: SRTrack::E ({} MeV) doesn't match true SRTrueParticle::p.E ({} GeV) -- possible "
                      "GeV/MeV unit mismatch",
                      ixn_idx, p, track.E, true_part.p.E);
-          UFW_ASSERT(track.Evis == track.E, "nu[{}].part[{}]: SRTrack::Evis ({}) doesn't match SRTrack::E ({})",
-                     ixn_idx, p, track.Evis, track.E);
+
+          // start/end/time/length/Evis come from the tracker hits only, never from the whole trajectory
+          auto const ends = find_tracker_ends(*trj);
+          UFW_ASSERT(ends.first != nullptr, "nu[{}].part[{}]: track without tracker hits", ixn_idx, p);
+          UFW_ASSERT(same_position_cm(track.start, ends.first->GetStart()),
+                     "nu[{}].part[{}]: track start ({}, {}, {}) isn't the start of its first tracker hit {}", ixn_idx,
+                     p, track.start.x, track.start.y, track.start.z, ends.first->GetStart());
+          UFW_ASSERT(same_position_cm(track.end, ends.last->GetStop()),
+                     "nu[{}].part[{}]: track end ({}, {}, {}) isn't the stop of its last tracker hit {}", ixn_idx, p,
+                     track.end.x, track.end.y, track.end.z, ends.last->GetStop());
+          UFW_ASSERT(track.time == ends.first->GetStart().T(),
+                     "nu[{}].part[{}]: track time {} isn't the time of its first tracker hit {}", ixn_idx, p,
+                     track.time, ends.first->GetStart().T());
+          UFW_ASSERT(close(track.len_cm, ends.length_mm * 0.1),
+                     "nu[{}].part[{}]: track length {} cm isn't the summed length of its tracker hits {} cm", ixn_idx,
+                     p, track.len_cm, ends.length_mm * 0.1);
+          UFW_ASSERT(close(track.Evis, total_energy_deposit(*trj)),
+                     "nu[{}].part[{}]: SRTrack::Evis ({} MeV) isn't the energy deposited in the tracker ({} MeV)",
+                     ixn_idx, p, track.Evis, total_energy_deposit(*trj));
 
           // fast_reco derives SRTrack::enddir from the edep-sim trajectory's last point
           // (the direction at the endpoint, which bends in a magnetic field). Re-derive it
@@ -257,11 +311,18 @@ namespace sand::test {
           UFW_ASSERT(shower.part.type == ::caf::SRRecoParticleID::kSandreco && shower.part.ixn == ixn_idx_i
                          && shower.part.ipart == p_i,
                      "nu[{}].part[{}]: matched shower's part doesn't point back to this particle", ixn_idx, p);
-          // Same units regression guard as above: SRShower::Evis is in MeV, like SRTrack::E.
-          UFW_ASSERT(shower.Evis == static_cast<float>(true_part.p.E * 1000.),
-                     "nu[{}].part[{}]: SRShower::Evis ({} MeV) doesn't match true SRTrueParticle::p.E ({} GeV) -- "
-                     "possible GeV/MeV unit mismatch",
-                     ixn_idx, p, shower.Evis, true_part.p.E);
+          // start/time/Evis come from the tracker hits only
+          auto const ends = find_tracker_ends(*trj);
+          UFW_ASSERT(ends.first != nullptr, "nu[{}].part[{}]: shower without tracker hits", ixn_idx, p);
+          UFW_ASSERT(same_position_cm(shower.start, ends.first->GetStart()),
+                     "nu[{}].part[{}]: shower start ({}, {}, {}) isn't the start of its first tracker hit {}", ixn_idx,
+                     p, shower.start.x, shower.start.y, shower.start.z, ends.first->GetStart());
+          UFW_ASSERT(shower.time == ends.first->GetStart().T(),
+                     "nu[{}].part[{}]: shower time {} isn't the time of its first tracker hit {}", ixn_idx, p,
+                     shower.time, ends.first->GetStart().T());
+          UFW_ASSERT(close(shower.Evis, total_energy_deposit(*trj)),
+                     "nu[{}].part[{}]: SRShower::Evis ({} MeV) isn't the energy deposited in the tracker ({} MeV)",
+                     ixn_idx, p, shower.Evis, total_energy_deposit(*trj));
           ++n_with_shower;
         }
 
