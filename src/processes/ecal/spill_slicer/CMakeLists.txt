@@ -1,0 +1,4 @@
+sandreco_add_process(sand_ecal_spill_slicer)
+
+target_sources(sand_ecal_spill_slicer PRIVATE spill_slicer.cpp)
+target_link_libraries(sand_ecal_spill_slicer PRIVATE ROOT::MathCore)
