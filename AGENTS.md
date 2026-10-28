@@ -62,7 +62,7 @@ Critical external libraries: `ROOT`, `ufw`, `spdlog`, `pybind11`, `duneanaobj`, 
 
 ## Building and Testing Inside Container
 
-All building and testing must be performed inside the `sandreco-ci` podman container, which is running.
+All building and testing must be performed inside the `sandreco-ci` podman container, which is running (if sandreco-ci is nodt running, try `sand-dev` or `sand-dev-cpu`).
  - The container provides the full development environment with all dependencies (ROOT, ufw, spdlog, etc.) pre-installed.
  - Dependencies are not installed outside the container and building will not be possible outside of it.
  - The container mounts the project folder `/home/nicko/Development/sand_mnt/sandreco-experimental` under a different name: `/home/sand/sandreco-experimental/`.
@@ -71,7 +71,6 @@ All building and testing must be performed inside the `sandreco-ci` podman conta
 
 ### Configuring command
  - Default command `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "cmake -S .. -B . -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=/usr/local/"`
-
 
 ### Build and install command
  `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "cmake --build . -j8 && cmake --install .`
