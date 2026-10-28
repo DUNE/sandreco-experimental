@@ -19,9 +19,15 @@ namespace caf {
   class SRTracker;
 } // namespace caf
 
+class EDEPTrajectory;
+
 namespace sand {
 
   class edep_reader;
+
+  namespace common {
+    class G4IdMap;
+  } // namespace common
 
   namespace common::reco_details {
 
@@ -54,8 +60,9 @@ namespace sand {
                                                                 ::caf::TrueParticleID const& id);
 
     /// \brief Perfect track, for a track-like particle that has tracker hits.
+    /// @param trj  the particle's edep-sim trajectory, for the end direction; nullptr falls back to the start one.
     [[nodiscard]] ::caf::SRTrack track_from_true(::caf::SRTrueParticle const& true_part,
-                                                 ::caf::TrueParticleID const& id, sand::edep_reader const& edep);
+                                                 ::caf::TrueParticleID const& id, EDEPTrajectory const* trj);
 
     /// \brief Perfect shower, for a shower-like particle that has tracker hits.
     [[nodiscard]] ::caf::SRShower shower_from_true(::caf::SRTrueParticle const& true_part,
@@ -65,19 +72,22 @@ namespace sand {
     ///
     /// The tracker collections are spill-level, so track/shower indices keep counting across interactions:
     /// `first_track_idx`/`first_shower_idx` are the sizes of caf::SRTracker::tracks/showers before this interaction.
+    /// `track_ids` maps this interaction's G4IDs to the spill-wide ids `tracker_ids` is made of.
     [[nodiscard]] ParticleSlots particle_slots_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                         TrackerG4IDs const& tracker_ids, int ixn_idx,
-                                                         int first_track_idx, int first_shower_idx);
+                                                         TrackerG4IDs const& tracker_ids, G4IdMap const& track_ids,
+                                                         int ixn_idx, int first_track_idx, int first_shower_idx);
 
     /// \brief Perfect reco particles: one caf::SRRecoParticle per true `prim`/`sec`, cross-links resolved.
     [[nodiscard]] ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn,
-                                                                        TrackerG4IDs const& tracker_ids, int ixn_idx,
+                                                                        TrackerG4IDs const& tracker_ids,
+                                                                        G4IdMap const& track_ids, int ixn_idx,
                                                                         int first_track_idx, int first_shower_idx);
 
     /// \brief Perfect SAND tracker: appends to the spill-level `tracker` one caf::SRTrack/caf::SRShower per particle
     /// of this interaction that passed the gate.
     void sand_tracker_from_true(::caf::SRTracker& tracker, ::caf::SRTrueInteraction const& true_ixn,
-                                TrackerG4IDs const& tracker_ids, int ixn_idx, sand::edep_reader const& edep);
+                                TrackerG4IDs const& tracker_ids, G4IdMap const& track_ids, int ixn_idx,
+                                sand::edep_reader const& edep);
 
   } // namespace common::reco_details
 } // namespace sand

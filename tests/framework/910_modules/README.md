@@ -15,6 +15,10 @@ For every interaction (`nu[i]`):
   is always inserted before its children), and the round trip holds: the parent's
   `daughtersID` lists this node back.
 - `daughters` and `daughtersID` have matching sizes.
+- **Track ids**: `G4IdMap::to_spill_id(G4ID)` resolves to the edep-sim trajectory the particle was
+  built from: same pdg, same start point, and its parent is `to_spill_id(parent)`. At least one
+  spill must have more than one interaction, otherwise interaction and spill ids coincide and this
+  check would pass even with a wrong conversion.
 
 Wired into `910_truth_filler.json` between `truth_filler` and `caf_streamer`; any
 violation aborts via `UFW_ASSERT`, failing the ctest.

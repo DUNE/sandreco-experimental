@@ -1,5 +1,7 @@
 #include "truth_filler_details.hpp"
+
 #include "evtcode_parser.hpp"
+#include "g4_id_map.hpp"
 
 #include <sand.h>
 
@@ -17,7 +19,6 @@
 #include <cstddef>
 #include <limits>
 #include <numeric>
-#include <string>
 #include <string_view>
 #include <vector>
 
@@ -49,10 +50,10 @@ namespace sand::common::filler_details {
       }
 
       constexpr double nucleon_mass = 0.9389187; // genie::constants::kNucleonMass, average of proton and neutron
-      const double nu2  = nu * nu;
-      const double Q2   = -q.M2();
-      const double Q2p  = Q2 * nucleon_mass / target_mass;
-      const double mpi2 = pion_p4.M2();
+      const double nu2              = nu * nu;
+      const double Q2               = -q.M2();
+      const double Q2p              = Q2 * nucleon_mass / target_mass;
+      const double mpi2             = pion_p4.M2();
       return 2 * nu2 + Q2p - mpi2 - std::sqrt((nu2 + Q2p) / (nu2 + Q2)) * (2 * nu2 + Q2 - mpi2 - t_final_state);
     }
 
@@ -86,20 +87,6 @@ namespace sand::common::filler_details {
   bool is_darkneutrino_pdg(int pdg) {
     const int abs_pdg = std::abs(pdg);
     return abs_pdg == 2000030000;
-  }
-
-  std::vector<InteractionRange> make_interaction_ranges(Primaries const& primaries) {
-    std::vector<InteractionRange> output;
-
-    for (auto it = primaries.begin(); it != primaries.end();) {
-      auto group_end = std::find_if_not(it, primaries.end(), [ixn = it->GetInteractionNumber()](auto const& p) {
-        return p.GetInteractionNumber() == ixn;
-      });
-      output.push_back({static_cast<std::size_t>(it - primaries.begin()), static_cast<std::size_t>(group_end - it)});
-      it = group_end;
-    }
-
-    return output;
   }
 
   bool is_lepton_pdg(int pdg) {
@@ -151,19 +138,19 @@ namespace sand::common::filler_details {
     ixn.hitnuc    = summary.hit_nucleon_pdg.value_or(0);
 
     constexpr double m_to_cm = 100.;
-    ixn.vtx.x     = static_cast<float>(event.EvtVtx_[0] * m_to_cm);
-    ixn.vtx.y     = static_cast<float>(event.EvtVtx_[1] * m_to_cm);
-    ixn.vtx.z     = static_cast<float>(event.EvtVtx_[2] * m_to_cm);
-    ixn.time      = static_cast<float>(event.EvtVtx_[3]);
-    ixn.isvtxcont = false;
+    ixn.vtx.x                = static_cast<float>(event.EvtVtx_[0] * m_to_cm);
+    ixn.vtx.y                = static_cast<float>(event.EvtVtx_[1] * m_to_cm);
+    ixn.vtx.z                = static_cast<float>(event.EvtVtx_[2] * m_to_cm);
+    ixn.time                 = static_cast<float>(event.EvtVtx_[3]);
+    ixn.isvtxcont            = false;
 
     const auto& nu_p4 = stdhep.P4_[static_cast<int>(StdHepIndex::nu)];
     UFW_DEBUG("nu_p4.E(): {}", nu_p4.E());
-    
-    ixn.E             = static_cast<float>(nu_p4.E());
-    ixn.momentum.x    = static_cast<float>(nu_p4.Px());
-    ixn.momentum.y    = static_cast<float>(nu_p4.Py());
-    ixn.momentum.z    = static_cast<float>(nu_p4.Pz());
+
+    ixn.E          = static_cast<float>(nu_p4.E());
+    ixn.momentum.x = static_cast<float>(nu_p4.Px());
+    ixn.momentum.y = static_cast<float>(nu_p4.Py());
+    ixn.momentum.z = static_cast<float>(nu_p4.Pz());
 
     // t is defined for coherent events only (as in ND_CAFMaker); it needs the final-state pion
     const int pion_idx = ixn.mode == ::caf::kCoh ? find_final_pion(stdhep) : -1;
@@ -172,13 +159,13 @@ namespace sand::common::filler_details {
     }
     const double target_mass = stdhep.P4_[static_cast<int>(StdHepIndex::tgt)].M();
     auto kinematics          = calculate_kinematics(nu_p4, stdhep.P4_.at(find_final_lepton(stdhep)),
-                                                    pion_idx >= 0 ? &stdhep.P4_.at(pion_idx) : nullptr, target_mass);
-    ixn.Q2           = kinematics.Q2;
-    ixn.q0           = kinematics.q0;
-    ixn.modq         = kinematics.modq;
-    ixn.W            = kinematics.W;
-    ixn.bjorkenX     = kinematics.bjorkenX;
-    ixn.inelasticity = kinematics.inelasticity;
+                                           pion_idx >= 0 ? &stdhep.P4_.at(pion_idx) : nullptr, target_mass);
+    ixn.Q2                   = kinematics.Q2;
+    ixn.q0                   = kinematics.q0;
+    ixn.modq                 = kinematics.modq;
+    ixn.W                    = kinematics.W;
+    ixn.bjorkenX             = kinematics.bjorkenX;
+    ixn.inelasticity         = kinematics.inelasticity;
     if (pion_idx >= 0) {
       ixn.t = kinematics.t;
     }
@@ -189,12 +176,12 @@ namespace sand::common::filler_details {
       ixn.resnum = static_cast<int>(summary.resonance_type.value());
     }
 
-    ixn.xsec       = static_cast<float>(event.EvtXSec_);
-    ixn.genweight  = static_cast<float>(event.EvtWght_);
+    ixn.xsec      = static_cast<float>(event.EvtXSec_);
+    ixn.genweight = static_cast<float>(event.EvtWght_);
     // gRooTracker stores the cross section in 1e-38 cm2; CAF (GENIE XSec()) wants GeV^-2
-    constexpr double xsec_1e38cm2_to_GeVm2 = 1e-38 / 3.893793e-28;   // 1 GeV^-2 = 0.3893793 mb
-    ixn.xsec       = static_cast<float>(event.EvtXSec_ * xsec_1e38cm2_to_GeVm2);
-    ixn.xsec_cvwgt = 1.0f;
+    constexpr double xsec_1e38cm2_to_GeVm2 = 1e-38 / 3.893793e-28; // 1 GeV^-2 = 0.3893793 mb
+    ixn.xsec                               = static_cast<float>(event.EvtXSec_ * xsec_1e38cm2_to_GeVm2);
+    ixn.xsec_cvwgt                         = 1.0f;
 
     return ixn;
   }
@@ -232,14 +219,14 @@ namespace sand::common::filler_details {
   }
 
   ::caf::SRTrueParticle true_particle_from_edep(EDEPTrajectory const& traj, long int ixn_id,
-                                                ::caf::TrueParticleID const& ancestor_id) {
+                                                ::caf::TrueParticleID const& ancestor_id, G4IdMap const& ids) {
     ::caf::SRTrueParticle p{};
 
     p.pdg            = traj.GetPDGCode();
-    p.G4ID           = traj.GetId();
+    p.G4ID           = ids.to_interaction_id(traj.GetId());
     p.interaction_id = ixn_id;
     p.ancestor_id    = ancestor_id;
-    p.parent         = traj.GetParentId();
+    p.parent         = ids.to_interaction_id(traj.GetParentId());
 
     auto const mom = traj.GetInitialMomentum();
     p.p.px         = static_cast<float>(mom.Px() * 1e-3); // MeV → GeV
@@ -280,11 +267,11 @@ namespace sand::common::filler_details {
     /// @return this node's own TrueParticleID, so the caller can link it as a parent/daughter.
     ::caf::TrueParticleID add_secondary_subtree(EDEPTrajectory const& traj, ::caf::TrueParticleID parent_id,
                                                 ::caf::TrueParticleID ancestor_id, int sr_ixn, long int interaction_id,
-                                                TrueParticleTree& out) {
+                                                G4IdMap const& ids, TrueParticleTree& out) {
       auto const ordered_slot = static_cast<int>(out.sec.size());
       ::caf::TrueParticleID const my_id{sr_ixn, caf::TrueParticleID::kSecondary, ordered_slot};
 
-      out.sec.emplace_back(true_particle_from_edep(traj, interaction_id, ancestor_id));
+      out.sec.emplace_back(true_particle_from_edep(traj, interaction_id, ancestor_id, ids));
       out.sec[ordered_slot].parentID = parent_id;
 
       auto const& children = traj.GetChildrenTrajectories();
@@ -294,8 +281,8 @@ namespace sand::common::filler_details {
       g4ids.reserve(children.size());
 
       std::transform(children.begin(), children.end(), std::back_inserter(dids), [&](auto const& child) {
-        g4ids.push_back(static_cast<unsigned int>(child.GetId()));
-        return add_secondary_subtree(child, my_id, ancestor_id, sr_ixn, interaction_id, out);
+        g4ids.push_back(static_cast<unsigned int>(ids.to_interaction_id(child.GetId())));
+        return add_secondary_subtree(child, my_id, ancestor_id, sr_ixn, interaction_id, ids, out);
       });
 
       out.sec[ordered_slot].daughters   = std::move(g4ids);
@@ -307,6 +294,7 @@ namespace sand::common::filler_details {
   [[nodiscard]] TrueParticleTree build_true_particle_tree(Primaries const& primaries, std::size_t first_idx,
                                                           std::size_t count, int sr_ixn, long int interaction_id) {
     TrueParticleTree out_tree;
+    G4IdMap const ids{primaries, {first_idx, count}};
 
     out_tree.prim.reserve(count);
     auto begin = primaries.begin() + first_idx;
@@ -319,7 +307,7 @@ namespace sand::common::filler_details {
       auto const& prim = primaries[first_idx + i];
       ::caf::TrueParticleID const prim_id{sr_ixn, caf::TrueParticleID::kPrimary, static_cast<int>(i)};
 
-      out_tree.prim.emplace_back(true_particle_from_edep(prim, interaction_id, prim_id));
+      out_tree.prim.emplace_back(true_particle_from_edep(prim, interaction_id, prim_id, ids));
 
       auto const& children = prim.GetChildrenTrajectories();
       std::vector<caf::TrueParticleID> dids;
@@ -328,8 +316,8 @@ namespace sand::common::filler_details {
       g4ids.reserve(children.size());
 
       std::transform(children.begin(), children.end(), std::back_inserter(dids), [&](auto const& child) {
-        g4ids.push_back(static_cast<unsigned int>(child.GetId()));
-        return add_secondary_subtree(child, prim_id, prim_id, sr_ixn, interaction_id, out_tree);
+        g4ids.push_back(static_cast<unsigned int>(ids.to_interaction_id(child.GetId())));
+        return add_secondary_subtree(child, prim_id, prim_id, sr_ixn, interaction_id, ids, out_tree);
       });
 
       out_tree.prim[i].daughters   = std::move(g4ids);
@@ -349,49 +337,6 @@ namespace sand::common::filler_details {
     }
 
     return out_tree;
-  }
-
-    void to_local_track_ids(TrueParticleTree& tree) {
-    if (tree.prim.empty())
-      return;
-
-    auto const by_g4id = [](auto const& a, auto const& b) { return a.G4ID < b.G4ID; };
-
-    // primaries and secondaries of one interaction are two contiguous blocks of spill-wide ids
-    auto const nprim   = static_cast<int>(tree.prim.size());
-    auto const prim_lo = std::min_element(tree.prim.begin(), tree.prim.end(), by_g4id)->G4ID;
-    auto const prim_hi = std::max_element(tree.prim.begin(), tree.prim.end(), by_g4id)->G4ID;
-    if (prim_hi - prim_lo + 1 != nprim)
-      UFW_ERROR("Primary track ids [{}, {}] are not contiguous for {} primaries", prim_lo, prim_hi, nprim);
-
-    auto const nsec = static_cast<int>(tree.sec.size());
-    int sec_lo      = 0;
-    if (nsec > 0) {
-      sec_lo            = std::min_element(tree.sec.begin(), tree.sec.end(), by_g4id)->G4ID;
-      auto const sec_hi = std::max_element(tree.sec.begin(), tree.sec.end(), by_g4id)->G4ID;
-      if (sec_hi - sec_lo + 1 != nsec)
-        UFW_ERROR("Secondary track ids [{}, {}] are not contiguous for {} secondaries", sec_lo, sec_hi, nsec);
-    }
-
-    // spill-wide id -> per-interaction id (primaries 0..nprim-1, then secondaries), as in ND_CAFMaker
-    auto const to_local = [=](int g) {
-      if (g < 0)
-        return g;
-      if (g >= prim_lo && g < prim_lo + nprim)
-        return g - prim_lo;
-      if (nsec > 0 && g >= sec_lo && g < sec_lo + nsec)
-        return nprim + g - sec_lo;
-      UFW_ERROR("Track id {} does not belong to this interaction", g);
-    };
-
-    for (auto* particles : {&tree.prim, &tree.sec}) {
-      for (auto& p : *particles) {
-        p.G4ID   = to_local(p.G4ID);
-        p.parent = to_local(p.parent);
-        for (auto& d : p.daughters)
-          d = static_cast<unsigned int>(to_local(static_cast<int>(d)));
-      }
-    }
   }
 
 } // namespace sand::common::filler_details
