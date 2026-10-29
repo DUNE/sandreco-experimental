@@ -1,4 +1,5 @@
 add_subdirectory(edep_reader)
+add_subdirectory(spill_maps)
 add_subdirectory(genie_reader)
 add_subdirectory(geoinfo)
 add_subdirectory(hdf5)
