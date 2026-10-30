@@ -4,6 +4,7 @@
 #include <caf/caf_wrapper.hpp>
 #include <edep_reader/edep_reader.hpp>
 #include <genie_reader/genie_reader.hpp>
+#include <spill_maps/spill_maps.hpp>
 
 #include <ufw/factory.hpp>
 #include <ufw/utils.hpp>
@@ -17,6 +18,7 @@ namespace sand::common {
   void truth_filler::run() {
     auto const& genie  = instance<genie_reader>();
     auto const& edep   = instance<edep_reader>();
+    auto const& maps   = instance<spill_maps>();
     auto& truth_branch = set<sand::caf::truth_branch_wrapper>("out_truth_branch");
 
     auto const& primaries   = edep.GetChildrenTrajectories();
@@ -47,7 +49,7 @@ namespace sand::common {
 
       // Create primaries and secondaries tree
       auto tree = filler_details::build_true_particle_tree(primaries, first_prim_idx, prim_count,
-                                                           static_cast<int>(ixn_idx), true_ixn.id);
+                                                           static_cast<int>(ixn_idx), true_ixn.id, maps.at(ixn_idx));
 
       // Fill CAF fields
       true_ixn.prim     = std::move(tree.prim);

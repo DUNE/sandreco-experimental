@@ -1,7 +1,7 @@
 #ifndef SAND_COMMON_TRUTH_FILLER_DETAILS_HPP
 #define SAND_COMMON_TRUTH_FILLER_DETAILS_HPP
 
-#include "g4_id_map.hpp"
+#include <spill_maps/g4_id_map.hpp>
 
 #include <vector>
 
@@ -65,8 +65,10 @@ namespace sand::common::filler_details {
   /// @param sr_ixn         index of this interaction in the SRTruthBranch (-> TrueParticleID::ixn);
   ///                        distinct from `interaction_id`.
   /// @param interaction_id  edep-sim vertex ID (-> SRTrueParticle::interaction_id).
+  /// @param ids             track id map of this interaction.
   [[nodiscard]] TrueParticleTree build_true_particle_tree(Primaries const& primaries, std::size_t first_idx,
-                                                          std::size_t count, int sr_ixn, long int interaction_id);
+                                                          std::size_t count, int sr_ixn, long int interaction_id,
+                                                          G4IdMap const& ids);
 
 } // namespace sand::common::filler_details
 

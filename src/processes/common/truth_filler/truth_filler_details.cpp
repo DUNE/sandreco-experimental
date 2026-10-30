@@ -1,13 +1,10 @@
 #include "truth_filler_details.hpp"
-
 #include "evtcode_parser.hpp"
-#include "g4_id_map.hpp"
 
-#include <sand.h>
-
-#include <edep_reader/EDEPTrajectory.h>
 #include <edep_reader/EDEPTree.h>
+#include <edep_reader/EDEPTrajectory.h>
 #include <genie_reader/GenieWrapper.h>
+#include <sand.h>
 
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
 #include <duneanaobj/StandardRecord/SRTrueParticle.h>
@@ -292,9 +289,9 @@ namespace sand::common::filler_details {
   } // namespace
 
   [[nodiscard]] TrueParticleTree build_true_particle_tree(Primaries const& primaries, std::size_t first_idx,
-                                                          std::size_t count, int sr_ixn, long int interaction_id) {
+                                                          std::size_t count, int sr_ixn, long int interaction_id,
+                                                          G4IdMap const& ids) {
     TrueParticleTree out_tree;
-    G4IdMap const ids{primaries, {first_idx, count}};
 
     out_tree.prim.reserve(count);
     auto begin = primaries.begin() + first_idx;

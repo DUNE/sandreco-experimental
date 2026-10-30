@@ -1,7 +1,8 @@
 # truth_filler
 
-Reads GENIE (`genie_reader`) and edep-sim (`edep_reader`) and produces
-an `SRTruthBranch` (`truth_branch_wrapper`) for downstream CAF consumers (`fast_reco`, `caf_streamer`).
+Reads GENIE (`genie_reader`) and edep-sim (`edep_reader`, with the track id maps of `spill_maps`) and
+produces an `SRTruthBranch` (`truth_branch_wrapper`) for downstream CAF consumers (the fast reco,
+`fast_matching`, `caf_streamer`).
 
 ## Data flow
 
@@ -21,6 +22,11 @@ NumiFlux
         children["GetChildrenTrajectories()
 all primaries
 (and, recursively, their children)"]
+    end
+
+    subgraph spill_maps["spill_maps"]
+        maps["at(i)
+G4IdMap of interaction i"]
     end
 
     subgraph truth_filler["truth_filler"]
@@ -61,6 +67,7 @@ iscc, mode..."| tif
     mpp -->|"prefsi"| tb
 
     children -->|"primaries in the range"| btpt
+    maps -->|"spill id -> interaction id"| btpt
     btpt -->|"true_particle_from_edep
 for each primary"| tpe
     btpt -->|"for each primary's children"| ast
@@ -89,12 +96,17 @@ The same edep-sim trajectory has two ids:
 For example, an interaction whose primaries have spill ids 2, 3, 4 and whose secondaries have spill
 ids 8, 9, 10 gets interaction ids 0, 1, 2 and 3, 4, 5.
 
-`G4IdMap` (`g4_id_map.hpp`) converts between the two, one map per interaction:
+`G4IdMap` converts between the two, one map per interaction. It lives in the `sand_spill_maps` library
+(`src/data/common/spill_maps`, see its README), and the maps of the current spill are framework data,
+built once per spill:
 
 ```cpp
-auto const g4_ids = sand::common::g4_id_maps(edep.GetChildrenTrajectories()); // one per SRTruthBranch::nu
-auto const trj    = edep.GetTrajectory(g4_ids.at(ixn).to_spill_id(true_part.G4ID));
+auto const& maps = instance<sand::spill_maps>(); // one G4IdMap per SRTruthBranch::nu
+auto const trj   = edep.GetTrajectory(maps.at(ixn).to_spill_id(true_part.G4ID));
 ```
+
+`truth_filler` itself takes the maps this way and passes each interaction's map to
+`build_true_particle_tree()`, so a job running it needs `"sand::spill_maps": {}` in `contexts.locals`.
 
 **Never pass `SRTrueParticle::G4ID` to `GetTrajectory()` directly**: it only works by chance for the
 primaries of the first interaction, and silently returns another particle's trajectory otherwise.

@@ -18,7 +18,8 @@
       },
       "sand::genie_reader": {
         "uri": "test/sand-spills.5.edep.root"
-      }
+      },
+      "sand::spill_maps": {}
     }
   },
   "run": [
