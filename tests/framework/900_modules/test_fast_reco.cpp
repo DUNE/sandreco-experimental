@@ -1,12 +1,15 @@
 #include <caf/caf_wrapper.hpp>
 
 #include <edep_reader/edep_reader.hpp>
-#include <truth_filler/g4_id_map.hpp>
+#include <spill_maps/spill_maps.hpp>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
+
+#include <TDatabasePDG.h>
+#include <TParticlePDG.h>
 
 #include <algorithm>
 #include <cmath>
@@ -31,10 +34,11 @@ namespace sand::test {
     void run() override;
 
    private:
-    double m_min_energy_deposit{};    ///< same `min_energy_deposit` [MeV] as sand::tracker::fast_reco
-    std::size_t m_gated_in{};         ///< track-/shower-like particles that did get a reco object
-    std::size_t m_gated_out{};        ///< track-/shower-like particles the tracker gate rejected
-    std::size_t m_neutral_gated_in{}; ///< gamma/pi0 with a reco object (expected 0)
+    double m_min_energy_deposit{};                 ///< same `min_energy_deposit` [MeV] as sand::tracker::fast_reco
+    std::size_t m_tracks_without_tracker_points{}; ///< tracks with E unknown (no trajectory point in the tracker)
+    std::size_t m_gated_in{};                      ///< track-/shower-like particles that did get a reco object
+    std::size_t m_gated_out{};                     ///< track-/shower-like particles the tracker gate rejected
+    std::size_t m_neutral_gated_in{};              ///< gamma/pi0 with a reco object (expected 0)
   };
 
   fast_reco_test::fast_reco_test()
@@ -117,6 +121,50 @@ namespace sand::test {
     /// Sums may be done in a different order than in the reco: compare with a relative tolerance.
     bool close(double a, double b) { return std::abs(a - b) <= 1e-5 * std::max(std::abs(a), std::abs(b)); }
 
+    /// The earliest and the latest trajectory point in the tracker (STT/drift), by time; on equal times the first
+    /// met for `first`, the last met for `last`. Deliberately a local copy of tracker::fast_reco's own.
+    struct tracker_point_ends {
+      EDEPTrajectoryPoint const* first{};
+      EDEPTrajectoryPoint const* last{};
+    };
+
+    tracker_point_ends find_tracker_point_ends(EDEPTrajectory const& trj) {
+      tracker_point_ends ends;
+      for (auto const& [det, points] : trj.GetTrajectoryPoints()) {
+        if (det != sand::subdetector_t::STT && det != sand::subdetector_t::DRIFT) {
+          continue;
+        }
+        for (auto const& point : points) {
+          auto const t = point.GetPosition().T();
+          if (ends.first == nullptr || t < ends.first->GetPosition().T()) {
+            ends.first = &point;
+          }
+          if (ends.last == nullptr || t >= ends.last->GetPosition().T()) {
+            ends.last = &point;
+          }
+        }
+      }
+      return ends;
+    }
+
+    /// @return true if `dir` is the unit vector along (x, y, z), within 1e-4 per component.
+    bool same_direction(::caf::SRVector3D const& dir, double x, double y, double z) {
+      double const norm = std::sqrt(x * x + y * y + z * z);
+      return norm > 0. && std::abs(dir.x - x / norm) < 1e-4 && std::abs(dir.y - y / norm) < 1e-4
+          && std::abs(dir.z - z / norm) < 1e-4;
+    }
+
+    bool same_direction(::caf::SRVector3D const& dir, sand::mom_3d const& p) {
+      return same_direction(dir, p.x(), p.y(), p.z());
+    }
+
+    bool same_direction(::caf::SRVector3D const& dir, EDEPHit const& hit) {
+      return same_direction(dir, hit.GetStop().X() - hit.GetStart().X(), hit.GetStop().Y() - hit.GetStart().Y(),
+                            hit.GetStop().Z() - hit.GetStart().Z());
+    }
+
+    bool is_stopped(sand::mom_3d const& p) { return std::sqrt(p.Mag2()) <= 1e-6; }
+
     ::caf::SRTrueParticle const& resolve_true(::caf::SRTruthBranch const& truth, ::caf::TrueParticleID const& id) {
       UFW_ASSERT(id.ixn >= 0 && static_cast<std::size_t>(id.ixn) < truth.nu.size(),
                  "TrueParticleID::ixn {} out of range", id.ixn);
@@ -141,7 +189,7 @@ namespace sand::test {
     auto const& nd     = get<sand::caf::nd_reco_branch_wrapper>("in_nd");
     auto const& edep   = instance<sand::edep_reader>();
 
-    auto const track_ids = sand::common::g4_id_maps(edep.GetChildrenTrajectories());
+    auto const& track_ids = instance<sand::spill_maps>();
 
     UFW_ASSERT(common.ixn.sandreco.size() == common.ixn.nsandreco,
                "common.ixn.nsandreco ({}) doesn't match common.ixn.sandreco.size() ({})", common.ixn.nsandreco,
@@ -253,12 +301,6 @@ namespace sand::test {
           UFW_ASSERT(track.part.type == ::caf::SRRecoParticleID::kSandreco && track.part.ixn == ixn_idx_i
                          && track.part.ipart == p_i,
                      "nu[{}].part[{}]: matched track's part doesn't point back to this particle", ixn_idx, p);
-          // SRTrack::E is in MeV, SRTrueParticle::p in GeV
-          UFW_ASSERT(track.E == static_cast<float>(true_part.p.E * 1000.),
-                     "nu[{}].part[{}]: SRTrack::E ({} MeV) doesn't match true SRTrueParticle::p.E ({} GeV) -- possible "
-                     "GeV/MeV unit mismatch",
-                     ixn_idx, p, track.E, true_part.p.E);
-
           // start/end/time/length/Evis come from the tracker hits only, never from the whole trajectory
           auto const ends = find_tracker_ends(*trj);
           UFW_ASSERT(ends.first != nullptr, "nu[{}].part[{}]: track without tracker hits", ixn_idx, p);
@@ -278,23 +320,38 @@ namespace sand::test {
                      "nu[{}].part[{}]: SRTrack::Evis ({} MeV) isn't the energy deposited in the tracker ({} MeV)",
                      ixn_idx, p, track.Evis, total_energy_deposit(*trj));
 
-          // fast_reco derives SRTrack::enddir from the edep-sim trajectory's last point
-          // (the direction at the endpoint, which bends in a magnetic field). Re-derive it
-          // here the slow way and check it matches.
-          if (trj != edep.end()) {
-            auto const pts = trj->GetTrajectoryPointsVect();
-            if (pts.size() >= 2) {
-              auto const& mom = pts.back().GetMomentum();
-              double const mm = std::hypot(mom.x(), mom.y(), mom.z());
-              if (mm > 1e-6) { // skip stopped particles (zero final momentum)
-                UFW_ASSERT(std::abs(track.enddir.x - mom.x() / mm) < 1e-4
-                               && std::abs(track.enddir.y - mom.y() / mm) < 1e-4
-                               && std::abs(track.enddir.z - mom.z() / mm) < 1e-4,
-                           "nu[{}].part[{}]: track enddir ({}, {}, {}) doesn't match the last trajectory momentum "
-                           "direction ({}, {}, {})",
-                           ixn_idx, p, track.enddir.x, track.enddir.y, track.enddir.z, mom.x() / mm, mom.y() / mm,
-                           mom.z() / mm);
-              }
+          // dir/E at the tracker entry and enddir at the tracker exit, from the trajectory points in the tracker;
+          // without them, directions from the first/last hit segment and E unknown (NaN)
+          auto const points = find_tracker_point_ends(*trj);
+          if (points.first == nullptr) {
+            ++m_tracks_without_tracker_points;
+            UFW_ASSERT(std::isnan(track.E), "nu[{}].part[{}]: no trajectory point in the tracker, but E = {} MeV",
+                       ixn_idx, p, track.E);
+            UFW_ASSERT(same_direction(track.dir, *ends.first) && same_direction(track.enddir, *ends.last),
+                       "nu[{}].part[{}]: no trajectory point in the tracker, but dir/enddir aren't the first/last "
+                       "hit's direction",
+                       ixn_idx, p);
+          } else {
+            auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
+            double const mass    = pdg_info != nullptr ? pdg_info->Mass() * 1000. : 0.; // GeV -> MeV
+            auto const& p_in     = points.first->GetMomentum();                         // MeV
+            double const e_in    = std::sqrt(p_in.Mag2() + mass * mass);
+            // SRTrack::E is in MeV, at the tracker entry: never more than the true energy at the vertex (GeV)
+            UFW_ASSERT(close(track.E, e_in),
+                       "nu[{}].part[{}]: SRTrack::E ({} MeV) isn't the energy at the tracker entry ({} MeV)", ixn_idx,
+                       p, track.E, e_in);
+            UFW_ASSERT(track.E <= true_part.p.E * 1000. * (1. + 1e-5),
+                       "nu[{}].part[{}]: SRTrack::E ({} MeV) is more than the true energy at the vertex ({} MeV)",
+                       ixn_idx, p, track.E, true_part.p.E * 1000.);
+            if (!is_stopped(p_in)) {
+              UFW_ASSERT(same_direction(track.dir, p_in),
+                         "nu[{}].part[{}]: track dir ({}, {}, {}) isn't the momentum direction at the tracker entry",
+                         ixn_idx, p, track.dir.x, track.dir.y, track.dir.z);
+            }
+            if (auto const& p_out = points.last->GetMomentum(); !is_stopped(p_out)) {
+              UFW_ASSERT(same_direction(track.enddir, p_out),
+                         "nu[{}].part[{}]: track enddir ({}, {}, {}) isn't the momentum direction at the tracker exit",
+                         ixn_idx, p, track.enddir.x, track.enddir.y, track.enddir.z);
             }
           }
           ++n_with_track;
@@ -323,6 +380,19 @@ namespace sand::test {
           UFW_ASSERT(close(shower.Evis, total_energy_deposit(*trj)),
                      "nu[{}].part[{}]: SRShower::Evis ({} MeV) isn't the energy deposited in the tracker ({} MeV)",
                      ixn_idx, p, shower.Evis, total_energy_deposit(*trj));
+
+          // direction at the tracker entry, else from the first hit segment
+          auto const points = find_tracker_point_ends(*trj);
+          if (points.first != nullptr && !is_stopped(points.first->GetMomentum())) {
+            UFW_ASSERT(same_direction(shower.direction, points.first->GetMomentum()),
+                       "nu[{}].part[{}]: shower direction isn't the momentum direction at the tracker entry", ixn_idx,
+                       p);
+          } else if (points.first == nullptr) {
+            UFW_ASSERT(same_direction(shower.direction, *ends.first),
+                       "nu[{}].part[{}]: no trajectory point in the tracker, but the shower direction isn't the "
+                       "first hit's",
+                       ixn_idx, p);
+          }
           ++n_with_shower;
         }
 
@@ -347,6 +417,8 @@ namespace sand::test {
   }
 
   fast_reco_test::~fast_reco_test() {
+    UFW_INFO("fast_reco_test: {} track(s) without trajectory points in the tracker (E unknown)",
+             m_tracks_without_tracker_points);
     UFW_INFO("fast_reco_test: tracker gate let {} track-/shower-like particle(s) through, rejected {}", m_gated_in,
              m_gated_out);
 

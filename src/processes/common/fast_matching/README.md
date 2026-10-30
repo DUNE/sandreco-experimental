@@ -1,47 +1,48 @@
-# fast_reco
+# fast_matching
 
-Reads the `SRTruthBranch` produced by `truth_filler` and produces `SRCommonRecoBranch`
-(`out_common`) and `SRNDBranch` (`out_nd`) for downstream CAF consumers (`caf_streamer`,
-`gauss_smearing`/`gluckstern_smearing`). "Perfect" reco: every field is copied/derived
-1:1 from truth, no smearing — `gauss_smearing`/`gluckstern_smearing` perturb this output
-afterwards.
+Combines the truth and the objects of the subdetector reconstructions into the CAF reco branches:
+`SRCommonRecoBranch` (`out_common`) and `SRNDBranch` (`out_nd`), for downstream consumers (`caf_streamer`,
+`gauss_smearing`/`gluckstern_smearing`). It is the only module writing `common` and `nd`.
 
-Which particles get a reconstructed object is *not* decided by PDG alone: see
-[§0 Tracker gate](#0-tracker-gate) below.
+Today it has one subdetector input, the tracker (`in_tracker`, from `sand::tracker::fast_reco`). The matching is
+"perfect": a subdetector object belongs to the particle its `truth[0]` points to. A real matching (by geometry and
+time), and the GRAIN and ECAL inputs, will keep the same outputs.
+
+The interaction and particle fields are copied 1:1 from the truth, no smearing — `gauss_smearing`/
+`gluckstern_smearing` perturb this output afterwards.
+
+```json
+{
+  "sand::common::fast_matching": {},
+  "reqs": { "in_truth": "produced_truth", "in_tracker": "produced_tracker" },
+  "prods": { "out_common": "produced_common", "out_nd": "produced_nd" }
+}
+```
 
 ## Data flow
 
 ```mermaid
 flowchart TB
-    subgraph input["in_truth (SRTruthBranch)"]
-        nu["truth_branch.nu[ixn]
+    subgraph input["inputs"]
+        nu["in_truth: nu[ixn]
 SRTrueInteraction"]
-        prim["nu.prim[i] / nu.sec[i]
+        prim["in_truth: nu.prim[i] / nu.sec[i]
 SRTrueParticle"]
+        trk["in_tracker: tracks[k] / showers[k]
+SRTrack / SRShower (truth[0] set)"]
     end
 
-    subgraph edep["sand::edep_reader (context instance)"]
-        trj["EDEPTrajectory
-(hits per subdetector)"]
-    end
-
-    subgraph fast_reco["fast_reco_details"]
+    subgraph reco_details["reco_details"]
         dft["direction_from_true()"]
         nhft["neutrino_hypothesis_from_true()"]
         eft["energy_from_true()"]
-        tgfe["tracker_g4ids_from_edep()
-(sorted G4IDs with STT/DRIFT hits)"]
-        psft["particle_slots_from_true()
-(ParticleSlot per particle:
-id, part_idx, track_idx, shower_idx)"]
-        tpfi["true_particle_from_id()"]
-        rift["reco_idx_from_id()
-(TrueParticleID.parentID -> part_idx)"]
         rpft["reco_particle_from_true()"]
-        tft["track_from_true()"]
-        sft["shower_from_true()"]
         rpsft["reco_particles_from_true()"]
-        stft["sand_tracker_from_true()"]
+    end
+
+    subgraph link["fast_matching::run(): link"]
+        lnk["truth[0] -> particle index
+(primaries first, then secondaries)"]
     end
 
     subgraph out_common["out_common (SRCommonRecoBranch)"]
@@ -53,11 +54,9 @@ SRRecoParticle"]
 
     subgraph out_nd["out_nd (SRNDBranch)"]
         sandixn["sand.ixn[i]
-SRSANDInt"]
-        tracks["sand.tracker.tracks[k]
-SRTrack"]
-        showers["sand.tracker.showers[k]
-SRShower"]
+SRSANDInt (empty)"]
+        tracks["sand.tracker.tracks[k] / showers[k]
+copies of the inputs"]
     end
 
     nu -->|"id, vtx"| ixn
@@ -65,89 +64,21 @@ SRShower"]
     nu -->|"pdg, iscc, nproton,
 npip+npim, npi0, nneutron"| nhft -->|"nuhyp"| ixn
     nu -->|"E"| eft -->|"Enu"| ixn
+    prim --> rpft -->|"per particle"| rpsft -->|"part"| ixn
+    nu -->|"one per nu"| sandixn
 
-    trj -->|"hits in STT or DRIFT"| tgfe
-    tgfe -->|"tracker_ids (gate)"| psft
-    prim -->|"pdg, G4ID"| psft
-    psft --> rpsft
-    psft --> stft
-
-    rpsft -->|"slot.id"| tpfi
-    stft -->|"slot.id"| tpfi
-    tpfi -->|"SRTrueParticle"| rpft
-    tpfi -->|"SRTrueParticle"| tft
-    tpfi -->|"SRTrueParticle"| sft
-    tpfi -->|"parentID"| rift
-
-    rpft -->|"per particle"| rpsft
-    rift -->|"parent_idx"| rpsft
-    rpsft -->|"part
-(SRRecoParticlesBranch)"| ixn
-    rpsft -.->|"recoobj (SRRecoBaseID)"| part
-
-    tft -->|"per track"| stft
-    sft -->|"per shower"| stft
-    stft -->|"appended to sand.tracker
-(SRTracker, spill-level)"| tracks
-    stft -->|"appended to sand.tracker
-(SRTracker, spill-level)"| showers
-    stft -.->|"part (SRRecoParticleID)"| tracks
-    stft -.->|"part (SRRecoParticleID)"| showers
-
-    ixn -.->|"truth = {ixn_idx}"| nu
-    part -.->|"truth[0] = slot.id"| prim
-    tracks -.->|"truth[0] = slot.id"| prim
-    showers -.->|"truth[0] = slot.id"| prim
+    trk -->|"copied"| tracks
+    trk --> lnk
+    lnk -.->|"recoobj, origRecoObjType"| part
+    lnk -.->|"part"| tracks
 ```
-(dashed arrows: cross-reference links, not data copies — `recoobj`/`part` are the
-bidirectional `SRRecoParticle` ↔ `SRTrack`/`SRShower` link, `truth` is the reco→truth
-link, both `TrueParticleID`/`SRRecoBaseID`/`SRRecoParticleID`, not nested objects)
-
----
-
-## 0. Tracker gate
-
-A true particle becomes an `SRTrack`/`SRShower` only if **both** hold:
-
-1. its PDG is track-like (μ, π±, K±, p) or shower-like (e±, γ, π0), and
-2. its trajectory left at least one hit in the tracker.
-
-Condition 2 is the gate. It is evaluated by `tracker_g4ids_from_edep()`, which walks the
-`sand::edep_reader` tree once per event and collects the G4IDs of the trajectories with
-hits in `sand::subdetector_t::STT` **or** `::DRIFT` — the two tracker technologies, `"Straw"`
-and `"DriftVolume"` in edep-sim's sensitive-detector names (`sand::string_to_component`,
-`include/common/sand.h`). Which one a file uses depends on the simulated geometry, so
-`fast_reco` accepts either. `particle_slots_from_true()` then looks each particle's `G4ID` up
-in that sorted vector with `std::binary_search`, after converting it to a spill id with
-`G4IdMap::to_spill_id()`: `SRTrueParticle::G4ID` is per interaction, the edep-sim ids are per
-spill (see the truth_filler README, *Track ids: interaction vs spill*). The same conversion is
-used to find the trajectory `SRTrack::enddir` is taken from.
-
-Particles that fail the gate are **not** dropped: they still get their own `SRRecoParticle`
-(with kinematics, `parent`, `daughters`), only with `recoobj` and `origRecoObjType` left
-unset. `SRRecoParticlesBranch::sandreco` therefore always holds exactly one entry per
-`true_ixn.prim`/`true_ixn.sec`, in that order — an invariant the `parent`/`daughters` index
-arithmetic depends on.
-
-Two consequences worth knowing:
-
-- **Neutrals never pass.** edep-sim attributes each hit segment to the charged particle that
-  ionised (`TG4HitSegment::Contrib[0]`), so a γ or a π0 owns no hits of its own and gets no
-  `SRShower`. `tracker.showers` in practice holds e± only, including the e+e− of a
-  conversion, which are trajectories in their own right.
-- **Low-energy secondaries mostly do not pass either**, which is the point: before the gate,
-  `tracker` had an entry per track-/shower-like PDG whether or not it ever crossed the
-  tracker.
-
-Requires `sand::edep_reader` as a context instance — `fast_reco` reads it directly, it is
-not a per-event requirement, so no change to the process' `reqs`.
+(dashed arrows: cross-reference links set by the matching, not data copies)
 
 ---
 
 ## 1. `caf::SRInteraction` — the reconstructed neutrino vertex
 
-Stored in `common_reco_branch.ixn.sandreco[i]`. Filled directly in `fast_reco::run()`,
-one per `truth_branch.nu[i]`.
+Stored in `common_reco_branch.ixn.sandreco[i]`, one per `truth_branch.nu[i]`, filled in `fast_matching::run()`.
 
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
@@ -156,12 +87,15 @@ one per `truth_branch.nu[i]`.
 | `dir` | `SRDirectionBranch` | `direction_from_true(true_ixn)` | See §2 |
 | `nuhyp` | `SRNeutrinoHypothesisBranch` | `neutrino_hypothesis_from_true(true_ixn)` | See §3 |
 | `Enu` | `SRNeutrinoEnergyBranch` | `energy_from_true(true_ixn)` | See §4 |
-| `part` | `SRRecoParticlesBranch` | `reco_particles_from_true(true_ixn, tracker_ids, ixn_idx)` | See §5 |
+| `part` | `SRRecoParticlesBranch` | `reco_particles_from_true(true_ixn, ixn_idx)` | See §5 |
 | `truth` | `vector<size_t>` | `{ixn_idx}` | Index into `truth_branch.nu` |
 | `truthOverlap` | `vector<float>` | `{1.0}` | Perfect reco: 100% overlap |
 
 **Filled:** 8 fields. **Not filled** (left at default): `preselected` (`false`),
 `isFromTrigger` (`true` — correct default, SAND has no cosmic-overlay concept yet).
+
+An empty `SRSANDInt` is appended to `nd.sand.ixn` for every interaction, only to keep `common` and `nd`
+index-aligned (see §7).
 
 ---
 
@@ -216,9 +150,9 @@ collapses to `true_ixn.E`.
 
 ## 5. `caf::SRRecoParticle` — one per primary/secondary
 
-Stored in `common_reco_branch.ixn.sandreco[i].part.sandreco[j]`, one per
-`true_ixn.prim`/`true_ixn.sec` entry. Filled by `reco_particle_from_true()`
-(+ `recoobj`/`parent`/`daughters` set in `reco_particles_from_true()`).
+Stored in `common_reco_branch.ixn.sandreco[i].part.sandreco[j]`, **one per `true_ixn.prim`/`true_ixn.sec` entry, in
+that order**, whether or not a subdetector reconstructed it. Filled by `reco_particle_from_true()` (+ `parent`/
+`daughters` in `reco_particles_from_true()`, + `recoobj`/`origRecoObjType` by the matching, §6).
 
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
@@ -229,70 +163,43 @@ Stored in `common_reco_branch.ixn.sandreco[i].part.sandreco[j]`, one per
 | `p` | `SRVector3D` | `{true_part.p.px, py, pz}` | **GeV/c** |
 | `start` | `SRVector3D` | `true_part.start_pos` | **cm** |
 | `end` | `SRVector3D` | `true_part.end_pos` | **cm** |
-| `origRecoObjType` | `RecoObjType` | `kTrack`/`kShower` from the slot, else `kUnknownRecoObj` | Set together with `recoobj`, never from the PDG alone — see §0 |
 | `parent` | `int` | Index of the parent's `SRRecoParticle` in the same `part.sandreco`, via `true_part.parentID` | `-1` if no parent (primaries) |
 | `daughters` | `vector<unsigned int>` | Reverse of `parent`: this particle's index, pushed onto its parent's `daughters` | |
 | `truth` | `vector<TrueParticleID>` | `{id}` | `id = {ixn_idx, kPrimary\|kSecondary, i}`, **not** `true_part.ancestor_id` |
 | `truthOverlap` | `vector<float>` | `{1.0}` | |
-| `recoobj` | `SRRecoBaseID` | `{ixn_idx, kSANDTrackerTrack\|kSANDTrackerShower, slot.track_idx\|shower_idx}` | Only for particles that pass the tracker gate (§0); unset (`kUnknown`) otherwise |
+| `recoobj` | `SRRecoBaseID` | `{ixn, kSANDTrackerTrack\|kSANDTrackerShower, k}` | Only for particles with a tracker object; unset (`kUnknown`) otherwise |
+| `origRecoObjType` | `RecoObjType` | `kTrack`/`kShower` | Set together with `recoobj`, never from the PDG alone |
 
 **Filled:** 13/17 fields. **Not filled**: `E_method`
 (→ `PartEMethod::kCalorimetry` when picked up), `tgtA` (→ from `true_ixn.targetPDG`).
 **Open question** (not answerable without new infrastructure): `contained`, `walldist` —
 no containment query exists in the repo yet.
 
----
-
-## 6. `caf::SRTrack` — one per track-like particle with tracker hits
-
-Stored in the spill-level `nd_reco_branch.sand.tracker.tracks[k]`, one per primary/secondary
-whose PDG is track-like (μ, π±, K±, p) **and** that left hits in the tracker (§0). Filled
-by `track_from_true()` (+ `part` set in `sand_tracker_from_true()`).
-
-| Field | Type | Source | Notes |
-|-------|------|--------|-------|
-| `start` | `SRVector3D` | `true_part.start_pos` | **cm** |
-| `end` | `SRVector3D` | `true_part.end_pos` | **cm** |
-| `dir` | `SRVector3D` | `normalize({true_part.p.px, py, pz})` | |
-| `enddir` | `SRVector3D` | = `dir` | No smearing → start/end direction coincide |
-| `time` | `double` | `true_part.time` | **ns** |
-| `E` | `float` | `true_part.p.E` | **GeV** — see unit note below |
-| `Evis` | `float` | = `E` | |
-| `len_cm` | `float` | `distance(start, end)` | **cm** |
-| `charge` | `short int` | `TDatabasePDG::Instance()->GetParticle(pdg)->Charge() / 3` | `0` if PDG unknown |
-| `qual` | `float` | Hardcoded `1.0` | Perfect quality |
-| `truth` | `vector<TrueParticleID>` | `{id}` | Same `id` as the matching `SRRecoParticle` |
-| `truthOverlap` | `vector<float>` | `{1.0}` | |
-| `part` | `SRRecoParticleID` | `{ixn_idx, kSandreco, slot.part_idx}` | Points back to the matching `SRRecoParticle` |
-
-**Filled:** 13/14 fields. **Not filled:** `len_gcm2` (length in g/cm² — needs material
-density integration along the track, not derivable from truth alone).
+The one-entry-per-true-particle order is an invariant: the `parent`/`daughters` indices and the matching (§6)
+both rely on it.
 
 ---
 
-## 7. `caf::SRShower` — one per shower-like particle with tracker hits
+## 6. Subdetector objects and matching
 
-Stored in the spill-level `nd_reco_branch.sand.tracker.showers[k]`, one per primary/secondary
-whose PDG is shower-like (e±, γ, π0) **and** that left hits in the tracker (§0) — in
-practice e± only, see §0. Filled by `shower_from_true()` (+ `part` set in
-`sand_tracker_from_true()`).
+`in_tracker` is copied to `nd.sand.tracker` unchanged, except for `part`. Which particles get a tracker object and
+how its fields are computed (from the tracker hits and trajectory points, threshold `min_energy_deposit`) is the
+tracker's job: see `src/processes/tracker/fast_reco/README.md`.
 
-| Field | Type | Source | Notes |
-|-------|------|--------|-------|
-| `start` | `SRVector3D` | `true_part.start_pos` | **cm** |
-| `direction` | `SRVector3D` | `normalize({true_part.p.px, py, pz})` | |
-| `Evis` | `float` | `true_part.p.E` | **GeV** — see unit note below |
-| `truth` | `vector<TrueParticleID>` | `{id}` | |
-| `truthOverlap` | `vector<float>` | `{1.0}` | |
-| `part` | `SRRecoParticleID` | `{ixn_idx, kSandreco, slot.part_idx}` | |
+The matching then links every tracker track/shower `k` to the particle built from the same true particle:
 
-**Filled:** 6/11 fields. **Not filled:** `time`, `qual`, `len_cm`, `initial_dEdx`,
-`conversionGap` — all require actual shower-shape reconstruction (dE/dx profile,
-conversion point), not derivable from a truth copy.
+- `truth[0] = {ixn, type, i}` gives the particle index `ipart = i` for a primary, `n_prim + i` for a secondary
+  (§5 order);
+- `particle.recoobj = {ixn, kSANDTrackerTrack|kSANDTrackerShower, k}`, `particle.origRecoObjType = kTrack|kShower`;
+- `object.part = {ixn, kSandreco, ipart}`.
+
+In the fast reco each particle has at most one object in the tracker, so the link is one-to-one. With more
+subdetectors a particle may have pieces in GRAIN, tracker and ECAL: they will be grouped in an `SRSANDAssn` in
+`nd.sand.ixn[i].trkmatch`, which is still empty today.
 
 ---
 
-## 8. Linking mechanism (three distinct ID schemes — do not confuse them)
+## 7. Linking mechanism (three distinct ID schemes — do not confuse them)
 
 | Link | ID type | Direction | Resolution |
 |------|---------|-----------|------------|
@@ -301,12 +208,9 @@ conversion point), not derivable from a truth copy.
 | `*.truth[i]` (all three) | `TrueParticleID` (`{ixn, type=kPrimary\|kSecondary, part}`) | any reco object → truth | `truth_branch.nu[ixn].prim\|sec[part]` |
 
 All three share the same `ixn` value across `common`/`nd` branches by construction:
-`fast_reco` appends one `SRInteraction` and one `SRSANDInt` per `truth_branch.nu[i]` in
-the same loop, so they stay index-aligned. The `SRSANDInt` itself is left empty (no
-cross-subdetector `trkmatch`): the tracks/showers of every interaction are appended to the
-single spill-level `sand.tracker`, so `irecoobj` keeps counting across interactions.
-`nd_reco_branch.sand.ixn` has no equivalent
-of `.grain`'s ID scheme wired up (out of scope — `.grain` itself is untouched).
+`fast_matching` appends one `SRInteraction` and one `SRSANDInt` per `truth_branch.nu[i]` in
+the same loop, so they stay index-aligned. The tracker collections are spill-level (one `sand.tracker` for all
+interactions), so `irecoobj` counts across interactions.
 
 ---
 
@@ -324,5 +228,5 @@ change upstream.
 Subdetector objects are in **MeV**, reco particles in **GeV**, as documented upstream:
 `SRTrack::E` (`///< Track energy estimate in MeV`), `SRECALCluster::E` (`[MeV]`),
 `SRRecoParticle::E` (`[GeV]`). `SRTrack::Evis` and `SRShower::Evis` are not documented upstream;
-they are in MeV too, like the other subdetector energies. `SRTrueParticle::p` is in GeV, so
-`sand::tracker::fast_reco` and `gluckstern_smearing` multiply by 1000 when filling them.
+they are in MeV too, like the other subdetector energies. `sand::tracker::fast_reco` takes them from edep-sim,
+already in MeV; `gluckstern_smearing` starts from `SRTrueParticle::p`, in GeV, and multiplies by 1000.
