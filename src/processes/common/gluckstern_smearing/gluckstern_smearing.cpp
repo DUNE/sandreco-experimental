@@ -4,7 +4,7 @@
 
 #include <edep_reader/edep_reader.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
-#include <truth_filler/g4_id_map.hpp>
+#include <spill_maps/spill_maps.hpp>
 
 #include <ufw/factory.hpp>
 
@@ -219,7 +219,7 @@ namespace sand::common {
 
     out_nd.sand = in_nd.sand;
 
-    auto const track_ids = g4_id_maps(edep.GetChildrenTrajectories());
+    auto const& track_ids = instance<sand::spill_maps>();
 
     int n_smeared{};
     int n_out_of_range{};
@@ -257,7 +257,7 @@ namespace sand::common {
       auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
       float const mass     = pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
 
-      track.dir  = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
+      track.dir = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
       // smeared_p and mass are in GeV, SRTrack::E is in MeV
       track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass)) * 1000.;
       track.Evis = track.E;
