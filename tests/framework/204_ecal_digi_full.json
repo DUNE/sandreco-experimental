@@ -13,7 +13,7 @@
     "sand::geoinfo": {}
     },
   "contexts": {
-    "keys": 2,
+    "keys": 1,
     "locals": {
       "sand::edep_reader": {
         "uri": "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"
@@ -35,12 +35,15 @@
         "int_time_window": 30.0,
         "dead_time_window": 0.0,
         "pe_threshold": 2.5,
-	      "pmt_signal_length": 35.0,
-	      "samples": 10000,
-	      "pmt_sigma": 600.0,
-	      "pmt_tau": 4.0,
+	"pmt_signal_length": 35.0,
+	"samples": 10000,
+	"pmt_sigma": 0.6,
+	"pmt_tau": 4.0,
         "time_offset": 5.0,
-        "saturation_level": 3200.0
+        "saturation_level": 3200.0,
+	"p0Sat": 5.59,
+	"p1Sat": 0.04,
+	"p2Sat": 1.22e-3
       },
       "reqs": {
         "pes": "ecal_photo_electrons"

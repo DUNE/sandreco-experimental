@@ -14,8 +14,6 @@ namespace sand::ecal {
 
    double single_pe_response(double, double, double);
 
-   void norm_waveform(reco::waveform, double);
-   
   /// @brief Integration time window for signal accumulation
     double m_int_time_window;
 
@@ -42,6 +40,9 @@ namespace sand::ecal {
 
  /// @brief Saturation of PMT
     double m_saturation_level;
+    double m_p0Sat;
+    double m_p1Sat;
+    double m_p2Sat;
 
     };
 } // namespace sand::ecal
