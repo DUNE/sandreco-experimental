@@ -3,11 +3,72 @@
 
 #include <caf/caf_wrapper.hpp>
 
-#include <duneanaobj/StandardRecord/SRInteraction.h>
-
 #include <ufw/factory.hpp>
 
 namespace sand::common {
+
+  namespace {
+
+    void fill_interactions(::caf::SRTruthBranch const& truth, ::caf::SRCommonRecoBranch& common, ::caf::SRSAND& sand) {
+      for (std::size_t ixn_idx{}; ixn_idx != truth.nu.size(); ++ixn_idx) {
+        auto const& true_ixn = truth.nu[ixn_idx];
+
+        auto& ixn        = common.ixn.sandreco.emplace_back();
+        ixn.id           = true_ixn.id;
+        ixn.vtx          = true_ixn.vtx;
+        ixn.dir          = reco_details::direction_from_true(true_ixn);
+        ixn.nuhyp        = reco_details::neutrino_hypothesis_from_true(true_ixn);
+        ixn.Enu          = reco_details::energy_from_true(true_ixn);
+        ixn.part         = reco_details::reco_particles_from_true(true_ixn, ixn_idx);
+        ixn.truth        = {ixn_idx};
+        ixn.truthOverlap = {1.f};
+      }
+      common.ixn.nsandreco = common.ixn.sandreco.size();
+
+      // Index-aligned with common.ixn.sandreco: SRRecoBaseID{ixn, kSANDAssn, i} resolves to sand.ixn[ixn].trkmatch[i]
+      sand.ixn.resize(truth.nu.size());
+      sand.nixn = sand.ixn.size();
+    }
+
+    /// The subdetector object a constituent names
+    ::caf::SRRecoObjBase& object_at(::caf::SRSAND& sand, ::caf::SRSANDObjID const& id) {
+      switch (id.type) {
+      case ::caf::SRRecoBaseID::kSANDTrackerTrack:
+        return sand.tracker.tracks.at(id.idx);
+      case ::caf::SRRecoBaseID::kSANDTrackerShower:
+        return sand.tracker.showers.at(id.idx);
+      default:
+        UFW_ERROR("Unsupported SAND collection {}", static_cast<int>(id.type));
+      }
+    }
+
+    ::caf::RecoObjType reco_obj_type(::caf::SRRecoBaseID::SRRecoBaseCollectionType type) {
+      return type == ::caf::SRRecoBaseID::kSANDTrackerShower ? ::caf::RecoObjType::kShower : ::caf::RecoObjType::kTrack;
+    }
+
+    void associate(reco_details::ParticleMatch const& match, ::caf::SRTruthBranch const& truth,
+                   ::caf::SRCommonRecoBranch& common, ::caf::SRSAND& sand) {
+      auto const& id    = match.particle;
+      auto const n_prim = static_cast<int>(truth.nu.at(id.ixn).prim.size());
+      int const ipart   = id.type == ::caf::TrueParticleID::kPrimary ? id.part : n_prim + id.part;
+      ::caf::SRRecoParticleID const part{id.ixn, ::caf::SRRecoParticleID::kSandreco, ipart};
+
+      auto& sand_ixn     = sand.ixn.at(id.ixn);
+      auto& assn         = sand_ixn.trkmatch.emplace_back();
+      assn.constituents  = match.constituents;
+      assn.part          = part;
+      sand_ixn.ntrkmatch = sand_ixn.trkmatch.size();
+
+      for (auto const& constituent : match.constituents) {
+        object_at(sand, constituent).part = part;
+      }
+
+      auto& particle   = common.ixn.sandreco.at(id.ixn).part.sandreco.at(ipart);
+      particle.recoobj = {id.ixn, ::caf::SRRecoBaseID::kSANDAssn, static_cast<int>(sand_ixn.trkmatch.size() - 1)};
+      particle.origRecoObjType = reco_obj_type(match.constituents.front().type);
+    }
+
+  } // namespace
 
   fast_matching::fast_matching()
     : process{
@@ -15,68 +76,16 @@ namespace sand::common {
           {{"out_common", "sand::caf::common_reco_branch_wrapper"}, {"out_nd", "sand::caf::nd_reco_branch_wrapper"}}} {}
 
   void fast_matching::run() {
-    auto const& truth_branch = get<sand::caf::truth_branch_wrapper>("in_truth");
-    auto const& tracker_reco = get<sand::caf::tracker_reco_wrapper>("in_tracker");
-    auto& common_reco_branch = set<sand::caf::common_reco_branch_wrapper>("out_common");
-    auto& nd_reco_branch     = set<sand::caf::nd_reco_branch_wrapper>("out_nd");
+    auto const& truth = get<sand::caf::truth_branch_wrapper>("in_truth");
+    auto& common      = set<sand::caf::common_reco_branch_wrapper>("out_common");
+    auto& sand        = set<sand::caf::nd_reco_branch_wrapper>("out_nd").sand;
 
-    // Reserve reco capacities to match truth
-    common_reco_branch.ixn.sandreco.reserve(truth_branch.nu.size());
-    nd_reco_branch.sand.ixn.reserve(truth_branch.nu.size());
+    fill_interactions(truth, common, sand);
+    sand.tracker = get<sand::caf::tracker_reco_wrapper>("in_tracker");
 
-    for (std::size_t ixn_idx{}, n_nu = truth_branch.nu.size(); ixn_idx != n_nu; ++ixn_idx) {
-      auto& true_ixn = truth_branch.nu[ixn_idx];
-
-      auto& common_reco_ixn        = common_reco_branch.ixn.sandreco.emplace_back();
-      common_reco_ixn.id           = true_ixn.id;
-      common_reco_ixn.vtx          = true_ixn.vtx;
-      common_reco_ixn.dir          = reco_details::direction_from_true(true_ixn);
-      common_reco_ixn.nuhyp        = reco_details::neutrino_hypothesis_from_true(true_ixn);
-      common_reco_ixn.Enu          = reco_details::energy_from_true(true_ixn);
-      common_reco_ixn.part         = reco_details::reco_particles_from_true(true_ixn, ixn_idx);
-      common_reco_ixn.truth        = {ixn_idx};
-      common_reco_ixn.truthOverlap = {1.f};
-      ++common_reco_branch.ixn.nsandreco;
-
-      // No cross-subdetector matching here: the SAND interaction is kept only to stay index-aligned with sandreco
-      nd_reco_branch.sand.ixn.emplace_back();
-      ++nd_reco_branch.sand.nixn;
-
-      UFW_ASSERT(common_reco_branch.ixn.sandreco.size() == common_reco_branch.ixn.nsandreco,
-                 "common.ixn.nsandreco ({}) doesn't match common.ixn.sandreco.size() ({})",
-                 common_reco_branch.ixn.nsandreco, common_reco_branch.ixn.sandreco.size());
-
-      UFW_ASSERT(nd_reco_branch.sand.ixn.size() == nd_reco_branch.sand.nixn,
-                 "nd.sand.nixn ({}) doesn't match nd.sand.ixn.size() ({})", nd_reco_branch.sand.nixn,
-                 nd_reco_branch.sand.ixn.size());
+    for (auto const& match : reco_details::match_by_truth(sand)) {
+      associate(match, truth, common, sand);
     }
-
-    // Link every tracker object to the reco particle built from the same true particle
-    auto& sand_tracker = nd_reco_branch.sand.tracker;
-    sand_tracker       = tracker_reco;
-
-    // Position of a true particle in SRRecoParticlesBranch::sandreco: primaries first, then secondaries
-    auto const part_idx = [&](::caf::TrueParticleID const& id) {
-      auto const n_prim = static_cast<int>(truth_branch.nu.at(id.ixn).prim.size());
-      return id.type == ::caf::TrueParticleID::kPrimary ? id.part : n_prim + id.part;
-    };
-
-    auto const link = [&](auto& objects, ::caf::SRRecoBaseID::SRRecoBaseCollectionType collection,
-                          ::caf::RecoObjType type) {
-      for (std::size_t k{}; k != objects.size(); ++k) {
-        auto& object    = objects[k];
-        auto const& id  = object.truth.at(0);
-        int const ipart = part_idx(id);
-
-        auto& particle           = common_reco_branch.ixn.sandreco.at(id.ixn).part.sandreco.at(ipart);
-        particle.recoobj         = {id.ixn, collection, static_cast<int>(k)};
-        particle.origRecoObjType = type;
-        object.part              = {id.ixn, ::caf::SRRecoParticleID::kSandreco, ipart};
-      }
-    };
-
-    link(sand_tracker.tracks, ::caf::SRRecoBaseID::kSANDTrackerTrack, ::caf::RecoObjType::kTrack);
-    link(sand_tracker.showers, ::caf::SRRecoBaseID::kSANDTrackerShower, ::caf::RecoObjType::kShower);
   }
 
 } // namespace sand::common

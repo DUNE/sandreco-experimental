@@ -6,9 +6,9 @@
 #include <duneanaobj/StandardRecord/SRNeutrinoHypothesisBranch.h>
 #include <duneanaobj/StandardRecord/SRRecoParticle.h>
 #include <duneanaobj/StandardRecord/SRRecoParticlesBranch.h>
+#include <duneanaobj/StandardRecord/SRSAND.h>
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
 #include <duneanaobj/StandardRecord/SRTrueParticle.h>
-
 #include <duneanaobj/StandardRecord/SRVector3D.h>
 
 #include <algorithm>
@@ -47,6 +47,31 @@ namespace sand::common::reco_details {
         return -1; // no parent, or prefsi (not modeled here)
       }
     }
+
+    /// A SAND subdetector object, tagged with the true particle it comes from
+    struct TaggedObject {
+      ::caf::TrueParticleID particle;
+      ::caf::SRSANDObjID object;
+    };
+
+    /// Appends every object of `collection`, tagged with its truth[0]
+    template <typename Collection>
+    void tag_objects(Collection const& collection, ::caf::SRRecoBaseID::SRRecoBaseCollectionType type,
+                     std::vector<TaggedObject>& tagged) {
+      for (std::size_t k{}; k != collection.size(); ++k) {
+        tagged.push_back({collection[k].truth.at(0), {type, static_cast<int>(k)}});
+      }
+    }
+
+    /// Interaction first, then primaries before secondaries, then position in the collection
+    bool particle_less(::caf::TrueParticleID const& a, ::caf::TrueParticleID const& b) {
+      return std::tie(a.ixn, a.type, a.part) < std::tie(b.ixn, b.type, b.part);
+    }
+
+    bool same_particle(::caf::TrueParticleID const& a, ::caf::TrueParticleID const& b) {
+      return a.ixn == b.ixn && a.type == b.type && a.part == b.part;
+    }
+
   } // namespace
 
   ::caf::SRNeutrinoHypothesisBranch neutrino_hypothesis_from_true(::caf::SRTrueInteraction const& true_ixn) {
@@ -117,6 +142,27 @@ namespace sand::common::reco_details {
     enu.part_energy_sum = true_ixn.E;
 
     return enu;
+  }
+
+  std::vector<ParticleMatch> match_by_truth(::caf::SRSAND const& sand) {
+    // Tag every subdetector object with its true particle
+    std::vector<TaggedObject> tagged;
+    tag_objects(sand.tracker.tracks, ::caf::SRRecoBaseID::kSANDTrackerTrack, tagged);
+    tag_objects(sand.tracker.showers, ::caf::SRRecoBaseID::kSANDTrackerShower, tagged);
+
+    // Sort by particle, so that the objects of the same particle become adjacent
+    std::stable_sort(tagged.begin(), tagged.end(),
+                     [](auto const& a, auto const& b) { return particle_less(a.particle, b.particle); });
+
+    // Every run of adjacent objects with the same particle is one match
+    std::vector<ParticleMatch> matches;
+    for (auto const& [particle, object] : tagged) {
+      if (matches.empty() || !same_particle(matches.back().particle, particle)) {
+        matches.push_back({particle, {}});
+      }
+      matches.back().constituents.push_back(object);
+    }
+    return matches;
   }
 
   ::caf::SRRecoParticle reco_particle_from_true(::caf::SRTrueParticle const& true_part,

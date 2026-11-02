@@ -10,6 +10,7 @@
 #include <duneanaobj/StandardRecord/SRNeutrinoEnergyBranch.h>
 #include <duneanaobj/StandardRecord/SRNeutrinoHypothesisBranch.h>
 #include <duneanaobj/StandardRecord/SRRecoParticle.h>
+#include <duneanaobj/StandardRecord/SRSAND.h>
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
 #include <duneanaobj/StandardRecord/SRTrueParticle.h>
 #include <duneanaobj/StandardRecord/SRVector3D.h>
@@ -18,12 +19,34 @@ namespace {
 
   using sand::common::reco_details::direction_from_true;
   using sand::common::reco_details::energy_from_true;
+  using sand::common::reco_details::match_by_truth;
   using sand::common::reco_details::neutrino_hypothesis_from_true;
   using sand::common::reco_details::reco_particle_from_true;
 
   ::caf::TrueParticleID make_id(int part = 0) { return {0, ::caf::TrueParticleID::kPrimary, part}; }
 
   double constexpr tol_percent = 1e-4;
+
+  ::caf::TrueParticleID primary(int ixn, int part) { return {ixn, ::caf::TrueParticleID::kPrimary, part}; }
+  ::caf::TrueParticleID secondary(int ixn, int part) { return {ixn, ::caf::TrueParticleID::kSecondary, part}; }
+
+  void add_track(::caf::SRSAND& sand, ::caf::TrueParticleID const& id) {
+    sand.tracker.tracks.emplace_back().truth = {id};
+    sand.tracker.ntracks                     = sand.tracker.tracks.size();
+  }
+
+  void add_shower(::caf::SRSAND& sand, ::caf::TrueParticleID const& id) {
+    sand.tracker.showers.emplace_back().truth = {id};
+    sand.tracker.nshowers                     = sand.tracker.showers.size();
+  }
+
+  bool same_particle(::caf::TrueParticleID const& a, ::caf::TrueParticleID const& b) {
+    return a.ixn == b.ixn && a.type == b.type && a.part == b.part;
+  }
+
+  bool same_object(::caf::SRSANDObjID const& a, ::caf::SRRecoBaseID::SRRecoBaseCollectionType type, int idx) {
+    return a.type == type && a.idx == idx;
+  }
 
 } // namespace
 
@@ -156,6 +179,63 @@ BOOST_AUTO_TEST_CASE(reco_particle_energy_and_momentum_stay_in_gev) {
   BOOST_CHECK_EQUAL(rp.end.x, 4.f);
   BOOST_REQUIRE_EQUAL(rp.truth.size(), 1u);
   BOOST_CHECK_EQUAL(rp.truthOverlap.at(0), 1.f);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(matching)
+
+BOOST_AUTO_TEST_CASE(no_objects_no_matches) {
+  ::caf::SRSAND const sand;
+
+  BOOST_CHECK(match_by_truth(sand).empty());
+}
+
+BOOST_AUTO_TEST_CASE(objects_of_the_same_particle_are_one_match) {
+  ::caf::SRSAND sand;
+  add_shower(sand, primary(0, 2));
+  add_track(sand, primary(0, 2));
+
+  auto const matches = match_by_truth(sand);
+
+  BOOST_REQUIRE_EQUAL(matches.size(), 1u);
+  BOOST_CHECK(same_particle(matches[0].particle, primary(0, 2)));
+  // within a particle, tracks come before showers: the order the collections are scanned in
+  BOOST_REQUIRE_EQUAL(matches[0].constituents.size(), 2u);
+  BOOST_CHECK(same_object(matches[0].constituents[0], ::caf::SRRecoBaseID::kSANDTrackerTrack, 0));
+  BOOST_CHECK(same_object(matches[0].constituents[1], ::caf::SRRecoBaseID::kSANDTrackerShower, 0));
+}
+
+BOOST_AUTO_TEST_CASE(same_index_in_another_collection_is_another_particle) {
+  ::caf::SRSAND sand;
+  add_track(sand, primary(0, 0));
+  add_track(sand, secondary(0, 0)); // same part, other collection
+  add_track(sand, primary(1, 0));   // same part, other interaction
+
+  BOOST_CHECK_EQUAL(match_by_truth(sand).size(), 3u);
+}
+
+BOOST_AUTO_TEST_CASE(matches_are_ordered_by_particle) {
+  ::caf::SRSAND sand;
+  add_track(sand, primary(1, 0));   // track 0
+  add_track(sand, secondary(0, 0)); // track 1
+  add_shower(sand, primary(0, 1));  // shower 0
+  add_track(sand, primary(0, 0));   // track 2
+
+  auto const matches = match_by_truth(sand);
+
+  // interaction first, then primaries before secondaries, then position
+  BOOST_REQUIRE_EQUAL(matches.size(), 4u);
+  BOOST_CHECK(same_particle(matches[0].particle, primary(0, 0)));
+  BOOST_CHECK(same_particle(matches[1].particle, primary(0, 1)));
+  BOOST_CHECK(same_particle(matches[2].particle, secondary(0, 0)));
+  BOOST_CHECK(same_particle(matches[3].particle, primary(1, 0)));
+
+  // every constituent still names its own object
+  BOOST_CHECK(same_object(matches[0].constituents.at(0), ::caf::SRRecoBaseID::kSANDTrackerTrack, 2));
+  BOOST_CHECK(same_object(matches[1].constituents.at(0), ::caf::SRRecoBaseID::kSANDTrackerShower, 0));
+  BOOST_CHECK(same_object(matches[2].constituents.at(0), ::caf::SRRecoBaseID::kSANDTrackerTrack, 1));
+  BOOST_CHECK(same_object(matches[3].constituents.at(0), ::caf::SRRecoBaseID::kSANDTrackerTrack, 0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
