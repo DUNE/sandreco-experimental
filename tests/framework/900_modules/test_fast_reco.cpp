@@ -18,8 +18,8 @@
 namespace sand::test {
 
   /// Verifies that sand::common::fast_matching's output is internally consistent and
-  /// round-trip navigable: every SRRecoParticle <-> SRTrack/SRShower link (recoobj/part)
-  /// resolves back to the node it claims to, every truth match resolves to a real
+  /// round-trip navigable: every SRRecoParticle -> SRSANDAssn -> SRTrack/SRShower chain (recoobj, constituents)
+  /// resolves back to the particle it starts from (assn.part, object part), every truth match resolves to a real
   /// SRTrueParticle with the same pdg, and every parent/daughters link round-trips.
   ///
   /// It also re-derives, straight from sand::edep_reader, which particles were supposed to
@@ -287,17 +287,33 @@ namespace sand::test {
                    "nu[{}].part[{}]: origRecoObjType ({}) and recoobj disagree on whether there is a reco object",
                    ixn_idx, p, static_cast<int>(particle.origRecoObjType));
 
-        // recoobj <-> track/shower round trip
+        // recoobj -> SRSANDAssn round trip: the assn points back to this particle
+        ::caf::SRSANDObjID constituent{};
+        if (has_obj) {
+          UFW_ASSERT(particle.recoobj.type == ::caf::SRRecoBaseID::kSANDAssn && particle.recoobj.ixn == ixn_idx_i,
+                     "nu[{}].part[{}]: recoobj isn't an SRSANDAssn of this interaction", ixn_idx, p);
+          auto const& trkmatch = nd.sand.ixn[ixn_idx].trkmatch;
+          UFW_ASSERT(particle.recoobj.irecoobj >= 0
+                         && static_cast<std::size_t>(particle.recoobj.irecoobj) < trkmatch.size(),
+                     "nu[{}].part[{}]: recoobj.irecoobj out of range", ixn_idx, p);
+          auto const& assn = trkmatch[static_cast<std::size_t>(particle.recoobj.irecoobj)];
+          UFW_ASSERT(assn.part.type == ::caf::SRRecoParticleID::kSandreco && assn.part.ixn == ixn_idx_i
+                         && assn.part.ipart == p_i,
+                     "nu[{}].part[{}]: assn.part doesn't point back to this particle", ixn_idx, p);
+          // only the tracker is reconstructed: at most one object per particle
+          UFW_ASSERT(assn.constituents.size() == 1, "nu[{}].part[{}]: assn has {} constituents, expected 1", ixn_idx,
+                     p, assn.constituents.size());
+          constituent = assn.constituents.front();
+        }
+
+        // constituent <-> track/shower round trip
         if (particle.origRecoObjType == ::caf::RecoObjType::kTrack) {
           UFW_ASSERT(trackish, "nu[{}].part[{}]: pdg {} isn't track-like but got a track", ixn_idx, p, particle.pdg);
-          UFW_ASSERT(particle.recoobj.type == ::caf::SRRecoBaseID::kSANDTrackerTrack,
-                     "nu[{}].part[{}]: recoobj.type isn't kSANDTrackerTrack", ixn_idx, p);
-          UFW_ASSERT(particle.recoobj.ixn == ixn_idx_i, "nu[{}].part[{}]: recoobj.ixn doesn't match this interaction",
-                     ixn_idx, p);
-          UFW_ASSERT(particle.recoobj.irecoobj >= 0
-                         && static_cast<std::size_t>(particle.recoobj.irecoobj) < tracker.tracks.size(),
-                     "nu[{}].part[{}]: recoobj.irecoobj out of range", ixn_idx, p);
-          auto const& track = tracker.tracks[static_cast<std::size_t>(particle.recoobj.irecoobj)];
+          UFW_ASSERT(constituent.type == ::caf::SRRecoBaseID::kSANDTrackerTrack,
+                     "nu[{}].part[{}]: constituent type isn't kSANDTrackerTrack", ixn_idx, p);
+          UFW_ASSERT(constituent.idx >= 0 && static_cast<std::size_t>(constituent.idx) < tracker.tracks.size(),
+                     "nu[{}].part[{}]: constituent idx out of range", ixn_idx, p);
+          auto const& track = tracker.tracks[static_cast<std::size_t>(constituent.idx)];
           UFW_ASSERT(track.part.type == ::caf::SRRecoParticleID::kSandreco && track.part.ixn == ixn_idx_i
                          && track.part.ipart == p_i,
                      "nu[{}].part[{}]: matched track's part doesn't point back to this particle", ixn_idx, p);
@@ -357,14 +373,11 @@ namespace sand::test {
           ++n_with_track;
         } else if (particle.origRecoObjType == ::caf::RecoObjType::kShower) {
           UFW_ASSERT(showerish, "nu[{}].part[{}]: pdg {} isn't shower-like but got a shower", ixn_idx, p, particle.pdg);
-          UFW_ASSERT(particle.recoobj.type == ::caf::SRRecoBaseID::kSANDTrackerShower,
-                     "nu[{}].part[{}]: recoobj.type isn't kSANDTrackerShower", ixn_idx, p);
-          UFW_ASSERT(particle.recoobj.ixn == ixn_idx_i, "nu[{}].part[{}]: recoobj.ixn doesn't match this interaction",
-                     ixn_idx, p);
-          UFW_ASSERT(particle.recoobj.irecoobj >= 0
-                         && static_cast<std::size_t>(particle.recoobj.irecoobj) < tracker.showers.size(),
-                     "nu[{}].part[{}]: recoobj.irecoobj out of range", ixn_idx, p);
-          auto const& shower = tracker.showers[static_cast<std::size_t>(particle.recoobj.irecoobj)];
+          UFW_ASSERT(constituent.type == ::caf::SRRecoBaseID::kSANDTrackerShower,
+                     "nu[{}].part[{}]: constituent type isn't kSANDTrackerShower", ixn_idx, p);
+          UFW_ASSERT(constituent.idx >= 0 && static_cast<std::size_t>(constituent.idx) < tracker.showers.size(),
+                     "nu[{}].part[{}]: constituent idx out of range", ixn_idx, p);
+          auto const& shower = tracker.showers[static_cast<std::size_t>(constituent.idx)];
           UFW_ASSERT(shower.part.type == ::caf::SRRecoParticleID::kSandreco && shower.part.ixn == ixn_idx_i
                          && shower.part.ipart == p_i,
                      "nu[{}].part[{}]: matched shower's part doesn't point back to this particle", ixn_idx, p);
@@ -412,6 +425,18 @@ namespace sand::test {
                n_with_track, tracker.tracks.size());
     UFW_ASSERT(n_with_shower == tracker.showers.size(), "{} particle(s) point to a shower but tracker.showers holds {}",
                n_with_shower, tracker.showers.size());
+
+    // one SRSANDAssn per tracker object: none left without a particle
+    std::size_t n_assn{};
+    for (std::size_t ixn_idx{}; ixn_idx != nd.sand.ixn.size(); ++ixn_idx) {
+      auto const& sand_ixn = nd.sand.ixn[ixn_idx];
+      UFW_ASSERT(sand_ixn.trkmatch.size() == sand_ixn.ntrkmatch,
+                 "nd.sand.ixn[{}]: ntrkmatch ({}) doesn't match trkmatch.size() ({})", ixn_idx, sand_ixn.ntrkmatch,
+                 sand_ixn.trkmatch.size());
+      n_assn += sand_ixn.trkmatch.size();
+    }
+    UFW_ASSERT(n_assn == tracker.tracks.size() + tracker.showers.size(),
+               "{} SRSANDAssn but {} tracker objects", n_assn, tracker.tracks.size() + tracker.showers.size());
 
     UFW_INFO("fast_reco_test: verified {} interaction(s)", common.ixn.sandreco.size());
   }
