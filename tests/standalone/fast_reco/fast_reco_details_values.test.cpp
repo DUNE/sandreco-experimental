@@ -1,7 +1,9 @@
 #define BOOST_TEST_MODULE fast_reco_details_values
 #include <boost/test/included/unit_test.hpp>
 
-#include <processes/common/fast_matching/fast_matching_details.hpp>
+#include <processes/common/fast_matching/fast_kinematics.hpp>
+#include <processes/common/fast_matching/fast_pid.hpp>
+#include <processes/common/fast_matching/truth_matching.hpp>
 
 #include <test_helpers.hpp>
 
@@ -17,11 +19,11 @@
 
 namespace {
 
-  using sand::common::reco_details::direction_from_true;
-  using sand::common::reco_details::energy_from_true;
-  using sand::common::reco_details::match_by_truth;
-  using sand::common::reco_details::neutrino_hypothesis_from_true;
-  using sand::common::reco_details::reco_particle_from_true;
+  using sand::common::direction_from_true;
+  using sand::common::energy_from_true;
+  using sand::common::match_by_truth;
+  using sand::common::neutrino_hypothesis_from_true;
+  using sand::common::reco_particle_from_true;
 
   ::caf::TrueParticleID make_id(int part = 0) { return {0, ::caf::TrueParticleID::kPrimary, part}; }
 
@@ -199,7 +201,7 @@ BOOST_AUTO_TEST_CASE(objects_of_the_same_particle_are_one_match) {
   auto const matches = match_by_truth(sand);
 
   BOOST_REQUIRE_EQUAL(matches.size(), 1u);
-  BOOST_CHECK(same_particle(matches[0].particle, primary(0, 2)));
+  BOOST_CHECK(same_particle(matches[0].trk.truth.at(0), primary(0, 2)));
   // within a particle, tracks come before showers: the order the collections are scanned in
   BOOST_REQUIRE_EQUAL(matches[0].constituents.size(), 2u);
   BOOST_CHECK(same_object(matches[0].constituents[0], ::caf::SRRecoBaseID::kSANDTrackerTrack, 0));
@@ -226,10 +228,10 @@ BOOST_AUTO_TEST_CASE(matches_are_ordered_by_particle) {
 
   // interaction first, then primaries before secondaries, then position
   BOOST_REQUIRE_EQUAL(matches.size(), 4u);
-  BOOST_CHECK(same_particle(matches[0].particle, primary(0, 0)));
-  BOOST_CHECK(same_particle(matches[1].particle, primary(0, 1)));
-  BOOST_CHECK(same_particle(matches[2].particle, secondary(0, 0)));
-  BOOST_CHECK(same_particle(matches[3].particle, primary(1, 0)));
+  BOOST_CHECK(same_particle(matches[0].trk.truth.at(0), primary(0, 0)));
+  BOOST_CHECK(same_particle(matches[1].trk.truth.at(0), primary(0, 1)));
+  BOOST_CHECK(same_particle(matches[2].trk.truth.at(0), secondary(0, 0)));
+  BOOST_CHECK(same_particle(matches[3].trk.truth.at(0), primary(1, 0)));
 
   // every constituent still names its own object
   BOOST_CHECK(same_object(matches[0].constituents.at(0), ::caf::SRRecoBaseID::kSANDTrackerTrack, 2));
