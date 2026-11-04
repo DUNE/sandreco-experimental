@@ -18,6 +18,8 @@ namespace {
     double y() const { return m_y; }
 
    protected:
+    friend class shared;
+
     test_obj(const test_obj&) = default;
 
    private:

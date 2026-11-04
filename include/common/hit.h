@@ -29,9 +29,6 @@ namespace sand::reco {
     /// @brief Default constructor produces an invalid hit, required by ROOT, do not use
     hit() = default;
 
-    hit(const pos_3d& c, const dir_3d& d, const time& t, double w)
-      : m_centre(c), m_primary_axis(d), m_time(t), m_width(w) {}
-
     dir_3d axis() const { return m_primary_axis; }
 
     pos_3d centre() const { return m_centre; }
@@ -40,9 +37,19 @@ namespace sand::reco {
 
     double width() const { return m_width; }
 
+    template <typename... Args>
+    static std::unique_ptr<hit> create(Args&&... args) {
+      return shared::create<hit>(std::forward<Args>(args)...);
+    }
+
    protected:
     /// Used by shared::split and derived classes to make a copy, do not use
+    friend class shared;
+
     hit(const hit&) = default;
+
+    hit(const pos_3d& c, const dir_3d& d, const time& t, double w)
+      : m_centre(c), m_primary_axis(d), m_time(t), m_width(w) {}
 
    private:
     shared* copy_self() const override { return new hit(*this); }

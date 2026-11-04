@@ -49,7 +49,7 @@ namespace sand::reco {
     }
 
     /**
-     * Split an object into two, consuming \p x (pass by rvalue).
+     * Split an object into two, taking ownership of and consuming \p x (pass by rvalue).
      * Returns two new objects with the data of \p x, with quotas of \p x scaled by \p frac and (1 - \p frac)
      * respectively.
      * \p frac must satisfy 0 < frac < 1.
@@ -90,7 +90,7 @@ namespace sand::reco {
      */
     template <typename Child>
     static std::unique_ptr<Child> clone_ptr(const std::unique_ptr<Child>& x) {
-      return std::unique_ptr<Child>(static_cast<Child*>(do_copy(x.get())));
+      return std::unique_ptr<Child>(static_cast<Child*>(x->copy_self()));
     }
 
    private:
@@ -103,13 +103,6 @@ namespace sand::reco {
      * Must be overridden by derived classes.
      */
     virtual shared* copy_self() const = 0;
-
-    /**
-     * Call copy_self on a shared object.
-     * This non-template indirection is deliberate: the call to copy_self made here is checked in the
-     * context of shared, which is required for clone_ptr (a template) to be callable from outside.
-     */
-    static shared* do_copy(const shared* x) { return x->copy_self(); }
 
     static void set_quota(shared* p, double q) { p->m_quota = q; }
 

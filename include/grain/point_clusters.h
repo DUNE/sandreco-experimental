@@ -11,13 +11,22 @@ namespace sand::grain {
     class cluster : public reco::hit {
      public:
       /// @brief Default constuctor produces an invalid cluster, required by ROOT, do not use
-      cluster() : reco::hit(pos_3d(0.0, 0.0, 0.0), dir_3d(0.0, 0.0, 0.0), reco::timerange(0.0, 0.0), 0.0) {}
+      cluster() = default;
+
+      template <typename... Args>
+      static std::unique_ptr<cluster> create(Args&&... args) {
+        return shared::create<cluster>(std::forward<Args>(args)...);
+      }
+
+      std::vector<point_cloud::point> points() const { return m_clusterized_points; }
+
+    protected:
+      friend class reco::shared;
+
       cluster(const pos_3d& c, const dir_3d& d, const reco::timerange& t, double w,
               const std::vector<point_cloud::point>& points)
         : reco::hit(c, d, t, w), m_clusterized_points(points) {}
-      std::vector<point_cloud::point> points() const { return m_clusterized_points; }
 
-     protected:
       /// Used by reco::shared::split and derived classes to make a copy, do not use
       cluster(const cluster&) = default;
 

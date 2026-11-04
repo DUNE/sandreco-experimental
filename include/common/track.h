@@ -35,7 +35,13 @@ namespace sand::reco {
       timerange dT;    //< time span of the segment [ns]
     };
 
+    /// @brief Default constructor produces an invalid track, required by ROOT, do not use
     track() = default;
+
+    template <typename... Args>
+    static std::unique_ptr<track> create(Args&&... args) {
+      return shared::create<track>(std::forward<Args>(args)...);
+    }
 
     vec_4d begin() const { return m_begin; }
 
@@ -64,6 +70,7 @@ namespace sand::reco {
     }
 
    protected:
+    friend class shared;
     /// Deep copy of a track: hits are re-allocated with their quotas preserved, used by shared::split
     track(const track& other) : shared(other), m_segments(other.m_segments), m_begin(other.m_begin), m_end(other.m_end) {
       m_hits.reserve(other.m_hits.size());
