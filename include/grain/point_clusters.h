@@ -17,10 +17,16 @@ namespace sand::grain {
         : reco::hit(c, d, t, w), m_clusterized_points(points) {}
       std::vector<point_cloud::point> points() const { return m_clusterized_points; }
 
+     protected:
+      /// Used by reco::shared::split and derived classes to make a copy, do not use
+      cluster(const cluster&) = default;
+
      private:
+      reco::shared* copy_self() const override { return new cluster(*this); }
+
       std::vector<point_cloud::point> m_clusterized_points;
     };
-    using point_clusters_list = std::vector<std::vector<cluster>>;
+    using point_clusters_list = std::vector<std::vector<std::unique_ptr<cluster>>>;
     point_clusters_list clusters;
   };
 

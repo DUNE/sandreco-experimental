@@ -124,21 +124,21 @@ namespace sand::grain {
         continue;
       }
       UFW_DEBUG("Processing {} clusters", ev_clusters_in.size());
-      std::vector<point_clusters::cluster> ev_clusters_out;
+      std::vector<std::unique_ptr<point_clusters::cluster>> ev_clusters_out;
       for (const auto& clust : ev_clusters_in) {
-        if (clust.points().size() == 0) {
+        if (clust->points().size() == 0) {
           UFW_INFO("Skipping cluster with 0 points");
           continue;
         }
 
-        auto [fitted_line_point, fitted_line_dir] = weighted_linear_fit(clust);
+        auto [fitted_line_point, fitted_line_dir] = weighted_linear_fit(*clust);
         UFW_DEBUG("Fitted track: point {} direction {}", fitted_line_point, fitted_line_dir);
 
         // Using placeholder time
-        ev_clusters_out.emplace_back(fitted_line_point, fitted_line_dir, reco::timerange(0.0, 0.0), 0.0,
-                                     clust.points());
+        ev_clusters_out.push_back(reco::shared::create<point_clusters::cluster>(
+            fitted_line_point, fitted_line_dir, reco::timerange(0.0, 0.0), 0.0, clust->points()));
       }
-      point_clusters_out.push_back(ev_clusters_out);
+      point_clusters_out.push_back(std::move(ev_clusters_out));
     }
   }
 

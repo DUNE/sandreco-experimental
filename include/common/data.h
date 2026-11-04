@@ -4,6 +4,7 @@
 
 #include <ufw/data.hpp>
 
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -16,6 +17,13 @@ namespace sand {
     : public managed_data_base
     , public std::vector<T> {
     using type = T;
+  };
+
+  template <typename T>
+  struct spill_data_collection_shared
+    : public managed_data_base
+    , public std::vector<std::unique_ptr<T>> {
+    using type = std::unique_ptr<T>;
   };
 
 } // namespace sand
@@ -93,5 +101,12 @@ UFW_DECLARE_UNMANAGED_DATA(sand::truth_index)
   UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \
   namespace NS {                                                                                                       \
     using NAME = sand::spill_data_collection<NS::T>;                                                                   \
+  }                                                                                                                    \
+  UFW_DECLARE_MANAGED_DATA(NS::NAME)
+
+#define SAND_DATA_SHARED_COLLECTION(NS, T, NAME)                                                                       \
+  UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \
+  namespace NS {                                                                                                       \
+    using NAME = sand::spill_data_collection_shared<NS::T>;                                                            \
   }                                                                                                                    \
   UFW_DECLARE_MANAGED_DATA(NS::NAME)

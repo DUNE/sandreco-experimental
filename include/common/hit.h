@@ -1,15 +1,22 @@
 #pragma once
 
 #include <common/sand.h>
+#include <common/shared.h>
 #include <common/timerange.h>
+
+#include <cmath>
+#include <memory>
 
 namespace sand::reco {
 
   /**
    * The hit class represents a generic reconstructed hit in the detector.
    * Specialized classes for each detector must inherit from hit.
+   *
+   * A hit is a shared object: it is created via reco::shared::create and may only be duplicated
+   * via reco::shared::split.
    */
-  class hit {
+  class hit : public shared {
    public:
     using time = timerange;
 
@@ -19,7 +26,9 @@ namespace sand::reco {
       double time_distance;
     };
 
-   public:
+    /// @brief Default constructor produces an invalid hit, required by ROOT, do not use
+    hit() = default;
+
     hit(const pos_3d& c, const dir_3d& d, const time& t, double w)
       : m_centre(c), m_primary_axis(d), m_time(t), m_width(w) {}
 
@@ -31,7 +40,13 @@ namespace sand::reco {
 
     double width() const { return m_width; }
 
+   protected:
+    /// Used by shared::split and derived classes to make a copy, do not use
+    hit(const hit&) = default;
+
    private:
+    shared* copy_self() const override { return new hit(*this); }
+
     pos_3d m_centre;
     dir_3d m_primary_axis;
     time m_time;
@@ -65,3 +80,5 @@ namespace sand::reco {
   };
 
 } // namespace sand::reco
+
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::hit)

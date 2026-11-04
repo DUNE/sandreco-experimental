@@ -164,7 +164,7 @@ namespace sand::grain {
       }
       std::vector<cl_float4> cl_points = point_cloud_to_float4(ev_points);
       UFW_DEBUG("Processing {} points", cl_points.size());
-      std::vector<point_clusters::cluster> ev_clusters_out;
+      std::vector<std::unique_ptr<point_clusters::cluster>> ev_clusters_out;
       uint n_found_tracks{0};
       while (true) {
         cl::buffer buf_points;
@@ -248,8 +248,8 @@ namespace sand::grain {
         const pos_3d out_line_point{line_point.s[0], line_point.s[1], line_point.s[2]};
         const dir_3d out_line_dir{max_versor.s[0], max_versor.s[1], max_versor.s[2]};
         // Using placeholder time
-        ev_clusters_out.emplace_back(out_line_point, out_line_dir, reco::timerange(0.0, 0.0), 0.0,
-                                     point_float4_to_cloud(clustered_points));
+        ev_clusters_out.push_back(reco::shared::create<point_clusters::cluster>(
+            out_line_point, out_line_dir, reco::timerange(0.0, 0.0), 0.0, point_float4_to_cloud(clustered_points)));
         n_found_tracks++;
 
         UFW_DEBUG("Added track: point {} direction {} n_points {}", out_line_point, out_line_dir,
@@ -260,7 +260,7 @@ namespace sand::grain {
         }
       }
       UFW_INFO("Found {} tracks", n_found_tracks);
-      point_clusters_out.push_back(ev_clusters_out);
+      point_clusters_out.push_back(std::move(ev_clusters_out));
     }
   }
 

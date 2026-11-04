@@ -1,11 +1,13 @@
 #pragma once
 
+#include <common/data.h>
 #include <common/hit.h>
 #include <common/sand.h>
 #include <common/timerange.h>
-#include <cmath>
+
+#include <memory>
 #include <numeric>
-#include <type_traits>
+#include <utility>
 
 namespace sand::reco {
 
@@ -19,8 +21,11 @@ namespace sand::reco {
    * \p sand::reco::track::segments.
    * The track is composed of an ordered sequence of segments, each implicitly beginning at the end of the previous.
    * The first segment starts from begin()
+   *
+   * A track is a shared object: it is created via reco::shared::create and may only be duplicated
+   * via reco::shared::split, which deep-copies its hits while preserving their quotas.
    */
-  class track {
+  class track : public shared {
    public:
     struct segment {
       dir_3d ds;       //< segment [mm]
@@ -36,12 +41,13 @@ namespace sand::reco {
 
     vec_4d end() const { return m_end; }
 
-    template <typename Fn, typename T = std::invoke_result_t<Fn, const hit&>>
+    template <typename T, typename Fn>
     T accumulate_on_hits(Fn&& f, const T& init = T()) const {
-      return std::accumulate(m_hits.begin(), m_hits.end(), init, std::forward<Fn>(f));
+      return std::accumulate(m_hits.begin(), m_hits.end(), init,
+                             [&f](const T& a, const std::unique_ptr<hit>& h) { return f(a, *h); });
     }
 
-    template <typename Fn, typename T = std::invoke_result_t<Fn, const segment&>>
+    template <typename T, typename Fn>
     T accumulate_on_segments(Fn&& f, const T& init = T()) const {
       return std::accumulate(m_segments.begin(), m_segments.end(), init, std::forward<Fn>(f));
     }
@@ -50,18 +56,30 @@ namespace sand::reco {
       return accumulate_on_segments([](double a, segment b) { return a + std::sqrt(b.ds.Mag2()); }, 0.0);
     }
 
-    void push(const hit& h) { m_hits.push_back(h); }
+    void push(std::unique_ptr<hit>&& h) { m_hits.push_back(std::move(h)); }
 
     void push(const segment& s) {
       m_segments.push_back(s);
       m_end += sand::vec_4d(s.ds.x(), s.ds.y(), s.ds.z(), s.dT.span());
     }
 
-   private:
-    std::vector<hit> m_hits;
+   protected:
+    /// Deep copy of a track: hits are re-allocated with their quotas preserved, used by shared::split
+    track(const track& other) : shared(other), m_segments(other.m_segments), m_begin(other.m_begin), m_end(other.m_end) {
+      m_hits.reserve(other.m_hits.size());
+      for (const auto& h : other.m_hits) {
+        m_hits.push_back(clone_ptr(h));
+      }
+    }
+
+    shared* copy_self() const override { return new track(*this); }
+
+    std::vector<std::unique_ptr<hit>> m_hits;
     std::vector<segment> m_segments;
     vec_4d m_begin;
     vec_4d m_end;
   };
 
 } // namespace sand::reco
+
+SAND_DATA_SHARED_COLLECTION(sand::reco, track, tracks)

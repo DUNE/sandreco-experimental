@@ -54,6 +54,45 @@ BOOST_AUTO_TEST_CASE(empty_track) {
   BOOST_CHECK_CLOSE(t.length(), 0.0, 1.e-9);
 }
 
+BOOST_AUTO_TEST_CASE(quota_splitting) {
+  // a track is created with quota 1
+  auto t1 = sand::reco::shared::create<track>();
+  BOOST_CHECK_EQUAL(t1->quota(), 1.0);
+  BOOST_CHECK(t1->is_unique());
+
+  // a hit is split 0.25/0.75 across two tracks
+  auto hit = sand::reco::shared::create<sand::reco::hit>(sand::pos_3d(0.0, 0.0, 5.0), sand::dir_3d(0.0, 0.0, 1.0),
+                                                         sand::reco::timerange(0.0, 1.0), 2.0);
+  auto [h_a, h_b] = sand::reco::shared::split(std::move(hit), 0.25);
+  BOOST_CHECK_EQUAL(h_a->quota(), 0.25);
+  BOOST_CHECK_EQUAL(h_b->quota(), 0.75);
+
+  auto t2 = sand::reco::shared::create<track>();
+  t1->push(std::move(h_a));
+  t2->push(std::move(h_b));
+
+  // the accumulate_on_hits callback now sees a const hit&
+  const double width =
+      t1->accumulate_on_hits<double>([](double a, const sand::reco::hit& h) { return a + h.width(); }, 0.0);
+  BOOST_CHECK_CLOSE(width, 2.0, 1.e-9);
+
+  // give t1 a segment, to check it survives a split
+  t1->push(track::segment{sand::dir_3d(0.0, 0.0, 10.0), 0.0, sand::dir_3d(0.0, 0.0, 0.0), 1.0, {0.0, 0.0, 1.0}});
+
+  // splitting a track deep-copies its hits, preserving their quotas
+  auto [t3, t4] = sand::reco::shared::split(std::move(t1), 0.25);
+  BOOST_CHECK_EQUAL(t3->quota(), 0.25);
+  BOOST_CHECK_EQUAL(t4->quota(), 0.75);
+  BOOST_CHECK_CLOSE(t3->length(), 10.0, 1.e-9);
+  BOOST_CHECK_CLOSE(t4->length(), 10.0, 1.e-9);
+  const double hit_quota =
+      t3->accumulate_on_hits<double>([](double a, const sand::reco::hit& h) { return a + h.quota(); }, 0.0);
+  BOOST_CHECK_EQUAL(hit_quota, 0.25);
+  const double hit_width =
+      t4->accumulate_on_hits<double>([](double a, const sand::reco::hit& h) { return a + h.width(); }, 0.0);
+  BOOST_CHECK_CLOSE(hit_width, 2.0, 1.e-9);
+}
+
 BOOST_AUTO_TEST_CASE(insertion) {
   Random3D ranvec(12345);
   track t;
