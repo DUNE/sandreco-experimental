@@ -102,7 +102,8 @@ namespace sand::test {
 
         check_trajectory(p, ixn_idx, "prim", k);
 
-        UFW_ASSERT(same_id(p.ancestor_id, self_id), "nu[{}].prim[{}]: ancestor_id doesn't point to itself", ixn_idx, k);
+        UFW_ASSERT(same_id(p.ancestor_id, ::caf::TrueParticleID{}),
+                   "nu[{}].prim[{}]: ancestor_id should be unset (no ancestor for a primary)", ixn_idx, k);
         UFW_ASSERT(p.parentID.type == ::caf::TrueParticleID::kUnknown,
                    "nu[{}].prim[{}]: parentID should be unset (no SR parent for a primary)", ixn_idx, k);
         UFW_ASSERT(p.daughters.size() == p.daughtersID.size(), "nu[{}].prim[{}]: daughters/daughtersID size mismatch",

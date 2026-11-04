@@ -7,7 +7,7 @@ For every interaction (`nu[i]`):
 
 - `nprim`/`nsec` match `prim.size()`/`sec.size()`.
 - `nproton`/`nneutron`/`npip`/`npim`/`npi0` match counts recomputed from `prim`'s PDGs.
-- Every **primary**'s `ancestor_id` points to itself, `parentID` is unset (`kUnknown`),
+- Every **primary**'s `ancestor_id` and `parentID` are unset (`kUnknown`),
   and each of its `daughtersID` resolves to a secondary whose `parentID`/`ancestor_id`
   point back correctly.
 - Every **secondary**'s `ancestor_id` resolves to a valid primary, `parentID` resolves to

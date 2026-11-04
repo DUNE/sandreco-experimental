@@ -147,7 +147,7 @@ Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from
 | `npi0` | `int` | PDG 111 (π⁰) count in `prim` | — | |
 | **Particle vectors** |||||
 | `nprim` | `int` | `build_true_particle_tree().prim.size()` | — | |
-| `prim` | `vector<SRTrueParticle>` | `build_true_particle_tree()` from edep-sim | — | Post-FSI, post-Geant4; each linked to itself via `ancestor_id`, to its direct children via `daughtersID` |
+| `prim` | `vector<SRTrueParticle>` | `build_true_particle_tree()` from edep-sim | — | Post-FSI, post-Geant4; `ancestor_id` unset, each linked to its direct children via `daughtersID` |
 | `nprefsi` | `int` | `make_prefsi_particles().size()` | — | |
 | `prefsi` | `vector<SRTrueParticle>` | `make_prefsi_particles()` from GENIE StdHep | — | Status `kIStHadronInTheNucleus`, excluding bindino |
 | `nsec` | `int` | `build_true_particle_tree().sec.size()` | — | |
@@ -166,7 +166,7 @@ Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from
 | `pdg` | `int` | `EDEPTrajectory::GetPDGCode()` | — | |
 | `G4ID` | `int` | `G4IdMap::to_interaction_id(EDEPTrajectory::GetId())` | — | Interaction id, see [Track ids](#track-ids-interaction-vs-spill) |
 | `interaction_id` | `long int` | Parameter (`ixn_id`) | — | |
-| `ancestor_id` | `TrueParticleID` | Parameter | — | For `prim`: itself, `{sr_ixn, kPrimary, i}`. For `sec`: the root primary's ID, propagated unchanged through the whole subtree |
+| `ancestor_id` | `TrueParticleID` | Parameter | — | For `prim`: unset, `{-1, kUnknown, -1}`, as in ND_CAFMaker. For `sec`: the root primary's ID, propagated unchanged through the whole subtree |
 | `parent` | `int` | `G4IdMap::to_interaction_id(EDEPTrajectory::GetParentId())` | — | Interaction id of the parent, `-1` for primaries |
 | `p` | `SRLorentzVector` | `GetInitialMomentum() × 1e−3` | **GeV/c**, **GeV** | edep-sim stores momentum in MeV |
 | `time` | `double` | First `TrajectoryPoint::GetPosition().T()` | **ns** | No conversion needed |
