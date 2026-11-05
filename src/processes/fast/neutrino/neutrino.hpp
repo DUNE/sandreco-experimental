@@ -1,20 +1,19 @@
-#ifndef SAND_COMMON_FAST_KINEMATICS_HPP
-#define SAND_COMMON_FAST_KINEMATICS_HPP
+#ifndef SAND_FAST_NEUTRINO_HPP
+#define SAND_FAST_NEUTRINO_HPP
 
-namespace caf {
-  class SRDirectionBranch;
-  class SRNeutrinoEnergyBranch;
-  class SRTrueInteraction;
-} // namespace caf
+#include <common/version.h>
 
-namespace sand::common {
+#include <ufw/process.hpp>
 
-  /// Perfect neutrino energy hypothesis: every estimator collapses to the true energy.
-  ::caf::SRNeutrinoEnergyBranch energy_from_true(::caf::SRTrueInteraction const& true_ixn);
+namespace sand::fast {
 
-  /// Perfect direction hypothesis: every estimator collapses to the true neutrino direction.
-  ::caf::SRDirectionBranch direction_from_true(::caf::SRTrueInteraction const& true_ixn);
+  struct neutrino : public ufw::process {
+    neutrino();
+    void run() override;
+  };
 
-} // namespace sand::common
+} // namespace sand::fast
+
+UFW_REGISTER_PROCESS(sand::fast::neutrino);
 
 #endif

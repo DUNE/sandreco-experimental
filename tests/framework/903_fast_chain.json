@@ -73,6 +73,34 @@
         "out_common": "produced_common_pid",
         "out_nd": "produced_nd_pid"
       }
+    },
+    {
+      "sand::fast::neutrino": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_common": "produced_common_pid"
+      },
+      "prods": {
+        "out_common": "produced_common"
+      }
+    },
+    {
+      "sand::test::fast_reco_test": {
+        "min_energy_deposit": 0.04
+      },
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_common": "produced_common",
+        "in_nd": "produced_nd_pid"
+      },
+      "prods": {}
+    },
+    {
+      "sand::caf::caf_streamer": {
+        "uri": "test/output_fast_chain.caf.root",
+        "tree": "cafTree"
+      },
+      "write": ["produced_truth", "produced_common", "produced_nd_pid"]
     }
   ]
 }

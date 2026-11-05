@@ -1,6 +1,7 @@
 add_subdirectory(ecal)
 add_subdirectory(grain)
 add_subdirectory(matching)
+add_subdirectory(neutrino)
 add_subdirectory(pid)
 add_subdirectory(tracker)
 add_subdirectory(utils)
