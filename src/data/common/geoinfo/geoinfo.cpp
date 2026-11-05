@@ -27,13 +27,14 @@
 namespace sand {
 
   namespace {
-    constexpr char root_path[]  = "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/";
+    constexpr char root_path[] =
+        "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/";
     constexpr char ecal_path[]  = "kloe_calo_volume_PV_0/";
     constexpr char inner_path[] = "sand_inner_volume_PV_0/";
     constexpr char grain_path[] = "GRAIN_lv_PV_0/GRAIN_LAr_lv_PV_0/";
     constexpr char stt_path[]   = "STTtracker_PV_0/";
     constexpr char drift_path[] = "SANDtracker_PV_0/";
-  }
+  } // namespace
 
   /**
    * @brief Builds the top-level geometry description and detects the tracker type.
@@ -64,7 +65,7 @@ namespace sand {
 
     nav->cd(inner);
     bool isSTT = false;
-    nav->for_each_node([&isSTT](auto node){
+    nav->for_each_node([&isSTT](auto node) {
       std::string name = node->GetName();
       isSTT |= (name.find("STTtracker") != std::string::npos);
     });
@@ -78,7 +79,7 @@ namespace sand {
         nav->cd(daughter_path.c_str());
         std::string granddaughter_tmp = nav->GetCurrentNode()->GetDaughter(0)->GetName(); // s_...
         UFW_DEBUG("GRANDDAUGHTER vol '{}' ", granddaughter_tmp.c_str());
-        if (granddaughter_tmp.find("s_") != std::string::npos){
+        if (granddaughter_tmp.find("s_") != std::string::npos) {
           isGenericDrift = true;
         }
         nav->CdUp();
@@ -90,7 +91,7 @@ namespace sand {
       UFW_INFO("STT subdetector implementation detected.");
       m_tracker_cfg.update(stt_cfg);
       m_tracker_type = STT;
-    } else if (isGenericDrift){ /// FIXME!!!
+    } else if (isGenericDrift) { /// FIXME!!!
       UFW_INFO("Generic Drift subdetector implementation detected.");
       m_tracker_cfg.update(generic_drift_cfg);
       m_tracker_type = GENERIC_DRIFT;
@@ -105,9 +106,7 @@ namespace sand {
   geoinfo::~geoinfo() = default;
 
   /// @brief Lazily constructs the ECAL geometry description.
-  void geoinfo::init_ecal() const {
-    m_ecal.reset(new ecal_info(*this, ecal_path, m_ecal_cfg));
-  }
+  void geoinfo::init_ecal() const { m_ecal.reset(new ecal_info(*this, ecal_path, m_ecal_cfg)); }
 
   /// @brief Lazily constructs the GRAIN geometry description.
   void geoinfo::init_grain() const {
@@ -117,16 +116,16 @@ namespace sand {
   /// @brief constructs the tracker geometry (STT or drift) for the detected type.
   void geoinfo::init_tracker() const {
     switch (m_tracker_type) {
-      case DRIFT:
+    case DRIFT:
       m_tracker.reset(new drift_info(*this, geo_path(inner_path) / drift_path, m_tracker_cfg));
       return;
-      case STT:
+    case STT:
       m_tracker.reset(new stt_info(*this, geo_path(inner_path) / stt_path, m_tracker_cfg));
       return;
-      case GENERIC_DRIFT:
+    case GENERIC_DRIFT:
       m_tracker.reset(new generic_drift_info(*this, geo_path(inner_path) / drift_path, m_tracker_cfg));
       return;
-      default:
+    default:
       UFW_ERROR("Unknown tracker type");
     }
   }
@@ -181,46 +180,38 @@ namespace sand {
    * @param[out] intersection_point The intersection, set only when the function returns true.
    * @return true if the line meets the segment.
    */
-  bool geoinfo::getXYLineSegmentIntersection(
-    const pos_3d& v1,
-    const pos_3d& v2,
-    const pos_3d& p,
-    const dir_3d& dir,
-    pos_3d& intersection_point)
-    {
-        // Segment direction vector
-        double delta_x = v1.X() - v2.X();
-        double delta_y = v1.Y() - v2.Y();
+  bool geoinfo::getXYLineSegmentIntersection(const pos_3d& v1, const pos_3d& v2, const pos_3d& p, const dir_3d& dir,
+                                             pos_3d& intersection_point) {
+    // Segment direction vector
+    double delta_x = v1.X() - v2.X();
+    double delta_y = v1.Y() - v2.Y();
 
-        // Determinant for solving the linear system
-        double det = dir.X() * delta_y - dir.Y() * delta_x;
+    // Determinant for solving the linear system
+    double det = dir.X() * delta_y - dir.Y() * delta_x;
 
-        // If det is ~0, the lines are parallel or nearly parallel → no intersection
-        if (std::fabs(det) < 1e-9) {
-            return false;
-        }
-
-        // Solve parametric values t (for infinite line p + t*dir) and s (segment)
-        double t = ((v1.X() - p.X()) * delta_y -
-                    (v1.Y() - p.Y()) * delta_x) / det;
-
-        double s = ((p.X() - v1.X()) * dir.Y() -
-                    (p.Y() - v1.Y()) * dir.X()) / det;
-
-        // Intersection must lie on the segment (s ∈ [0,1])
-        if (s < 0.0 || s > 1.0) {
-            return false;
-        }
-
-        // Compute intersection point 
-        intersection_point = p;
-        intersection_point.SetX(p.X() + t * dir.X());
-        intersection_point.SetY(p.Y() + t * dir.Y());
-        intersection_point.SetZ(p.Z());
-
-
-        return true;
+    // If det is ~0, the lines are parallel or nearly parallel → no intersection
+    if (std::fabs(det) < 1e-9) {
+      return false;
     }
+
+    // Solve parametric values t (for infinite line p + t*dir) and s (segment)
+    double t = ((v1.X() - p.X()) * delta_y - (v1.Y() - p.Y()) * delta_x) / det;
+
+    double s = ((p.X() - v1.X()) * dir.Y() - (p.Y() - v1.Y()) * dir.X()) / det;
+
+    // Intersection must lie on the segment (s ∈ [0,1])
+    if (s < 0.0 || s > 1.0) {
+      return false;
+    }
+
+    // Compute intersection point
+    intersection_point = p;
+    intersection_point.SetX(p.X() + t * dir.X());
+    intersection_point.SetY(p.Y() + t * dir.Y());
+    intersection_point.SetZ(p.Z());
+
+    return true;
+  }
 
   /**
    * @brief All intersections of an infinite line with a polygon, in the XY plane.
@@ -229,22 +220,62 @@ namespace sand {
    * @param dir Direction of the line.
    * @return The intersection points with the polygon edges.
    */
-  std::vector<pos_3d> geoinfo::getXYLinePolygonIntersections(
-    const std::vector<pos_3d>& v,
-    const pos_3d& p,
-    const dir_3d& dir){
-      std::vector<pos_3d> intersections;
-      for (int i = 0; i < v.size(); i++) {
-        pos_3d intersection;
-        const auto& current_v = v[i];
-        const auto& next_v    = v[(i + 1) % v.size()]; // wraps to first
-        if(getXYLineSegmentIntersection(current_v, next_v, p, dir, intersection)) {
-          intersections.push_back(intersection);
-        }
+  std::vector<pos_3d> geoinfo::getXYLinePolygonIntersections(const std::vector<pos_3d>& v, const pos_3d& p,
+                                                             const dir_3d& dir) {
+    std::vector<pos_3d> intersections;
+    for (int i = 0; i < v.size(); i++) {
+      pos_3d intersection;
+      const auto& current_v = v[i];
+      const auto& next_v    = v[(i + 1) % v.size()]; // wraps to first
+      if (getXYLineSegmentIntersection(current_v, next_v, p, dir, intersection)) {
+        intersections.push_back(intersection);
       }
-      return intersections;
+    }
+    return intersections;
+  }
+
+  std::string geoinfo::material_at(const pos_3d& p) const {
+    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav  = tgm.navigator();
+
+    auto* node = nav->FindNode(p.x(), p.y(), p.z());
+    if (node == nullptr) {
+      return "OUTSIDE";
     }
 
+    auto* vol = node->GetVolume();
+    if (vol == nullptr) {
+      return "NO_VOLUME";
+    }
 
+    auto* med = vol->GetMedium();
+    if (med == nullptr) {
+      return "NO_MEDIUM";
+    }
+
+    auto* mat = med->GetMaterial();
+    if (mat == nullptr) {
+      return "NO_MATERIAL";
+    }
+
+    return mat->GetName();
+  }
+
+  std::string geoinfo::volume_at(const pos_3d& p) const {
+    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav  = tgm.navigator();
+
+    auto* node = nav->FindNode(p.x(), p.y(), p.z());
+    if (node == nullptr) {
+      return "OUTSIDE";
+    }
+
+    auto* vol = node->GetVolume();
+    if (vol == nullptr) {
+      return "NO_VOLUME";
+    }
+
+    return vol->GetName();
+  }
 
 } // namespace sand

@@ -31,15 +31,33 @@ namespace sand {
 
     ~geoinfo();
 
-    const ecal_info& ecal() const { if (!m_ecal) { init_ecal(); } return *m_ecal; }
+    const ecal_info& ecal() const {
+      if (!m_ecal) {
+        init_ecal();
+      }
+      return *m_ecal;
+    }
 
-    const grain_info& grain() const { if (!m_grain) { init_grain(); } return *m_grain; }
+    const grain_info& grain() const {
+      if (!m_grain) {
+        init_grain();
+      }
+      return *m_grain;
+    }
 
-    const tracker_info& tracker() const { if (!m_tracker) { init_tracker(); } return *m_tracker; }
+    const tracker_info& tracker() const {
+      if (!m_tracker) {
+        init_tracker();
+      }
+      return *m_tracker;
+    }
 
     geo_id id(const geo_path&) const;
 
     geo_path path(geo_id) const;
+
+    std::string material_at(const pos_3d& p) const;
+    std::string volume_at(const pos_3d& p) const;
 
    private:
     void init_ecal() const;
@@ -68,20 +86,12 @@ namespace sand {
     const geo_path& root_path() const { return m_root_path; }
 
    public:
+    static bool getXYLineSegmentIntersection(const pos_3d& v1, const pos_3d& v2, const pos_3d& p, const dir_3d& dir,
+                                             pos_3d& intersection_point);
 
-    static bool getXYLineSegmentIntersection(
-      const pos_3d& v1,
-      const pos_3d& v2,
-      const pos_3d& p,
-      const dir_3d& dir,
-      pos_3d& intersection_point);
-
-    static std::vector<pos_3d> getXYLinePolygonIntersections(
-      const std::vector<pos_3d>& polygon,
-      const pos_3d& line_point,
-      const dir_3d& line_dir);
-      
-    };
+    static std::vector<pos_3d> getXYLinePolygonIntersections(const std::vector<pos_3d>& polygon,
+                                                             const pos_3d& line_point, const dir_3d& line_dir);
+  };
 
 } // namespace sand
 
