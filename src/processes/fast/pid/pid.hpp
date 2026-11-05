@@ -1,27 +1,19 @@
-#ifndef SAND_COMMON_FAST_PID_HPP
-#define SAND_COMMON_FAST_PID_HPP
+#ifndef SAND_FAST_PID_HPP
+#define SAND_FAST_PID_HPP
 
-namespace caf {
-  class SRNeutrinoHypothesisBranch;
-  class SRTrueInteraction;
-  class SRTrueParticle;
-  class SRRecoParticle;
-  class SRRecoParticlesBranch;
-  class TrueParticleID;
-} // namespace caf
+#include <common/version.h>
 
-namespace sand::common {
+#include <ufw/process.hpp>
 
-  /// Perfect classifier: one-hot CVN scores on the true interaction class.
-  ::caf::SRNeutrinoHypothesisBranch neutrino_hypothesis_from_true(::caf::SRTrueInteraction const& true_ixn);
+namespace sand::fast {
 
-  /// Perfect reco particle: every field copied or derived 1:1 from the true particle.
-  ::caf::SRRecoParticle reco_particle_from_true(::caf::SRTrueParticle const& true_part,
-                                                ::caf::TrueParticleID const& id);
+  struct pid : public ufw::process {
+    pid();
+    void run() override;
+  };
 
-  /// Perfect reco particles: one caf::SRRecoParticle per true `prim`/`sec`, cross-links resolved.
-  ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx);
+} // namespace sand::fast
 
-} // namespace sand::common
+UFW_REGISTER_PROCESS(sand::fast::pid);
 
 #endif

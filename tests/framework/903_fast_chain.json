@@ -61,6 +61,18 @@
         "out_common": "produced_common_vtx",
         "out_nd": "produced_nd_vtx"
       }
+    },
+    {
+      "sand::fast::pid": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_common": "produced_common_vtx",
+        "in_nd": "produced_nd_vtx"
+      },
+      "prods": {
+        "out_common": "produced_common_pid",
+        "out_nd": "produced_nd_pid"
+      }
     }
   ]
 }
