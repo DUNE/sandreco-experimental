@@ -1,20 +1,19 @@
-#ifndef SAND_COMMON_TRUTH_MATCHING_HPP
-#define SAND_COMMON_TRUTH_MATCHING_HPP
+#ifndef SAND_FAST_MATCHING_HPP
+#define SAND_FAST_MATCHING_HPP
 
-#include <vector>
+#include <common/version.h>
 
-namespace caf {
-  class SRSAND;
-  class SRSANDAssn;
-} // namespace caf
+#include <ufw/process.hpp>
 
-namespace sand::common {
+namespace sand::fast {
 
-  /// Perfect matching: one SRSANDAssn per true particle, with that particle's subdetector objects as constituents.
-  /// trk.truth carries the particle, as a real matcher's truth matching would; the rest of trk is not filled yet.
-  /// The assns are ordered by particle: interaction, then primaries before secondaries, then position.
-  std::vector<::caf::SRSANDAssn> match_by_truth(::caf::SRSAND const& objects);
+  struct matching : public ufw::process {
+    matching();
+    void run() override;
+  };
 
-} // namespace sand::common
+} // namespace sand::fast
+
+UFW_REGISTER_PROCESS(sand::fast::matching)
 
 #endif
