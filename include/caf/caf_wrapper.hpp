@@ -35,6 +35,10 @@ namespace sand::caf {
     : public ::caf::SREcal
     , public sand::managed_data_base {};
 
+  struct sand_assn_wrapper
+    : public std::vector<::caf::SRSANDAssn>
+    , public sand::managed_data_base {};
+
 } // namespace sand::caf
 
 UFW_DECLARE_MANAGED_DATA(sand::caf::standard_record_wrapper);
@@ -44,5 +48,6 @@ UFW_DECLARE_MANAGED_DATA(sand::caf::nd_reco_branch_wrapper);
 UFW_DECLARE_MANAGED_DATA(sand::caf::grain_reco_wrapper);
 UFW_DECLARE_MANAGED_DATA(sand::caf::tracker_reco_wrapper);
 UFW_DECLARE_MANAGED_DATA(sand::caf::ecal_reco_wrapper);
+UFW_DECLARE_MANAGED_DATA(sand::caf::sand_assn_wrapper);
 
 #endif // SANDRECO_CAF_WRAPPER_HPP
