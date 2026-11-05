@@ -5,4 +5,4 @@ target_sources(sand_fast_matching
   matching.cpp
 )
 
-target_link_libraries(sand_fast_matching  PRIVATE duneanaobj::StandardRecord)
+target_link_libraries(sand_fast_matching PRIVATE duneanaobj::StandardRecord)
