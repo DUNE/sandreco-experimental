@@ -2,10 +2,13 @@
 
 #include <common/version.h>
 
+#include <cstdint>
 #include <ufw/data.hpp>
 
+#include <atomic>
 #include <set>
 #include <vector>
+
 
 namespace sand {
 
@@ -17,6 +20,25 @@ namespace sand {
     , public std::vector<T> {
     using type = T;
   };
+
+  template <typename T>
+  struct spill_shared_collection : public spill_data_collection<T> {
+
+    spill_shared_collection() : m_unique(generate_unique()) {}
+
+   private:
+    uint64_t generate_unique() {
+      static std::atomic<uint64_t> s_global_counter(0);
+      return s_global_counter.fetch_add(1);
+    }
+
+   private:
+    // the purpose of the counter is to reconcile objects saved in a root file.
+    // ROOT does this via TRef, but I dont want the dependency here, and it only works for TObjects
+    uint64_t m_unique;
+
+  };
+
 
 } // namespace sand
 
