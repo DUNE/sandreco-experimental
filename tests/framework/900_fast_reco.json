@@ -42,14 +42,46 @@
       }
     },
     {
-      "sand::common::fast_matching": {},
+      "sand::fast::matching": {},
       "reqs": {
-        "in_truth": "produced_truth",
         "in_tracker": "produced_tracker"
       },
       "prods": {
-        "out_common": "produced_common",
+        "out_assns": "produced_assns"
+      }
+    },
+    {
+      "sand::fast::vertexing": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_assns": "produced_assns",
+        "in_tracker": "produced_tracker"
+      },
+      "prods": {
+        "out_common": "produced_common_vtx",
+        "out_nd": "produced_nd_vtx"
+      }
+    },
+    {
+      "sand::fast::pid": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_common": "produced_common_vtx",
+        "in_nd": "produced_nd_vtx"
+      },
+      "prods": {
+        "out_common": "produced_common_pid",
         "out_nd": "produced_nd"
+      }
+    },
+    {
+      "sand::fast::neutrino": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_common": "produced_common_pid"
+      },
+      "prods": {
+        "out_common": "produced_common"
       }
     },
     {
