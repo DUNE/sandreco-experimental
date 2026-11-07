@@ -81,7 +81,7 @@ When several records in the same context refer to the same shared object (e.g. a
 
 The primitive is provided by ufw (`<ufw/store.hpp>`); this section covers the sandreco-side conventions for using it.
 A complete, minimal example (base element type, store, keyed record, and producer/resolver processes) is in
-`include/common/shared.h`, `src/processes/common/shared_store_fill` and `src/processes/common/shared_store_resolve`,
+`include/common/shared.h` and the demo processes in `tests/framework/016_modules` and `017_modules`,
 exercised by the framework tests `016_store_write.json` / `017_store_read.json`.
 
 ### Declaring a store
@@ -100,6 +100,12 @@ exercised by the framework tests `016_store_write.json` / `017_store_read.json`.
      registered as managed data under this name;
    - `sand::vertices_store()` — accessor for the current context's store;
    - `sand::vertices_index` — the typed key for that store, registered as unmanaged data.
+
+   `NAME` also becomes the public id of the store variable (the name used in a
+   process's `reqs`/`prods` and as the streamer branch name). The public id space is
+   flat — namespaces do not qualify it — so `NAME` must be **unique across all stores**;
+   choose it to disambiguate stores that would otherwise share a name in different
+   namespaces (e.g. `grain_hits` rather than `hits`, see below).
 
    The element type is registered as unmanaged data by the macro as well, so it is
    ROOT-streamable. Declare one store per object class you share; each gets its own name and
@@ -152,6 +158,31 @@ read-ordering guarantee — the framework calls the streamer's `read` on every a
 streamer, and `tree_streamer::read` re-populates the already-read entry on a repeat call —
 ensures the store is populated regardless of the order in which the process touches its record
 and its store.
+
+### Multiple stores: `reco::hit` and `reco::track`
+
+Objects of several related stores may need to be consumed together, polymorphically, through a
+common base. The convention in this codebase is one store per concrete type (here: one per
+subdetector hit type — `SAND_SHARED_COLLECTION(sand::grain, hit, grain_hits)` and
+equivalents for `sand::tracker` and `sand::ecal`; the element types currently stub `sand::reco::hit`, whose accessors are
+virtual precisely so this works). A record that spans the stores holds **one vector of typed
+keys per store** and exposes a facade that iterates over them as if they were a single container
+of the base type. `sand::reco::track` is the reference example:
+
+```cpp
+track.push(sand::grain::grain_hits_index{0});    // one overload of push per store
+trk.for_each_hit([](const reco::hit& h) {  // resolves each key against its store,
+  h.width();                               // calls through the virtual base
+});
+```
+
+The key vectors stream as plain integers, exactly like any other key. The order in which
+`for_each_hit` visits the stores is **unspecified**; a defined ordering (e.g. along the track)
+is a property of a view over the keys, not of the raw iteration.
+
+This pattern is exercised by the framework tests `018_track_hits_write.json` /
+`019_track_hits_read.json` with the demo processes in `tests/framework/018_modules`
+and `tests/framework/019_modules`.
 
 ### Per-context / same-entry guarantee
 

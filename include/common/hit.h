@@ -1,15 +1,19 @@
 #pragma once
 
 #include <common/sand.h>
+#include <common/shared.h>
 #include <common/timerange.h>
 
 namespace sand::reco {
 
   /**
    * The hit class represents a generic reconstructed hit in the detector.
-   * Specialized classes for each detector must inherit from hit.
+   * Specialized classes for each detector must inherit from hit and are stored in
+   * per-context shared stores (see SAND_SHARED_COLLECTION), addressed through typed keys.
+   * The accessors are virtual so a hit can be used polymorphically through the base
+   * interface, e.g. when a record holds keys into several stores.
    */
-  class hit {
+  class hit : public shared_object {
    public:
     using time = timerange;
 
@@ -20,16 +24,18 @@ namespace sand::reco {
     };
 
    public:
+    hit() = default;
+
     hit(const pos_3d& c, const dir_3d& d, const time& t, double w)
       : m_centre(c), m_primary_axis(d), m_time(t), m_width(w) {}
 
-    dir_3d axis() const { return m_primary_axis; }
+    virtual dir_3d axis() const { return m_primary_axis; }
 
-    pos_3d centre() const { return m_centre; }
+    virtual pos_3d centre() const { return m_centre; }
 
-    time t() const { return m_time; }
+    virtual time t() const { return m_time; }
 
-    double width() const { return m_width; }
+    virtual double width() const { return m_width; }
 
    private:
     pos_3d m_centre;
@@ -59,9 +65,8 @@ namespace sand::reco {
         && lhs.time_distance < rhs.time_distance;
   }
 
-  template <typename HitType>
-  class hits_base {
-    static_assert(std::is_base_of_v<hit, HitType>, "HitType must inherit from sand::reco::hit");
-  };
-
 } // namespace sand::reco
+
+// The base hit type is streamable on its own: derived hit types stream their
+// quantities through it, and the ROOT streamer picks this up when it builds its linkdef.
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::hit)

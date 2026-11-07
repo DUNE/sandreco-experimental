@@ -1,12 +1,18 @@
-#include "shared_store_fill.hpp"
-
 #include <common/shared.h>
 
 #include <ufw/factory.hpp>
+#include <ufw/process.hpp>
 
 #include <cstddef>
 
-namespace sand::common {
+namespace sand::test {
+
+  // Creates the per-context shared-object store, fills it and mints a key into the record it
+  // produces (see 016_store_write.json), so 017_store_read.json can verify the round trip.
+  struct shared_store_fill : public ufw::process {
+    shared_store_fill();
+    void run() override;
+  };
 
   shared_store_fill::shared_store_fill()
     : process({}, {{"record", "sand::shared_record"}, {"store", "sand::shared"}}) {}
@@ -23,6 +29,7 @@ namespace sand::common {
     set<shared_record>("record").set_key(shared_index{1});
   }
 
-} // namespace sand::common
+} // namespace sand::test
 
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::common::shared_store_fill);
+UFW_REGISTER_PROCESS(sand::test::shared_store_fill)
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::test::shared_store_fill)

@@ -1,12 +1,16 @@
-#include "shared_store_resolve.hpp"
-
 #include <common/shared.h>
 
 #include <ufw/factory.hpp>
+#include <ufw/process.hpp>
 
-#include <cstddef>
+namespace sand::test {
 
-namespace sand::common {
+  // Reads back the shared-object store and its record written by 016_store_write.json and
+  // verifies that the record's key resolves to the right element of the read-back store.
+  struct shared_store_resolve : public ufw::process {
+    shared_store_resolve();
+    void run() override;
+  };
 
   shared_store_resolve::shared_store_resolve()
     : process({{"record", "sand::shared_record"}, {"store", "sand::shared"}}, {}) {}
@@ -25,6 +29,7 @@ namespace sand::common {
     UFW_ASSERT(&*k == &st.at(1), "The key must resolve to element 1 of the read-back store.");
   }
 
-} // namespace sand::common
+} // namespace sand::test
 
-UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::common::shared_store_resolve);
+UFW_REGISTER_PROCESS(sand::test::shared_store_resolve)
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::test::shared_store_resolve)

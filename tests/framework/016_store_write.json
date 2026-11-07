@@ -4,7 +4,7 @@
   "contexts": { "keys": 5, "locals": {} },
   "run": [
     {
-      "sand::common::shared_store_fill": {},
+      "sand::test::shared_store_fill": {},
       "reqs": {},
       "prods": { "record": "record", "store": "shared" }
     },

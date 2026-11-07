@@ -8,7 +8,7 @@
       "read": ["record", "shared"]
     },
     {
-      "sand::common::shared_store_resolve": {},
+      "sand::test::shared_store_resolve": {},
       "reqs": { "record": "record", "store": "shared" },
       "prods": {}
     }

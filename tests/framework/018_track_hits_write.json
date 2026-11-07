@@ -1,0 +1,16 @@
+{
+  "ufw": { "ufw-loglevel": "info", "ufw-basepath": "/usr/local/share/sandreco/data", "ufw-ldpath": ["/usr/local/lib64"] },
+  "globals": {},
+  "contexts": { "keys": 5, "locals": {} },
+  "run": [
+    {
+      "sand::test::track_hits_fill": {},
+      "reqs": {},
+      "prods": { "track": "track", "grain_hits": "grain_hits", "tracker_hits": "tracker_hits", "ecal_hits": "ecal_hits" }
+    },
+    {
+      "sand::root::tree_streamer": { "uri": "test/track_hits_roundtrip.root", "tree": "vars" },
+      "write": ["track", "grain_hits", "tracker_hits", "ecal_hits"]
+    }
+  ]
+}

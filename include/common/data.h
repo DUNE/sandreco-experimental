@@ -92,7 +92,9 @@ UFW_DECLARE_UNMANAGED_DATA(sand::truth_index)
  * shared-store counterpart of SAND_DATA_COLLECTION: NS::NAME becomes the collection type
  * and the registered (streamed) name of the managed variable. UFW_DECLARE_STORE adds the
  * NS::NAME_store() accessor and the NS::NAME_index key type, and registers the key as
- * unmanaged data.
+ * unmanaged data. NAME also becomes the public id of the store variable (the name used
+ * in a process's reqs/prods and as a branch name); the public id space is flat —
+ * namespaces do not qualify it — so NAME must be unique across all stores.
  */
 #define SAND_SHARED_COLLECTION(NS, T, NAME)                                                                            \
   UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \
