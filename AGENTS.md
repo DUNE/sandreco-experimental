@@ -16,13 +16,13 @@ src/
   processes/      — Algorithm modules (ufw::process subclasses)
   filters/        — Filter modules
   streamers/      — I/O streamers (rarely written from scratch)
-  data/           — Complex data (geometry, truth info, etc.)
+  data/           — Complex data (ufw complex data: geometry, truth info, etc.)
 tests/
   standalone/     — Boost-based unit tests
   framework/      — Framework-level integration tests (.json configs)
   data/           — Small test data files
 tools/cmake/      — Custom CMake modules
-docs/             — Doxygen docs, writing_new_modules.md
+docs/             — Doxygen docs for humans
 ```
 
 ## Module Development
@@ -62,25 +62,27 @@ Critical external libraries: `ROOT`, `ufw`, `spdlog`, `pybind11`, `duneanaobj`, 
 
 ## Building and Testing Inside Container
 
-All building and testing must be performed inside the `sandreco-ci` podman container, which is running (if sandreco-ci is nodt running, try `sand-dev` or `sand-dev-cpu`).
+All building and testing must be performed inside the `sandreco-ci` podman container, which is running (if sandreco-ci is not running, try starting it; also try `sand-dev` or `sand-dev-cpu` which are richer containers).
  - The container provides the full development environment with all dependencies (ROOT, ufw, spdlog, etc.) pre-installed.
  - Dependencies are not installed outside the container and building will not be possible outside of it.
- - The container mounts the project folder `/home/nicko/Development/sand_mnt/sandreco-experimental` under a different name: `/home/sand/sandreco-experimental/`.
- - All building and testing command must be run inside the container by using `podman exec -w /home/sand/sandreco-experimental sandreco-ci bash -c "command"`
- - Beware: tests can be slow to execute and produce copious output text. Do not run tests unless authorized.
+ - The container mounts the project folder `<local path>/sandreco-experimental` under a different name: `/home/sand/sandreco-experimental/`.
+ - The container also mounts the `ufw` library project folder `<local path>/ufw` under a different name: `/home/sand/ufw/`.
 
-### Configuring command
- - Default command `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "cmake -S .. -B . -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=/usr/local/"`
-
-### Build and install command
- `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "cmake --build . -j8 && cmake --install .`
+### Configure, build and install command
+Configuring is important whenever you make changes in include/ or make commits, as it picks up files and commit hash
+ - Configure `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "cmake -S .. -B . -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=/usr/local/"`
+ - Build and install `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "cmake --build . -j8 && cmake --install .`
+ Build takes a couple of minutes
 
 ### Run all tests command
- `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "ctest --output-on-failure`
+ `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "ctest --parallel 4 --output-on-failure`
+ Tests may take up to 20 minutes, recommend background execution
 
 ### Run one test command
  `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "ctest -R <test name>`
- test name will be onw of the tests from `tests/standalone` or `tests/framework`
+ test name will be one of the tests from `tests/standalone` or `tests/framework`.
+ Tests with the same hundreds digit may have data dependencies and need to be run in order.
+
 
 ### Available tests
 - **Standalone tests**: `tests/standalone/` — Boost.UnitTestFramework, header-only test executables. Include `tools/cmake/standalone_test.cmake` and use `add_test_with_libs()`.

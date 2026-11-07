@@ -75,4 +75,89 @@ The `sandreco_add_complex_data` functions handles that for you (it also adds the
 Some external tools (e.g. the 3D viewer) also use these headers, so they are publicly exported and installed if `EXPORT_PRIVATE_INTERFACES` is true.
 Another requirement for internal use is to export the link dependencies, which should therefore be PUBLIC.
 
+## Shared-object stores and typed indices
+
+When several records in the same context refer to the same shared object (e.g. a vertex shared by many tracks), store the object once in a per-context store and address it through a typed index (key) instead of duplicating it. The store and the records holding keys into it are streamed as branches of the same `TTree` entry for the same context, so a key can never dangle on read-back.
+
+The primitive is provided by ufw (`<ufw/store.hpp>`); this section covers the sandreco-side conventions for using it.
+A complete, minimal example (base element type, store, keyed record, and producer/resolver processes) is in
+`include/common/shared.h`, `src/processes/common/shared_store_fill` and `src/processes/common/shared_store_resolve`,
+exercised by the framework tests `016_store_write.json` / `017_store_read.json`.
+
+### Declaring a store
+
+1. Define the element type `T` as a plain class in a header under `include/`
+   (`sand::shared_object` is the base for typical shared objects).
+2. Declare the store with `SAND_SHARED_COLLECTION` (declared in `include/common/data.h`,
+   next to `SAND_DATA_COLLECTION`, which it mirrors):
+
+   ```cpp
+   SAND_SHARED_COLLECTION(sand, vertex, vertices)
+   ```
+
+   This produces, in namespace `sand`:
+   - `sand::vertices` — the collection type (`ufw::data::managed_collection<sand::vertex>`),
+     registered as managed data under this name;
+   - `sand::vertices_store()` — accessor for the current context's store;
+   - `sand::vertices_index` — the typed key for that store, registered as unmanaged data.
+
+   The element type is registered as unmanaged data by the macro as well, so it is
+   ROOT-streamable. Declare one store per object class you share; each gets its own name and
+   its own index type, and the same element type may be used by several stores.
+3. No cmake work is needed: the ROOT streamer picks `SAND_SHARED_COLLECTION` lines under
+   `include/` up automatically when it generates its linkdef (element, collection and index
+   classes are linked).
+
+### Holding keys in records
+
+A managed record holds a key as a plain member:
+
+```cpp
+struct track {
+  // ...
+  sand::vertices_index vertex; // key into the vertices store
+};
+```
+
+The key is the runtime index type, with the exact layout of a single `std::size_t` in all
+environments (including Cling), so records stream as usual; the ROOT streamer needs no special
+handling for keys.
+
+### Filling the store and minting keys
+
+The process that *produces* the store variable (it lists the store in its `prods`) creates the
+empty per-context store. Any process may also list a store in its `reqs` to add objects and mint
+keys into its records:
+
+```cpp
+auto& store = sand::vertices_store();
+auto idx    = store.size();
+store.push_back(vertex);
+auto key    = sand::vertices_index{idx};
+```
+
+### Resolving keys
+
+The resolver process reads the record(s) and dereferences the keys:
+
+```cpp
+const auto& track = get<sand::track>("in_track");
+if (track.vertex) {                 // explicit operator bool: valid against the current store
+  const auto& vertex = *track.vertex;
+}
+```
+
+The store is attached lazily, the first time a key is dereferenced (or otherwise used). The
+read-ordering guarantee — the framework calls the streamer's `read` on every attach to a read
+streamer, and `tree_streamer::read` re-populates the already-read entry on a repeat call —
+ensures the store is populated regardless of the order in which the process touches its record
+and its store.
+
+### Per-context / same-entry guarantee
+
+Both the store (one branch) and the records holding keys into it (one branch each) live in the
+same `TTree` row for the same context. On read-back the row is populated together, so `bool(key)`
+is true and `*key` resolves to the element the key pointed at when the file was written. Keys are
+per-context: they are only meaningful while the minting context's store is the current one.
+
 

@@ -1,0 +1,16 @@
+{
+  "ufw": { "ufw-loglevel": "info", "ufw-basepath": "/usr/local/share/sandreco/data", "ufw-ldpath": ["/usr/local/lib64"] },
+  "globals": {},
+  "contexts": { "keys": 5, "locals": {} },
+  "run": [
+    {
+      "sand::common::shared_store_fill": {},
+      "reqs": {},
+      "prods": { "record": "record", "store": "shared" }
+    },
+    {
+      "sand::root::tree_streamer": { "uri": "test/store_roundtrip.root", "tree": "vars" },
+      "write": ["record", "shared"]
+    }
+  ]
+}

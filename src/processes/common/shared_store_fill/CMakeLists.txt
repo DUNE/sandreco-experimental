@@ -1,0 +1,5 @@
+sandreco_add_process(sand_common_shared_store_fill)
+
+target_sources(sand_common_shared_store_fill PRIVATE shared_store_fill.cpp)
+
+target_link_libraries(sand_common_shared_store_fill PRIVATE ROOT::MathCore)

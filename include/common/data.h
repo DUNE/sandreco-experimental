@@ -4,8 +4,8 @@
 
 #include <cstdint>
 #include <ufw/data.hpp>
+#include <ufw/store.hpp>
 
-#include <atomic>
 #include <set>
 #include <vector>
 
@@ -21,29 +21,12 @@ namespace sand {
     using type = T;
   };
 
-  template <typename T>
-  struct spill_shared_collection : public spill_data_collection<T> {
-
-    spill_shared_collection() : m_unique(generate_unique()) {}
-
-   private:
-    uint64_t generate_unique() {
-      static std::atomic<uint64_t> s_global_counter(0);
-      return s_global_counter.fetch_add(1);
-    }
-
-   private:
-    // the purpose of the counter is to reconcile objects saved in a root file.
-    // ROOT does this via TRef, but I dont want the dependency here, and it only works for TObjects
-    uint64_t m_unique;
-
-  };
-
+  // Shared-object collections are ufw::data::managed_collection (see
+  // SAND_SHARED_COLLECTION below); no sandreco-side counterpart is needed.
 
 } // namespace sand
 
-#ifndef __CLING__
-#  include <ufw/index.hpp>
+#include <ufw/index.hpp>
 
 class EDEPHit;
 
@@ -56,23 +39,9 @@ namespace sand {
     static bool valid(const index_type&);
   };
 
-  using truth_index = ufw::data::index<truth_adapter>;
+  using truth_index = ufw::data::index<truth_adapter, std::size_t>;
 
 } // namespace sand
-
-#else //__CLING__
-
-namespace sand {
-
-  struct truth_index {
-    std::size_t m_index;
-  };
-
-  bool operator< (const truth_index& lhs, const truth_index& rhs) { return lhs.m_index < rhs.m_index; }
-
-} // namespace sand
-
-#endif //__CLING__
 
 namespace sand {
 
@@ -117,3 +86,17 @@ UFW_DECLARE_UNMANAGED_DATA(sand::truth_index)
     using NAME = sand::spill_data_collection<NS::T>;                                                                   \
   }                                                                                                                    \
   UFW_DECLARE_MANAGED_DATA(NS::NAME)
+
+/**
+ * Declare a per-context store of shared objects addressed through typed keys, the
+ * shared-store counterpart of SAND_DATA_COLLECTION: NS::NAME becomes the collection type
+ * and the registered (streamed) name of the managed variable. UFW_DECLARE_STORE adds the
+ * NS::NAME_store() accessor and the NS::NAME_index key type, and registers the key as
+ * unmanaged data.
+ */
+#define SAND_SHARED_COLLECTION(NS, T, NAME)                                                                            \
+  UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \
+  namespace NS {                                                                                                       \
+    using NAME = ufw::data::managed_collection<NS::T>;                                                                 \
+  }                                                                                                                    \
+  UFW_DECLARE_STORE(NS, NS::NAME, NAME)

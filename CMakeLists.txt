@@ -29,7 +29,7 @@ find_package(spdlog REQUIRED)
 
 find_package(ROOT COMPONENTS MathCore REQUIRED)
 
-find_package(ufw REQUIRED)
+find_package(ufw 0.7.0 REQUIRED)
 
 find_package(pybind11 REQUIRED)
 
