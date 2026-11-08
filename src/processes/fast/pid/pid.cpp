@@ -2,26 +2,27 @@
 
 #include <caf/caf_wrapper.hpp>
 
+#include <duneanaobj/StandardRecord/SRTrueParticle.h>
+#include <duneanaobj/StandardRecord/SRTruthBranch.h>
 #include <ufw/factory.hpp>
 
 #include <cstddef>
-#include <utility>
 #include <vector>
 
 namespace sand::fast {
 
   namespace {
 
-    /// Position of a true particle in SRRecoParticlesBranch::sandreco: primaries first, then secondaries
-    int reco_idx_from_id(::caf::TrueParticleID const& id, int n_prim) {
-      switch (id.type) {
-      case ::caf::TrueParticleID::kPrimary:
-        return id.part;
-      case ::caf::TrueParticleID::kSecondary:
-        return n_prim + id.part;
-      default:
-        return -1; // no parent, or prefsi (not modeled here)
-      }
+    /// True if `id` points to a true particle: primaries have no parent, so their parentID is left unset
+    bool is_particle(::caf::TrueParticleID const& id) {
+      return id.type == ::caf::TrueParticleID::kPrimary || id.type == ::caf::TrueParticleID::kSecondary;
+    }
+
+    /// The true particle `id` points to: truth.nu[id.ixn], then prim or sec at id.part
+    ::caf::SRTrueParticle const& true_particle(::caf::SRTruthBranch const& truth, ::caf::TrueParticleID const& id) {
+      auto const& true_ixn  = truth.nu.at(static_cast<std::size_t>(id.ixn));
+      auto const& particles = (id.type == ::caf::TrueParticleID::kPrimary) ? true_ixn.prim : true_ixn.sec;
+      return particles.at(static_cast<std::size_t>(id.part));
     }
 
     /// Perfect reco particle: every field copied or derived 1:1 from the true particle
@@ -41,32 +42,6 @@ namespace sand::fast {
       reco_p.truthOverlap.push_back(1.f);
 
       return reco_p;
-    }
-
-    /// Perfect reco particles: one per true `prim`/`sec`, in that order, with parent/daughters resolved
-    ::caf::SRRecoParticlesBranch reco_particles_from_true(::caf::SRTrueInteraction const& true_ixn, int ixn_idx) {
-      ::caf::SRRecoParticlesBranch part{};
-      auto const n_prim = static_cast<int>(true_ixn.prim.size());
-
-      auto add_all = [&](std::vector<::caf::SRTrueParticle> const& particles, ::caf::TrueParticleID::PartType type) {
-        for (std::size_t i{}; i != particles.size(); ++i) {
-          ::caf::TrueParticleID const id{ixn_idx, type, static_cast<int>(i)};
-          auto reco_p = reco_particle_from_true(particles[i], id);
-
-          int const parent_idx = reco_idx_from_id(particles[i].parentID, n_prim);
-          if (parent_idx >= 0) {
-            reco_p.parent = parent_idx;
-            part.sandreco[parent_idx].daughters.push_back(static_cast<unsigned int>(part.sandreco.size()));
-          }
-
-          part.sandreco.push_back(std::move(reco_p));
-          ++part.nsandreco;
-        }
-      };
-
-      add_all(true_ixn.prim, ::caf::TrueParticleID::kPrimary);
-      add_all(true_ixn.sec, ::caf::TrueParticleID::kSecondary);
-      return part;
     }
 
     /// The subdetector object a constituent names
@@ -104,28 +79,60 @@ namespace sand::fast {
     nd         = get<sand::caf::nd_reco_branch_wrapper>("in_nd");
     auto& sand = nd.sand;
 
-    // 1. One reco particle per true particle of the interaction, in prim/sec order
-    for (auto& ixn : common.ixn.sandreco) {
-      auto const true_idx = ixn.truth.at(0);
-      ixn.part            = reco_particles_from_true(truth.nu.at(true_idx), static_cast<int>(true_idx));
+    // 1. One reco particle per assn, in the order of trkmatch: particle j is the particle of trkmatch[j]
+    for (std::size_t i{}; i != common.ixn.sandreco.size(); ++i) {
+      auto& ixn            = common.ixn.sandreco[i];
+      auto const& trkmatch = sand.ixn[i].trkmatch;
+
+      for (std::size_t j{}; j != trkmatch.size(); ++j) {
+        auto const& id = trkmatch[j].trk.truth.at(0);
+        ixn.part.sandreco.push_back(reco_particle_from_true(true_particle(truth, id), id));
+      }
+      ixn.part.nsandreco = static_cast<int>(ixn.part.sandreco.size());
+
+      // Which true particles were seen: true particle -> its reco particle j, -1 if invisible
+      auto const& true_ixn = truth.nu.at(ixn.truth.at(0));
+      std::vector<int> prim_to_j(true_ixn.prim.size(), -1);
+      std::vector<int> sec_to_j(true_ixn.sec.size(), -1);
+      for (std::size_t j{}; j != trkmatch.size(); ++j) {
+        auto const& id = trkmatch[j].trk.truth.at(0);
+        (id.type == ::caf::TrueParticleID::kPrimary ? prim_to_j : sec_to_j).at(static_cast<std::size_t>(id.part)) =
+            static_cast<int>(j);
+      }
+      auto const reco_index = [&](::caf::TrueParticleID const& id) {
+        return (id.type == ::caf::TrueParticleID::kPrimary ? prim_to_j : sec_to_j)
+            .at(static_cast<std::size_t>(id.part));
+      };
+
+      // The parent of a reco particle is its nearest visible true ancestor, -1 if none
+      for (std::size_t j{}; j != trkmatch.size(); ++j) {
+        // Climb the true ancestors until one was seen, or there are no more
+        auto ancestor = true_particle(truth, trkmatch[j].trk.truth.at(0)).parentID;
+        while (is_particle(ancestor) && reco_index(ancestor) < 0) {
+          ancestor = true_particle(truth, ancestor).parentID;
+        }
+        if (is_particle(ancestor)) {
+          auto const parent           = reco_index(ancestor);
+          ixn.part.sandreco[j].parent = parent;
+          ixn.part.sandreco[static_cast<std::size_t>(parent)].daughters.push_back(static_cast<unsigned int>(j));
+        }
+      }
     }
 
-    // 2. Every assn and the particle of its trk.truth[0] point to each other; every constituent points to the particle
+    // 2. Every assn and the particle at the same position point to each other; every constituent points to the particle
     for (std::size_t i{}; i != sand.ixn.size(); ++i) {
       auto& trkmatch = sand.ixn[i].trkmatch;
       for (std::size_t k{}; k != trkmatch.size(); ++k) {
-        auto& assn        = trkmatch[k];
-        auto const& id    = assn.trk.truth.at(0);
-        auto const n_prim = static_cast<int>(truth.nu.at(id.ixn).prim.size());
-        int const ipart   = reco_idx_from_id(id, n_prim);
-        ::caf::SRRecoParticleID const part{static_cast<int>(i), ::caf::SRRecoParticleID::kSandreco, ipart};
+        auto& assn = trkmatch[k];
+        ::caf::SRRecoParticleID const part{static_cast<int>(i), ::caf::SRRecoParticleID::kSandreco,
+                                           static_cast<int>(k)};
 
         assn.part = part;
         for (auto const& constituent : assn.constituents) {
           object_at(sand, constituent).part = part;
         }
 
-        auto& particle           = common.ixn.sandreco.at(i).part.sandreco.at(ipart);
+        auto& particle           = common.ixn.sandreco.at(i).part.sandreco.at(k);
         particle.recoobj         = {static_cast<int>(i), ::caf::SRRecoBaseID::kSANDAssn, static_cast<int>(k)};
         particle.origRecoObjType = reco_obj_type(assn.constituents.front().type);
       }
