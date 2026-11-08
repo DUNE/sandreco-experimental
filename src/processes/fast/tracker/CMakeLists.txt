@@ -5,4 +5,4 @@ target_sources(sand_fast_tracker_reco
   reco.cpp
 )
 
-# target_link_libraries(sand_fast_tracker_reco PRIVATE ROOT::MathCore duneanaobj::StandardRecord)
+target_link_libraries(sand_fast_tracker_reco PRIVATE sand_edep_reader sand_spill_maps ROOT::MathCore ROOT::EG duneanaobj::StandardRecord)
