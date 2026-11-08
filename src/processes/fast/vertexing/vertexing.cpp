@@ -5,6 +5,7 @@
 #include <ufw/factory.hpp>
 
 #include <cstddef>
+#include <vector>
 
 namespace sand::fast {
 
@@ -25,28 +26,33 @@ namespace sand::fast {
     // 1. The subdetector objects: the constituents of the assns point into these collections
     sand.tracker = tracker;
 
-    // 2. One reco interaction per true interaction, at the true vertex
-    for (std::size_t i{}; i != truth.nu.size(); ++i) {
-      auto& ixn        = common.ixn.sandreco.emplace_back();
-      ixn.id           = truth.nu[i].id;
-      ixn.vtx          = truth.nu[i].vtx;
-      ixn.truth        = {i};
-      ixn.truthOverlap = {1.f};
-    }
-    common.ixn.nsandreco = common.ixn.sandreco.size();
-
-    // Index-aligned with common.ixn.sandreco: SRRecoBaseID{i, kSANDAssn, k} resolves to sand.ixn[i].trkmatch[k]
-    sand.ixn.resize(truth.nu.size());
-    sand.nixn = sand.ixn.size();
-
-    // 3. Every assn goes to the interaction of its particle, keeping the order of the matching
+    // 2. The interactions come from the assns: one per true interaction with at least one assn, at the true vertex.
+    //    A neutrino that left nothing visible gives no interaction. common.ixn.sandreco[i] and sand.ixn[i] are created
+    //    together, so SRRecoBaseID{i, kSANDAssn, k} resolves to sand.ixn[i].trkmatch[k].
+    std::vector<int> reco_of_true(truth.nu.size(), -1); // true interaction -> reco interaction, -1 if none yet
     for (auto const& assn : assns) {
-      auto& sand_ixn = sand.ixn.at(static_cast<std::size_t>(assn.trk.truth.at(0).ixn));
+      auto const true_ixn = static_cast<std::size_t>(assn.trk.truth.at(0).ixn);
+      if (reco_of_true.at(true_ixn) < 0) {
+        reco_of_true[true_ixn] = static_cast<int>(common.ixn.sandreco.size());
+
+        auto& ixn        = common.ixn.sandreco.emplace_back();
+        ixn.id           = truth.nu[true_ixn].id;
+        ixn.vtx          = truth.nu[true_ixn].vtx;
+        ixn.truth        = {true_ixn};
+        ixn.truthOverlap = {1.f};
+        sand.ixn.emplace_back();
+      }
+
+      // 3. Every assn goes to the interaction of its particle, keeping the order of the matching
+      auto& sand_ixn = sand.ixn[static_cast<std::size_t>(reco_of_true[true_ixn])];
       sand_ixn.trkmatch.push_back(assn);
       sand_ixn.ntrkmatch = sand_ixn.trkmatch.size();
     }
+    common.ixn.nsandreco = common.ixn.sandreco.size();
+    sand.nixn            = sand.ixn.size();
 
-    UFW_DEBUG("fast::vertexing: {} interactions, {} assns", sand.nixn, assns.size());
+    UFW_DEBUG("fast::vertexing: {} interactions out of {} neutrinos, {} assns", sand.nixn, truth.nu.size(),
+              assns.size());
   }
 
 } // namespace sand::fast
