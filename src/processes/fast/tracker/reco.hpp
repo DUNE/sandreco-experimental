@@ -1,23 +1,23 @@
-#ifndef SAND_TRACKER_FAST_RECO
-#define SAND_TRACKER_FAST_RECO
+#ifndef SAND_FAST_TRACKER_RECO_HPP
+#define SAND_FAST_TRACKER_RECO_HPP
 
 #include <common/version.h>
 
 #include <ufw/process.hpp>
 
-namespace sand::tracker {
+namespace sand::fast::tracker {
 
-  class fast_reco : public ufw::process {
+  class reco : public ufw::process {
     double m_min_energy_deposit{};
 
    public:
-    fast_reco();
+    reco();
     void configure(ufw::config const& cfg) override;
     void run() override;
   };
 
-} // namespace sand::tracker
+} // namespace sand::fast::tracker
 
-UFW_REGISTER_PROCESS(sand::tracker::fast_reco);
+UFW_REGISTER_PROCESS(sand::fast::tracker::reco);
 
 #endif
