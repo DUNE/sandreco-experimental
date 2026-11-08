@@ -336,16 +336,20 @@ namespace sand::test {
                      "nu[{}].part[{}]: SRTrack::Evis ({} MeV) isn't the energy deposited in the tracker ({} MeV)",
                      ixn_idx, p, track.Evis, total_energy_deposit(*trj));
 
-          // dir/E at the tracker entry and enddir at the tracker exit, from the trajectory points in the tracker;
-          // without them, directions from the first/last hit segment and E unknown (NaN)
+          // enddir: direction of the last tracker hit
+          UFW_ASSERT(same_direction(track.enddir, *ends.last),
+                     "nu[{}].part[{}]: track enddir ({}, {}, {}) isn't the direction of its last tracker hit", ixn_idx,
+                     p, track.enddir.x, track.enddir.y, track.enddir.z);
+
+          // dir/E at the tracker entry, from the first trajectory point in the tracker; without one, dir from the
+          // first hit segment and E unknown (NaN)
           auto const points = find_tracker_point_ends(*trj);
           if (points.first == nullptr) {
             ++m_tracks_without_tracker_points;
             UFW_ASSERT(std::isnan(track.E), "nu[{}].part[{}]: no trajectory point in the tracker, but E = {} MeV",
                        ixn_idx, p, track.E);
-            UFW_ASSERT(same_direction(track.dir, *ends.first) && same_direction(track.enddir, *ends.last),
-                       "nu[{}].part[{}]: no trajectory point in the tracker, but dir/enddir aren't the first/last "
-                       "hit's direction",
+            UFW_ASSERT(same_direction(track.dir, *ends.first),
+                       "nu[{}].part[{}]: no trajectory point in the tracker, but dir isn't the first hit's direction",
                        ixn_idx, p);
           } else {
             auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
@@ -363,11 +367,6 @@ namespace sand::test {
               UFW_ASSERT(same_direction(track.dir, p_in),
                          "nu[{}].part[{}]: track dir ({}, {}, {}) isn't the momentum direction at the tracker entry",
                          ixn_idx, p, track.dir.x, track.dir.y, track.dir.z);
-            }
-            if (auto const& p_out = points.last->GetMomentum(); !is_stopped(p_out)) {
-              UFW_ASSERT(same_direction(track.enddir, p_out),
-                         "nu[{}].part[{}]: track enddir ({}, {}, {}) isn't the momentum direction at the tracker exit",
-                         ixn_idx, p, track.enddir.x, track.enddir.y, track.enddir.z);
             }
           }
           ++n_with_track;

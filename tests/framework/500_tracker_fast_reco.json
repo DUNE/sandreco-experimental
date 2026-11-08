@@ -31,7 +31,7 @@
       }
     },
     {
-      "sand::tracker::fast_reco": {
+      "sand::fast::tracker::reco": {
         "min_energy_deposit": 0.04
       },
       "reqs": {
