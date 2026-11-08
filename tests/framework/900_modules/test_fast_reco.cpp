@@ -1,4 +1,5 @@
 #include <caf/caf_wrapper.hpp>
+#include <common/sand.h>
 
 #include <edep_reader/edep_reader.hpp>
 #include <spill_maps/spill_maps.hpp>
@@ -14,17 +15,21 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <numeric>
 #include <vector>
 
 namespace sand::test {
 
   /// Verifies the output of the fast reco chain (tracker reco, matching, vertexing, pid):
-  /// 1. counters and the index alignment of common.ixn and nd.sand.ixn;
-  /// 2. the gate: a true track-/shower-like particle has a reco particle if and only if it left at least
-  ///    `min_energy_deposit` in the tracker, recomputed from sand::edep_reader without sharing code with the reco;
+  /// 1. counters, the index alignment of common.ixn and nd.sand.ixn, and the interactions: one per neutrino with
+  ///    something visible, never empty, never two for the same neutrino, at the neutrino's vertex;
+  /// 2. the gate, over every neutrino: a true track-/shower-like particle has a reco particle if and only if it left
+  ///    at least `min_energy_deposit` in the tracker, recomputed from sand::edep_reader without sharing code with the
+  ///    reco; a neutrino has a reco interaction if and only if at least one of its particles is seen;
   /// 3. the links: particle j <-> trkmatch[j] <-> its tracker object, with the same truth, every object used once;
   /// 4. the tracker objects: position, time, length, Evis and enddir from the hits, dir and E at the tracker entry;
-  /// 5. the parentage: the parent of a reco particle is its nearest visible true ancestor, and daughters mirror it.
+  /// 5. the parentage: the parent of a reco particle is its nearest visible true ancestor, and daughters mirror it;
+  /// 6. part_energy_sum and part_mom_sum: sums over the visible primary particles of the interaction.
   struct fast_reco_test : public ufw::process {
     fast_reco_test();
     ~fast_reco_test() override;
@@ -171,8 +176,8 @@ namespace sand::test {
       UFW_ASSERT(close(track.len_cm, hits.length_mm * 0.1),
                  "ixn[{}].part[{}]: track length {} cm isn't the summed length of its tracker hits {} cm", i, j,
                  track.len_cm, hits.length_mm * 0.1);
-      UFW_ASSERT(close(track.Evis, hits.energy), "ixn[{}].part[{}]: Evis {} MeV isn't the tracker deposit {} MeV", i,
-                 j, track.Evis, hits.energy);
+      UFW_ASSERT(close(track.Evis, hits.energy), "ixn[{}].part[{}]: Evis {} MeV isn't the tracker deposit {} MeV", i, j,
+                 track.Evis, hits.energy);
       UFW_ASSERT(same_direction(track.enddir, *hits.last),
                  "ixn[{}].part[{}]: enddir isn't the direction of the last tracker hit", i, j);
 
@@ -185,15 +190,15 @@ namespace sand::test {
       }
       auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
       double const mass    = pdg_info != nullptr ? pdg_info->Mass() * 1000. : 0.; // GeV -> MeV
-      auto const& p_in     = entry->GetMomentum();                                 // MeV
+      auto const& p_in     = entry->GetMomentum();                                // MeV
       UFW_ASSERT(close(track.E, std::sqrt(p_in.Mag2() + mass * mass)),
                  "ixn[{}].part[{}]: E {} MeV isn't the energy at the tracker entry", i, j, track.E);
       UFW_ASSERT(track.E <= true_part.p.E * 1000. * (1. + 1e-5),
                  "ixn[{}].part[{}]: E {} MeV is more than the true energy at the vertex {} MeV", i, j, track.E,
                  true_part.p.E * 1000.);
       if (!is_stopped(p_in)) {
-        UFW_ASSERT(same_direction(track.dir, p_in), "ixn[{}].part[{}]: dir isn't the momentum at the tracker entry",
-                   i, j);
+        UFW_ASSERT(same_direction(track.dir, p_in), "ixn[{}].part[{}]: dir isn't the momentum at the tracker entry", i,
+                   j);
       }
     }
 
@@ -254,12 +259,26 @@ namespace sand::test {
     std::vector<int> track_users(tracker.tracks.size());
     std::vector<int> shower_users(tracker.showers.size());
 
+    // Which true particles were seen, for every neutrino: true particle -> reco particle j, -1 if invisible
+    std::vector<std::vector<int>> prim_to_j(truth.nu.size());
+    std::vector<std::vector<int>> sec_to_j(truth.nu.size());
+    for (std::size_t t{}; t != truth.nu.size(); ++t) {
+      prim_to_j[t].assign(truth.nu[t].prim.size(), -1);
+      sec_to_j[t].assign(truth.nu[t].sec.size(), -1);
+    }
+    auto const reco_index = [&](::caf::TrueParticleID const& id) -> int& {
+      auto& tables = (id.type == ::caf::TrueParticleID::kPrimary) ? prim_to_j : sec_to_j;
+      return tables.at(static_cast<std::size_t>(id.ixn)).at(static_cast<std::size_t>(id.part));
+    };
+
+    // Which neutrino every reco interaction comes from: at most one interaction per neutrino
+    std::vector<int> reco_of_true(truth.nu.size(), -1);
+
     for (std::size_t i{}; i != common.ixn.sandreco.size(); ++i) {
       auto const& reco_ixn  = common.ixn.sandreco[i];
       auto const& particles = reco_ixn.part.sandreco;
       auto const& sand_ixn  = nd.sand.ixn[i];
       auto const& trkmatch  = sand_ixn.trkmatch;
-      auto const& true_ixn  = truth.nu.at(reco_ixn.truth.at(0));
       auto const i_int      = static_cast<int>(i);
 
       UFW_ASSERT(particles.size() == static_cast<std::size_t>(reco_ixn.part.nsandreco),
@@ -268,13 +287,16 @@ namespace sand::test {
       UFW_ASSERT(particles.size() == trkmatch.size(), "ixn[{}]: {} reco particles but {} assns", i, particles.size(),
                  trkmatch.size());
 
-      // Which true particles were seen: true particle -> reco particle j, -1 if invisible
-      std::vector<int> prim_to_j(true_ixn.prim.size(), -1);
-      std::vector<int> sec_to_j(true_ixn.sec.size(), -1);
-      auto const reco_index = [&](::caf::TrueParticleID const& id) -> int& {
-        auto& table = (id.type == ::caf::TrueParticleID::kPrimary) ? prim_to_j : sec_to_j;
-        return table.at(static_cast<std::size_t>(id.part));
-      };
+      // Vertexing: an interaction exists only for a neutrino with something visible, once, at its true vertex
+      UFW_ASSERT(!particles.empty(), "ixn[{}]: an interaction without visible particles", i);
+      UFW_ASSERT(reco_ixn.truth.size() == 1 && reco_ixn.truth[0] < truth.nu.size(),
+                 "ixn[{}]: expected one valid truth match", i);
+      auto const t = reco_ixn.truth[0];
+      UFW_ASSERT(reco_of_true[t] == -1, "ixn[{}]: neutrino {} already has interaction {}", i, t, reco_of_true[t]);
+      reco_of_true[t] = i_int;
+      UFW_ASSERT(reco_ixn.id == truth.nu[t].id && reco_ixn.vtx.x == truth.nu[t].vtx.x
+                     && reco_ixn.vtx.y == truth.nu[t].vtx.y && reco_ixn.vtx.z == truth.nu[t].vtx.z,
+                 "ixn[{}]: id or vertex isn't the one of neutrino {}", i, t);
 
       for (std::size_t j{}; j != particles.size(); ++j) {
         auto const& particle = particles[j];
@@ -286,14 +308,16 @@ namespace sand::test {
                    "ixn[{}].part[{}]: expected exactly one truth match", i, j);
         auto const& id = particle.truth[0];
         UFW_ASSERT(same_particle(id, assn.trk.truth.at(0)), "ixn[{}].part[{}]: truth differs from its assn's", i, j);
+        UFW_ASSERT(static_cast<std::size_t>(id.ixn) == t, "ixn[{}].part[{}]: belongs to neutrino {}, not {}", i, j,
+                   id.ixn, t);
         UFW_ASSERT(reco_index(id) == -1, "ixn[{}].part[{}]: true particle already has a reco particle", i, j);
         reco_index(id) = j_int;
 
         auto const& true_part = resolve_true(truth, id);
         UFW_ASSERT(particle.pdg == true_part.pdg, "ixn[{}].part[{}]: pdg {} isn't the true {}", i, j, particle.pdg,
                    true_part.pdg);
-        UFW_ASSERT(particle.E == true_part.p.E, "ixn[{}].part[{}]: E {} isn't the true {} GeV (unit mismatch?)", i,
-                   j, particle.E, true_part.p.E);
+        UFW_ASSERT(particle.E == true_part.p.E, "ixn[{}].part[{}]: E {} isn't the true {} GeV (unit mismatch?)", i, j,
+                   particle.E, true_part.p.E);
         UFW_ASSERT(particle.primary == (id.type == ::caf::TrueParticleID::kPrimary),
                    "ixn[{}].part[{}]: primary flag disagrees with the truth", i, j);
 
@@ -331,24 +355,6 @@ namespace sand::test {
         }
       }
 
-      // 2. Gate: a track-/shower-like true particle is seen iff it left enough energy in the tracker
-      for (auto const type : {::caf::TrueParticleID::kPrimary, ::caf::TrueParticleID::kSecondary}) {
-        auto const n = (type == ::caf::TrueParticleID::kPrimary) ? true_ixn.prim.size() : true_ixn.sec.size();
-        for (std::size_t k{}; k != n; ++k) {
-          ::caf::TrueParticleID const id{static_cast<int>(reco_ixn.truth.at(0)), type, static_cast<int>(k)};
-          auto const& true_part = resolve_true(truth, id);
-          bool const candidate  = is_track_like(true_part.pdg) || is_shower_like(true_part.pdg);
-          auto const hits       = find_tracker_hits(trajectory(id));
-          bool const expected   = candidate && hits.first != nullptr && hits.energy >= m_min_energy_deposit;
-          bool const seen       = reco_index(id) >= 0;
-          UFW_ASSERT(seen == expected, "ixn[{}]: true particle pdg {} (G4ID {}, {} MeV in the tracker) {} be seen", i,
-                     true_part.pdg, true_part.G4ID, hits.energy, expected ? "should" : "should not");
-          if (candidate) {
-            ++(seen ? m_gated_in : m_gated_out);
-          }
-        }
-      }
-
       // 5. Parentage: the parent is the nearest visible true ancestor; daughters mirror it
       std::size_t n_daughters{};
       for (std::size_t j{}; j != particles.size(); ++j) {
@@ -369,6 +375,46 @@ namespace sand::test {
           std::count_if(particles.begin(), particles.end(), [](auto const& particle) { return particle.parent >= 0; });
       UFW_ASSERT(n_daughters == static_cast<std::size_t>(n_with_parent),
                  "ixn[{}]: {} daughters listed but {} particles have a parent", i, n_daughters, n_with_parent);
+
+      // 6. part_energy_sum and part_mom_sum: the four-momentum summed over the visible primaries
+      auto const sum = std::accumulate(
+          particles.begin(), particles.end(), sand::mom_4d{},
+          [](sand::mom_4d const& acc, ::caf::SRRecoParticle const& particle) {
+            return particle.primary ? acc + sand::mom_4d{particle.p.x, particle.p.y, particle.p.z, particle.E} : acc;
+          });
+      UFW_ASSERT(close(reco_ixn.Enu.part_energy_sum, sum.E()),
+                 "ixn[{}]: part_energy_sum {} GeV isn't the energy of the visible primaries {} GeV", i,
+                 reco_ixn.Enu.part_energy_sum, sum.E());
+      auto const& mom_dir  = reco_ixn.dir.part_mom_sum;
+      bool const no_mom    = sum.Px() == 0. && sum.Py() == 0. && sum.Pz() == 0.;
+      bool const right_dir = no_mom ? (mom_dir.x == 0.f && mom_dir.y == 0.f && mom_dir.z == 0.f)
+                                    : same_direction(mom_dir, sum.Px(), sum.Py(), sum.Pz());
+      UFW_ASSERT(right_dir, "ixn[{}]: part_mom_sum isn't the direction of the momentum of the visible primaries", i);
+    }
+
+    // 2. Gate, over every neutrino (also those with no reco interaction): a track-/shower-like true particle is seen
+    //    iff it left enough energy in the tracker. A neutrino with nothing seen must have no interaction.
+    for (std::size_t t{}; t != truth.nu.size(); ++t) {
+      bool any_seen{};
+      for (auto const type : {::caf::TrueParticleID::kPrimary, ::caf::TrueParticleID::kSecondary}) {
+        auto const n = (type == ::caf::TrueParticleID::kPrimary) ? truth.nu[t].prim.size() : truth.nu[t].sec.size();
+        for (std::size_t k{}; k != n; ++k) {
+          ::caf::TrueParticleID const id{static_cast<int>(t), type, static_cast<int>(k)};
+          auto const& true_part = resolve_true(truth, id);
+          bool const candidate  = is_track_like(true_part.pdg) || is_shower_like(true_part.pdg);
+          auto const hits       = find_tracker_hits(trajectory(id));
+          bool const expected   = candidate && hits.first != nullptr && hits.energy >= m_min_energy_deposit;
+          bool const seen       = reco_index(id) >= 0;
+          UFW_ASSERT(seen == expected, "nu[{}]: true particle pdg {} (G4ID {}, {} MeV in the tracker) {} be seen", t,
+                     true_part.pdg, true_part.G4ID, hits.energy, expected ? "should" : "should not");
+          if (candidate) {
+            ++(seen ? m_gated_in : m_gated_out);
+          }
+          any_seen = any_seen || seen;
+        }
+      }
+      UFW_ASSERT(any_seen == (reco_of_true[t] >= 0), "nu[{}]: {} visible particles but {} reco interaction", t,
+                 any_seen ? "has" : "has no", reco_of_true[t] >= 0 ? "a" : "no");
     }
 
     // 3. Every tracker object belongs to exactly one reco particle

@@ -1,6 +1,7 @@
 #include "neutrino.hpp"
 
 #include <caf/caf_wrapper.hpp>
+#include <sand.h>
 
 #include <ufw/factory.hpp>
 
@@ -9,6 +10,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <numeric>
 
 namespace sand::fast {
 
@@ -65,7 +67,8 @@ namespace sand::fast {
       return nuhyp;
     }
 
-    /// Perfect neutrino energy hypothesis: every estimator collapses to the true energy.
+    /// Perfect neutrino energy hypothesis: every estimator collapses to the true energy, except part_energy_sum (from
+    /// the particles, in run()).
     ::caf::SRNeutrinoEnergyBranch energy_from_true(::caf::SRTrueInteraction const& true_ixn) {
       ::caf::SRNeutrinoEnergyBranch enu{};
 
@@ -81,12 +84,11 @@ namespace sand::fast {
 
       enu.regcnn = true_ixn.E;
 
-      enu.part_energy_sum = true_ixn.E;
-
       return enu;
     }
 
-    /// Perfect direction hypothesis: every estimator collapses to the true neutrino direction.
+    /// Perfect direction hypothesis: every estimator collapses to the true neutrino direction, except part_mom_sum
+    /// (from the particles, in run()).
     ::caf::SRDirectionBranch direction_from_true(::caf::SRTrueInteraction const& true_ixn) {
       ::caf::SRDirectionBranch dir{};
 
@@ -94,7 +96,6 @@ namespace sand::fast {
       dir.calo            = true_dir;
       dir.heshw           = true_dir;
       dir.lngtrk          = true_dir;
-      dir.part_mom_sum    = true_dir;
 
       return dir;
     }
@@ -112,12 +113,25 @@ namespace sand::fast {
     // The interactions and particles of the pid, enriched below
     common = get<sand::caf::common_reco_branch_wrapper>("in_common");
 
-    // The hypotheses on the neutrino of every interaction, from the true interaction it comes from
     for (auto& ixn : common.ixn.sandreco) {
+      // The hypotheses on the neutrino, copied from the true interaction it comes from (a declared cheat)
       auto const& true_ixn = truth.nu.at(ixn.truth.at(0));
       ixn.nuhyp            = neutrino_hypothesis_from_true(true_ixn);
       ixn.Enu              = energy_from_true(true_ixn);
       ixn.dir              = direction_from_true(true_ixn);
+
+      // part_energy_sum and part_mom_sum are what their names say: sums over the visible particles. Only the
+      // primaries: the energy of a particle at generation already includes what it gives to its descendants.
+      auto const& particles = ixn.part.sandreco;
+      auto const sum        = std::accumulate(
+          particles.begin(), particles.end(), sand::mom_4d{},
+          [](sand::mom_4d const& acc, ::caf::SRRecoParticle const& particle) {
+            return particle.primary ? acc + sand::mom_4d{particle.p.x, particle.p.y, particle.p.z, particle.E} : acc;
+          });
+      
+      ixn.Enu.part_energy_sum = static_cast<float>(sum.E()); // GeV
+      ixn.dir.part_mom_sum    = normalize_to_direction(static_cast<float>(sum.Px()), static_cast<float>(sum.Py()),
+                                                       static_cast<float>(sum.Pz()));
     }
   }
 
