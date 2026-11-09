@@ -1,0 +1,235 @@
+#include "reco.hpp"
+
+#include <caf/caf_wrapper.hpp>
+#include <edep_reader/edep_reader.hpp>
+#include <spill_maps/spill_maps.hpp>
+
+#include <ufw/factory.hpp>
+#include <ufw/utils.hpp>
+
+#include <TDatabasePDG.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdlib>
+#include <numeric>
+#include <vector>
+
+namespace sand::fast::grain {
+
+  namespace {
+
+    /// The GRAIN volume: the liquid argon
+    constexpr std::array grain_volumes{subdetector_t::GRAIN};
+
+    /// Below this momentum [MeV] a particle is stopped and its momentum has no direction
+    constexpr double stopped_momentum{1e-6};
+
+    /// The hits of `trj` in GRAIN, ordered by start time
+    std::vector<EDEPHit> grain_hits(EDEPTrajectory const& trj) {
+      std::vector<EDEPHit> hits;
+      for (auto const volume : grain_volumes) {
+        if (auto const it = trj.GetHitMap().find(volume); it != trj.GetHitMap().end()) {
+          hits.insert(hits.end(), it->second.begin(), it->second.end());
+        }
+      }
+      std::stable_sort(hits.begin(), hits.end(),
+                       [](EDEPHit const& a, EDEPHit const& b) { return a.GetStart().T() < b.GetStart().T(); });
+      return hits;
+    }
+
+    /// The earliest trajectory point of `trj` in GRAIN, where its momentum is taken (for a particle born in GRAIN,
+    /// where it is created); null if edep-sim stored none there
+    EDEPTrajectoryPoint const* entry_point(EDEPTrajectory const& trj) {
+      EDEPTrajectoryPoint const* entry{};
+      for (auto const volume : grain_volumes) {
+        if (auto const it = trj.GetTrajectoryPoints().find(volume); it != trj.GetTrajectoryPoints().end()) {
+          for (auto const& point : it->second) {
+            if (entry == nullptr || point.GetPosition().T() < entry->GetPosition().T()) {
+              entry = &point;
+            }
+          }
+        }
+      }
+      return entry;
+    }
+
+    ::caf::SRVector3D normalize_to_direction(double x, double y, double z) {
+      auto const fx   = static_cast<float>(x);
+      auto const fy   = static_cast<float>(y);
+      auto const fz   = static_cast<float>(z);
+      float const mag = std::sqrt(fx * fx + fy * fy + fz * fz);
+      return (mag > 0.f) ? ::caf::SRVector3D{fx / mag, fy / mag, fz / mag} : ::caf::SRVector3D{0.f, 0.f, 0.f};
+    }
+
+    /// Direction of a hit, from its start to its stop
+    ::caf::SRVector3D direction_of(EDEPHit const& hit) {
+      return normalize_to_direction(hit.GetStop().X() - hit.GetStart().X(), hit.GetStop().Y() - hit.GetStart().Y(),
+                                    hit.GetStop().Z() - hit.GetStart().Z());
+    }
+
+    /// Direction at the GRAIN entry: the momentum at the entry point, else the first hit
+    ::caf::SRVector3D entry_direction(EDEPTrajectoryPoint const* entry, std::vector<EDEPHit> const& hits) {
+      if (entry != nullptr && std::sqrt(entry->GetMomentum().Mag2()) > stopped_momentum) {
+        auto const& p = entry->GetMomentum();
+        return normalize_to_direction(p.X(), p.Y(), p.Z());
+      }
+      return direction_of(hits.front());
+    }
+
+    /// edep-sim positions are in mm, CAF positions in cm
+    ::caf::SRVector3D position_cm(sand::vec_4d const& v) {
+      return {static_cast<float>(v.X() * 0.1), static_cast<float>(v.Y() * 0.1), static_cast<float>(v.Z() * 0.1)};
+    }
+
+    double energy_deposit(std::vector<EDEPHit> const& hits) {
+      return std::accumulate(hits.begin(), hits.end(), 0.,
+                             [](double sum, EDEPHit const& hit) { return sum + hit.GetEnergyDeposit(); });
+    }
+
+    double track_length_mm(std::vector<EDEPHit> const& hits) {
+      return std::accumulate(hits.begin(), hits.end(), 0.,
+                             [](double sum, EDEPHit const& hit) { return sum + hit.GetTrackLength(); });
+    }
+
+    /// Mass hypothesis from the true pdg (perfect PID) [MeV]
+    double mass_mev(int pdg) {
+      auto const* p = TDatabasePDG::Instance()->GetParticle(pdg);
+      return p != nullptr ? p->Mass() * 1000. : 0.; // TDatabasePDG masses are in GeV
+    }
+
+    short charge_from_pdg(int pdg) {
+      if (auto const* p = TDatabasePDG::Instance()->GetParticle(pdg)) {
+        double const q = p->Charge() / 3.0;
+        if (q > 0.5) {
+          return 1;
+        }
+        if (q < -0.5) {
+          return -1;
+        }
+      }
+      return 0;
+    }
+
+    /// True for the long-lived charged particles that leave a track: mu±, pi±, K±, p and pbar
+    bool is_track_like(int pdg) {
+      int const abs_pdg = std::abs(pdg);
+      return abs_pdg == 13 || abs_pdg == 211 || abs_pdg == 321 || abs_pdg == 2212;
+    }
+
+    /// True for the electromagnetic particles that start a shower: e±, gamma, pi0
+    bool is_shower_like(int pdg) {
+      int const abs_pdg = std::abs(pdg);
+      return abs_pdg == 11 || abs_pdg == 22 || abs_pdg == 111;
+    }
+
+    /// Position, time, length and Evis from the hits; momentum (dir, E) at the entry point, E NaN without one;
+    /// enddir from the last hit
+    ::caf::SRTrack track_from(std::vector<EDEPHit> const& hits, EDEPTrajectoryPoint const* entry,
+                              ::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
+      ::caf::SRTrack track{};
+
+      track.start  = position_cm(hits.front().GetStart());
+      track.end    = position_cm(hits.back().GetStop());
+      track.time   = hits.front().GetStart().T();
+      track.len_cm = static_cast<float>(track_length_mm(hits) * 0.1);
+      track.Evis   = static_cast<float>(energy_deposit(hits)); // MeV
+
+      track.dir    = entry_direction(entry, hits);
+      track.enddir = direction_of(hits.back());
+      if (entry != nullptr) {
+        auto const m = mass_mev(true_part.pdg);
+        track.E      = static_cast<float>(std::sqrt(entry->GetMomentum().Mag2() + m * m)); // MeV
+      }
+
+      track.charge = charge_from_pdg(true_part.pdg);
+      track.qual   = 1.f;
+
+      track.truth.push_back(id);
+      track.truthOverlap.push_back(1.f);
+      return track;
+    }
+
+    /// Start, time and Evis from the hits; direction at the entry point
+    ::caf::SRShower shower_from(std::vector<EDEPHit> const& hits, EDEPTrajectoryPoint const* entry,
+                                ::caf::TrueParticleID const& id) {
+      ::caf::SRShower shower{};
+
+      shower.start     = position_cm(hits.front().GetStart());
+      shower.time      = hits.front().GetStart().T();
+      shower.Evis      = static_cast<float>(energy_deposit(hits)); // MeV
+      shower.direction = entry_direction(entry, hits);
+
+      shower.truth.push_back(id);
+      shower.truthOverlap.push_back(1.f);
+      return shower;
+    }
+
+  } // namespace
+
+  reco::reco()
+    : process{{{"in_truth", "sand::caf::truth_branch_wrapper"}}, {{"out_grain", "sand::caf::grain_reco_wrapper"}}} {}
+
+  void reco::configure(ufw::config const& cfg) {
+    process::configure(cfg);
+    m_min_energy_deposit = cfg.value("min_energy_deposit", 0.);
+
+    UFW_ASSERT(m_min_energy_deposit >= 0., "fast::grain::reco: min_energy_deposit must be >= 0, got {}",
+               m_min_energy_deposit);
+  }
+
+  void reco::run() {
+    auto const& edep    = instance<sand::edep_reader>();
+    auto const& id_maps = instance<sand::spill_maps>();
+    auto const& truth   = get<sand::caf::truth_branch_wrapper>("in_truth");
+    auto& grain         = set<sand::caf::grain_reco_wrapper>("out_grain");
+
+    int n_no_hits{}, n_below_threshold{};
+
+    for (std::size_t ixn{}; ixn != truth.nu.size(); ++ixn) {
+      auto const& ids = id_maps.at(ixn);
+
+      // Every true particle of the interaction: primaries, then secondaries
+      for (auto const type : {::caf::TrueParticleID::kPrimary, ::caf::TrueParticleID::kSecondary}) {
+        auto const& particles = (type == ::caf::TrueParticleID::kPrimary) ? truth.nu[ixn].prim : truth.nu[ixn].sec;
+        for (std::size_t idx{}; idx != particles.size(); ++idx) {
+          auto const& p = particles[idx];
+          ::caf::TrueParticleID const id{static_cast<int>(ixn), type, static_cast<int>(idx)};
+
+          auto const trj = edep.GetTrajectory(ids.to_spill_id(p.G4ID));
+          if (trj == edep.end()) {
+            UFW_ERROR("nu[{}]: true particle G4ID {} has no edep-sim trajectory", ixn, p.G4ID);
+          }
+
+          // Detectability: hits in GRAIN, with enough deposited energy
+          auto const hits = grain_hits(*trj);
+          if (hits.empty()) {
+            ++n_no_hits;
+            continue;
+          }
+          if (energy_deposit(hits) < m_min_energy_deposit) {
+            ++n_below_threshold;
+            continue;
+          }
+
+          if (is_track_like(p.pdg)) {
+            grain.tracks.push_back(track_from(hits, entry_point(*trj), p, id));
+          } else if (is_shower_like(p.pdg)) {
+            grain.showers.push_back(shower_from(hits, entry_point(*trj), id));
+          }
+        }
+      }
+    }
+    grain.ntracks  = grain.tracks.size();
+    grain.nshowers = grain.showers.size();
+
+    UFW_DEBUG("fast::grain::reco: {} tracks, {} showers; {} particles without GRAIN hits, {} below "
+              "min_energy_deposit ({} MeV)",
+              grain.ntracks, grain.nshowers, n_no_hits, n_below_threshold, m_min_energy_deposit);
+  }
+
+} // namespace sand::fast::grain
+
+UFW_REGISTER_DYNAMIC_PROCESS_FACTORY(sand::fast::grain::reco);
