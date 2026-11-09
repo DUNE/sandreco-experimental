@@ -47,6 +47,10 @@ namespace sand::fast {
     /// The subdetector object a constituent names
     ::caf::SRRecoObjBase& object_at(::caf::SRSAND& sand, ::caf::SRSANDObjID const& id) {
       switch (id.type) {
+      case ::caf::SRRecoBaseID::kSANDGRAINTrack:
+        return sand.grain.tracks.at(id.idx);
+      case ::caf::SRRecoBaseID::kSANDGRAINShower:
+        return sand.grain.showers.at(id.idx);
       case ::caf::SRRecoBaseID::kSANDTrackerTrack:
         return sand.tracker.tracks.at(id.idx);
       case ::caf::SRRecoBaseID::kSANDTrackerShower:
@@ -57,7 +61,16 @@ namespace sand::fast {
     }
 
     ::caf::RecoObjType reco_obj_type(::caf::SRRecoBaseID::SRRecoBaseCollectionType type) {
-      return type == ::caf::SRRecoBaseID::kSANDTrackerShower ? ::caf::RecoObjType::kShower : ::caf::RecoObjType::kTrack;
+      switch (type) {
+      case ::caf::SRRecoBaseID::kSANDGRAINTrack:
+      case ::caf::SRRecoBaseID::kSANDTrackerTrack:
+        return ::caf::RecoObjType::kTrack;
+      case ::caf::SRRecoBaseID::kSANDGRAINShower:
+      case ::caf::SRRecoBaseID::kSANDTrackerShower:
+        return ::caf::RecoObjType::kShower;
+      default:
+        return ::caf::RecoObjType::kUnknownRecoObj;
+      }
     }
 
   } // namespace

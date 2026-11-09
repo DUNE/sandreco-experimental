@@ -20,14 +20,17 @@
 
 namespace sand::test {
 
-  /// Verifies the output of the fast reco chain (tracker reco, matching, vertexing, pid):
+  /// Verifies the output of the fast reco chain (GRAIN and tracker recos, matching, vertexing, pid, neutrino):
   /// 1. counters, the index alignment of common.ixn and nd.sand.ixn, and the interactions: one per neutrino with
   ///    something visible, never empty, never two for the same neutrino, at the neutrino's vertex;
-  /// 2. the gate, over every neutrino: a true track-/shower-like particle has a reco particle if and only if it left
-  ///    at least `min_energy_deposit` in the tracker, recomputed from sand::edep_reader without sharing code with the
-  ///    reco; a neutrino has a reco interaction if and only if at least one of its particles is seen;
-  /// 3. the links: particle j <-> trkmatch[j] <-> its tracker object, with the same truth, every object used once;
-  /// 4. the tracker objects: position, time, length, Evis and enddir from the hits, dir and E at the tracker entry;
+  /// 2. the gate, over every neutrino and per subdetector: a true track-/shower-like particle has an object in GRAIN
+  ///    (in the tracker) if and only if it left at least the GRAIN (tracker) `min_energy_deposit` there, recomputed
+  ///    from sand::edep_reader without sharing code with the reco; it has a reco particle iff it has an object; a
+  ///    neutrino has a reco interaction iff at least one of its particles is seen;
+  /// 3. the links: particle j <-> trkmatch[j] <-> its objects (one per subdetector at most), with the same truth,
+  ///    every object used once;
+  /// 4. the objects: position, time, length, Evis and enddir from the hits in their subdetector, dir and E at the
+  ///    entry point in it;
   /// 5. the parentage: the parent of a reco particle is its nearest visible true ancestor, and daughters mirror it;
   /// 6. part_energy_sum and part_mom_sum: sums over the visible primary particles of the interaction.
   struct fast_reco_test : public ufw::process {
@@ -37,9 +40,10 @@ namespace sand::test {
     void run() override;
 
    private:
-    double m_min_energy_deposit{}; ///< same `min_energy_deposit` [MeV] as sand::fast::tracker::reco
-    std::size_t m_gated_in{};      ///< track-/shower-like true particles with a reco particle
-    std::size_t m_gated_out{};     ///< track-/shower-like true particles the gate rejected
+    double m_tracker_min_energy_deposit{}; ///< same `min_energy_deposit` [MeV] as sand::fast::tracker::reco
+    double m_grain_min_energy_deposit{};   ///< same `min_energy_deposit` [MeV] as sand::fast::grain::reco
+    std::size_t m_gated_in{};              ///< track-/shower-like true particles with a reco particle
+    std::size_t m_gated_out{};             ///< track-/shower-like true particles the gate rejected
   };
 
   fast_reco_test::fast_reco_test()
@@ -61,23 +65,29 @@ namespace sand::test {
       return abs_pdg == 11 || abs_pdg == 22 || abs_pdg == 111;
     }
 
-    bool is_tracker(sand::subdetector_t det) {
-      return det == sand::subdetector_t::STT || det == sand::subdetector_t::DRIFT;
+    /// The subdetectors with a fast reco
+    enum class region { grain, tracker };
+
+    char const* name_of(region r) { return r == region::grain ? "GRAIN" : "tracker"; }
+
+    bool is_in(sand::subdetector_t det, region r) {
+      return r == region::grain ? det == sand::subdetector_t::GRAIN
+                                : det == sand::subdetector_t::STT || det == sand::subdetector_t::DRIFT;
     }
 
-    /// The tracker hits of a trajectory, found without sorting: the earliest and the latest by start time (on equal
-    /// times, the first and the last met), the summed length and the deposited energy.
-    struct tracker_hits {
+    /// The hits of a trajectory in a region, found without sorting: the earliest and the latest by start time (on
+    /// equal times, the first and the last met), the summed length and the deposited energy.
+    struct region_hits {
       EDEPHit const* first{};
       EDEPHit const* last{};
       double length_mm{};
       double energy{}; ///< [MeV]
     };
 
-    tracker_hits find_tracker_hits(EDEPTrajectory const& trj) {
-      tracker_hits th;
+    region_hits find_hits(EDEPTrajectory const& trj, region r) {
+      region_hits th;
       for (auto const& [det, hits] : trj.GetHitMap()) {
-        if (!is_tracker(det)) {
+        if (!is_in(det, r)) {
           continue;
         }
         for (auto const& hit : hits) {
@@ -95,11 +105,11 @@ namespace sand::test {
       return th;
     }
 
-    /// The earliest trajectory point in the tracker, null if edep-sim stored none there
-    EDEPTrajectoryPoint const* find_entry_point(EDEPTrajectory const& trj) {
+    /// The earliest trajectory point in a region, null if edep-sim stored none there
+    EDEPTrajectoryPoint const* find_entry_point(EDEPTrajectory const& trj, region r) {
       EDEPTrajectoryPoint const* entry{};
       for (auto const& [det, points] : trj.GetTrajectoryPoints()) {
-        if (!is_tracker(det)) {
+        if (!is_in(det, r)) {
           continue;
         }
         for (auto const& point : points) {
@@ -161,72 +171,99 @@ namespace sand::test {
       return collection[static_cast<std::size_t>(id.part)];
     }
 
-    /// Tracker reco: position, time, length, Evis and enddir from the hits; dir and E at the entry point (E = NaN and
-    /// dir from the first hit without one)
+    /// A track in region `r`: position, time, length, Evis and enddir from the hits there; dir and E at the entry
+    /// point there (E = NaN and dir from the first hit without one)
     void check_track(::caf::SRTrack const& track, EDEPTrajectory const& trj, ::caf::SRTrueParticle const& true_part,
-                     std::size_t i, std::size_t j) {
-      auto const hits = find_tracker_hits(trj);
-      UFW_ASSERT(hits.first != nullptr, "ixn[{}].part[{}]: track without tracker hits", i, j);
+                     region r, std::size_t i, std::size_t j) {
+      auto const* in  = name_of(r);
+      auto const hits = find_hits(trj, r);
+      UFW_ASSERT(hits.first != nullptr, "ixn[{}].part[{}]: {} track without hits there", i, j, in);
       UFW_ASSERT(same_position_cm(track.start, hits.first->GetStart()),
-                 "ixn[{}].part[{}]: track start isn't the start of its first tracker hit", i, j);
+                 "ixn[{}].part[{}]: {} track start isn't the start of its first hit", i, j, in);
       UFW_ASSERT(same_position_cm(track.end, hits.last->GetStop()),
-                 "ixn[{}].part[{}]: track end isn't the stop of its last tracker hit", i, j);
+                 "ixn[{}].part[{}]: {} track end isn't the stop of its last hit", i, j, in);
       UFW_ASSERT(track.time == hits.first->GetStart().T(),
-                 "ixn[{}].part[{}]: track time isn't the time of its first tracker hit", i, j);
+                 "ixn[{}].part[{}]: {} track time isn't the time of its first hit", i, j, in);
       UFW_ASSERT(close(track.len_cm, hits.length_mm * 0.1),
-                 "ixn[{}].part[{}]: track length {} cm isn't the summed length of its tracker hits {} cm", i, j,
+                 "ixn[{}].part[{}]: {} track length {} cm isn't the summed length of its hits {} cm", i, j, in,
                  track.len_cm, hits.length_mm * 0.1);
-      UFW_ASSERT(close(track.Evis, hits.energy), "ixn[{}].part[{}]: Evis {} MeV isn't the tracker deposit {} MeV", i, j,
-                 track.Evis, hits.energy);
+      UFW_ASSERT(close(track.Evis, hits.energy), "ixn[{}].part[{}]: {} track Evis {} MeV isn't the deposit {} MeV", i,
+                 j, in, track.Evis, hits.energy);
       UFW_ASSERT(same_direction(track.enddir, *hits.last),
-                 "ixn[{}].part[{}]: enddir isn't the direction of the last tracker hit", i, j);
+                 "ixn[{}].part[{}]: {} track enddir isn't the direction of its last hit", i, j, in);
 
-      auto const* entry = find_entry_point(trj);
+      auto const* entry = find_entry_point(trj, r);
       if (entry == nullptr) {
-        UFW_ASSERT(std::isnan(track.E), "ixn[{}].part[{}]: no entry point, but E = {} MeV", i, j, track.E);
+        UFW_ASSERT(std::isnan(track.E), "ixn[{}].part[{}]: {} track without entry point, but E = {} MeV", i, j, in,
+                   track.E);
         UFW_ASSERT(same_direction(track.dir, *hits.first),
-                   "ixn[{}].part[{}]: no entry point, but dir isn't the first hit's direction", i, j);
+                   "ixn[{}].part[{}]: {} track without entry point, but dir isn't the first hit's", i, j, in);
         return;
       }
       auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
       double const mass    = pdg_info != nullptr ? pdg_info->Mass() * 1000. : 0.; // GeV -> MeV
       auto const& p_in     = entry->GetMomentum();                                // MeV
       UFW_ASSERT(close(track.E, std::sqrt(p_in.Mag2() + mass * mass)),
-                 "ixn[{}].part[{}]: E {} MeV isn't the energy at the tracker entry", i, j, track.E);
+                 "ixn[{}].part[{}]: {} track E {} MeV isn't the energy at the entry point", i, j, in, track.E);
       UFW_ASSERT(track.E <= true_part.p.E * 1000. * (1. + 1e-5),
-                 "ixn[{}].part[{}]: E {} MeV is more than the true energy at the vertex {} MeV", i, j, track.E,
-                 true_part.p.E * 1000.);
+                 "ixn[{}].part[{}]: {} track E {} MeV is more than the true energy at the vertex {} MeV", i, j, in,
+                 track.E, true_part.p.E * 1000.);
       if (!is_stopped(p_in)) {
-        UFW_ASSERT(same_direction(track.dir, p_in), "ixn[{}].part[{}]: dir isn't the momentum at the tracker entry", i,
-                   j);
+        UFW_ASSERT(same_direction(track.dir, p_in),
+                   "ixn[{}].part[{}]: {} track dir isn't the momentum at the entry point", i, j, in);
       }
     }
 
-    /// Tracker reco: start, time and Evis from the hits; direction at the entry point, else from the first hit
-    void check_shower(::caf::SRShower const& shower, EDEPTrajectory const& trj, std::size_t i, std::size_t j) {
-      auto const hits = find_tracker_hits(trj);
-      UFW_ASSERT(hits.first != nullptr, "ixn[{}].part[{}]: shower without tracker hits", i, j);
+    /// A shower in region `r`: start, time and Evis from the hits there; direction at the entry point there, else
+    /// from the first hit
+    void check_shower(::caf::SRShower const& shower, EDEPTrajectory const& trj, region r, std::size_t i,
+                      std::size_t j) {
+      auto const* in  = name_of(r);
+      auto const hits = find_hits(trj, r);
+      UFW_ASSERT(hits.first != nullptr, "ixn[{}].part[{}]: {} shower without hits there", i, j, in);
       UFW_ASSERT(same_position_cm(shower.start, hits.first->GetStart()),
-                 "ixn[{}].part[{}]: shower start isn't the start of its first tracker hit", i, j);
+                 "ixn[{}].part[{}]: {} shower start isn't the start of its first hit", i, j, in);
       UFW_ASSERT(shower.time == hits.first->GetStart().T(),
-                 "ixn[{}].part[{}]: shower time isn't the time of its first tracker hit", i, j);
-      UFW_ASSERT(close(shower.Evis, hits.energy), "ixn[{}].part[{}]: Evis {} MeV isn't the tracker deposit {} MeV", i,
-                 j, shower.Evis, hits.energy);
+                 "ixn[{}].part[{}]: {} shower time isn't the time of its first hit", i, j, in);
+      UFW_ASSERT(close(shower.Evis, hits.energy), "ixn[{}].part[{}]: {} shower Evis {} MeV isn't the deposit {} MeV", i,
+                 j, in, shower.Evis, hits.energy);
 
-      auto const* entry = find_entry_point(trj);
+      auto const* entry = find_entry_point(trj, r);
       if (entry == nullptr) {
         UFW_ASSERT(same_direction(shower.direction, *hits.first),
-                   "ixn[{}].part[{}]: no entry point, but direction isn't the first hit's", i, j);
+                   "ixn[{}].part[{}]: {} shower without entry point, but direction isn't the first hit's", i, j, in);
       } else if (!is_stopped(entry->GetMomentum())) {
         UFW_ASSERT(same_direction(shower.direction, entry->GetMomentum()),
-                   "ixn[{}].part[{}]: direction isn't the momentum at the tracker entry", i, j);
+                   "ixn[{}].part[{}]: {} shower direction isn't the momentum at the entry point", i, j, in);
+      }
+    }
+
+    /// Region and kind of a constituent's collection
+    struct collection_info {
+      region where;
+      bool is_track;
+    };
+
+    collection_info info_of(::caf::SRRecoBaseID::SRRecoBaseCollectionType type) {
+      switch (type) {
+      case ::caf::SRRecoBaseID::kSANDGRAINTrack:
+        return {region::grain, true};
+      case ::caf::SRRecoBaseID::kSANDGRAINShower:
+        return {region::grain, false};
+      case ::caf::SRRecoBaseID::kSANDTrackerTrack:
+        return {region::tracker, true};
+      case ::caf::SRRecoBaseID::kSANDTrackerShower:
+        return {region::tracker, false};
+      default:
+        UFW_ERROR("unexpected constituent type {}", static_cast<int>(type));
       }
     }
   } // namespace
 
   void fast_reco_test::configure(ufw::config const& cfg) {
     process::configure(cfg);
-    m_min_energy_deposit = cfg.value("min_energy_deposit", 0.);
+    m_tracker_min_energy_deposit = cfg.value("tracker_min_energy_deposit", 0.);
+    m_grain_min_energy_deposit   = cfg.value("grain_min_energy_deposit", 0.);
   }
 
   void fast_reco_test::run() {
@@ -235,6 +272,7 @@ namespace sand::test {
     auto const& nd      = get<sand::caf::nd_reco_branch_wrapper>("in_nd");
     auto const& edep    = instance<sand::edep_reader>();
     auto const& id_maps = instance<sand::spill_maps>();
+    auto const& grain   = nd.sand.grain;
     auto const& tracker = nd.sand.tracker;
 
     // The edep-sim trajectory of a true particle
@@ -249,15 +287,19 @@ namespace sand::test {
     // 1. Counters and alignment
     UFW_ASSERT(common.ixn.sandreco.size() == common.ixn.nsandreco, "common.ixn.nsandreco doesn't match its size");
     UFW_ASSERT(nd.sand.ixn.size() == nd.sand.nixn, "nd.sand.nixn doesn't match its size");
+    UFW_ASSERT(grain.tracks.size() == grain.ntracks, "grain.ntracks doesn't match its size");
+    UFW_ASSERT(grain.showers.size() == grain.nshowers, "grain.nshowers doesn't match its size");
     UFW_ASSERT(tracker.tracks.size() == tracker.ntracks, "tracker.ntracks doesn't match its size");
     UFW_ASSERT(tracker.showers.size() == tracker.nshowers, "tracker.nshowers doesn't match its size");
     UFW_ASSERT(common.ixn.sandreco.size() == nd.sand.ixn.size(),
                "common.ixn.sandreco ({}) and nd.sand.ixn ({}) are not index-aligned", common.ixn.sandreco.size(),
                nd.sand.ixn.size());
 
-    // How many particles point to each tracker object: exactly one at the end
-    std::vector<int> track_users(tracker.tracks.size());
-    std::vector<int> shower_users(tracker.showers.size());
+    // How many particles point to each object: exactly one at the end
+    std::vector<int> grain_track_users(grain.tracks.size());
+    std::vector<int> grain_shower_users(grain.showers.size());
+    std::vector<int> tracker_track_users(tracker.tracks.size());
+    std::vector<int> tracker_shower_users(tracker.showers.size());
 
     // Which true particles were seen, for every neutrino: true particle -> reco particle j, -1 if invisible
     std::vector<std::vector<int>> prim_to_j(truth.nu.size());
@@ -325,33 +367,46 @@ namespace sand::test {
                        && particle.recoobj.irecoobj == j_int,
                    "ixn[{}].part[{}]: recoobj isn't trkmatch[{}] of this interaction", i, j, j);
         UFW_ASSERT(same_reco_particle(assn.part, i_int, j_int), "ixn[{}].part[{}]: assn.part doesn't point back", i, j);
-        UFW_ASSERT(assn.constituents.size() == 1, "ixn[{}].part[{}]: {} constituents, expected 1 (tracker only)", i, j,
+        UFW_ASSERT(!assn.constituents.empty() && assn.constituents.size() <= 2,
+                   "ixn[{}].part[{}]: {} constituents, expected 1 or 2 (GRAIN, tracker)", i, j,
                    assn.constituents.size());
+        UFW_ASSERT(particle.origRecoObjType
+                       == (info_of(assn.constituents.front().type).is_track ? ::caf::RecoObjType::kTrack
+                                                                            : ::caf::RecoObjType::kShower),
+                   "ixn[{}].part[{}]: origRecoObjType isn't the kind of the first constituent", i, j);
 
-        auto const& constituent = assn.constituents.front();
-        auto const idx          = static_cast<std::size_t>(constituent.idx);
-        auto const& trj         = trajectory(id);
-        if (constituent.type == ::caf::SRRecoBaseID::kSANDTrackerTrack) {
-          UFW_ASSERT(idx < tracker.tracks.size(), "ixn[{}].part[{}]: track index out of range", i, j);
-          auto const& track = tracker.tracks[idx];
-          UFW_ASSERT(particle.origRecoObjType == ::caf::RecoObjType::kTrack && is_track_like(particle.pdg),
-                     "ixn[{}].part[{}]: pdg {} got a track", i, j, particle.pdg);
-          UFW_ASSERT(same_reco_particle(track.part, i_int, j_int) && same_particle(track.truth.at(0), id),
-                     "ixn[{}].part[{}]: its track doesn't point back, or has another truth", i, j);
-          ++track_users[idx];
-          // 4. Tracker objects
-          check_track(track, trj, true_part, i, j);
-        } else if (constituent.type == ::caf::SRRecoBaseID::kSANDTrackerShower) {
-          UFW_ASSERT(idx < tracker.showers.size(), "ixn[{}].part[{}]: shower index out of range", i, j);
-          auto const& shower = tracker.showers[idx];
-          UFW_ASSERT(particle.origRecoObjType == ::caf::RecoObjType::kShower && is_shower_like(particle.pdg),
-                     "ixn[{}].part[{}]: pdg {} got a shower", i, j, particle.pdg);
-          UFW_ASSERT(same_reco_particle(shower.part, i_int, j_int) && same_particle(shower.truth.at(0), id),
-                     "ixn[{}].part[{}]: its shower doesn't point back, or has another truth", i, j);
-          ++shower_users[idx];
-          check_shower(shower, trj, i, j);
-        } else {
-          UFW_ERROR("ixn[{}].part[{}]: unexpected constituent type {}", i, j, static_cast<int>(constituent.type));
+        auto const& trj = trajectory(id);
+        bool in_region[2]{};
+        for (auto const& constituent : assn.constituents) {
+          auto const [where, is_track] = info_of(constituent.type);
+          auto const idx               = static_cast<std::size_t>(constituent.idx);
+          auto& seen_here              = in_region[where == region::grain ? 0 : 1];
+          UFW_ASSERT(!seen_here, "ixn[{}].part[{}]: two constituents in {}", i, j, name_of(where));
+          seen_here = true;
+
+          // 4. The objects, each from the hits in its own subdetector
+          if (is_track) {
+            auto const& tracks = where == region::grain ? grain.tracks : tracker.tracks;
+            auto& users        = where == region::grain ? grain_track_users : tracker_track_users;
+            UFW_ASSERT(idx < tracks.size(), "ixn[{}].part[{}]: {} track index out of range", i, j, name_of(where));
+            auto const& track = tracks[idx];
+            UFW_ASSERT(is_track_like(particle.pdg), "ixn[{}].part[{}]: pdg {} got a track", i, j, particle.pdg);
+            UFW_ASSERT(same_reco_particle(track.part, i_int, j_int) && same_particle(track.truth.at(0), id),
+                       "ixn[{}].part[{}]: its {} track doesn't point back, or has another truth", i, j, name_of(where));
+            ++users[idx];
+            check_track(track, trj, true_part, where, i, j);
+          } else {
+            auto const& showers = where == region::grain ? grain.showers : tracker.showers;
+            auto& users         = where == region::grain ? grain_shower_users : tracker_shower_users;
+            UFW_ASSERT(idx < showers.size(), "ixn[{}].part[{}]: {} shower index out of range", i, j, name_of(where));
+            auto const& shower = showers[idx];
+            UFW_ASSERT(is_shower_like(particle.pdg), "ixn[{}].part[{}]: pdg {} got a shower", i, j, particle.pdg);
+            UFW_ASSERT(same_reco_particle(shower.part, i_int, j_int) && same_particle(shower.truth.at(0), id),
+                       "ixn[{}].part[{}]: its {} shower doesn't point back, or has another truth", i, j,
+                       name_of(where));
+            ++users[idx];
+            check_shower(shower, trj, where, i, j);
+          }
         }
       }
 
@@ -392,8 +447,9 @@ namespace sand::test {
       UFW_ASSERT(right_dir, "ixn[{}]: part_mom_sum isn't the direction of the momentum of the visible primaries", i);
     }
 
-    // 2. Gate, over every neutrino (also those with no reco interaction): a track-/shower-like true particle is seen
-    //    iff it left enough energy in the tracker. A neutrino with nothing seen must have no interaction.
+    // 2. Gate, over every neutrino (also those with no reco interaction) and per subdetector: a track-/shower-like
+    //    true particle has an object in a subdetector iff it left enough energy there; it is seen iff it has an
+    //    object anywhere. A neutrino with nothing seen must have no interaction.
     for (std::size_t t{}; t != truth.nu.size(); ++t) {
       bool any_seen{};
       for (auto const type : {::caf::TrueParticleID::kPrimary, ::caf::TrueParticleID::kSecondary}) {
@@ -402,11 +458,26 @@ namespace sand::test {
           ::caf::TrueParticleID const id{static_cast<int>(t), type, static_cast<int>(k)};
           auto const& true_part = resolve_true(truth, id);
           bool const candidate  = is_track_like(true_part.pdg) || is_shower_like(true_part.pdg);
-          auto const hits       = find_tracker_hits(trajectory(id));
-          bool const expected   = candidate && hits.first != nullptr && hits.energy >= m_min_energy_deposit;
-          bool const seen       = reco_index(id) >= 0;
-          UFW_ASSERT(seen == expected, "nu[{}]: true particle pdg {} (G4ID {}, {} MeV in the tracker) {} be seen", t,
-                     true_part.pdg, true_part.G4ID, hits.energy, expected ? "should" : "should not");
+          auto const& trj       = trajectory(id);
+          int const j           = reco_index(id);
+
+          for (auto const r : {region::grain, region::tracker}) {
+            auto const hits     = find_hits(trj, r);
+            auto const min_dep  = r == region::grain ? m_grain_min_energy_deposit : m_tracker_min_energy_deposit;
+            bool const expected = candidate && hits.first != nullptr && hits.energy >= min_dep;
+            bool has_object{};
+            if (j >= 0) {
+              auto const& sand_ixn     = nd.sand.ixn[static_cast<std::size_t>(reco_of_true[t])];
+              auto const& constituents = sand_ixn.trkmatch[static_cast<std::size_t>(j)].constituents;
+              has_object               = std::any_of(constituents.begin(), constituents.end(),
+                                                     [&](auto const& c) { return info_of(c.type).where == r; });
+            }
+            UFW_ASSERT(has_object == expected,
+                       "nu[{}]: true particle pdg {} (G4ID {}, {} MeV in {}) {} have an object there", t, true_part.pdg,
+                       true_part.G4ID, hits.energy, name_of(r), expected ? "should" : "should not");
+          }
+
+          bool const seen = j >= 0;
           if (candidate) {
             ++(seen ? m_gated_in : m_gated_out);
           }
@@ -417,11 +488,14 @@ namespace sand::test {
                  any_seen ? "has" : "has no", reco_of_true[t] >= 0 ? "a" : "no");
     }
 
-    // 3. Every tracker object belongs to exactly one reco particle
-    UFW_ASSERT(std::all_of(track_users.begin(), track_users.end(), [](int n) { return n == 1; }),
-               "some tracker tracks belong to no reco particle, or to more than one");
-    UFW_ASSERT(std::all_of(shower_users.begin(), shower_users.end(), [](int n) { return n == 1; }),
-               "some tracker showers belong to no reco particle, or to more than one");
+    // 3. Every object belongs to exactly one reco particle
+    auto const used_once = [](std::vector<int> const& users) {
+      return std::all_of(users.begin(), users.end(), [](int n) { return n == 1; });
+    };
+    UFW_ASSERT(used_once(grain_track_users) && used_once(grain_shower_users),
+               "some GRAIN objects belong to no reco particle, or to more than one");
+    UFW_ASSERT(used_once(tracker_track_users) && used_once(tracker_shower_users),
+               "some tracker objects belong to no reco particle, or to more than one");
 
     UFW_INFO("fast_reco_test: verified {} interaction(s)", common.ixn.sandreco.size());
   }

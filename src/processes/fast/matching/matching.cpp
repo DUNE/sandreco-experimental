@@ -33,15 +33,24 @@ namespace sand::fast {
   } // namespace
 
   matching::matching()
-    : process{{{"in_tracker", "sand::caf::tracker_reco_wrapper"}}, {{"out_assns", "sand::caf::sand_assn_wrapper"}}} {}
+    : process{{{"in_grain", "sand::caf::grain_reco_wrapper"}, {"in_tracker", "sand::caf::tracker_reco_wrapper"}},
+              {{"out_assns", "sand::caf::sand_assn_wrapper"}}} {}
 
   void matching::run() {
+    auto const& grain   = get<sand::caf::grain_reco_wrapper>("in_grain");
     auto const& tracker = get<sand::caf::tracker_reco_wrapper>("in_tracker");
     auto& assns         = set<sand::caf::sand_assn_wrapper>("out_assns");
 
-    // 1. Tag every tracker object with its true particle, in collection order
+    // 1. Tag every subdetector object with its true particle, in collection order: GRAIN first, then the tracker
+    //    (inside out, so that a particle crossing both usually gets its constituents in the order it crossed them)
     std::vector<TaggedObject> tags;
-    tags.reserve(tracker.tracks.size() + tracker.showers.size());
+    tags.reserve(grain.tracks.size() + grain.showers.size() + tracker.tracks.size() + tracker.showers.size());
+    for (std::size_t k{}; k != grain.tracks.size(); ++k) {
+      tags.push_back({grain.tracks[k].truth.at(0), {::caf::SRRecoBaseID::kSANDGRAINTrack, static_cast<int>(k)}});
+    }
+    for (std::size_t k{}; k != grain.showers.size(); ++k) {
+      tags.push_back({grain.showers[k].truth.at(0), {::caf::SRRecoBaseID::kSANDGRAINShower, static_cast<int>(k)}});
+    }
     for (std::size_t k{}; k != tracker.tracks.size(); ++k) {
       tags.push_back({tracker.tracks[k].truth.at(0), {::caf::SRRecoBaseID::kSANDTrackerTrack, static_cast<int>(k)}});
     }
