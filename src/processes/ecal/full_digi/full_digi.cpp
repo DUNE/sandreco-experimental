@@ -188,7 +188,7 @@ namespace sand::ecal {
   
   double full_digi::single_pe_response(double act_time, double pe_time, double t0){
     double signal = 1./ (m_pmt_sigma * sqrt(2.0 * M_PI)) * exp(-0.5 * pow((act_time - pe_time) / m_pmt_sigma, 2)) * exp(-(act_time - pe_time)/m_pmt_tau);
-    //double signal = 1./ (m_pmt_sigma * sqrt(2.0 * M_PI)) * exp(-0.5 * pow((act_time - pe_time) / m_pmt_sigma, 2)) * exp(-(act_time-t0)/m_pmt_tau);
+    // double signal = 1./ (m_pmt_sigma * sqrt(2.0 * M_PI)) * exp(-0.5 * pow((act_time - pe_time) / m_pmt_sigma, 2)) * exp(-(act_time-t0)/m_pmt_tau);
 
     return signal;
   }

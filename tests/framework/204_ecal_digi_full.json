@@ -38,7 +38,7 @@
 	"pmt_signal_length": 35.0,
 	"samples": 10000,
 	"pmt_sigma": 0.6,
-	"pmt_tau": 4.0,
+	"pmt_tau": 4.,
         "time_offset": 5.0,
         "saturation_level": 3200.0,
 	"p0Sat": 5.59,

@@ -31,7 +31,11 @@ namespace sand::reco {
     auto end() { return m_samples.end(); }
     auto begin() const { return m_samples.begin(); }
     auto end() const { return m_samples.end(); }
-
+    template <typename... Args>
+      auto erase(Args&&... args) { return m_samples.erase(std::forward<Args>(args)...); }
+    template <typename... Args>
+      auto insert(Args&&... args) { return m_samples.insert(std::forward<Args>(args)...); }
+    
     double sample_period() const {
       if (m_samples.empty()) {
         return NAN;
