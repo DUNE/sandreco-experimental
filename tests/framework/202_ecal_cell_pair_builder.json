@@ -56,24 +56,28 @@
         ]
       },
       {
-        "sand::ecal::spill_slicer_placeholder": {},
+        "sand::ecal::spill_slicer": {
+          "print_output": true
+        },
         "reqs": {
           "digi": "ecal_digits"
         },
         "prods": {
-          "digit_slices": "digit_ecal_slices"
+          "timeranges": "ecal_timeranges"
         }
       },
       {
         "sand::ecal::cell_pair_builder": {
+          "print_output": true,
           "pair_time_tolerance_ns": 0.0,
           "keep_incomplete": true
         },
         "reqs": {
-          "digit_slices": "digit_ecal_slices"
+          "digi": "ecal_digits",
+          "timeranges": "ecal_timeranges"
         },
         "prods": {
-          "cell_pair_slices": "ecal_cell_pair_slices"
+          "cell_pairs": "ecal_cell_pairs"
         }
       }
     ]

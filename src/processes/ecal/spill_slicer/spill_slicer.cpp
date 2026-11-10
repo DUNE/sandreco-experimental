@@ -79,7 +79,11 @@ namespace sand::ecal {
     const auto windows = compute_slice_times(digi.digits);
     output.assign(windows.begin(), windows.end()); 
 
-    UFW_DEBUG("ECAL spill_slicer: {} input digits, {} derived time windows with begin {} and end {} time", digi.digits.size(), output.size(), output.front().earliest(), output.back().latest());
+    UFW_DEBUG("ECAL spill_slicer: {} input digits, {} derived time windows", digi.digits.size(), output.size());
+    if (!output.empty()) {
+      UFW_DEBUG("ECAL spill_slicer: time windows begin at {} and end at {}", output.front().earliest(),
+                output.back().latest());
+    }
     if (m_print_output) { 
       std::vector<double> times;
       for (const auto& digit : digi.digits) {

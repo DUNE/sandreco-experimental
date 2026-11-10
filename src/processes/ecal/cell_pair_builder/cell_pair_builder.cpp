@@ -1,15 +1,17 @@
 #include <cell_pair_builder.hpp>
 
 #include <ecal/cell_pair.h>
-#include <ecal/cell_pair_slice.h>
 #include <ecal/digit.h>
-#include <ecal/digit_slice.h>
 
 #include <geoinfo/ecal_info.hpp>
 #include <geoinfo/geoinfo.hpp>
 
+#include <common/timerange.h>
+#include <common/timeslicer.h>
+
 #include <ufw/factory.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -86,11 +88,13 @@ namespace sand::ecal {
   } // namespace
 
   cell_pair_builder::cell_pair_builder()
-    : process({{"digit_slices", "sand::ecal::digit_slices_container"}},
-              {{"cell_pair_slices", "sand::ecal::cell_pair_slices_container"}}) {}
+    : process({{"digi", "sand::ecal::digits_container"}, {"timeranges", "sand::reco::timeranges"}},
+              {{"cell_pairs", "sand::ecal::cell_pairs"}}) {}
 
   void cell_pair_builder::configure(const ufw::config& cfg) {
     process::configure(cfg);
+
+    m_print_output = cfg.value("print_output", m_print_output);
 
     m_pair_time_tolerance_ns = cfg.value("pair_time_tolerance_ns", m_pair_time_tolerance_ns);
 
@@ -101,19 +105,31 @@ namespace sand::ecal {
     const auto& gi   = instance<sand::geoinfo>();
     const auto& ecal = gi.ecal();
 
-    const auto& digit_slices = get<sand::ecal::digit_slices_container>("digit_slices");
+    const auto& digi    = get<digits_container>("digi");
+    const auto& windows = get<reco::timeranges>("timeranges");
 
-    auto& cell_pair_slices = set<sand::ecal::cell_pair_slices_container>("cell_pair_slices");
+    auto& pairs = set<cell_pairs>("cell_pairs");
+    pairs.clear();
 
-    cell_pair_slices.collection.clear();
-    cell_pair_slices.collection.reserve(digit_slices.collection.size());
+    // The iterator views refer to this local copy; preserve the original digit order.
+    auto ordered = digi.digits;
+    std::stable_sort(ordered.begin(), ordered.end(),
+                     [](const auto& lhs, const auto& rhs) { return lhs.t() < rhs.t(); });
 
-    for (std::size_t islice = 0; islice < digit_slices.collection.size(); ++islice) {
-      const auto& digit_slice = digit_slices.collection.at(islice);
-      auto& out_slice         = cell_pair_slices.collection.emplace_back();
+    reco::timeslicer slicer(windows);
+    const auto views = slicer.slice(ordered.cbegin(), ordered.cend());
+
+    if (m_print_output) {
+      UFW_INFO("ECAL cell_pair_builder spill {}: {} digits, {} windows, {} nonempty views",
+               ufw::context::current()->id(), digi.digits.size(), windows.size(), views.size());
+    }
+
+    for (std::size_t iview = 0; iview < views.size(); ++iview) {
+      const auto& view      = views.at(iview);
+      const auto first_pair = pairs.size();
 
       /*
-       * Group digits by physical ECal cell.
+       * Group digits by physical ECal cell within this window only.
        *
        * We use cid.raw as the map key because operator< for cell_id is defined
        * in ecal_info.cpp. It just uses normal integer comparison.
@@ -121,8 +137,9 @@ namespace sand::ecal {
 
       std::map<std::uint32_t, grouped_cell_digits> by_cell;
 
-      for (std::size_t idig = 0; idig < digit_slice.size(); ++idig) {
-        const auto& d = digit_slice.at(idig);
+      std::size_t idig = 0;
+      for (auto it = view.begin(); it != view.end(); ++it, ++idig) {
+        const auto& d = *it;
 
         const auto pmt = ecal.pmt(d.channel());
 
@@ -144,7 +161,15 @@ namespace sand::ecal {
           UFW_ERROR("ECal cell_pair_builder: invalid PMT face {}", static_cast<int>(pmt.face_));
         }
       }
+      if (m_print_output) {
+        UFW_INFO("  view {}: [{:.17g}, {:.17g}) ns, best={:.17g} ns, digits={}, cells={}", iview, view.earliest(),
+                 view.latest(), view.best(), idig, by_cell.size());
+      }
+
       for (const auto& [raw_cid, group] : by_cell) {
+        if (m_print_output) {
+          UFW_INFO("    cell {}: begin digits={}, end digits={}", raw_cid, group.begin.size(), group.end.size());
+        }
         /*
          * If the cell has only one readout side, no complete pair can be built.
          * In that case we do not need to access the ECal geometry at all.
@@ -154,19 +179,21 @@ namespace sand::ecal {
             for (const auto& b : group.begin) {
               sand::ecal::cell_pair pair;
               pair.begin                             = *b.ptr;
+              pair.begin_present                     = true;
               pair.cell_has_competing_complete_pairs = false;
               pair.n_complete_candidates_in_cell     = 0;
 
-              out_slice.push_back(std::move(pair));
+              pairs.push_back(std::move(pair));
             }
 
             for (const auto& e : group.end) {
               sand::ecal::cell_pair pair;
               pair.end                               = *e.ptr;
+              pair.end_present                       = true;
               pair.cell_has_competing_complete_pairs = false;
               pair.n_complete_candidates_in_cell     = 0;
 
-              out_slice.push_back(std::move(pair));
+              pairs.push_back(std::move(pair));
             }
           }
 
@@ -204,8 +231,10 @@ namespace sand::ecal {
             }
 
             sand::ecal::cell_pair pair;
-            pair.begin = *b.ptr;
-            pair.end   = *e.ptr;
+            pair.begin         = *b.ptr;
+            pair.end           = *e.ptr;
+            pair.begin_present = true;
+            pair.end_present   = true;
 
             complete_pairs_in_cell.push_back(std::move(pair));
 
@@ -224,10 +253,11 @@ namespace sand::ecal {
          */
         const auto n_complete_pairs_in_cell = complete_pairs_in_cell.size();
 
-        UFW_ASSERT(n_complete_pairs_in_cell <= std::numeric_limits<std::uint16_t>::max(),
-                   "ECal cell_pair_builder: slice {}, cell {} has {} valid complete pairs, which exceeds the "
-                   "uint16_t storage limit {}",
-                   islice, raw_cid, n_complete_pairs_in_cell, std::numeric_limits<std::uint16_t>::max());
+        UFW_ASSERT(
+            n_complete_pairs_in_cell <= std::numeric_limits<std::uint16_t>::max(),
+            "ECal cell_pair_builder: digit window view {}, cell {} has {} valid complete pairs, which exceeds the "
+            "uint16_t storage limit {}",
+            iview, raw_cid, n_complete_pairs_in_cell, std::numeric_limits<std::uint16_t>::max());
 
         const bool has_competition                = n_complete_pairs_in_cell > 1;
         const auto n_valid_complete_pairs_in_cell = saturated_u16(n_complete_pairs_in_cell);
@@ -236,7 +266,7 @@ namespace sand::ecal {
           pair.cell_has_competing_complete_pairs = has_competition;
           pair.n_complete_candidates_in_cell     = n_valid_complete_pairs_in_cell;
 
-          out_slice.push_back(std::move(pair));
+          pairs.push_back(std::move(pair));
         }
 
         if (!m_keep_incomplete) {
@@ -257,10 +287,11 @@ namespace sand::ecal {
 
           sand::ecal::cell_pair pair;
           pair.begin                             = *b.ptr;
+          pair.begin_present                     = true;
           pair.cell_has_competing_complete_pairs = has_competition;
           pair.n_complete_candidates_in_cell     = n_valid_complete_pairs_in_cell;
 
-          out_slice.push_back(std::move(pair));
+          pairs.push_back(std::move(pair));
         }
 
         for (const auto& e : group.end) {
@@ -270,17 +301,44 @@ namespace sand::ecal {
 
           sand::ecal::cell_pair pair;
           pair.end                               = *e.ptr;
+          pair.end_present                       = true;
           pair.cell_has_competing_complete_pairs = has_competition;
           pair.n_complete_candidates_in_cell     = n_valid_complete_pairs_in_cell;
 
-          out_slice.push_back(std::move(pair));
+          pairs.push_back(std::move(pair));
         }
+      }
+
+      if (m_print_output) {
+        std::size_t n_complete  = 0;
+        std::size_t n_ambiguous = 0;
+        for (std::size_t ipair = first_pair; ipair < pairs.size(); ++ipair) {
+          const auto& pair   = pairs.at(ipair);
+          const auto raw_cid = ecal.pmt(pair.either().channel()).cell_.raw;
+          if (pair.complete()) {
+            ++n_complete;
+            n_ambiguous += pair.ambiguous_complete();
+            UFW_INFO("    pair {}: cell={}, complete, begin(channel={}, tdc={:.17g} ns, adc={}), "
+                     "end(channel={}, tdc={:.17g} ns, adc={}), candidates={}, competing={}",
+                     ipair, raw_cid, pair.begin.channel(), pair.begin.tdc(), pair.begin.adc(), pair.end.channel(),
+                     pair.end.tdc(), pair.end.adc(), pair.n_complete_candidates_in_cell,
+                     pair.cell_has_competing_complete_pairs);
+          } else {
+            const auto& digit = pair.either();
+            UFW_INFO("    pair {}: cell={}, {}-only, channel={}, tdc={:.17g} ns, adc={}, "
+                     "candidates={}, competing={}",
+                     ipair, raw_cid, pair.has_begin() ? "begin" : "end", digit.channel(), digit.tdc(), digit.adc(),
+                     pair.n_complete_candidates_in_cell, pair.cell_has_competing_complete_pairs);
+          }
+        }
+        UFW_INFO("  view {} result: {} complete ({} ambiguous), {} incomplete, {} total pairs", iview, n_complete,
+                 n_ambiguous, pairs.size() - first_pair - n_complete, pairs.size() - first_pair);
       }
     }
 
-    UFW_ASSERT(cell_pair_slices.collection.size() == digit_slices.collection.size(),
-               "ECal cell_pair_builder: output slices ({}) do not match input slices ({})",
-               cell_pair_slices.collection.size(), digit_slices.collection.size());
+    if (m_print_output) {
+      UFW_INFO("ECAL cell_pair_builder spill {}: {} output pairs", ufw::context::current()->id(), pairs.size());
+    }
   }
 
 } // namespace sand::ecal

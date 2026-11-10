@@ -34,4 +34,6 @@ namespace sand::ecal {
   };
 } // namespace sand::ecal
 
+UFW_DECLARE_UNMANAGED_DATA(sand::ecal::pes_container::photo_electron);
+UFW_DECLARE_UNMANAGED_DATA(sand::truth<sand::ecal::pes_container::photo_electron>);
 UFW_DECLARE_MANAGED_DATA(sand::ecal::pes_container);

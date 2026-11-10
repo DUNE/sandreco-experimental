@@ -45,4 +45,6 @@ namespace sand::ecal {
   };
 } // namespace sand::ecal
 
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::digi<sand::ecal::pes_container::photo_electron>);
+UFW_DECLARE_UNMANAGED_DATA(sand::ecal::digits_container::digit);
 UFW_DECLARE_MANAGED_DATA(sand::ecal::digits_container);
