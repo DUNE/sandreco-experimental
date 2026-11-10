@@ -76,11 +76,7 @@ namespace sand {
     return vol->GetName();
   }
 
-  geoinfo::position_info geoinfo::subdetector_info::GetInfo(const pos_3d& p) {
-    geoinfo::position_info pi;
 
-    return pi;
-  }
 
   geoinfo::subdetector_info::~subdetector_info() = default;
 

@@ -234,4 +234,35 @@ namespace sand {
     return intersections;
   }
 
+  geoinfo::position_info geoinfo::getinfo(const pos_3d& p) {
+    root_tgeomanager& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav              = tgm.navigator();
+
+    auto node = nav->node_at(p);
+    auto path = nav->get_path();
+
+    if (path.find(ecal_path) != std::string::npos) {
+      if (!m_ecal) {
+        init_ecal();
+      }
+      return position_info(p, m_ecal,node);
+    }
+
+    if (path.find(grain_path) != std::string::npos) {
+      if (!m_grain) {
+        init_grain();
+      }
+      return position_info(p, m_grain,node);
+    }
+
+    if ((path.find(stt_path) != std::string::npos) || (path.find(drift_path) != std::string::npos)) {
+      if (!m_tracker) {
+        init_tracker();
+      }
+      return position_info(p, m_tracker,node);
+    } 
+
+    UFW_EXCEPT(root_tgeomanager::invalid_position, p);
+  }
+
 } // namespace sand

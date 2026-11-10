@@ -25,6 +25,11 @@ namespace sand {
         ret.SetCoordinates(GetCurrentPoint());
         return ret;
       }
+
+      geo_path get_path() {
+        return GetPath();
+      };
+
       void set_point(pos_3d p) { SetCurrentPoint(p.x(), p.y(), p.z()); }
       void set_direction(dir_3d d) { SetCurrentDirection(d.x(), d.y(), d.z()); }
       void set_track(pos_3d p, dir_3d d) { InitTrack(p.x(), p.y(), p.z(), d.x(), d.y(), d.z()); }
@@ -48,6 +53,7 @@ namespace sand {
       root_tgeomanager* m_parent;
     };
 
+   public:
     class path_not_found : public ufw::exception {
      public:
       path_not_found(const geo_path& p) : exception("Cannot find path '{}' in geometry.", p.c_str()) {}
@@ -89,6 +95,7 @@ namespace sand {
   }
 
   inline TGeoNode* root_tgeomanager::tgeonav::node_at(pos_3d p) {
+    set_point(p);
     TGeoNode* n = GetCurrentNode();
     if (!n) {
       UFW_EXCEPT(invalid_position, p);

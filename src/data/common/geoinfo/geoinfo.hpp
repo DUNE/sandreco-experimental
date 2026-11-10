@@ -30,6 +30,8 @@ namespace sand {
    public:
     explicit geoinfo(const ufw::config&);
 
+    position_info getinfo(const pos_3d&);
+
     ~geoinfo();
 
     const ecal_info& ecal() const {
@@ -73,9 +75,9 @@ namespace sand {
     friend class position_info;
 
    private:
-    mutable std::unique_ptr<grain_info> m_grain;
-    mutable std::unique_ptr<ecal_info> m_ecal;
-    mutable std::unique_ptr<tracker_info> m_tracker;
+    mutable std::shared_ptr<grain_info> m_grain;
+    mutable std::shared_ptr<ecal_info> m_ecal;
+    mutable std::shared_ptr<tracker_info> m_tracker;
     geo_path m_root_path;
     ufw::config m_grain_cfg;
     ufw::config m_ecal_cfg;

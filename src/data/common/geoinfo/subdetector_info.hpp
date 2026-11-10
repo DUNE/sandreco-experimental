@@ -1,6 +1,7 @@
 #pragma once
 
 #include <geoinfo/geoinfo.hpp>
+#include <geoinfo/position_info.hpp>
 
 namespace sand {
 
@@ -15,8 +16,6 @@ namespace sand {
     virtual geo_id id(const geo_path&) const = 0;
 
     virtual geo_path path(geo_id) const = 0;
-
-    geoinfo::position_info GetInfo(const pos_3d&);
 
     std::string material_at(const pos_3d&) const;
 
