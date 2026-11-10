@@ -53,6 +53,15 @@
       }
     },
     {
+      "sand::fast::ecal::reco": { "min_energy_deposit": 1.0 },
+      "reqs": {
+        "in_truth": "produced_truth"
+      },
+      "prods": {
+        "out_ecal": "produced_ecal"
+      }
+    },
+    {
       "sand::fast::matching": {},
       "reqs": {
         "in_grain": "produced_grain",
