@@ -53,10 +53,20 @@
       }
     },
     {
+      "sand::fast::ecal::reco": { "min_energy_deposit": 1.0 },
+      "reqs": {
+        "in_truth": "produced_truth"
+      },
+      "prods": {
+        "out_ecal": "produced_ecal"
+      }
+    },
+    {
       "sand::fast::matching": {},
       "reqs": {
         "in_grain": "produced_grain",
-        "in_tracker": "produced_tracker"
+        "in_tracker": "produced_tracker",
+        "in_ecal": "produced_ecal"
       },
       "prods": {
         "out_assns": "produced_assns"
@@ -68,7 +78,8 @@
         "in_truth": "produced_truth",
         "in_assns": "produced_assns",
         "in_grain": "produced_grain",
-        "in_tracker": "produced_tracker"
+        "in_tracker": "produced_tracker",
+        "in_ecal": "produced_ecal"
       },
       "prods": {
         "out_common": "produced_common_vtx",
@@ -100,7 +111,8 @@
     {
       "sand::test::fast_reco_test": {
         "tracker_min_energy_deposit": 0.04,
-        "grain_min_energy_deposit": 1.0
+        "grain_min_energy_deposit": 1.0,
+        "ecal_min_energy_deposit": 1.0
       },
       "reqs": {
         "in_truth": "produced_truth",

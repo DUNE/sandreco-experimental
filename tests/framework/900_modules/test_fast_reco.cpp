@@ -20,17 +20,21 @@
 
 namespace sand::test {
 
-  /// Verifies the output of the fast reco chain (GRAIN and tracker recos, matching, vertexing, pid, neutrino):
+  /// Verifies the output of the fast reco chain (GRAIN, tracker and ECAL recos, matching, vertexing, pid, neutrino):
   /// 1. counters, the index alignment of common.ixn and nd.sand.ixn, and the interactions: one per neutrino with
   ///    something visible, never empty, never two for the same neutrino, at the neutrino's vertex;
   /// 2. the gate, over every neutrino and per subdetector: a true track-/shower-like particle has an object in GRAIN
-  ///    (in the tracker) if and only if it left at least the GRAIN (tracker) `min_energy_deposit` there, recomputed
-  ///    from sand::edep_reader without sharing code with the reco; it has a reco particle iff it has an object; a
-  ///    neutrino has a reco interaction iff at least one of its particles is seen;
+  ///    (in the tracker) if and only if it left at least the GRAIN (tracker) `min_energy_deposit` there; any true
+  ///    particle has an ECAL cluster iff it is a cluster root (born outside the ECAL, or a primary) and its ECAL
+  ///    group (its hits and those of its descendants born inside the ECAL) has at least the ECAL
+  ///    `min_energy_deposit`. All recomputed from sand::edep_reader and the truth without sharing code with the
+  ///    recos (the ECAL groups are built bottom-up through parentID, the reco goes top-down through edep-sim's
+  ///    children). A particle has a reco particle iff it has an object; a neutrino has a reco interaction iff at
+  ///    least one of its particles is seen;
   /// 3. the links: particle j <-> trkmatch[j] <-> its objects (one per subdetector at most), with the same truth,
   ///    every object used once;
   /// 4. the objects: position, time, length, Evis and enddir from the hits in their subdetector, dir and E at the
-  ///    entry point in it;
+  ///    entry point in it; ECAL clusters from the hits of their group, direction at the root's first ECAL point;
   /// 5. the parentage: the parent of a reco particle is its nearest visible true ancestor, and daughters mirror it;
   /// 6. part_energy_sum and part_mom_sum: sums over the visible primary particles of the interaction.
   struct fast_reco_test : public ufw::process {
@@ -42,8 +46,10 @@ namespace sand::test {
    private:
     double m_tracker_min_energy_deposit{}; ///< same `min_energy_deposit` [MeV] as sand::fast::tracker::reco
     double m_grain_min_energy_deposit{};   ///< same `min_energy_deposit` [MeV] as sand::fast::grain::reco
-    std::size_t m_gated_in{};              ///< track-/shower-like true particles with a reco particle
-    std::size_t m_gated_out{};             ///< track-/shower-like true particles the gate rejected
+    double m_ecal_min_energy_deposit{};    ///< same `min_energy_deposit` [MeV] as sand::fast::ecal::reco
+    std::size_t m_seen{};                  ///< true particles with a reco particle
+    std::size_t m_unseen{};                ///< true particles without one
+    std::size_t m_ecal_and_other{};        ///< reco particles with an ECAL cluster and an object elsewhere
   };
 
   fast_reco_test::fast_reco_test()
@@ -66,13 +72,28 @@ namespace sand::test {
     }
 
     /// The subdetectors with a fast reco
-    enum class region { grain, tracker };
+    enum class region { grain, tracker, ecal };
 
-    char const* name_of(region r) { return r == region::grain ? "GRAIN" : "tracker"; }
+    char const* name_of(region r) {
+      switch (r) {
+      case region::grain:
+        return "GRAIN";
+      case region::tracker:
+        return "tracker";
+      default:
+        return "ECAL";
+      }
+    }
 
     bool is_in(sand::subdetector_t det, region r) {
-      return r == region::grain ? det == sand::subdetector_t::GRAIN
-                                : det == sand::subdetector_t::STT || det == sand::subdetector_t::DRIFT;
+      switch (r) {
+      case region::grain:
+        return det == sand::subdetector_t::GRAIN;
+      case region::tracker:
+        return det == sand::subdetector_t::STT || det == sand::subdetector_t::DRIFT;
+      default:
+        return det == sand::subdetector_t::ECAL;
+      }
     }
 
     /// The hits of a trajectory in a region, found without sorting: the earliest and the latest by start time (on
@@ -129,6 +150,13 @@ namespace sand::test {
 
     /// Sums may be done in a different order than in the reco: compare with a relative tolerance.
     bool close(double a, double b) { return std::abs(a - b) <= 1e-5 * std::max(std::abs(a), std::abs(b)); }
+
+    /// As close, plus an absolute 1e-3 for the values that can be near 0 (coordinates [cm], spreads [cm]).
+    bool near(double a, double b) { return std::abs(a - b) <= 1e-3 + 1e-5 * std::max(std::abs(a), std::abs(b)); }
+
+    bool near(::caf::SRVector3D const& reco, double x, double y, double z) {
+      return near(reco.x, x) && near(reco.y, y) && near(reco.z, z);
+    }
 
     /// @return true if `dir` is the unit vector along (x, y, z), within 1e-4 per component.
     bool same_direction(::caf::SRVector3D const& dir, double x, double y, double z) {
@@ -238,6 +266,72 @@ namespace sand::test {
       }
     }
 
+    /// The ECAL hits of a cluster root and of its descendants born inside the ECAL
+    struct ecal_group {
+      std::vector<EDEPHit const*> hits;
+      double energy{}; ///< [MeV]
+    };
+
+    /// An ECAL cluster from the hits of its group: E, energy-weighted position and time, start of the earliest hit,
+    /// spread with the legacy neff correction, num_cells not computed; direction from the momentum of the root at its
+    /// first ECAL point
+    void check_cluster(::caf::SRECALCluster const& cluster, ecal_group const& group, EDEPTrajectory const& root_trj,
+                       std::size_t i, std::size_t j) {
+      UFW_ASSERT(!group.hits.empty(), "ixn[{}].part[{}]: ECAL cluster for a particle that isn't a root with hits", i,
+                 j);
+      UFW_ASSERT(close(cluster.E, group.energy), "ixn[{}].part[{}]: ECAL cluster E {} MeV isn't the deposit {} MeV", i,
+                 j, cluster.E, group.energy);
+
+      double e{}, e2{}, t{}, earliest{};
+      double sum[3]{}, sum_sq[3]{};
+      for (auto const* hit : group.hits) {
+        double const de = hit->GetEnergyDeposit();
+        auto const mid  = 0.5 * (hit->GetStart() + hit->GetStop());
+        double const c[3]{mid.X(), mid.Y(), mid.Z()};
+        e += de;
+        e2 += de * de;
+        t += de * mid.T();
+        for (int k{}; k != 3; ++k) {
+          sum[k] += de * c[k];
+          sum_sq[k] += de * c[k] * c[k];
+        }
+        earliest = (hit == group.hits.front()) ? hit->GetStart().T() : std::min(earliest, hit->GetStart().T());
+      }
+      double const neff = e * e / e2;
+      double mean[3]{}, spread[3]{};
+      for (int k{}; k != 3; ++k) {
+        mean[k]          = sum[k] / e;
+        double const var = sum_sq[k] / e - mean[k] * mean[k];
+        spread[k] = (group.hits.size() < 2 || neff <= 1. || var <= 0.) ? 0. : std::sqrt(neff / (neff - 1.) * var);
+      }
+
+      UFW_ASSERT(near(cluster.position, mean[0] * 0.1, mean[1] * 0.1, mean[2] * 0.1),
+                 "ixn[{}].part[{}]: ECAL cluster position isn't the energy-weighted barycenter of its hits", i, j);
+      UFW_ASSERT(near(cluster.time, t / e), "ixn[{}].part[{}]: ECAL cluster time {} ns isn't the energy-weighted {} ns",
+                 i, j, cluster.time, t / e);
+      UFW_ASSERT(near(cluster.var_position, spread[0] * 0.1, spread[1] * 0.1, spread[2] * 0.1),
+                 "ixn[{}].part[{}]: ECAL cluster var_position isn't the spread of its hits", i, j);
+      UFW_ASSERT(std::any_of(group.hits.begin(), group.hits.end(),
+                             [&](EDEPHit const* hit) {
+                               return hit->GetStart().T() == earliest
+                                   && same_position_cm(cluster.start, hit->GetStart());
+                             }),
+                 "ixn[{}].part[{}]: ECAL cluster start isn't the start of its earliest hit", i, j);
+      UFW_ASSERT(cluster.num_cells == -1, "ixn[{}].part[{}]: ECAL cluster num_cells {}, expected -1 (not computed)", i,
+                 j, cluster.num_cells);
+
+      auto const* entry = find_entry_point(root_trj, region::ecal);
+      if (entry == nullptr) {
+        UFW_ASSERT(cluster.direction.x == 0.f && cluster.direction.y == 0.f && cluster.direction.z == 0.f,
+                   "ixn[{}].part[{}]: ECAL cluster without an ECAL point of its root, but direction isn't (0, 0, 0)", i,
+                   j);
+      } else if (!is_stopped(entry->GetMomentum())) {
+        UFW_ASSERT(same_direction(cluster.direction, entry->GetMomentum()),
+                   "ixn[{}].part[{}]: ECAL cluster direction isn't the momentum of its root at its first ECAL point", i,
+                   j);
+      }
+    }
+
     /// Region and kind of a constituent's collection
     struct collection_info {
       region where;
@@ -254,6 +348,8 @@ namespace sand::test {
         return {region::tracker, true};
       case ::caf::SRRecoBaseID::kSANDTrackerShower:
         return {region::tracker, false};
+      case ::caf::SRRecoBaseID::kSANDECalCluster:
+        return {region::ecal, false};
       default:
         UFW_ERROR("unexpected constituent type {}", static_cast<int>(type));
       }
@@ -264,6 +360,7 @@ namespace sand::test {
     process::configure(cfg);
     m_tracker_min_energy_deposit = cfg.value("tracker_min_energy_deposit", 0.);
     m_grain_min_energy_deposit   = cfg.value("grain_min_energy_deposit", 0.);
+    m_ecal_min_energy_deposit    = cfg.value("ecal_min_energy_deposit", 0.);
   }
 
   void fast_reco_test::run() {
@@ -274,6 +371,7 @@ namespace sand::test {
     auto const& id_maps = instance<sand::spill_maps>();
     auto const& grain   = nd.sand.grain;
     auto const& tracker = nd.sand.tracker;
+    auto const& ecal    = nd.sand.ecal;
 
     // The edep-sim trajectory of a true particle
     auto const trajectory = [&](::caf::TrueParticleID const& id) -> EDEPTrajectory const& {
@@ -291,6 +389,7 @@ namespace sand::test {
     UFW_ASSERT(grain.showers.size() == grain.nshowers, "grain.nshowers doesn't match its size");
     UFW_ASSERT(tracker.tracks.size() == tracker.ntracks, "tracker.ntracks doesn't match its size");
     UFW_ASSERT(tracker.showers.size() == tracker.nshowers, "tracker.nshowers doesn't match its size");
+    UFW_ASSERT(ecal.clusters.size() == ecal.nclusters, "ecal.nclusters doesn't match its size");
     UFW_ASSERT(common.ixn.sandreco.size() == nd.sand.ixn.size(),
                "common.ixn.sandreco ({}) and nd.sand.ixn ({}) are not index-aligned", common.ixn.sandreco.size(),
                nd.sand.ixn.size());
@@ -300,6 +399,7 @@ namespace sand::test {
     std::vector<int> grain_shower_users(grain.showers.size());
     std::vector<int> tracker_track_users(tracker.tracks.size());
     std::vector<int> tracker_shower_users(tracker.showers.size());
+    std::vector<int> ecal_cluster_users(ecal.clusters.size());
 
     // Which true particles were seen, for every neutrino: true particle -> reco particle j, -1 if invisible
     std::vector<std::vector<int>> prim_to_j(truth.nu.size());
@@ -312,6 +412,65 @@ namespace sand::test {
       auto& tables = (id.type == ::caf::TrueParticleID::kPrimary) ? prim_to_j : sec_to_j;
       return tables.at(static_cast<std::size_t>(id.ixn)).at(static_cast<std::size_t>(id.part));
     };
+
+    // The ECAL groups, bottom-up from the truth: every true particle with ECAL hits gives them to its cluster root,
+    // found by climbing parentID while the particle is a secondary born inside the ECAL. "Born inside" = the
+    // particle's generation point (time and start_pos from the truth) is one of its ECAL trajectory points.
+    std::vector<std::vector<ecal_group>> prim_group(truth.nu.size());
+    std::vector<std::vector<ecal_group>> sec_group(truth.nu.size());
+    std::vector<std::vector<char>> prim_born_in_ecal(truth.nu.size());
+    std::vector<std::vector<char>> sec_born_in_ecal(truth.nu.size());
+    auto const group_of = [&](::caf::TrueParticleID const& id) -> ecal_group& {
+      auto& tables = (id.type == ::caf::TrueParticleID::kPrimary) ? prim_group : sec_group;
+      return tables.at(static_cast<std::size_t>(id.ixn)).at(static_cast<std::size_t>(id.part));
+    };
+    auto const born_in_ecal = [&](::caf::TrueParticleID const& id) -> bool {
+      auto const& tables = (id.type == ::caf::TrueParticleID::kPrimary) ? prim_born_in_ecal : sec_born_in_ecal;
+      return tables.at(static_cast<std::size_t>(id.ixn)).at(static_cast<std::size_t>(id.part)) != 0;
+    };
+    for (std::size_t t{}; t != truth.nu.size(); ++t) {
+      for (auto const type : {::caf::TrueParticleID::kPrimary, ::caf::TrueParticleID::kSecondary}) {
+        bool const prim = type == ::caf::TrueParticleID::kPrimary;
+        auto const n    = prim ? truth.nu[t].prim.size() : truth.nu[t].sec.size();
+        (prim ? prim_group : sec_group)[t].resize(n);
+        auto& born = (prim ? prim_born_in_ecal : sec_born_in_ecal)[t];
+        born.resize(n);
+        for (std::size_t k{}; k != n; ++k) {
+          ::caf::TrueParticleID const id{static_cast<int>(t), type, static_cast<int>(k)};
+          auto const& true_part = resolve_true(truth, id);
+          auto const& points    = trajectory(id).GetTrajectoryPoints();
+          auto const in_ecal    = points.find(sand::subdetector_t::ECAL);
+          born[k]               = in_ecal != points.end()
+                 && std::any_of(in_ecal->second.begin(), in_ecal->second.end(), [&](EDEPTrajectoryPoint const& point) {
+                      return point.GetPosition().T() == true_part.time
+                          && same_position_cm(true_part.start_pos, point.GetPosition());
+                    });
+        }
+      }
+    }
+    for (std::size_t t{}; t != truth.nu.size(); ++t) {
+      for (auto const type : {::caf::TrueParticleID::kPrimary, ::caf::TrueParticleID::kSecondary}) {
+        auto const n = (type == ::caf::TrueParticleID::kPrimary) ? truth.nu[t].prim.size() : truth.nu[t].sec.size();
+        for (std::size_t k{}; k != n; ++k) {
+          ::caf::TrueParticleID const id{static_cast<int>(t), type, static_cast<int>(k)};
+          auto const& hit_map  = trajectory(id).GetHitMap();
+          auto const ecal_hits = hit_map.find(sand::subdetector_t::ECAL);
+          if (ecal_hits == hit_map.end() || ecal_hits->second.empty()) {
+            continue;
+          }
+          auto root = id;
+          while (root.type == ::caf::TrueParticleID::kSecondary && born_in_ecal(root)) {
+            root = resolve_true(truth, root).parentID;
+            UFW_ASSERT(is_particle(root), "nu[{}]: a secondary born inside the ECAL without a saved parent", t);
+          }
+          auto& group = group_of(root);
+          for (auto const& hit : ecal_hits->second) {
+            group.hits.push_back(&hit);
+            group.energy += hit.GetEnergyDeposit();
+          }
+        }
+      }
+    }
 
     // Which neutrino every reco interaction comes from: at most one interaction per neutrino
     std::vector<int> reco_of_true(truth.nu.size(), -1);
@@ -367,8 +526,8 @@ namespace sand::test {
                        && particle.recoobj.irecoobj == j_int,
                    "ixn[{}].part[{}]: recoobj isn't trkmatch[{}] of this interaction", i, j, j);
         UFW_ASSERT(same_reco_particle(assn.part, i_int, j_int), "ixn[{}].part[{}]: assn.part doesn't point back", i, j);
-        UFW_ASSERT(!assn.constituents.empty() && assn.constituents.size() <= 2,
-                   "ixn[{}].part[{}]: {} constituents, expected 1 or 2 (GRAIN, tracker)", i, j,
+        UFW_ASSERT(!assn.constituents.empty() && assn.constituents.size() <= 3,
+                   "ixn[{}].part[{}]: {} constituents, expected 1 to 3 (GRAIN, tracker, ECAL)", i, j,
                    assn.constituents.size());
         UFW_ASSERT(particle.origRecoObjType
                        == (info_of(assn.constituents.front().type).is_track ? ::caf::RecoObjType::kTrack
@@ -376,16 +535,23 @@ namespace sand::test {
                    "ixn[{}].part[{}]: origRecoObjType isn't the kind of the first constituent", i, j);
 
         auto const& trj = trajectory(id);
-        bool in_region[2]{};
+        bool in_region[3]{};
         for (auto const& constituent : assn.constituents) {
           auto const [where, is_track] = info_of(constituent.type);
           auto const idx               = static_cast<std::size_t>(constituent.idx);
-          auto& seen_here              = in_region[where == region::grain ? 0 : 1];
+          auto& seen_here              = in_region[static_cast<int>(where)];
           UFW_ASSERT(!seen_here, "ixn[{}].part[{}]: two constituents in {}", i, j, name_of(where));
           seen_here = true;
 
           // 4. The objects, each from the hits in its own subdetector
-          if (is_track) {
+          if (where == region::ecal) {
+            UFW_ASSERT(idx < ecal.clusters.size(), "ixn[{}].part[{}]: ECAL cluster index out of range", i, j);
+            auto const& cluster = ecal.clusters[idx];
+            UFW_ASSERT(same_reco_particle(cluster.part, i_int, j_int) && same_particle(cluster.truth.at(0), id),
+                       "ixn[{}].part[{}]: its ECAL cluster doesn't point back, or has another truth", i, j);
+            ++ecal_cluster_users[idx];
+            check_cluster(cluster, group_of(id), trj, i, j);
+          } else if (is_track) {
             auto const& tracks = where == region::grain ? grain.tracks : tracker.tracks;
             auto& users        = where == region::grain ? grain_track_users : tracker_track_users;
             UFW_ASSERT(idx < tracks.size(), "ixn[{}].part[{}]: {} track index out of range", i, j, name_of(where));
@@ -407,6 +573,9 @@ namespace sand::test {
             ++users[idx];
             check_shower(shower, trj, where, i, j);
           }
+        }
+        if (in_region[static_cast<int>(region::ecal)] && assn.constituents.size() > 1) {
+          ++m_ecal_and_other;
         }
       }
 
@@ -448,7 +617,8 @@ namespace sand::test {
     }
 
     // 2. Gate, over every neutrino (also those with no reco interaction) and per subdetector: a track-/shower-like
-    //    true particle has an object in a subdetector iff it left enough energy there; it is seen iff it has an
+    //    true particle has an object in GRAIN or the tracker iff it left enough energy there; any particle has an
+    //    ECAL cluster iff its ECAL group (empty unless it is a root) has enough energy; it is seen iff it has an
     //    object anywhere. A neutrino with nothing seen must have no interaction.
     for (std::size_t t{}; t != truth.nu.size(); ++t) {
       bool any_seen{};
@@ -461,10 +631,19 @@ namespace sand::test {
           auto const& trj       = trajectory(id);
           int const j           = reco_index(id);
 
-          for (auto const r : {region::grain, region::tracker}) {
-            auto const hits     = find_hits(trj, r);
-            auto const min_dep  = r == region::grain ? m_grain_min_energy_deposit : m_tracker_min_energy_deposit;
-            bool const expected = candidate && hits.first != nullptr && hits.energy >= min_dep;
+          for (auto const r : {region::grain, region::tracker, region::ecal}) {
+            bool expected{};
+            double deposit{}; // [MeV], for the message
+            if (r == region::ecal) {
+              auto const& group = group_of(id);
+              deposit           = group.energy;
+              expected          = !group.hits.empty() && group.energy > 0. && group.energy >= m_ecal_min_energy_deposit;
+            } else {
+              auto const hits    = find_hits(trj, r);
+              auto const min_dep = r == region::grain ? m_grain_min_energy_deposit : m_tracker_min_energy_deposit;
+              deposit            = hits.energy;
+              expected           = candidate && hits.first != nullptr && hits.energy >= min_dep;
+            }
             bool has_object{};
             if (j >= 0) {
               auto const& sand_ixn     = nd.sand.ixn[static_cast<std::size_t>(reco_of_true[t])];
@@ -474,13 +653,11 @@ namespace sand::test {
             }
             UFW_ASSERT(has_object == expected,
                        "nu[{}]: true particle pdg {} (G4ID {}, {} MeV in {}) {} have an object there", t, true_part.pdg,
-                       true_part.G4ID, hits.energy, name_of(r), expected ? "should" : "should not");
+                       true_part.G4ID, deposit, name_of(r), expected ? "should" : "should not");
           }
 
           bool const seen = j >= 0;
-          if (candidate) {
-            ++(seen ? m_gated_in : m_gated_out);
-          }
+          ++(seen ? m_seen : m_unseen);
           any_seen = any_seen || seen;
         }
       }
@@ -496,15 +673,18 @@ namespace sand::test {
                "some GRAIN objects belong to no reco particle, or to more than one");
     UFW_ASSERT(used_once(tracker_track_users) && used_once(tracker_shower_users),
                "some tracker objects belong to no reco particle, or to more than one");
+    UFW_ASSERT(used_once(ecal_cluster_users), "some ECAL clusters belong to no reco particle, or to more than one");
 
     UFW_INFO("fast_reco_test: verified {} interaction(s)", common.ixn.sandreco.size());
   }
 
   fast_reco_test::~fast_reco_test() {
-    UFW_INFO("fast_reco_test: the gate let {} track-/shower-like particle(s) through, rejected {}", m_gated_in,
-             m_gated_out);
-    UFW_ASSERT(m_gated_in > 0, "no particle passed the gate over the whole job: gate always false, or wrong input?");
-    UFW_ASSERT(m_gated_out > 0, "no particle was rejected by the gate over the whole job: gate inactive?");
+    UFW_INFO("fast_reco_test: {} true particle(s) seen, {} not; {} reco particle(s) with an ECAL cluster and an object "
+             "in another subdetector",
+             m_seen, m_unseen, m_ecal_and_other);
+    UFW_ASSERT(m_seen > 0, "no particle passed the gate over the whole job: gate always false, or wrong input?");
+    UFW_ASSERT(m_unseen > 0, "no particle was rejected by the gate over the whole job: gate inactive?");
+    UFW_ASSERT(m_ecal_and_other > 0, "no particle seen in the ECAL and elsewhere over the whole job: matching broken?");
   }
 
 } // namespace sand::test
