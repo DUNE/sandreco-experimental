@@ -234,7 +234,7 @@ namespace sand {
     return intersections;
   }
 
-  geoinfo::position_info geoinfo::getinfo(const pos_3d& p) {
+  geoinfo::position_info geoinfo::get_info(const pos_3d& p) {
     root_tgeomanager& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav              = tgm.navigator();
 

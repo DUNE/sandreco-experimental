@@ -4,8 +4,7 @@
 
 namespace sand {
 
-//chiamare solo le funzioni
-
-
+  geoinfo::position_info::~position_info()
+   {}
    
 } // namespace sand
