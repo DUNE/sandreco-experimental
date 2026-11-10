@@ -19,7 +19,8 @@ namespace sand {
     class drift_info;
     class generic_drift_info;
     class stt_info;
-
+    // class position_info;
+    
    private:
     class invalid_geo_id : public ufw::exception {
      public:
