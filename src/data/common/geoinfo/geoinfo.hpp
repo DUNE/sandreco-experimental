@@ -30,7 +30,7 @@ namespace sand {
    public:
     explicit geoinfo(const ufw::config&);
 
-    position_info getinfo(const pos_3d&);
+    position_info get_info(const pos_3d&);
 
     ~geoinfo();
 

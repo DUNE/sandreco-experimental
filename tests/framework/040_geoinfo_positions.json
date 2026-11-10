@@ -1,0 +1,29 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : ["/usr/local/lib64"],
+    "ufw-ignore-errors": {
+      "sand::root_tgeomanager::invalid_position" : 10
+    }
+  },
+  "globals" : {
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
+  "sand::geoinfo" : { }
+  },
+  "contexts" : {
+    "keys" : 10,
+    "locals" : {},
+    "seed" : 1111
+  },
+  "run" : [
+    {
+      "sand::test::geoinfo_positions" : {
+         "pos": [0, -2385, 23910],
+         "hsize": [500, 500, 500],
+         "nsamples": 10
+      },
+      "reqs" : {}
+    }
+  ]
+}
