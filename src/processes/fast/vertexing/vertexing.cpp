@@ -14,7 +14,8 @@ namespace sand::fast {
           {{"in_truth", "sand::caf::truth_branch_wrapper"},
            {"in_assns", "sand::caf::sand_assn_wrapper"},
            {"in_grain", "sand::caf::grain_reco_wrapper"},
-           {"in_tracker", "sand::caf::tracker_reco_wrapper"}},
+           {"in_tracker", "sand::caf::tracker_reco_wrapper"},
+           {"in_ecal", "sand::caf::ecal_reco_wrapper"}},
           {{"out_common", "sand::caf::common_reco_branch_wrapper"}, {"out_nd", "sand::caf::nd_reco_branch_wrapper"}}} {}
 
   void vertexing::run() {
@@ -22,12 +23,14 @@ namespace sand::fast {
     auto const& assns   = get<sand::caf::sand_assn_wrapper>("in_assns");
     auto const& grain   = get<sand::caf::grain_reco_wrapper>("in_grain");
     auto const& tracker = get<sand::caf::tracker_reco_wrapper>("in_tracker");
+    auto const& ecal    = get<sand::caf::ecal_reco_wrapper>("in_ecal");
     auto& common        = set<sand::caf::common_reco_branch_wrapper>("out_common");
     auto& sand          = set<sand::caf::nd_reco_branch_wrapper>("out_nd").sand;
 
     // 1. The subdetector objects: the constituents of the assns point into these collections
     sand.grain   = grain;
     sand.tracker = tracker;
+    sand.ecal    = ecal;
 
     // 2. The interactions come from the assns: one per true interaction with at least one assn, at the true vertex.
     //    A neutrino that left nothing visible gives no interaction. common.ixn.sandreco[i] and sand.ixn[i] are created

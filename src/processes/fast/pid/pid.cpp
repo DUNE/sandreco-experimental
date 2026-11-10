@@ -55,6 +55,8 @@ namespace sand::fast {
         return sand.tracker.tracks.at(id.idx);
       case ::caf::SRRecoBaseID::kSANDTrackerShower:
         return sand.tracker.showers.at(id.idx);
+      case ::caf::SRRecoBaseID::kSANDECalCluster:
+        return sand.ecal.clusters.at(id.idx);
       default:
         UFW_ERROR("Unsupported SAND collection {}", static_cast<int>(id.type));
       }
@@ -67,6 +69,7 @@ namespace sand::fast {
         return ::caf::RecoObjType::kTrack;
       case ::caf::SRRecoBaseID::kSANDGRAINShower:
       case ::caf::SRRecoBaseID::kSANDTrackerShower:
+      case ::caf::SRRecoBaseID::kSANDECalCluster:
         return ::caf::RecoObjType::kShower;
       default:
         return ::caf::RecoObjType::kUnknownRecoObj;

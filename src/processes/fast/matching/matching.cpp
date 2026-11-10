@@ -33,30 +33,32 @@ namespace sand::fast {
   } // namespace
 
   matching::matching()
-    : process{{{"in_grain", "sand::caf::grain_reco_wrapper"}, {"in_tracker", "sand::caf::tracker_reco_wrapper"}},
+    : process{{{"in_grain", "sand::caf::grain_reco_wrapper"},
+               {"in_tracker", "sand::caf::tracker_reco_wrapper"},
+               {"in_ecal", "sand::caf::ecal_reco_wrapper"}},
               {{"out_assns", "sand::caf::sand_assn_wrapper"}}} {}
 
   void matching::run() {
     auto const& grain   = get<sand::caf::grain_reco_wrapper>("in_grain");
     auto const& tracker = get<sand::caf::tracker_reco_wrapper>("in_tracker");
+    auto const& ecal    = get<sand::caf::ecal_reco_wrapper>("in_ecal");
     auto& assns         = set<sand::caf::sand_assn_wrapper>("out_assns");
 
-    // 1. Tag every subdetector object with its true particle, in collection order: GRAIN first, then the tracker
-    //    (inside out, so that a particle crossing both usually gets its constituents in the order it crossed them)
+    // 1. Tag every subdetector object with its true particle, in collection order: GRAIN, the tracker, then the ECAL
+    //    (inside out, so that a particle crossing several usually gets its constituents in the order it crossed them)
     std::vector<TaggedObject> tags;
-    tags.reserve(grain.tracks.size() + grain.showers.size() + tracker.tracks.size() + tracker.showers.size());
-    for (std::size_t k{}; k != grain.tracks.size(); ++k) {
-      tags.push_back({grain.tracks[k].truth.at(0), {::caf::SRRecoBaseID::kSANDGRAINTrack, static_cast<int>(k)}});
-    }
-    for (std::size_t k{}; k != grain.showers.size(); ++k) {
-      tags.push_back({grain.showers[k].truth.at(0), {::caf::SRRecoBaseID::kSANDGRAINShower, static_cast<int>(k)}});
-    }
-    for (std::size_t k{}; k != tracker.tracks.size(); ++k) {
-      tags.push_back({tracker.tracks[k].truth.at(0), {::caf::SRRecoBaseID::kSANDTrackerTrack, static_cast<int>(k)}});
-    }
-    for (std::size_t k{}; k != tracker.showers.size(); ++k) {
-      tags.push_back({tracker.showers[k].truth.at(0), {::caf::SRRecoBaseID::kSANDTrackerShower, static_cast<int>(k)}});
-    }
+    tags.reserve(grain.tracks.size() + grain.showers.size() + tracker.tracks.size() + tracker.showers.size()
+                 + ecal.clusters.size());
+    auto tag_all = [&tags](auto const& objects, ::caf::SRRecoBaseID::SRRecoBaseCollectionType type) {
+      for (std::size_t k{}; k != objects.size(); ++k) {
+        tags.push_back({objects[k].truth.at(0), {type, static_cast<int>(k)}});
+      }
+    };
+    tag_all(grain.tracks, ::caf::SRRecoBaseID::kSANDGRAINTrack);
+    tag_all(grain.showers, ::caf::SRRecoBaseID::kSANDGRAINShower);
+    tag_all(tracker.tracks, ::caf::SRRecoBaseID::kSANDTrackerTrack);
+    tag_all(tracker.showers, ::caf::SRRecoBaseID::kSANDTrackerShower);
+    tag_all(ecal.clusters, ::caf::SRRecoBaseID::kSANDECalCluster);
 
     // 2. Sort by particle, so that the objects of the same particle become adjacent
     std::stable_sort(tags.begin(), tags.end(),
