@@ -19,8 +19,8 @@ namespace sand {
     class drift_info;
     class generic_drift_info;
     class stt_info;
-    // class position_info;
-    
+    class position_info;
+
    private:
     class invalid_geo_id : public ufw::exception {
      public:
@@ -57,9 +57,6 @@ namespace sand {
 
     geo_path path(geo_id) const;
 
-    std::string material_at(const pos_3d& p) const;
-    std::string volume_at(const pos_3d& p) const;
-
    private:
     void init_ecal() const;
     void init_grain() const;
@@ -73,6 +70,7 @@ namespace sand {
     friend class drift_info;
     friend class generic_drift_info;
     friend class stt_info;
+    friend class position_info;
 
    private:
     mutable std::unique_ptr<grain_info> m_grain;

@@ -32,6 +32,56 @@ namespace sand {
     UFW_DEBUG("z = ({:.2f}, {:.2f}, {:.2f})", z.x(), z.y(), z.z());
   }
 
+  std::string geoinfo::subdetector_info::material_at(const pos_3d& p) const {
+    root_tgeomanager& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav              = tgm.navigator();
+
+    TGeoNode* node = nav->FindNode(p.x(), p.y(), p.z());
+    if (node == nullptr) {
+      return "OUTSIDE";
+    }
+
+    TGeoVolume* vol = node->GetVolume();
+    if (vol == nullptr) {
+      return "NO_VOLUME";
+    }
+
+    TGeoMedium* med = vol->GetMedium();
+    if (med == nullptr) {
+      return "NO_MEDIUM";
+    }
+
+    TGeoMaterial* mat = med->GetMaterial();
+    if (mat == nullptr) {
+      return "NO_MATERIAL";
+    }
+
+    return mat->GetName();
+  }
+
+  std::string geoinfo::subdetector_info::volume_at(const pos_3d& p) const {
+    root_tgeomanager& tgm = ufw::context::current()->instance<root_tgeomanager>();
+    auto nav              = tgm.navigator();
+
+    TGeoNode* node = nav->FindNode(p.x(), p.y(), p.z());
+    if (node == nullptr) {
+      return "OUTSIDE";
+    }
+
+    TGeoVolume* vol = node->GetVolume();
+    if (vol == nullptr) {
+      return "NO_VOLUME";
+    }
+
+    return vol->GetName();
+  }
+
+  geoinfo::position_info geoinfo::subdetector_info::GetInfo(const pos_3d& p) {
+    geoinfo::position_info pi;
+
+    return pi;
+  }
+
   geoinfo::subdetector_info::~subdetector_info() = default;
 
 } // namespace sand

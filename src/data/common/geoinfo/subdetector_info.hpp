@@ -16,6 +16,12 @@ namespace sand {
 
     virtual geo_path path(geo_id) const = 0;
 
+    geoinfo::position_info GetInfo(const pos_3d&);
+
+    std::string material_at(const pos_3d&) const;
+
+    std::string volume_at(const pos_3d&) const;
+
     geo_path path() const { return m_path; }
 
     geo_path partial_path(const geo_path& full_path, const geoinfo& gi) const {

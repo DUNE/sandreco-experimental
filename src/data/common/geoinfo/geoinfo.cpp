@@ -234,48 +234,4 @@ namespace sand {
     return intersections;
   }
 
-  std::string geoinfo::material_at(const pos_3d& p) const {
-    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-    auto nav  = tgm.navigator();
-
-    auto* node = nav->FindNode(p.x(), p.y(), p.z());
-    if (node == nullptr) {
-      return "OUTSIDE";
-    }
-
-    auto* vol = node->GetVolume();
-    if (vol == nullptr) {
-      return "NO_VOLUME";
-    }
-
-    auto* med = vol->GetMedium();
-    if (med == nullptr) {
-      return "NO_MEDIUM";
-    }
-
-    auto* mat = med->GetMaterial();
-    if (mat == nullptr) {
-      return "NO_MATERIAL";
-    }
-
-    return mat->GetName();
-  }
-
-  std::string geoinfo::volume_at(const pos_3d& p) const {
-    auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
-    auto nav  = tgm.navigator();
-
-    auto* node = nav->FindNode(p.x(), p.y(), p.z());
-    if (node == nullptr) {
-      return "OUTSIDE";
-    }
-
-    auto* vol = node->GetVolume();
-    if (vol == nullptr) {
-      return "NO_VOLUME";
-    }
-
-    return vol->GetName();
-  }
-
 } // namespace sand
