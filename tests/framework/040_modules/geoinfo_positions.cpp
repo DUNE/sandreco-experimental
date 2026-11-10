@@ -3,6 +3,9 @@
 #include <geoinfo/grain_info.hpp>
 #include <geoinfo/tracker_info.hpp>
 
+#include <edep_reader/edep_reader.hpp>
+#include <root_tgeomanager/root_tgeomanager.hpp>
+
 #include <ufw/config.hpp>
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
@@ -44,6 +47,25 @@ namespace sand::test {
     for (int i = 0; i != m_nsamples; ++i) {
       pos_3d p = m_pos + rnd_unif(rng) * m_hsize;
       UFW_INFO("Position {}: material {}", p, gi.get_info(p).get_material()->GetName());
+    }
+
+
+    auto const& edep = instance<sand::edep_reader>();
+
+    for(const auto& trj:edep) {
+      for(const auto& sens_det:trj.GetHitMap()) {
+        if(sens_det.first == subdetector_t::DRIFT || 
+           sens_det.first == subdetector_t::STT ||
+           sens_det.first == subdetector_t::GRAIN ||
+           sens_det.first == subdetector_t::GENERIC_DRIFT ||
+           sens_det.first == subdetector_t::ECAL) {
+          for(const auto& hit:sens_det.second) {
+            auto d = ((hit.GetStart() + hit.GetStop()) * 0.5);
+            pos_3d p(d.x(), d.y(), d.z());
+            UFW_INFO("Position {}: material {}", p, gi.get_info(p).get_material()->GetName());
+          }
+        }
+      }
     }
   }
 

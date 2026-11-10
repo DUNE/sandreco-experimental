@@ -241,6 +241,10 @@ namespace sand {
     auto node = nav->node_at(p);
     auto path = nav->get_path();
 
+    if (path.empty() || path.back() != '/') {
+      path.push_back('/');
+    }
+
     if (path.find(ecal_path) != std::string::npos) {
       if (!m_ecal) {
         init_ecal();

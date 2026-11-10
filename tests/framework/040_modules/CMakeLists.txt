@@ -2,4 +2,4 @@ sandreco_add_test_process(sand_test_geoinfo_positions)
 
 target_sources(sand_test_geoinfo_positions PRIVATE geoinfo_positions.cpp)
 
-target_link_libraries(sand_test_geoinfo_positions PRIVATE ROOT::Core sand_geoinfo sand_root_tgeomanager)
+target_link_libraries(sand_test_geoinfo_positions PRIVATE ROOT::Core sand_geoinfo sand_edep_reader sand_root_tgeomanager)

@@ -95,8 +95,7 @@ namespace sand {
   }
 
   inline TGeoNode* root_tgeomanager::tgeonav::node_at(pos_3d p) {
-    set_point(p);
-    TGeoNode* n = GetCurrentNode();
+    TGeoNode* n = find_node(p);
     if (!n) {
       UFW_EXCEPT(invalid_position, p);
     }
