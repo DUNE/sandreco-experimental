@@ -4,6 +4,8 @@
 #define BOOST_TEST_MODULE hdf5
 #include <boost/test/included/unit_test.hpp>
 
+#include <test_helpers.hpp>
+
 #include <common/track.h>
 
 #include <random>

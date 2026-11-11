@@ -1,6 +1,8 @@
 #define BOOST_TEST_MODULE time
 #include <boost/test/included/unit_test.hpp>
 
+#include <test_helpers.hpp>
+
 #include <common/digi.h>
 #include <common/timeslicer.h>
 
