@@ -21,6 +21,7 @@ namespace sand::caf {
     ufw::context_id m_context_id{};
     long m_last_entry{};
     bool m_has_context_id{false};
+    std::size_t m_last_read_attached{0};
 
     static constexpr const char* s_context_id_branch{"context_id"};
     static constexpr const char* s_data_branch{"rec"};
