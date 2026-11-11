@@ -13,16 +13,16 @@ namespace sand::test {
   };
 
   streamer_multiread_read::streamer_multiread_read()
-    : process({{"in_a", "sand::array<double>"}, {"in_b", "sand::array<double>"}}, {}) {}
+    : process({{"in_a", "sand::array<double>"}, {"in_b", "sand::array<int>"}}, {}) {}
 
   void streamer_multiread_read::run() {
     const auto& a = get<sand::array<double>>("in_a");
-    const auto& b = get<sand::array<double>>("in_b");
+    const auto& b = get<sand::array<int>>("in_b");
 
     UFW_ASSERT(a.values.size() == 1, "Expected exactly one value for 'a', got {}", a.values.size());
     UFW_ASSERT(b.values.size() == 1, "Expected exactly one value for 'b', got {}", b.values.size());
-    UFW_ASSERT(std::abs(a.values[0] - 14.0) < 1.e-9, "Variable 'a' does not match the fixture: {}", a.values[0]);
-    UFW_ASSERT(std::abs(b.values[0] - 15.0) < 1.e-9, "Variable 'b' does not match the fixture: {}", b.values[0]);
+    UFW_ASSERT(a.values[0] == 14.0, "Variable 'a' does not match the fixture: {}", a.values[0]);
+    UFW_ASSERT(b.values[0] == 15, "Variable 'b' does not match the fixture: {}", b.values[0]);
   }
 
 } // namespace sand::test
