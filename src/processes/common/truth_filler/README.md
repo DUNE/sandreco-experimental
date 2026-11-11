@@ -1,8 +1,8 @@
 # truth_filler
 
 Reads GENIE (`genie_reader`) and edep-sim (`edep_reader`, with the track id maps of `spill_maps`) and
-produces an `SRTruthBranch` (`truth_branch_wrapper`) for downstream CAF consumers (the fast reco,
-`fast_matching`, `caf_streamer`).
+produces an `SRTruthBranch` (`truth_branch_wrapper`) for downstream CAF consumers (the `sand::fast` chain,
+`caf_streamer`).
 
 ## Data flow
 

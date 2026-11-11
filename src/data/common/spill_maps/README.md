@@ -67,5 +67,5 @@ tree with `make_g4_id_map`.
 - The factory of `sand::spill_maps` rebuilds the maps only when the spill changes: every process asking for them in
   the same spill gets the same object.
 
-Users: `truth_filler` (`G4ID`, `parent`, `daughters` of the true particles), `tracker::fast_reco`,
+Users: `truth_filler` (`G4ID`, `parent`, `daughters` of the true particles), the `sand::fast` recos,
 `gluckstern_smearing`, the 900 and 910 framework tests; `primary_nu` uses `make_interaction_ranges` only.

@@ -52,13 +52,13 @@ namespace sand::test {
     void run() override;
 
    private:
-    double m_tracker_min_energy_deposit{}; ///< same `min_energy_deposit` [MeV] as sand::fast::tracker::reco
-    double m_grain_min_energy_deposit{};   ///< same `min_energy_deposit` [MeV] as sand::fast::grain::reco
-    double m_ecal_min_energy_deposit{};    ///< same `min_energy_deposit` [MeV] as sand::fast::ecal::reco
-    double m_b_field{};                    ///< same `b_field_magnitude` [T] as the tracker and GRAIN reco
-    std::size_t m_seen{};                  ///< true particles with a reco particle
-    std::size_t m_unseen{};                ///< true particles without one
-    std::size_t m_ecal_and_other{};        ///< reco particles with an ECAL cluster and an object elsewhere
+    double m_tracker_min_energy_deposit{};  ///< same `min_energy_deposit` [MeV] as sand::fast::tracker::reco
+    double m_grain_min_energy_deposit{};    ///< same `min_energy_deposit` [MeV] as sand::fast::grain::reco
+    double m_ecal_min_energy_deposit{};     ///< same `min_energy_deposit` [MeV] as sand::fast::ecal::reco
+    double m_b_field{};                     ///< same `b_field_magnitude` [T] as the tracker and GRAIN reco
+    std::size_t m_seen{};                   ///< true particles with a reco particle
+    std::size_t m_unseen{};                 ///< true particles without one
+    std::size_t m_ecal_and_other{};         ///< reco particles with an ECAL cluster and an object elsewhere
     std::array<std::size_t, 5> m_targets{}; ///< reco interactions per SRIntTarget (kGraphite ... kOther)
   };
 
