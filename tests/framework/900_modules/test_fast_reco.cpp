@@ -2,6 +2,7 @@
 #include <common/sand.h>
 
 #include <edep_reader/edep_reader.hpp>
+#include <root_tgeomanager/root_tgeomanager.hpp>
 #include <spill_maps/spill_maps.hpp>
 
 #include <ufw/config.hpp>
@@ -10,12 +11,18 @@
 #include <ufw/process.hpp>
 
 #include <TDatabasePDG.h>
+#include <TGeoMaterial.h>
+#include <TGeoNode.h>
+#include <TGeoVolume.h>
 #include <TParticlePDG.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <numeric>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace sand::test {
@@ -30,7 +37,8 @@ namespace sand::test {
   ///    `min_energy_deposit`. All recomputed from sand::edep_reader and the truth without sharing code with the
   ///    recos (the ECAL groups are built bottom-up through parentID, the reco goes top-down through edep-sim's
   ///    children). A particle has a reco particle iff it has an object; a neutrino has a reco interaction iff at
-  ///    least one of its particles is seen;
+  ///    least one of its particles is seen; the target of an interaction is the material at its vertex, recomputed
+  ///    from the ROOT geometry directly (not through sand::geoinfo, which the vertexing uses);
   /// 3. the links: particle j <-> trkmatch[j] <-> its objects (one per subdetector at most), with the same truth,
   ///    every object used once;
   /// 4. the objects: position, time, length, Evis and enddir from the hits in their subdetector, dir and E at the
@@ -51,6 +59,7 @@ namespace sand::test {
     std::size_t m_seen{};                  ///< true particles with a reco particle
     std::size_t m_unseen{};                ///< true particles without one
     std::size_t m_ecal_and_other{};        ///< reco particles with an ECAL cluster and an object elsewhere
+    std::array<std::size_t, 5> m_targets{}; ///< reco interactions per SRIntTarget (kGraphite ... kOther)
   };
 
   fast_reco_test::fast_reco_test()
@@ -60,6 +69,38 @@ namespace sand::test {
               {}) {}
 
   namespace {
+
+    /// The target expected at a vertex [cm], from the ROOT geometry directly: the material of the node there if the
+    /// node is inside GRAIN, the tracker or the ECAL (by its path), kOther otherwise or for any other material
+    ::caf::SRSANDInt::SRIntTarget expected_target(root_tgeomanager::tgeonav& nav, ::caf::SRVector3D const& vtx) {
+      auto const* node = nav.find_node(pos_3d{vtx.x * 10., vtx.y * 10., vtx.z * 10.}); // cm -> mm
+      if (node == nullptr) {
+        return ::caf::SRSANDInt::SRIntTarget::kOther;
+      }
+      std::string const path = nav.get_path() + "/"; // the deepest node has no trailing slash
+      bool inside{};
+      for (std::string_view const volume :
+           {"/kloe_calo_volume_PV_0/", "/GRAIN_LAr_lv_PV_0/", "/STTtracker_PV_0/", "/SANDtracker_PV_0/"}) {
+        inside = inside || path.find(volume) != std::string::npos;
+      }
+      if (!inside) {
+        return ::caf::SRSANDInt::SRIntTarget::kOther;
+      }
+      std::string_view const material = node->GetVolume()->GetMaterial()->GetName();
+      if (material == "Graphite") {
+        return ::caf::SRSANDInt::SRIntTarget::kGraphite;
+      }
+      if (material == "C3H6") {
+        return ::caf::SRSANDInt::SRIntTarget::kPlastic;
+      }
+      if (material == "LAr") {
+        return ::caf::SRSANDInt::SRIntTarget::kArgon;
+      }
+      if (material == "Lead" || material == "Scintillator") {
+        return ::caf::SRSANDInt::SRIntTarget::kCalo;
+      }
+      return ::caf::SRSANDInt::SRIntTarget::kOther;
+    }
     /// @return true for mu, pi+/-, K+/-, p. Deliberately a local copy of the reco's own table.
     bool is_track_like(int pdg) {
       int const abs_pdg = std::abs(pdg);
@@ -484,6 +525,7 @@ namespace sand::test {
 
     // Which neutrino every reco interaction comes from: at most one interaction per neutrino
     std::vector<int> reco_of_true(truth.nu.size(), -1);
+    auto nav = instance<sand::root_tgeomanager>().navigator();
 
     for (std::size_t i{}; i != common.ixn.sandreco.size(); ++i) {
       auto const& reco_ixn  = common.ixn.sandreco[i];
@@ -509,6 +551,10 @@ namespace sand::test {
                      && reco_ixn.vtx.y == truth.nu[t].vtx.y && reco_ixn.vtx.z == truth.nu[t].vtx.z
                      && reco_ixn.vtx_time == truth.nu[t].time,
                  "ixn[{}]: id, vertex or vertex time isn't the one of neutrino {}", i, t);
+      auto const target = expected_target(*nav, reco_ixn.vtx);
+      UFW_ASSERT(sand_ixn.target == target, "ixn[{}]: target {} isn't the material at the vertex ({})", i,
+                 static_cast<int>(sand_ixn.target), static_cast<int>(target));
+      ++m_targets.at(static_cast<std::size_t>(target));
 
       for (std::size_t j{}; j != particles.size(); ++j) {
         auto const& particle = particles[j];
@@ -691,8 +737,8 @@ namespace sand::test {
 
   fast_reco_test::~fast_reco_test() {
     UFW_INFO("fast_reco_test: {} true particle(s) seen, {} not; {} reco particle(s) with an ECAL cluster and an object "
-             "in another subdetector",
-             m_seen, m_unseen, m_ecal_and_other);
+             "in another subdetector; targets: {} graphite, {} plastic, {} argon, {} calo, {} other",
+             m_seen, m_unseen, m_ecal_and_other, m_targets[0], m_targets[1], m_targets[2], m_targets[3], m_targets[4]);
     UFW_ASSERT(m_seen > 0, "no particle passed the gate over the whole job: gate always false, or wrong input?");
     UFW_ASSERT(m_unseen > 0, "no particle was rejected by the gate over the whole job: gate inactive?");
     UFW_ASSERT(m_ecal_and_other > 0, "no particle seen in the ECAL and elsewhere over the whole job: matching broken?");

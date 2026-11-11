@@ -2,4 +2,4 @@ sandreco_add_test_process(sand_test_fast_reco)
 
 target_sources(sand_test_fast_reco PRIVATE test_fast_reco.cpp)
 
-target_link_libraries(sand_test_fast_reco PRIVATE sand_edep_reader sand_spill_maps ROOT::EG duneanaobj::StandardRecord)
+target_link_libraries(sand_test_fast_reco PRIVATE sand_edep_reader sand_root_tgeomanager sand_spill_maps ROOT::EG ROOT::Geom duneanaobj::StandardRecord)
