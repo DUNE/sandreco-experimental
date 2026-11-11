@@ -4,7 +4,6 @@
 
 namespace sand {
 
-  geoinfo::position_info::~position_info()
-   {}
-   
+  geoinfo::position_info::~position_info() {}
+
 } // namespace sand

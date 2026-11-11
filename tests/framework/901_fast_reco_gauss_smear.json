@@ -8,7 +8,8 @@
   "globals": {
     "sand::root_tgeomanager": {
       "geometry": "test/sand-spills.5.edep.root"
-    }
+    },
+    "sand::geoinfo": {}
   },
   "contexts": {
     "keys": 2,

@@ -5,4 +5,4 @@ target_sources(sand_fast_vertexing
   vertexing.cpp
 )
 
-target_link_libraries(sand_fast_vertexing PRIVATE duneanaobj::StandardRecord)
+target_link_libraries(sand_fast_vertexing PRIVATE sand_geoinfo sand_root_tgeomanager duneanaobj::StandardRecord)
