@@ -9,6 +9,7 @@ namespace sand::fast::grain {
 
   class reco : public ufw::process {
     double m_min_energy_deposit{};
+    double m_b_field{}; ///< [T], along x
 
    public:
     reco();

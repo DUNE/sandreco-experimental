@@ -125,10 +125,10 @@ namespace sand::fast::grain {
       return abs_pdg == 11 || abs_pdg == 22 || abs_pdg == 111;
     }
 
-    /// Position, time, length and Evis from the hits; momentum (dir, E) at the entry point, E NaN without one;
-    /// enddir from the last hit
+    /// Position, time, length and Evis from the hits; momentum (dir, E, R) at the entry point, E and R NaN without
+    /// one; enddir from the last hit. R is the curvature radius in a field `b_field` [T] along x.
     ::caf::SRTrack track_from(std::vector<EDEPHit> const& hits, EDEPTrajectoryPoint const* entry,
-                              ::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id) {
+                              ::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id, double b_field) {
       ::caf::SRTrack track{};
 
       track.start  = position_cm(hits.front().GetStart());
@@ -140,8 +140,11 @@ namespace sand::fast::grain {
       track.dir    = entry_direction(entry, hits);
       track.enddir = direction_of(hits.back());
       if (entry != nullptr) {
-        auto const m = mass_mev(true_part.pdg);
-        track.E      = static_cast<float>(std::sqrt(entry->GetMomentum().Mag2() + m * m)); // MeV
+        auto const& p  = entry->GetMomentum(); // MeV
+        auto const m   = mass_mev(true_part.pdg);
+        track.E        = static_cast<float>(std::sqrt(p.Mag2() + m * m)); // MeV
+        auto const p_T = std::hypot(p.Y(), p.Z());                        // transverse to the field, along x
+        track.R        = (p_T * 1e-3) / (0.3 * b_field) * 100.;           // MeV -> GeV, m -> cm
       }
 
       track.charge = charge_from_pdg(true_part.pdg);
@@ -175,9 +178,11 @@ namespace sand::fast::grain {
   void reco::configure(ufw::config const& cfg) {
     process::configure(cfg);
     m_min_energy_deposit = cfg.value("min_energy_deposit", 0.);
+    m_b_field            = cfg.value("b_field_magnitude", 0.6);
 
     UFW_ASSERT(m_min_energy_deposit >= 0., "fast::grain::reco: min_energy_deposit must be >= 0, got {}",
                m_min_energy_deposit);
+    UFW_ASSERT(m_b_field > 0., "fast::grain::reco: b_field_magnitude must be > 0, got {}", m_b_field);
   }
 
   void reco::run() {
@@ -215,7 +220,7 @@ namespace sand::fast::grain {
           }
 
           if (is_track_like(p.pdg)) {
-            grain.tracks.push_back(track_from(hits, entry_point(*trj), p, id));
+            grain.tracks.push_back(track_from(hits, entry_point(*trj), p, id, m_b_field));
           } else if (is_shower_like(p.pdg)) {
             grain.showers.push_back(shower_from(hits, entry_point(*trj), id));
           }

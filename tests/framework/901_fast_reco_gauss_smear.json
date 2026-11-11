@@ -32,7 +32,8 @@
     },
     {
       "sand::fast::tracker::reco": {
-        "min_energy_deposit": 0.04
+        "min_energy_deposit": 0.04,
+        "b_field_magnitude": 0.6
       },
       "reqs": {
         "in_truth": "produced_truth"
@@ -43,7 +44,8 @@
     },
     {
       "sand::fast::grain::reco": {
-        "min_energy_deposit": 1.0
+        "min_energy_deposit": 1.0,
+        "b_field_magnitude": 0.6
       },
       "reqs": {
         "in_truth": "produced_truth"
@@ -112,7 +114,8 @@
       "sand::test::fast_reco_test": {
         "tracker_min_energy_deposit": 0.04,
         "grain_min_energy_deposit": 1.0,
-        "ecal_min_energy_deposit": 1.0
+        "ecal_min_energy_deposit": 1.0,
+        "b_field_magnitude": 0.6
       },
       "reqs": {
         "in_truth": "produced_truth",

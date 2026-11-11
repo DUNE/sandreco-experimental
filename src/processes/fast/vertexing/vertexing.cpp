@@ -44,6 +44,7 @@ namespace sand::fast {
         auto& ixn        = common.ixn.sandreco.emplace_back();
         ixn.id           = truth.nu[true_ixn].id;
         ixn.vtx          = truth.nu[true_ixn].vtx;
+        ixn.vtx_time     = truth.nu[true_ixn].time; // ns
         ixn.truth        = {true_ixn};
         ixn.truthOverlap = {1.f};
         sand.ixn.emplace_back();

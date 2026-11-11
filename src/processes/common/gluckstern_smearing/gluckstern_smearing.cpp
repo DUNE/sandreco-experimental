@@ -260,6 +260,7 @@ namespace sand::common {
       track.dir = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
       // smeared_p and mass are in GeV, SRTrack::E is in MeV
       track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass)) * 1000.;
+      track.R    = 100. * std::hypot(smeared_p->y, smeared_p->z) / (0.3 * m_b_field); // GeV -> cm
       track.Evis = track.E;
 
       ++n_smeared;

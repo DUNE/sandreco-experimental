@@ -47,6 +47,7 @@ namespace sand::test {
     double m_tracker_min_energy_deposit{}; ///< same `min_energy_deposit` [MeV] as sand::fast::tracker::reco
     double m_grain_min_energy_deposit{};   ///< same `min_energy_deposit` [MeV] as sand::fast::grain::reco
     double m_ecal_min_energy_deposit{};    ///< same `min_energy_deposit` [MeV] as sand::fast::ecal::reco
+    double m_b_field{};                    ///< same `b_field_magnitude` [T] as the tracker and GRAIN reco
     std::size_t m_seen{};                  ///< true particles with a reco particle
     std::size_t m_unseen{};                ///< true particles without one
     std::size_t m_ecal_and_other{};        ///< reco particles with an ECAL cluster and an object elsewhere
@@ -199,10 +200,10 @@ namespace sand::test {
       return collection[static_cast<std::size_t>(id.part)];
     }
 
-    /// A track in region `r`: position, time, length, Evis and enddir from the hits there; dir and E at the entry
-    /// point there (E = NaN and dir from the first hit without one)
+    /// A track in region `r`: position, time, length, Evis and enddir from the hits there; dir, E and R at the entry
+    /// point there (E = R = NaN and dir from the first hit without one)
     void check_track(::caf::SRTrack const& track, EDEPTrajectory const& trj, ::caf::SRTrueParticle const& true_part,
-                     region r, std::size_t i, std::size_t j) {
+                     region r, double b_field, std::size_t i, std::size_t j) {
       auto const* in  = name_of(r);
       auto const hits = find_hits(trj, r);
       UFW_ASSERT(hits.first != nullptr, "ixn[{}].part[{}]: {} track without hits there", i, j, in);
@@ -224,6 +225,8 @@ namespace sand::test {
       if (entry == nullptr) {
         UFW_ASSERT(std::isnan(track.E), "ixn[{}].part[{}]: {} track without entry point, but E = {} MeV", i, j, in,
                    track.E);
+        UFW_ASSERT(std::isnan(track.R), "ixn[{}].part[{}]: {} track without entry point, but R = {} cm", i, j, in,
+                   track.R);
         UFW_ASSERT(same_direction(track.dir, *hits.first),
                    "ixn[{}].part[{}]: {} track without entry point, but dir isn't the first hit's", i, j, in);
         return;
@@ -233,6 +236,11 @@ namespace sand::test {
       auto const& p_in     = entry->GetMomentum();                                // MeV
       UFW_ASSERT(close(track.E, std::sqrt(p_in.Mag2() + mass * mass)),
                  "ixn[{}].part[{}]: {} track E {} MeV isn't the energy at the entry point", i, j, in, track.E);
+      // R [cm] = p_T [MeV] / (3 B [T]), p_T transverse to the field (along x)
+      double const radius = std::hypot(p_in.y(), p_in.z()) / (3. * b_field);
+      UFW_ASSERT(close(track.R, radius),
+                 "ixn[{}].part[{}]: {} track R {} cm isn't the curvature radius at the entry point {} cm", i, j, in,
+                 track.R, radius);
       UFW_ASSERT(track.E <= true_part.p.E * 1000. * (1. + 1e-5),
                  "ixn[{}].part[{}]: {} track E {} MeV is more than the true energy at the vertex {} MeV", i, j, in,
                  track.E, true_part.p.E * 1000.);
@@ -361,6 +369,8 @@ namespace sand::test {
     m_tracker_min_energy_deposit = cfg.value("tracker_min_energy_deposit", 0.);
     m_grain_min_energy_deposit   = cfg.value("grain_min_energy_deposit", 0.);
     m_ecal_min_energy_deposit    = cfg.value("ecal_min_energy_deposit", 0.);
+    m_b_field                    = cfg.value("b_field_magnitude", 0.6);
+    UFW_ASSERT(m_b_field > 0., "fast_reco_test: b_field_magnitude must be > 0, got {}", m_b_field);
   }
 
   void fast_reco_test::run() {
@@ -496,8 +506,9 @@ namespace sand::test {
       UFW_ASSERT(reco_of_true[t] == -1, "ixn[{}]: neutrino {} already has interaction {}", i, t, reco_of_true[t]);
       reco_of_true[t] = i_int;
       UFW_ASSERT(reco_ixn.id == truth.nu[t].id && reco_ixn.vtx.x == truth.nu[t].vtx.x
-                     && reco_ixn.vtx.y == truth.nu[t].vtx.y && reco_ixn.vtx.z == truth.nu[t].vtx.z,
-                 "ixn[{}]: id or vertex isn't the one of neutrino {}", i, t);
+                     && reco_ixn.vtx.y == truth.nu[t].vtx.y && reco_ixn.vtx.z == truth.nu[t].vtx.z
+                     && reco_ixn.vtx_time == truth.nu[t].time,
+                 "ixn[{}]: id, vertex or vertex time isn't the one of neutrino {}", i, t);
 
       for (std::size_t j{}; j != particles.size(); ++j) {
         auto const& particle = particles[j];
@@ -560,7 +571,7 @@ namespace sand::test {
             UFW_ASSERT(same_reco_particle(track.part, i_int, j_int) && same_particle(track.truth.at(0), id),
                        "ixn[{}].part[{}]: its {} track doesn't point back, or has another truth", i, j, name_of(where));
             ++users[idx];
-            check_track(track, trj, true_part, where, i, j);
+            check_track(track, trj, true_part, where, m_b_field, i, j);
           } else {
             auto const& showers = where == region::grain ? grain.showers : tracker.showers;
             auto& users         = where == region::grain ? grain_shower_users : tracker_shower_users;

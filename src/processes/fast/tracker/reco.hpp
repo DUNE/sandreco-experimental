@@ -9,6 +9,7 @@ namespace sand::fast::tracker {
 
   class reco : public ufw::process {
     double m_min_energy_deposit{};
+    double m_b_field{};
 
    public:
     reco();
