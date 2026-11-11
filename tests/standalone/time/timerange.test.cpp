@@ -144,3 +144,5 @@ BOOST_AUTO_TEST_CASE(time_slice) {
     }
   }
 }
+
+FIX_TEST_EXIT
