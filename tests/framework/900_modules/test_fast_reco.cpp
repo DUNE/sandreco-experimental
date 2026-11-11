@@ -549,7 +549,7 @@ namespace sand::test {
       reco_of_true[t] = i_int;
       UFW_ASSERT(reco_ixn.id == truth.nu[t].id && reco_ixn.vtx.x == truth.nu[t].vtx.x
                      && reco_ixn.vtx.y == truth.nu[t].vtx.y && reco_ixn.vtx.z == truth.nu[t].vtx.z
-                     && reco_ixn.vtx_time == truth.nu[t].time,
+                     && reco_ixn.time == truth.nu[t].time,
                  "ixn[{}]: id, vertex or vertex time isn't the one of neutrino {}", i, t);
       auto const target = expected_target(*nav, reco_ixn.vtx);
       UFW_ASSERT(sand_ixn.target == target, "ixn[{}]: target {} isn't the material at the vertex ({})", i,
