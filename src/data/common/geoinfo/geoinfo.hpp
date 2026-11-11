@@ -19,6 +19,7 @@ namespace sand {
     class drift_info;
     class generic_drift_info;
     class stt_info;
+    class position_info;
 
    private:
     class invalid_geo_id : public ufw::exception {
@@ -29,13 +30,30 @@ namespace sand {
    public:
     explicit geoinfo(const ufw::config&);
 
+    position_info get_info(const pos_3d&);
+
     ~geoinfo();
 
-    const ecal_info& ecal() const { if (!m_ecal) { init_ecal(); } return *m_ecal; }
+    const ecal_info& ecal() const {
+      if (!m_ecal) {
+        init_ecal();
+      }
+      return *m_ecal;
+    }
 
-    const grain_info& grain() const { if (!m_grain) { init_grain(); } return *m_grain; }
+    const grain_info& grain() const {
+      if (!m_grain) {
+        init_grain();
+      }
+      return *m_grain;
+    }
 
-    const tracker_info& tracker() const { if (!m_tracker) { init_tracker(); } return *m_tracker; }
+    const tracker_info& tracker() const {
+      if (!m_tracker) {
+        init_tracker();
+      }
+      return *m_tracker;
+    }
 
     geo_id id(const geo_path&) const;
 
@@ -54,11 +72,12 @@ namespace sand {
     friend class drift_info;
     friend class generic_drift_info;
     friend class stt_info;
+    friend class position_info;
 
    private:
-    mutable std::unique_ptr<grain_info> m_grain;
-    mutable std::unique_ptr<ecal_info> m_ecal;
-    mutable std::unique_ptr<tracker_info> m_tracker;
+    mutable std::shared_ptr<grain_info> m_grain;
+    mutable std::shared_ptr<ecal_info> m_ecal;
+    mutable std::shared_ptr<tracker_info> m_tracker;
     geo_path m_root_path;
     ufw::config m_grain_cfg;
     ufw::config m_ecal_cfg;
@@ -68,20 +87,12 @@ namespace sand {
     const geo_path& root_path() const { return m_root_path; }
 
    public:
+    static bool getXYLineSegmentIntersection(const pos_3d& v1, const pos_3d& v2, const pos_3d& p, const dir_3d& dir,
+                                             pos_3d& intersection_point);
 
-    static bool getXYLineSegmentIntersection(
-      const pos_3d& v1,
-      const pos_3d& v2,
-      const pos_3d& p,
-      const dir_3d& dir,
-      pos_3d& intersection_point);
-
-    static std::vector<pos_3d> getXYLinePolygonIntersections(
-      const std::vector<pos_3d>& polygon,
-      const pos_3d& line_point,
-      const dir_3d& line_dir);
-      
-    };
+    static std::vector<pos_3d> getXYLinePolygonIntersections(const std::vector<pos_3d>& polygon,
+                                                             const pos_3d& line_point, const dir_3d& line_dir);
+  };
 
 } // namespace sand
 

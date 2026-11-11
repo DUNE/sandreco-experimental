@@ -1,6 +1,7 @@
 #pragma once
 
 #include <geoinfo/geoinfo.hpp>
+#include <geoinfo/position_info.hpp>
 
 namespace sand {
 
