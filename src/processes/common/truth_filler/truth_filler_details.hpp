@@ -50,7 +50,8 @@ namespace sand::common::filler_details {
   [[nodiscard]] std::vector<::caf::SRTrueParticle> make_prefsi_particles(StdHep const& stdhep, long int ixn_id);
 
   /// Builds one SRTrueParticle from an edep-sim trajectory. Used for both `prim` and `sec`.
-  /// @param ancestor_id  the root primary's TrueParticleID, propagated unchanged down the whole subtree.
+  /// @param ancestor_id  for `sec`, the root primary's TrueParticleID, propagated unchanged down the whole subtree;
+  ///                     for `prim`, a default-constructed (unknown) TrueParticleID, as in ND_CAFMaker.
   /// @param ids          converts the trajectory's spill-wide track ids (G4ID, parent) to per-interaction ids.
   [[nodiscard]] ::caf::SRTrueParticle true_particle_from_edep(EDEPTrajectory const& traj, long int ixn_id,
                                                               ::caf::TrueParticleID const& ancestor_id,

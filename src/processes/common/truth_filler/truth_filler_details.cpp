@@ -304,7 +304,7 @@ namespace sand::common::filler_details {
       auto const& prim = primaries[first_idx + i];
       ::caf::TrueParticleID const prim_id{sr_ixn, caf::TrueParticleID::kPrimary, static_cast<int>(i)};
 
-      out_tree.prim.emplace_back(true_particle_from_edep(prim, interaction_id, prim_id, ids));
+      out_tree.prim.emplace_back(true_particle_from_edep(prim, interaction_id, ::caf::TrueParticleID(), ids));
 
       auto const& children = prim.GetChildrenTrajectories();
       std::vector<caf::TrueParticleID> dids;
