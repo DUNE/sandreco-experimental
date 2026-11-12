@@ -22,12 +22,14 @@ namespace sand::fast::grain {
     /// Below this momentum [MeV] a particle is stopped and its momentum has no direction
     constexpr double stopped_momentum{1e-6};
 
-    /// The hits of `trj` in GRAIN, ordered by start time (the edep_reader already orders the hits of each component)
-    std::vector<EDEPHit> grain_hits(EDEPTrajectory const& trj) {
+    /// The hits of `trj` in GRAIN, ordered by start time (the edep_reader already orders the hits of each component);
+    /// empty if none
+    std::vector<EDEPHit> const& grain_hits(EDEPTrajectory const& trj) {
+      static std::vector<EDEPHit> const no_hits;
       if (auto const it = trj.GetHitMap().find(subdetector_t::GRAIN); it != trj.GetHitMap().end()) {
         return it->second;
       }
-      return {};
+      return no_hits;
     }
 
     /// The first trajectory point of `trj` in GRAIN (where it enters, or is born if born inside), where its momentum is
@@ -107,10 +109,12 @@ namespace sand::fast::grain {
       return abs_pdg == 11 || abs_pdg == 22 || abs_pdg == 111;
     }
 
-    /// Position, time, length and Evis from the hits; momentum (dir, E, R) at the entry point, E and R NaN without
-    /// one; enddir from the last hit. R is the curvature radius in a field `b_field` [T] along x.
-    ::caf::SRTrack track_from(std::vector<EDEPHit> const& hits, EDEPTrajectoryPoint const* entry,
-                              ::caf::SRTrueParticle const& true_part, ::caf::TrueParticleID const& id, double b_field) {
+    /// The track of `trj`, which must have hits in GRAIN. Position, time, length and Evis from the hits; momentum (dir,
+    /// E, R) at the entry point, E and R NaN without one; enddir from the last hit. R is the curvature radius in a
+    /// field `b_field` [T] along x.
+    ::caf::SRTrack track_from(EDEPTrajectory const& trj, ::caf::TrueParticleID const& id, double b_field) {
+      auto const& hits  = grain_hits(trj);
+      auto const* entry = entry_point(trj);
       ::caf::SRTrack track{};
 
       track.start  = position_cm(hits.front().GetStart());
@@ -123,13 +127,13 @@ namespace sand::fast::grain {
       track.enddir = direction_of(hits.back());
       if (entry != nullptr) {
         auto const& p  = entry->GetMomentum(); // MeV
-        auto const m   = mass_mev(true_part.pdg);
+        auto const m   = mass_mev(trj.GetPDGCode());
         track.E        = static_cast<float>(std::sqrt(p.Mag2() + m * m)); // MeV
         auto const p_T = std::hypot(p.Y(), p.Z());                        // transverse to the field, along x
         track.R        = (p_T * 1e-3) / (0.3 * b_field) * 100.;           // MeV -> GeV, m -> cm
       }
 
-      track.charge = charge_from_pdg(true_part.pdg);
+      track.charge = charge_from_pdg(trj.GetPDGCode());
       track.qual   = 1.f;
 
       track.truth.push_back(id);
@@ -137,9 +141,11 @@ namespace sand::fast::grain {
       return track;
     }
 
-    /// Start, time and Evis from the hits; direction at the entry point
-    ::caf::SRShower shower_from(std::vector<EDEPHit> const& hits, EDEPTrajectoryPoint const* entry,
-                                ::caf::TrueParticleID const& id) {
+    /// The shower of `trj`, which must have hits in GRAIN. Start, time and Evis from the hits; direction at the entry
+    /// point
+    ::caf::SRShower shower_from(EDEPTrajectory const& trj, ::caf::TrueParticleID const& id) {
+      auto const& hits  = grain_hits(trj);
+      auto const* entry = entry_point(trj);
       ::caf::SRShower shower{};
 
       shower.start     = position_cm(hits.front().GetStart());
@@ -191,7 +197,7 @@ namespace sand::fast::grain {
           }
 
           // Detectability: hits in GRAIN, with enough deposited energy
-          auto const hits = grain_hits(*trj);
+          auto const& hits = grain_hits(*trj);
           if (hits.empty()) {
             ++n_no_hits;
             continue;
@@ -202,9 +208,9 @@ namespace sand::fast::grain {
           }
 
           if (is_track_like(p.pdg)) {
-            grain.tracks.push_back(track_from(hits, entry_point(*trj), p, id, m_b_field));
+            grain.tracks.push_back(track_from(*trj, id, m_b_field));
           } else if (is_shower_like(p.pdg)) {
-            grain.showers.push_back(shower_from(hits, entry_point(*trj), id));
+            grain.showers.push_back(shower_from(*trj, id));
           }
         }
       }
