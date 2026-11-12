@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <numeric>
 
 #include <ufw/utils.hpp>
 
@@ -230,6 +231,36 @@ double EDEPTrajectory::GetDepositedEnergy(sand::subdetector_t c) const {
     e += hit.GetSecondaryDeposit();
   }
   return e;
+}
+
+/**
+ * @brief Calculates the total energy deposited by the trajectory in the specified detector sand::subdetector_t, as the
+ * sum of EDEPHit::GetEnergyDeposit over its hits there.
+ * @param c The detector sand::subdetector_t.
+ * @return The total energy deposit in the specified sand::subdetector_t [MeV], 0 if there are no hits there.
+ */
+double EDEPTrajectory::GetTotalEnergyDeposit(sand::subdetector_t c) const {
+  auto it = hit_map_.find(c);
+  if (it == hit_map_.end()) {
+    return 0.;
+  }
+  return std::accumulate(it->second.begin(), it->second.end(), 0.,
+                         [](double sum, const EDEPHit& hit) { return sum + hit.GetEnergyDeposit(); });
+}
+
+/**
+ * @brief Calculates the length of the trajectory in the specified detector sand::subdetector_t, as the sum of
+ * EDEPHit::GetTrackLength over its hits there.
+ * @param c The detector sand::subdetector_t.
+ * @return The track length in the specified sand::subdetector_t [mm], 0 if there are no hits there.
+ */
+double EDEPTrajectory::GetTrackLength(sand::subdetector_t c) const {
+  auto it = hit_map_.find(c);
+  if (it == hit_map_.end()) {
+    return 0.;
+  }
+  return std::accumulate(it->second.begin(), it->second.end(), 0.,
+                         [](double sum, const EDEPHit& hit) { return sum + hit.GetTrackLength(); });
 }
 
 /**
