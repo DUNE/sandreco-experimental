@@ -14,11 +14,11 @@ namespace sand::test {
   };
 
   streamer_multiread_write::streamer_multiread_write()
-    : process({}, {{"out_a", "sand::array<double>"}, {"out_b", "sand::array<double>"}}) {}
+    : process({}, {{"out_a", "sand::array<double>"}, {"out_b", "sand::array<int>"}}) {}
 
   void streamer_multiread_write::run() {
     set<sand::array<double>>("out_a").values.push_back(14.0);
-    set<sand::array<double>>("out_b").values.push_back(15.0);
+    set<sand::array<int>>("out_b").values.push_back(15);
   }
 
 } // namespace sand::test
