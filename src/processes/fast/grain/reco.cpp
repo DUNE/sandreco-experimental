@@ -9,7 +9,6 @@
 
 #include <TDatabasePDG.h>
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -27,17 +26,12 @@ namespace sand::fast::grain {
     /// Below this momentum [MeV] a particle is stopped and its momentum has no direction
     constexpr double stopped_momentum{1e-6};
 
-    /// The hits of `trj` in GRAIN, ordered by start time
+    /// The hits of `trj` in GRAIN, ordered by start time (the edep_reader already orders the hits of each component)
     std::vector<EDEPHit> grain_hits(EDEPTrajectory const& trj) {
-      std::vector<EDEPHit> hits;
-      for (auto const volume : grain_volumes) {
-        if (auto const it = trj.GetHitMap().find(volume); it != trj.GetHitMap().end()) {
-          hits.insert(hits.end(), it->second.begin(), it->second.end());
-        }
+      if (auto const it = trj.GetHitMap().find(subdetector_t::GRAIN); it != trj.GetHitMap().end()) {
+        return it->second;
       }
-      std::stable_sort(hits.begin(), hits.end(),
-                       [](EDEPHit const& a, EDEPHit const& b) { return a.GetStart().T() < b.GetStart().T(); });
-      return hits;
+      return {};
     }
 
     /// The earliest trajectory point of `trj` in GRAIN, where its momentum is taken (for a particle born in GRAIN,

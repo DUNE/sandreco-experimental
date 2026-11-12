@@ -9,7 +9,6 @@
 
 #include <TDatabasePDG.h>
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -27,17 +26,15 @@ namespace sand::fast::tracker {
     /// Below this momentum [MeV] a particle is stopped and its momentum has no direction
     constexpr double stopped_momentum{1e-6};
 
-    /// The hits of `trj` in the tracker, ordered by start time
+    /// The hits of `trj` in the tracker, ordered by start time. STT and DRIFT are alternative designs, so at most one
+    /// of them has hits, and the edep_reader already orders the hits of each component.
     std::vector<EDEPHit> tracker_hits(EDEPTrajectory const& trj) {
-      std::vector<EDEPHit> hits;
       for (auto const volume : tracker_volumes) {
         if (auto const it = trj.GetHitMap().find(volume); it != trj.GetHitMap().end()) {
-          hits.insert(hits.end(), it->second.begin(), it->second.end());
+          return it->second;
         }
       }
-      std::stable_sort(hits.begin(), hits.end(),
-                       [](EDEPHit const& a, EDEPHit const& b) { return a.GetStart().T() < b.GetStart().T(); });
-      return hits;
+      return {};
     }
 
     /// The earliest trajectory point of `trj` in the tracker, where the tracker would measure the momentum; null if
