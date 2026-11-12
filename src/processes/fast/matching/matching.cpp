@@ -44,8 +44,8 @@ namespace sand::fast {
     auto const& ecal    = get<sand::caf::ecal_reco_wrapper>("in_ecal");
     auto& assns         = set<sand::caf::sand_assn_wrapper>("out_assns");
 
-    // 1. Tag every subdetector object with its true particle, in collection order: GRAIN, the tracker, then the ECAL
-    //    (inside out, so that a particle crossing several usually gets its constituents in the order it crossed them)
+    // 1. Tag every subdetector object with its true particle, in scan order: GRAIN, the tracker, then the ECAL (not
+    //    necessarily the crossing order)
     std::vector<TaggedObject> tags;
     tags.reserve(grain.tracks.size() + grain.showers.size() + tracker.tracks.size() + tracker.showers.size()
                  + ecal.clusters.size());
