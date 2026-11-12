@@ -37,17 +37,18 @@ namespace sand::fast::tracker {
       return {};
     }
 
-    /// The earliest trajectory point of `trj` in the tracker, where the tracker would measure the momentum; null if
-    /// edep-sim stored none there
+    /// The first trajectory point of `trj` in the tracker (where it enters, or is born if born inside), where the
+    /// tracker would measure the momentum; null if edep-sim stored none there. The edep_reader keeps the first points
+    /// of every entry in step order, so the first entry is the front. A volume shared by the STT and DRIFT names files
+    /// its first point under DRIFT if the particle is born there and under STT if it enters it, so both lists are
+    /// checked even in a single design.
     EDEPTrajectoryPoint const* entry_point(EDEPTrajectory const& trj) {
       EDEPTrajectoryPoint const* entry{};
       for (auto const volume : tracker_volumes) {
-        if (auto const it = trj.GetTrajectoryPoints().find(volume); it != trj.GetTrajectoryPoints().end()) {
-          for (auto const& point : it->second) {
-            if (entry == nullptr || point.GetPosition().T() < entry->GetPosition().T()) {
-              entry = &point;
-            }
-          }
+        auto const& first_points = trj.GetFirstPointsInDetector(volume);
+        if (!first_points.empty()
+            && (entry == nullptr || first_points.front().GetPosition().T() < entry->GetPosition().T())) {
+          entry = &first_points.front();
         }
       }
       return entry;

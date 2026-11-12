@@ -16,34 +16,30 @@ namespace sand::fast::ecal {
 
   namespace {
 
-    /// True if the trajectory starts inside the ECAL: its earliest point, over all subdetectors, is an ECAL point
+    /// True if the trajectory starts inside the ECAL. The edep_reader files the first point of the trajectory as the
+    /// front of the first points of the subdetector where it starts, so the trajectory is born in the ECAL if the
+    /// front of the ECAL first points is not later than the front of any other subdetector.
     bool born_inside_ecal(EDEPTrajectory const& trj) {
-      EDEPTrajectoryPoint const* first{};
-      subdetector_t first_in{};
-      for (auto const& [det, points] : trj.GetTrajectoryPoints()) {
-        for (auto const& point : points) {
-          if (first == nullptr || point.GetPosition().T() < first->GetPosition().T()) {
-            first    = &point;
-            first_in = det;
-          }
+      auto const& ecal_first_points = trj.GetFirstPointsInDetector(subdetector_t::ECAL);
+      if (ecal_first_points.empty()) {
+        return false;
+      }
+      double const t_ecal = ecal_first_points.front().GetPosition().T();
+      for (unsigned c = subdetector_t::kSandBegin; c != subdetector_t::kLoopableEnd; ++c) {
+        auto const& first_points = trj.GetFirstPointsInDetector(static_cast<subdetector_t>(c));
+        if (!first_points.empty() && first_points.front().GetPosition().T() < t_ecal) {
+          return false;
         }
       }
-      return first != nullptr && first_in == subdetector_t::ECAL;
+      return true;
     }
 
-    /// The earliest trajectory point of `trj` in the ECAL, null if edep-sim stored none there
+    /// The first trajectory point of `trj` in the ECAL (where it enters, or is born if born inside), null if edep-sim
+    /// stored none there. The edep_reader keeps the first points of every entry in step order, so the first entry is
+    /// the front.
     EDEPTrajectoryPoint const* ecal_entry_point(EDEPTrajectory const& trj) {
-      auto const it = trj.GetTrajectoryPoints().find(subdetector_t::ECAL);
-      if (it == trj.GetTrajectoryPoints().end()) {
-        return nullptr;
-      }
-      EDEPTrajectoryPoint const* entry{};
-      for (auto const& point : it->second) {
-        if (entry == nullptr || point.GetPosition().T() < entry->GetPosition().T()) {
-          entry = &point;
-        }
-      }
-      return entry;
+      auto const& first_points = trj.GetFirstPointsInDetector(subdetector_t::ECAL);
+      return first_points.empty() ? nullptr : &first_points.front();
     }
 
     ::caf::SRVector3D normalize_to_direction(double x, double y, double z) {

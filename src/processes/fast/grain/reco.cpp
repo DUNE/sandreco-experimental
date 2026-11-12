@@ -9,7 +9,6 @@
 
 #include <TDatabasePDG.h>
 
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -19,9 +18,6 @@
 namespace sand::fast::grain {
 
   namespace {
-
-    /// The GRAIN volume: the liquid argon
-    constexpr std::array grain_volumes{subdetector_t::GRAIN};
 
     /// Below this momentum [MeV] a particle is stopped and its momentum has no direction
     constexpr double stopped_momentum{1e-6};
@@ -34,20 +30,12 @@ namespace sand::fast::grain {
       return {};
     }
 
-    /// The earliest trajectory point of `trj` in GRAIN, where its momentum is taken (for a particle born in GRAIN,
-    /// where it is created); null if edep-sim stored none there
+    /// The first trajectory point of `trj` in GRAIN (where it enters, or is born if born inside), where its momentum is
+    /// taken; null if edep-sim stored none there. The edep_reader keeps the first points of every entry in step order,
+    /// so the first entry is the front.
     EDEPTrajectoryPoint const* entry_point(EDEPTrajectory const& trj) {
-      EDEPTrajectoryPoint const* entry{};
-      for (auto const volume : grain_volumes) {
-        if (auto const it = trj.GetTrajectoryPoints().find(volume); it != trj.GetTrajectoryPoints().end()) {
-          for (auto const& point : it->second) {
-            if (entry == nullptr || point.GetPosition().T() < entry->GetPosition().T()) {
-              entry = &point;
-            }
-          }
-        }
-      }
-      return entry;
+      auto const& first_points = trj.GetFirstPointsInDetector(subdetector_t::GRAIN);
+      return first_points.empty() ? nullptr : &first_points.front();
     }
 
     ::caf::SRVector3D normalize_to_direction(double x, double y, double z) {
