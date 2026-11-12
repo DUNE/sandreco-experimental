@@ -32,11 +32,11 @@ namespace sand::test {
   ///    something visible, never empty, never two for the same neutrino, at the neutrino's vertex;
   /// 2. the gate, over every neutrino and per subdetector: a true track-/shower-like particle has an object in GRAIN
   ///    (in the tracker) if and only if it left at least the GRAIN (tracker) `min_energy_deposit` there; any true
-  ///    particle has an ECAL cluster iff it is a cluster root (born outside the ECAL, or a primary) and its ECAL
+  ///    particle has an ECAL cluster if it is a cluster root (born outside the ECAL, or a primary) and its ECAL
   ///    group (its hits and those of its descendants born inside the ECAL) has at least the ECAL
   ///    `min_energy_deposit`. All recomputed from sand::edep_reader and the truth without sharing code with the
   ///    recos (the ECAL groups are built bottom-up through parentID, the reco goes top-down through edep-sim's
-  ///    children). A particle has a reco particle iff it has an object; a neutrino has a reco interaction iff at
+  ///    children). A particle has a reco particle if it has an object; a neutrino has a reco interaction if at
   ///    least one of its particles is seen; the target of an interaction is the material at its vertex, recomputed
   ///    from the ROOT geometry directly (not through sand::geoinfo, which the vertexing uses);
   /// 3. the links: particle j <-> trkmatch[j] <-> its objects (one per subdetector at most), with the same truth,
@@ -674,8 +674,8 @@ namespace sand::test {
     }
 
     // 2. Gate, over every neutrino (also those with no reco interaction) and per subdetector: a track-/shower-like
-    //    true particle has an object in GRAIN or the tracker iff it left enough energy there; any particle has an
-    //    ECAL cluster iff its ECAL group (empty unless it is a root) has enough energy; it is seen iff it has an
+    //    true particle has an object in GRAIN or the tracker if it left enough energy there; any particle has an
+    //    ECAL cluster if its ECAL group (empty unless it is a root) has enough energy; it is seen if it has an
     //    object anywhere. A neutrino with nothing seen must have no interaction.
     for (std::size_t t{}; t != truth.nu.size(); ++t) {
       bool any_seen{};

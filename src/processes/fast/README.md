@@ -52,7 +52,7 @@ Read this before using the output for physics.
 | Secondaries | Visible secondaries (including delta rays) become reco particles; `parent` is the nearest **visible** ancestor, so `primary` ≠ `parent == -1`. |
 | ECAL cluster | One per particle entering the ECAL. A particle crossing the ECAL twice gets one cluster at the barycenter of both crossings. |
 | `assn.trk` | Only the truth is filled: use the constituents for positions, directions and energies. Constituents are in scan order (GRAIN, tracker, ECAL), not in time order. |
-| Times | Absolute in the spill file. `float` fields (`vtx_time`, ECAL `time`) lose tens to hundreds of ns after the first spill. |
+| Times | Absolute in the spill file. `float` fields (`time`, ECAL `time`) lose tens to hundreds of ns after the first spill. |
 
 ## Units
 

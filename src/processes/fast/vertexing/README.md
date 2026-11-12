@@ -28,7 +28,7 @@ No parameters. Global instances: `sand::root_tgeomanager`, `sand::geoinfo`.
 |-------|:------:|-------|
 | `id` | ✅ | true interaction id |
 | `vtx` | ✅ | true vertex [cm] |
-| `vtx_time` | ✅ | true neutrino time [ns] |
+| `time` | ✅ | true neutrino time [ns] |
 | `truth`, `truthOverlap` | ✅ | `{index in truth.nu}`, `{1}` |
 | `part` | ✅ | later, by [pid](../pid/README.md) |
 | `dir`, `nuhyp`, `Enu` | ✅ | later, by [neutrino](../neutrino/README.md) |
