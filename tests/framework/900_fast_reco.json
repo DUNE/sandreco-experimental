@@ -9,7 +9,9 @@
     "sand::root_tgeomanager": {
       "geometry": "test/sand-spills.5.edep.root"
     },
-    "sand::geoinfo": {}
+    "sand::geoinfo" : {
+      "grain" : { "inner_geometry" : "gdml-masks" }
+    }
   },
   "contexts": {
     "keys": 5,
