@@ -13,7 +13,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <numeric>
 #include <vector>
 
 namespace sand::fast::tracker {
@@ -83,14 +82,14 @@ namespace sand::fast::tracker {
       return {static_cast<float>(v.X() * 0.1), static_cast<float>(v.Y() * 0.1), static_cast<float>(v.Z() * 0.1)};
     }
 
-    double energy_deposit(std::vector<EDEPHit> const& hits) {
-      return std::accumulate(hits.begin(), hits.end(), 0.,
-                             [](double sum, EDEPHit const& hit) { return sum + hit.GetEnergyDeposit(); });
+    /// Energy deposited by `trj` in the tracker [MeV] (STT and DRIFT are alternative designs: one of them is 0)
+    double energy_deposit(EDEPTrajectory const& trj) {
+      return trj.GetTotalEnergyDeposit(subdetector_t::STT) + trj.GetTotalEnergyDeposit(subdetector_t::DRIFT);
     }
 
-    double track_length_mm(std::vector<EDEPHit> const& hits) {
-      return std::accumulate(hits.begin(), hits.end(), 0.,
-                             [](double sum, EDEPHit const& hit) { return sum + hit.GetTrackLength(); });
+    /// Length of `trj` in the tracker [mm] (STT and DRIFT are alternative designs: one of them is 0)
+    double track_length_mm(EDEPTrajectory const& trj) {
+      return trj.GetTrackLength(subdetector_t::STT) + trj.GetTrackLength(subdetector_t::DRIFT);
     }
 
     /// Mass hypothesis from the true pdg (perfect PID) [MeV]
@@ -134,8 +133,8 @@ namespace sand::fast::tracker {
       track.start  = position_cm(hits.front().GetStart());
       track.end    = position_cm(hits.back().GetStop());
       track.time   = hits.front().GetStart().T();
-      track.len_cm = static_cast<float>(track_length_mm(hits) * 0.1);
-      track.Evis   = static_cast<float>(energy_deposit(hits)); // MeV
+      track.len_cm = static_cast<float>(track_length_mm(trj) * 0.1);
+      track.Evis   = static_cast<float>(energy_deposit(trj)); // MeV
 
       track.dir    = entry_direction(entry, hits);
       track.enddir = direction_of(hits.back());
@@ -164,7 +163,7 @@ namespace sand::fast::tracker {
 
       shower.start     = position_cm(hits.front().GetStart());
       shower.time      = hits.front().GetStart().T();
-      shower.Evis      = static_cast<float>(energy_deposit(hits)); // MeV
+      shower.Evis      = static_cast<float>(energy_deposit(trj)); // MeV
       shower.direction = entry_direction(entry, hits);
 
       shower.truth.push_back(id);
@@ -217,7 +216,7 @@ namespace sand::fast::tracker {
             ++n_no_hits;
             continue;
           }
-          if (energy_deposit(hits) < m_min_energy_deposit) {
+          if (energy_deposit(*trj) < m_min_energy_deposit) {
             ++n_below_threshold;
             continue;
           }

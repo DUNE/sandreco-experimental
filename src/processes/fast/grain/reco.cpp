@@ -12,7 +12,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <numeric>
 #include <vector>
 
 namespace sand::fast::grain {
@@ -68,16 +67,6 @@ namespace sand::fast::grain {
       return {static_cast<float>(v.X() * 0.1), static_cast<float>(v.Y() * 0.1), static_cast<float>(v.Z() * 0.1)};
     }
 
-    double energy_deposit(std::vector<EDEPHit> const& hits) {
-      return std::accumulate(hits.begin(), hits.end(), 0.,
-                             [](double sum, EDEPHit const& hit) { return sum + hit.GetEnergyDeposit(); });
-    }
-
-    double track_length_mm(std::vector<EDEPHit> const& hits) {
-      return std::accumulate(hits.begin(), hits.end(), 0.,
-                             [](double sum, EDEPHit const& hit) { return sum + hit.GetTrackLength(); });
-    }
-
     /// Mass hypothesis from the true pdg (perfect PID) [MeV]
     double mass_mev(int pdg) {
       auto const* p = TDatabasePDG::Instance()->GetParticle(pdg);
@@ -120,8 +109,8 @@ namespace sand::fast::grain {
       track.start  = position_cm(hits.front().GetStart());
       track.end    = position_cm(hits.back().GetStop());
       track.time   = hits.front().GetStart().T();
-      track.len_cm = static_cast<float>(track_length_mm(hits) * 0.1);
-      track.Evis   = static_cast<float>(energy_deposit(hits)); // MeV
+      track.len_cm = static_cast<float>(trj.GetTrackLength(subdetector_t::GRAIN) * 0.1);
+      track.Evis   = static_cast<float>(trj.GetTotalEnergyDeposit(subdetector_t::GRAIN)); // MeV
 
       track.dir    = entry_direction(entry, hits);
       track.enddir = direction_of(hits.back());
@@ -150,7 +139,7 @@ namespace sand::fast::grain {
 
       shower.start     = position_cm(hits.front().GetStart());
       shower.time      = hits.front().GetStart().T();
-      shower.Evis      = static_cast<float>(energy_deposit(hits)); // MeV
+      shower.Evis      = static_cast<float>(trj.GetTotalEnergyDeposit(subdetector_t::GRAIN)); // MeV
       shower.direction = entry_direction(entry, hits);
 
       shower.truth.push_back(id);
@@ -202,7 +191,7 @@ namespace sand::fast::grain {
             ++n_no_hits;
             continue;
           }
-          if (energy_deposit(hits) < m_min_energy_deposit) {
+          if (trj->GetTotalEnergyDeposit(subdetector_t::GRAIN) < m_min_energy_deposit) {
             ++n_below_threshold;
             continue;
           }
