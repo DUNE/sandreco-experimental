@@ -8,6 +8,9 @@
   "globals": {
     "sand::root_tgeomanager": {
       "geometry": "test/sand-spills.5.edep.root"
+    },
+    "sand::geoinfo" : {
+      "grain" : { "inner_geometry" : "gdml-masks" }
     }
   },
   "contexts": {
@@ -18,7 +21,8 @@
       },
       "sand::genie_reader": {
         "uri": "test/sand-spills.5.edep.root"
-      }
+      },
+      "sand::spill_maps": {}
     }
   },
   "run": [
@@ -30,17 +34,92 @@
       }
     },
     {
-      "sand::common::fast_reco": {},
+      "sand::fast::tracker::reco": {
+        "min_energy_deposit": 0.04,
+        "b_field_magnitude": 0.6
+      },
       "reqs": {
         "in_truth": "produced_truth"
       },
       "prods": {
-        "out_common": "produced_common",
+        "out_tracker": "produced_tracker"
+      }
+    },
+    {
+      "sand::fast::grain::reco": {
+        "min_energy_deposit": 1.0,
+        "b_field_magnitude": 0.6
+      },
+      "reqs": {
+        "in_truth": "produced_truth"
+      },
+      "prods": {
+        "out_grain": "produced_grain"
+      }
+    },
+    {
+      "sand::fast::ecal::reco": { "min_energy_deposit": 1.0 },
+      "reqs": {
+        "in_truth": "produced_truth"
+      },
+      "prods": {
+        "out_ecal": "produced_ecal"
+      }
+    },
+    {
+      "sand::fast::matching": {},
+      "reqs": {
+        "in_grain": "produced_grain",
+        "in_tracker": "produced_tracker",
+        "in_ecal": "produced_ecal"
+      },
+      "prods": {
+        "out_assns": "produced_assns"
+      }
+    },
+    {
+      "sand::fast::vertexing": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_assns": "produced_assns",
+        "in_grain": "produced_grain",
+        "in_tracker": "produced_tracker",
+        "in_ecal": "produced_ecal"
+      },
+      "prods": {
+        "out_common": "produced_common_vtx",
+        "out_nd": "produced_nd_vtx"
+      }
+    },
+    {
+      "sand::fast::pid": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_common": "produced_common_vtx",
+        "in_nd": "produced_nd_vtx"
+      },
+      "prods": {
+        "out_common": "produced_common_pid",
         "out_nd": "produced_nd"
       }
     },
     {
-      "sand::test::fast_reco_test": {},
+      "sand::fast::neutrino": {},
+      "reqs": {
+        "in_truth": "produced_truth",
+        "in_common": "produced_common_pid"
+      },
+      "prods": {
+        "out_common": "produced_common"
+      }
+    },
+    {
+      "sand::test::fast_reco_test": {
+        "tracker_min_energy_deposit": 0.04,
+        "grain_min_energy_deposit": 1.0,
+        "ecal_min_energy_deposit": 1.0,
+        "b_field_magnitude": 0.6
+      },
       "reqs": {
         "in_truth": "produced_truth",
         "in_common": "produced_common",

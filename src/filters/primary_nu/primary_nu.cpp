@@ -1,7 +1,6 @@
 #include <edep_reader/edep_reader.hpp>
 #include <genie_reader/genie_reader.hpp>
-#include <truth_filler/evtcode_parser.hpp>
-#include <truth_filler/truth_filler_details.hpp>
+#include <spill_maps/g4_id_map.hpp>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -34,7 +33,7 @@ namespace sand::filter {
       const auto& tree      = instance<sand::edep_reader>();
       const auto& primaries = tree.GetChildrenTrajectories();
 
-      auto interaction_ranges = common::make_interaction_ranges(primaries);
+      auto interaction_ranges = make_interaction_ranges(primaries);
 
       auto const n_ixn = genie.events_.size();
 
