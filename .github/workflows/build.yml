@@ -36,4 +36,4 @@ jobs:
         run: |
           cp -r install/lib64/* /usr/local/lib64/ || true
           cd build
-          ctest --output-on-failure
+          ctest --output-on-failure --parallel 4

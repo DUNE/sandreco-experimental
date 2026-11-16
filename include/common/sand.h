@@ -2,8 +2,10 @@
 
 #include <common/data.h>
 
+#include <cctype>
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 #include <Math/Rotation3D.h>
 #include <Math/SMatrix.h>
@@ -234,9 +236,16 @@ namespace sand {
                                                   "C3H6Mod",      "Trk", "SuperMod", "Drift"};
 
   /**
-   * @brief List of string names associated with the generic DRIFT component.
+   * @brief True if @p name is a volume of the generic DRIFT tracker: a station `s_<n>` or one of its sub-volumes
+   * (`s_<n>_ch`, `s_<n>_fr`, `s_<n>_t_C`, `s_<n>_t_P`, `s_<n>_m`, `s_<n>_v_<k>`).
    */
-  inline std::initializer_list<std::string> generic_drift_names = {"SANDtracker", "ch", "t_P",  "t_C", "m", "fr", "_v_"};
+  inline bool is_generic_drift_name(std::string_view name) {
+    if (name.size() <= 2 || name.substr(0, 2) != "s_") return false;
+    auto digits_end = name.find_first_not_of("0123456789", 2);
+    if (digits_end == 2) return false;                        
+    if (digits_end == std::string_view::npos) return true;    
+    return name[digits_end] == '_' && digits_end + 1 < name.size();
+  }
 
   /**
    * @brief List of string names associated with the DRIFT component.

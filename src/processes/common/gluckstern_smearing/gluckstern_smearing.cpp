@@ -4,6 +4,7 @@
 
 #include <edep_reader/edep_reader.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
+#include <spill_maps/spill_maps.hpp>
 
 #include <ufw/factory.hpp>
 
@@ -213,10 +214,12 @@ namespace sand::common {
     auto const& in_nd    = get<sand::caf::nd_reco_branch_wrapper>("in_nd");
     auto const& in_truth = get<sand::caf::truth_branch_wrapper>("in_truth");
     auto& out_nd         = set<sand::caf::nd_reco_branch_wrapper>("out_nd");
-    auto& edep           = instance<sand::edep_reader>();
+    auto const& edep     = instance<sand::edep_reader>();
     auto& tgm            = instance<sand::root_tgeomanager>();
 
     out_nd.sand = in_nd.sand;
+
+    auto const& track_ids = instance<sand::spill_maps>();
 
     int n_smeared{};
     int n_out_of_range{};
@@ -229,7 +232,7 @@ namespace sand::common {
         continue; // only muons get Gluckstern smearing
       }
 
-      auto trj = edep.GetTrajectory(true_part.G4ID);
+      auto trj = edep.GetTrajectory(track_ids.at(static_cast<std::size_t>(true_id.ixn)).to_spill_id(true_part.G4ID));
       if (trj == edep.end()) {
         continue;
       }
@@ -254,8 +257,10 @@ namespace sand::common {
       auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
       float const mass     = pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
 
-      track.dir  = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
-      track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass));
+      track.dir = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
+      // smeared_p and mass are in GeV, SRTrack::E is in MeV
+      track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass)) * 1000.;
+      track.R    = 100. * std::hypot(smeared_p->y, smeared_p->z) / (0.3 * m_b_field); // GeV -> cm
       track.Evis = track.E;
 
       ++n_smeared;

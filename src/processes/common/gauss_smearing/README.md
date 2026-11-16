@@ -1,6 +1,6 @@
 # gauss_smearing
 
-Takes the "perfect" `common_reco_branch_wrapper` produced by `fast_reco` (`in_common`) and
+Takes the "perfect" `common_reco_branch_wrapper` produced by the `sand::fast` chain (`in_common`) and
 perturbs it with a Gaussian smearing model, producing a degraded `out_common`. The `nd`
 branch (tracks/showers) is untouched by this process — smear that separately if needed.
 
@@ -51,6 +51,6 @@ SRRecoParticle"]
   `SRRecoParticle::kPdgHadronicBlob`) fall back to a rest mass of `0`.
 - Randomness comes from `ufw::context::current()->engine()`, the per-context RNG already
   seeded by the framework; `gauss_smearing` does not own or seed its own engine.
-- `smear_interaction()` mirrors `fast_reco`'s choice of collapsing every `Enu` estimator
+- `smear_interaction()` mirrors `sand::fast::neutrino`'s choice of collapsing every `Enu` estimator
   (`calo`/`lep_calo`/`mu_range`/...) to the same value — here, the same smeared energy —
   rather than smearing each independently.

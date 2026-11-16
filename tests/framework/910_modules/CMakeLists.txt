@@ -2,4 +2,4 @@ sandreco_add_test_process(sand_test_truth_filler)
 
 target_sources(sand_test_truth_filler PRIVATE test_truth_filler.cpp)
 
-target_link_libraries(sand_test_truth_filler PRIVATE duneanaobj::StandardRecord)
+target_link_libraries(sand_test_truth_filler PRIVATE sand_edep_reader sand_spill_maps duneanaobj::StandardRecord)
