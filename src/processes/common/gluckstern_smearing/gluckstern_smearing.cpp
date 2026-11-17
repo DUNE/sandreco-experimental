@@ -62,9 +62,8 @@ namespace sand::common {
 
     /// The first trajectory point of `trj` in the tracker (where it enters, or is born if born inside), where the
     /// tracker would measure the momentum; null if edep-sim stored none there. The edep_reader keeps the first points
-    /// of every entry in step order, so the first entry is the front. A volume shared by the STT and DRIFT names files
-    /// its first point under DRIFT if the particle is born there and under STT if it enters it, so both lists are
-    /// checked even in a single design.
+    /// of every entry in step order, so the first entry is the front. The code must not rely on single tracker geometry,
+    /// therefore it loops through tracker_volumes, an array which contains all possible tracker geometries.
     EDEPTrajectoryPoint const* tracker_entry_point(EDEPTrajectory const& trj) {
       EDEPTrajectoryPoint const* entry{};
       for (auto const volume : tracker_volumes) {
