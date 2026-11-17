@@ -52,6 +52,18 @@ foreach(USER_TYPE_PATH ${USER_TYPES})
     list(APPEND USER_TYPES_LINKDEF "${CMAKE_MATCH_1}::${CMAKE_MATCH_3}")
   endforeach()
 endforeach()
+#Capture SAND_SHARED_COLLECTION(NS, T, NAME): link the element type, the collection type
+#(NS::NAME, a typedef of ufw::data::managed_collection<NS::T>, resolved by rootcling) and
+#the typed key.
+foreach(USER_TYPE_PATH ${USER_TYPES})
+  file(STRINGS "${CMAKE_SOURCE_DIR}/include/${USER_TYPE_PATH}" USER_FILE_LINES REGEX "^SAND_SHARED_COLLECTION")
+  foreach(LINE ${USER_FILE_LINES})
+    string(REGEX MATCH "\\(([^,]*), ([^,]*), ([^,]*)\\)" _ ${LINE})
+    list(APPEND USER_TYPES_LINKDEF "${CMAKE_MATCH_1}::${CMAKE_MATCH_2}")
+    list(APPEND USER_TYPES_LINKDEF "${CMAKE_MATCH_1}::${CMAKE_MATCH_3}")
+    list(APPEND USER_TYPES_LINKDEF "${CMAKE_MATCH_1}::${CMAKE_MATCH_3}_index")
+  endforeach()
+endforeach()
 
 list(TRANSFORM USER_TYPES_LINKDEF PREPEND "#pragma link C++ class ")
 list(TRANSFORM USER_TYPES_LINKDEF APPEND "+\;\n")

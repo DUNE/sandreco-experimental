@@ -5,7 +5,8 @@ set(HDRS drift_info.hpp
          stt_info.hpp
          tracker_info.hpp
          subdetector_info.hpp
-         geoinfo.hpp)
+         geoinfo.hpp
+         position_info.hpp)
 
 sandreco_add_complex_data(sand_geoinfo EXPORT_HEADERS ${HDRS})
 
@@ -21,7 +22,8 @@ target_sources(sand_geoinfo PRIVATE
                subdetector_info.cpp
                geoinfo.cpp
                BVH.hpp
-               BVH.cpp)
+               BVH.cpp
+               position_info.cpp)
 
 target_include_directories(sand_geoinfo PRIVATE ${CMAKE_SOURCE_DIR}/src/data/grain)
 

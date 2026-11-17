@@ -231,6 +231,10 @@ class EDEPTrajectory {
   bool HasHitInDetector(sand::subdetector_t c) const { return hit_map_.find(c) != hit_map_.end(); }
   /// Sum of the secondary deposits in @p c, 0 if there are no hits there.
   double GetDepositedEnergy(sand::subdetector_t c) const;
+  /// Sum of the total energy deposits (EDEPHit::GetEnergyDeposit) of the hits in @p c [MeV], 0 if there are none.
+  double GetTotalEnergyDeposit(sand::subdetector_t c) const;
+  /// Sum of the track lengths (EDEPHit::GetTrackLength) of the hits in @p c [mm], 0 if there are none.
+  double GetTrackLength(sand::subdetector_t c) const;
   bool HasHitBeforeTime(double t) const;
   bool HasHitAfterTime(double t) const;
   bool HasHitWithEnergySmallerThan(double e) const;

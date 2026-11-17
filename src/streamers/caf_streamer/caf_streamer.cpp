@@ -109,22 +109,36 @@ namespace sand::caf {
   void caf_streamer::read(ufw::context_id id) {
     // Required to avoid crash at program exit (ROOT internal state)
     m_file->cd();
-
+    std::size_t attached = 0;
+    for (const auto& [var, info] : info_map()) {
+      if (info.address != nullptr) {
+        ++attached;
+      }
+    }
     if (m_has_context_id) {
-      if (m_context_id == id) {
-        return;
-      }
-      const long entries = m_tree->GetEntries();
-      for (; m_last_entry != entries; ++m_last_entry) {
-        m_tree->GetEntry(m_last_entry);
-        if (m_context_id == id) {
-          return;
+      if (m_context_id != id) {
+        const long entries = m_tree->GetEntries();
+        for (; m_last_entry != entries; ++m_last_entry) {
+          m_tree->GetEntry(m_last_entry);
+          if (m_context_id == id) {
+            break;
+          }
         }
+        if (m_context_id != id) {
+          UFW_ERROR("Context id '{}' not found.", id);
+        }
+        m_last_read_attached = attached;
       }
-      UFW_ERROR("Context id '{}' not found.", id);
     } else {
       // Standard CAF file: use id directly as entry index
       m_tree->GetEntry(static_cast<long>(id));
+      m_last_read_attached = attached;
+    }
+    if (attached != m_last_read_attached) {
+      // The context was already located, but a variable was attached since the previous read (e.g. a store
+      // dereferenced lazily through an index): re-issue the read to populate the newly attached branch.
+      m_tree->GetEntry(m_last_entry);
+      m_last_read_attached = attached;
     }
   }
 

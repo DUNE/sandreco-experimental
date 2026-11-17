@@ -15,7 +15,8 @@
 
 namespace sand::root {
 
-  tree_streamer::tree_streamer() : m_file(nullptr), m_tree(nullptr), m_branchaddr(nullptr), m_id(), m_last_entry(-1) {
+  tree_streamer::tree_streamer()
+    : m_file(nullptr), m_tree(nullptr), m_branchaddr(nullptr), m_id(), m_last_entry(-1), m_last_read_attached(0) {
     m_id_ptr = &m_id;
   }
 
@@ -94,19 +95,34 @@ namespace sand::root {
   }
 
   void tree_streamer::read(ufw::context_id id) {
-    if (m_id == id) {
-      return;
-    }
-    m_file->cd(); // TODO figure out why removing these causes crash at program exit
-    long entries = m_tree->GetEntries();
-    // linear search
-    while (++m_last_entry < entries) {
-      m_tree->GetEntry(m_last_entry);
-      if (m_id == id) {
-        return;
+    // read() is invoked on every access to one of this streamer's variables, and may be called repeatedly for the
+    // same context: re-read the entry only when a new variable was attached since the previous read.
+    std::size_t attached = 0;
+    for (const auto& [var, info] : info_map()) {
+      if (info.address != nullptr) {
+        ++attached;
       }
     }
-    UFW_ERROR("Context id '{}' not found.", id);
+    m_file->cd(); // TODO figure out why removing these causes crash at program exit
+    if (m_id != id) {
+      long entries = m_tree->GetEntries();
+      // linear search
+      while (++m_last_entry < entries) {
+        m_tree->GetEntry(m_last_entry);
+        if (m_id == id) {
+          break;
+        }
+      }
+      if (m_id != id) {
+        UFW_ERROR("Context id '{}' not found.", id);
+      }
+      m_last_read_attached = attached;
+    } else if (attached != m_last_read_attached) {
+      // The context was already located, but a variable was attached since the previous read (e.g. a store
+      // dereferenced lazily through an index): re-issue the read to populate the newly attached branch.
+      m_tree->GetEntry(m_last_entry);
+      m_last_read_attached = attached;
+    }
   }
 
   void tree_streamer::write(ufw::context_id id) {

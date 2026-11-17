@@ -30,6 +30,7 @@ namespace sand::root {
     ufw::context_id m_id;
     ufw::context_id* m_id_ptr;
     long m_last_entry;
+    std::size_t m_last_read_attached;
     static constexpr char s_id_brname[] = "context_id";
   };
 
