@@ -78,7 +78,7 @@ namespace {
 
     double const expected_pt_res =
         std::hypot(sand::common::gluckstern_pt_resolution(p_transverse, geom, sigma_t, b_field),
-                   sand::common::mcs_pt_resolution(geom, b_field, p, p_transverse));
+                   sand::common::mcs_pt_resolution(geom, b_field, p));
     double const expected_dip_res = std::hypot(sand::common::gluckstern_dip_resolution(geom, sigma_l),
                                                sand::common::mcs_angle_resolution(geom.path_len_over_x0_full, p));
     double const expected_zy_res  = sand::common::mcs_angle_resolution(geom.path_len_over_x0_transverse, p);

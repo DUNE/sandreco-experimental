@@ -34,7 +34,7 @@ namespace sand::common {
 
   double gluckstern_pt_resolution(double p_t, GlucksternGeometry const& geometry, double sigma_t, double b_field);
 
-  double mcs_pt_resolution(GlucksternGeometry const& geometry, double b_field, double p, double p_transverse);
+  double mcs_pt_resolution(GlucksternGeometry const& geometry, double b_field, double p);
 
   double gluckstern_dip_resolution(GlucksternGeometry const& geometry, double sigma_l);
 

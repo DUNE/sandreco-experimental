@@ -176,8 +176,8 @@ namespace sand::common {
     return (highland_factor / p) * std::sqrt(len_over_x0) * (1. + highland_log_factor * std::log(len_over_x0));
   }
 
-  double mcs_pt_resolution(GlucksternGeometry const& geom, double b_field, double p, double  p_transverse) {
-    return mcs_angle_resolution(geom.path_len_over_x0_full, p) *  p_transverse / (0.3 * b_field * geom.lever_arm);
+  double mcs_pt_resolution(GlucksternGeometry const& geom, double b_field, double p) {
+    return mcs_angle_resolution(geom.path_len_over_x0_full, p) *  p / (0.3 * b_field * geom.lever_arm);
   }
 
   std::optional<::caf::SRVector3D> smear_momentum_gluckstern(::caf::SRLorentzVector const& true_p,
@@ -189,7 +189,7 @@ namespace sand::common {
     double const p            = true_p.Mag();
 
     double const pt_res =
-        std::hypot(gluckstern_pt_resolution(p_transverse, geom, sigma_t, b_field), mcs_pt_resolution(geom, b_field, p, p_transverse));
+        std::hypot(gluckstern_pt_resolution(p_transverse, geom, sigma_t, b_field), mcs_pt_resolution(geom, b_field, p));
     double const dip_res =
         std::hypot(gluckstern_dip_resolution(geom, sigma_l), mcs_angle_resolution(geom.path_len_over_x0_full, p));
     double const zy_res = mcs_angle_resolution(geom.path_len_over_x0_transverse, p);

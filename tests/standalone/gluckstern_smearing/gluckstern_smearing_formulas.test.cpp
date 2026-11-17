@@ -44,8 +44,8 @@ BOOST_AUTO_TEST_CASE(mcs_angle_resolution_transverse_path) {
 }
 
 BOOST_AUTO_TEST_CASE(pt_mcs_resolution) {
-  auto const sigma = sand::common::mcs_pt_resolution(make_geometry(), b_field, p, p_t);
-  BOOST_CHECK_CLOSE(sigma, 0.003462977792555973, tolerance_percent);
+  auto const sigma = sand::common::mcs_pt_resolution(make_geometry(), b_field, p);
+  BOOST_CHECK_CLOSE(sigma, 0.004155573351067168, tolerance_percent);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
