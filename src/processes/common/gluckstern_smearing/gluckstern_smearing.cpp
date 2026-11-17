@@ -57,6 +57,14 @@ namespace sand::common {
       return hit_map.find(sand::subdetector_t::STT);
     }
 
+    /// The first trajectory point of `trj` in the STRAW (where it enters, or is born if born inside), null if edep-sim
+    /// stored none there. The edep_reader keeps the first points of every entry in step order, so the first entry is
+    /// the front.
+    EDEPTrajectoryPoint const* tracker_entry_point(EDEPTrajectory const& trj) {
+      auto const& first_points = trj.GetFirstPointsInDetector(subdetector_t::STRAW);
+      return first_points.empty() ? nullptr : &first_points.front();
+    }
+
     double walk_segment(sand::root_tgeomanager::navigator_ptr const& nav, sand::root_tgeomanager& tgm,
                         sand::pos_3d const& current, sand::pos_3d const& next, sand::dir_3d const& dir) {
       nav->set_track(current, dir);
@@ -242,13 +250,22 @@ namespace sand::common {
       if (it == hit_map.end()) {
         continue;
       }
+      auto const* entry = tracker_entry_point(*trj);
+      if (entry == nullptr) {
+        continue;
+      }
+      auto const& pm = entry->GetMomentum();
+      ::caf::SRLorentzVector entry_p;
+      entry_p.px = pm.X() * 1e-3;
+      entry_p.py = pm.Y() * 1e-3;
+      entry_p.pz = pm.Z() * 1e-3;
 
       auto const geom = gluckstern_geometry_from_hits(tgm, it->second, m_hit_energy_thr);
       if (!geom) {
         continue;
       }
 
-      auto const smeared_p = smear_momentum_gluckstern(true_part.p, *geom, m_sigma_t, m_sigma_l, m_b_field);
+      auto const smeared_p = smear_momentum_gluckstern(entry_p, *geom, m_sigma_t, m_sigma_l, m_b_field);
       if (!smeared_p) {
         ++n_out_of_range; // resolution not physically usable, left unsmeared
         continue;
