@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdexcept>
+
 #include <common/data.h>
 #include <ecal/digit.h>
 
@@ -47,9 +49,26 @@ namespace sand::ecal {
 
     bool ambiguous_complete() const { return complete() && cell_has_competing_complete_pairs; }
 
-    const digit& either() const { return begin_present ? begin : end; }
+    /// Return the sole present digit; throw std::logic_error if both or neither are present.
+    const digit& single_digit() const {
+      if (begin_present && !end_present) {
+        return begin;
+      }
+      if (end_present && !begin_present) {
+        return end;
+      }
+      throw std::logic_error("cell_pair::single_digit(): exactly one digit must be present");
+    }
 
-    digit& either() { return begin_present ? begin : end; }
+    digit& single_digit() {
+      if (begin_present && !end_present) {
+        return begin;
+      }
+      if (end_present && !begin_present) {
+        return end;
+      }
+      throw std::logic_error("cell_pair::single_digit(): exactly one digit must be present");
+    }
   };
 
 } // namespace sand::ecal

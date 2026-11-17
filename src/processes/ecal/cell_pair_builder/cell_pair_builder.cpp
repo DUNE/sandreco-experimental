@@ -313,9 +313,9 @@ namespace sand::ecal {
         std::size_t n_complete  = 0;
         std::size_t n_ambiguous = 0;
         for (std::size_t ipair = first_pair; ipair < pairs.size(); ++ipair) {
-          const auto& pair   = pairs.at(ipair);
-          const auto raw_cid = ecal.pmt(pair.either().channel()).cell_.raw;
+          const auto& pair = pairs.at(ipair);
           if (pair.complete()) {
+            const auto raw_cid = ecal.pmt(pair.begin.channel()).cell_.raw;
             ++n_complete;
             n_ambiguous += pair.ambiguous_complete();
             UFW_INFO("    pair {}: cell={}, complete, begin(channel={}, tdc={:.17g} ns, adc={}), "
@@ -324,7 +324,8 @@ namespace sand::ecal {
                      pair.end.tdc(), pair.end.adc(), pair.n_complete_candidates_in_cell,
                      pair.cell_has_competing_complete_pairs);
           } else {
-            const auto& digit = pair.either();
+            const auto& digit  = pair.single_digit();
+            const auto raw_cid = ecal.pmt(digit.channel()).cell_.raw;
             UFW_INFO("    pair {}: cell={}, {}-only, channel={}, tdc={:.17g} ns, adc={}, "
                      "candidates={}, competing={}",
                      ipair, raw_cid, pair.has_begin() ? "begin" : "end", digit.channel(), digit.tdc(), digit.adc(),
