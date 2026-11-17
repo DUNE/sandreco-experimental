@@ -28,6 +28,9 @@
 namespace sand::common {
 
   namespace {
+
+    constexpr std::array tracker_volumes{subdetector_t::STT, subdetector_t::DRIFT};
+
     double x0(int z, int a) { return 716.408 * a / (z * (z + 1) * std::log(287. / std::sqrt(z))); }
 
     double density(sand::root_tgeomanager& tgm) {
@@ -57,12 +60,21 @@ namespace sand::common {
       return hit_map.find(sand::subdetector_t::STT);
     }
 
-    /// The first trajectory point of `trj` in the STRAW (where it enters, or is born if born inside), null if edep-sim
-    /// stored none there. The edep_reader keeps the first points of every entry in step order, so the first entry is
-    /// the front.
+    /// The first trajectory point of `trj` in the tracker (where it enters, or is born if born inside), where the
+    /// tracker would measure the momentum; null if edep-sim stored none there. The edep_reader keeps the first points
+    /// of every entry in step order, so the first entry is the front. A volume shared by the STT and DRIFT names files
+    /// its first point under DRIFT if the particle is born there and under STT if it enters it, so both lists are
+    /// checked even in a single design.
     EDEPTrajectoryPoint const* tracker_entry_point(EDEPTrajectory const& trj) {
-      auto const& first_points = trj.GetFirstPointsInDetector(subdetector_t::STRAW);
-      return first_points.empty() ? nullptr : &first_points.front();
+      EDEPTrajectoryPoint const* entry{};
+      for (auto const volume : tracker_volumes) {
+        auto const& first_points = trj.GetFirstPointsInDetector(volume);
+        if (!first_points.empty()
+            && (entry == nullptr || first_points.front().GetPosition().T() < entry->GetPosition().T())) {
+          entry = &first_points.front();
+        }
+      }
+      return entry;
     }
 
     double walk_segment(sand::root_tgeomanager::navigator_ptr const& nav, sand::root_tgeomanager& tgm,
