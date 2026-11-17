@@ -192,8 +192,10 @@ namespace sand::common {
         std::hypot(gluckstern_pt_resolution(p_transverse, geom, sigma_t, b_field), mcs_pt_resolution(geom, b_field, p));
     double const dip_res =
         std::hypot(gluckstern_dip_resolution(geom, sigma_l), mcs_angle_resolution(geom.path_len_over_x0_full, p));
-    double const zy_res = mcs_angle_resolution(geom.path_len_over_x0_transverse, p);
 
+    // The projection of the MCS onto the bending plane is shorter by a factor cos(dip angle) and gets bended more
+    double const zy_res = mcs_angle_resolution(geom.path_len_over_x0_full, p) / std::cos(dip_angle);
+    
     if (!std::isfinite(pt_res) || !std::isfinite(dip_res) || !std::isfinite(zy_res)
         || pt_res > kMaxRelativePtResolution) {
       return std::nullopt;
