@@ -20,7 +20,7 @@ namespace sand::ecal {
 
     /// Boundary-finding policy: currently one window covering every input digit.
     /// Future algorithms can return several ordered windows through the same interface.
-    std::vector<reco::timerange> compute_slice_times(const digits_container::digits_collection& digits) const;
+    std::vector<reco::timerange> compute_slice_times(const std::vector<digit>& digits) const;
   };
 
 } // namespace sand::ecal

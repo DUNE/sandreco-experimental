@@ -23,7 +23,7 @@ namespace sand::ecal {
 
   namespace {
 
-    using digit         = sand::ecal::digits_container::digit;
+    using digit         = sand::ecal::digit;
     using cell_id       = sand::geoinfo::ecal_info::cell_id;
     using module_t      = sand::geoinfo::ecal_info::module_t;
     using face_location = sand::geoinfo::ecal_info::face_location;
@@ -88,7 +88,7 @@ namespace sand::ecal {
   } // namespace
 
   cell_pair_builder::cell_pair_builder()
-    : process({{"digi", "sand::ecal::digits_container"}, {"timeranges", "sand::reco::timeranges"}},
+    : process({{"digi", "sand::ecal::digits"}, {"timeranges", "sand::reco::timeranges"}},
               {{"cell_pairs", "sand::ecal::cell_pairs"}}) {}
 
   void cell_pair_builder::configure(const ufw::config& cfg) {
@@ -105,14 +105,14 @@ namespace sand::ecal {
     const auto& gi   = instance<sand::geoinfo>();
     const auto& ecal = gi.ecal();
 
-    const auto& digi    = get<digits_container>("digi");
+    const auto& digi    = get<digits>("digi");
     const auto& windows = get<reco::timeranges>("timeranges");
 
     auto& pairs = set<cell_pairs>("cell_pairs");
     pairs.clear();
 
     // The iterator views refer to this local copy; preserve the original digit order.
-    auto ordered = digi.digits;
+    std::vector<digit> ordered(digi.begin(), digi.end());
     std::stable_sort(ordered.begin(), ordered.end(),
                      [](const auto& lhs, const auto& rhs) { return lhs.t() < rhs.t(); });
 
@@ -121,7 +121,7 @@ namespace sand::ecal {
 
     if (m_print_output) {
       UFW_INFO("ECAL cell_pair_builder spill {}: {} digits, {} windows, {} nonempty views",
-               ufw::context::current()->id(), digi.digits.size(), windows.size(), views.size());
+               ufw::context::current()->id(), digi.size(), windows.size(), views.size());
     }
 
     for (std::size_t iview = 0; iview < views.size(); ++iview) {

@@ -3,37 +3,20 @@
 #include <common/sand.h>
 
 namespace sand::ecal {
-  /// @brief Photo-electron data container for ECAL
-  ///
-  /// The pes struct represents a managed data container that stores photo-electron
-  /// information for multiple channels in the electromagnetic calorimeter. Each photo-electron
-  /// is associated with a channel and contains truth index and arrival time information.
-  struct pes_container : managed_data_base {
-    /// @brief Individual photo-electron with arrival time information
-    ///
-    /// A photo-electron extends the base truth class with an additional arrival time
-    /// measurement, useful for timing-based analysis in the calorimeter.
-    struct photo_electron : public sand::truth_index {
-      /// @brief Default constructor initializing pe with NaN arrival time
-      photo_electron() : sand::truth_index(), arrival_time(NAN) {};
+  /// @brief ECAL photo-electron with readout channel, truth hit and arrival time.
+  struct pe : sand::truth_index {
+    /// Default constructor required by ROOT; channel and arrival time are invalid.
+    pe() : sand::truth_index(), channel(), arrival_time(NAN) {}
 
-      /// @brief Parameterized constructor
-      /// @param idx Truth index identifier for the photo-electron
-      /// @param tm Arrival time of the photo-electron (in nanoseconds or appropriate unit)
-      photo_electron(truth_index idx, double tm) : truth_index(idx), arrival_time(tm) {};
+    /// @param ch Readout channel receiving this photo-electron.
+    /// @param idx Originating deposited-energy hit.
+    /// @param tm Arrival time at the readout [ns].
+    pe(channel_id ch, truth_index idx, double tm) : truth_index(idx), channel(ch), arrival_time(tm) {}
 
-      /// @brief Arrival time of the photo-electron
-      double arrival_time;
-    };
-
-    /// @brief Map associating channel IDs to collections of photo-electrons
-    using pe_collection = std::map<channel_id, std::vector<photo_electron>>;
-
-    /// @brief Collection of photo-electrons organized by channel
-    pe_collection collection;
+    channel_id channel;
+    double arrival_time;
   };
 } // namespace sand::ecal
 
-UFW_DECLARE_UNMANAGED_DATA(sand::ecal::pes_container::photo_electron);
-UFW_DECLARE_UNMANAGED_DATA(sand::truth<sand::ecal::pes_container::photo_electron>);
-UFW_DECLARE_MANAGED_DATA(sand::ecal::pes_container);
+UFW_DECLARE_UNMANAGED_DATA(sand::truth<sand::ecal::pe>);
+SAND_DATA_COLLECTION(sand::ecal, pe, pes)

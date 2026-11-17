@@ -12,7 +12,7 @@ namespace sand::ecal {
   /// A cell_pair stores up to two digits associated to the two geometrical
   /// readout faces of the same physical ECAL cell IN THE SAME TIME WINDOW.
   struct cell_pair {
-    using digit = digits_container::digit;
+    using digit = sand::ecal::digit;
 
     /// Digits on the two begin/end readout faces; ignore a digit when its presence flag is false.
     digit begin;

@@ -30,7 +30,7 @@ namespace sand::ecal {
    * \subsection Requirements
    * | Name | Type | Description |
    * |------|------|-------------|
-   * | `digi` | `sand::ecal::digits_container` | All digits in the current spill/context |
+   * | `digi` | `sand::ecal::digits` | All digits in the current spill/context |
    *
    * \subsection Products
    * | Name | Type | Description |
@@ -39,7 +39,7 @@ namespace sand::ecal {
    */
 
   spill_slicer::spill_slicer()
-    : process({{"digi", "sand::ecal::digits_container"}}, {{"timeranges", "sand::reco::timeranges"}}) {}
+    : process({{"digi", "sand::ecal::digits"}}, {{"timeranges", "sand::reco::timeranges"}}) {}
 
   void spill_slicer::configure(const ufw::config& cfg) {
     process::configure(cfg);
@@ -47,7 +47,7 @@ namespace sand::ecal {
   }
 
   std::vector<reco::timerange>
-  spill_slicer::compute_slice_times(const digits_container::digits_collection& digits) const {
+  spill_slicer::compute_slice_times(const std::vector<digit>& digits) const {
     if (digits.empty()) {
       return {};
     }
@@ -73,20 +73,20 @@ namespace sand::ecal {
   }
 
   void spill_slicer::run() {
-    const auto& digi = get<digits_container>("digi");
+    const auto& digi = get<digits>("digi");
     auto& output     = set<reco::timeranges>("timeranges");
     output.clear(); 
-    const auto windows = compute_slice_times(digi.digits);
+    const auto windows = compute_slice_times(digi);
     output.assign(windows.begin(), windows.end()); 
 
-    UFW_DEBUG("ECAL spill_slicer: {} input digits, {} derived time windows", digi.digits.size(), output.size());
+    UFW_DEBUG("ECAL spill_slicer: {} input digits, {} derived time windows", digi.size(), output.size());
     if (!output.empty()) {
       UFW_DEBUG("ECAL spill_slicer: time windows begin at {} and end at {}", output.front().earliest(),
                 output.back().latest());
     }
     if (m_print_output) { 
       std::vector<double> times;
-      for (const auto& digit : digi.digits) {
+      for (const auto& digit : digi) {
         times.push_back(digit.tdc());
       }
       std::sort(times.begin(), times.end());

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <ecal/digit.h>
 
 namespace sand::ecal {
@@ -12,7 +14,7 @@ namespace sand::ecal {
    */
   struct slices_container : managed_data_base {
     /** @brief Type alias for a single slice, which is a collection of digits. */
-    using slice = digits_container::digits_collection;
+    using slice = std::vector<digit>;
 
     /** @brief Type alias for a collection of slices. */
     using slice_collection = std::vector<slice>;
