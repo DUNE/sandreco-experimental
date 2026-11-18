@@ -36,9 +36,6 @@ channel_id digi_channel(const digi_container::digi& d) { return d.signals.front(
 
 void clustering::run()
 {
-    const auto& digi = get<sand::tracker::digi>("digi");
-    const auto& gi   = get<geoinfo>();
-
     auto& clu_out = set<sand::tracker::cluster_container>("clu");
 
     auto digis_by_station = group_digis_by_station();
