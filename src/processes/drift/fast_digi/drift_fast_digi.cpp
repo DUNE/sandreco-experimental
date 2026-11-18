@@ -12,6 +12,13 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
+#include <algorithm>
+#include <limits>
+#include <random>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 namespace sand::drift {
 
   /**
@@ -26,10 +33,14 @@ namespace sand::drift {
    * digitized signals.
    * Assigns the DRIFT energy deposits of the event to readout views and wires — splitting
    * a hit that crosses a cell boundary into one sub-hit per wire, with the energy shared by
-   * segment length — and turns the hits collected on each fired wire into one digitized
-   * signal: a TDC built from the earliest drift-plus-propagation time (Gaussian-smeared by
-   * `sigma_tdc`) and an ADC equal to the deposited energy. The contributing simulated-hit
-   * ids are kept on every signal for Monte Carlo truth matching.
+   * segment length — and turns the hits collected on each fired wire into one or more digis.
+   * The hit arrival times at the readout end (drift plus in-wire propagation) are sorted; a
+   * digi opens at the first arrival and collects every hit arriving within `integration_time`;
+   * hits arriving in the following `dead_time` are discarded and the next arrival opens a new
+   * digi on the same wire. Every hit collected in a digi becomes one of its signals, storing
+   * the raw arrival time, the deposited energy and the hit id for Monte Carlo truth matching.
+   * The digi TDC is the earliest signal time Gaussian-smeared by `sigma_tdc`; the digi ADC is
+   * the sum of the signal energies.
    *
    * \subsection Configuration
    * | Parameter Name   | Type     | Unit  | Required/Default | Description                          |
@@ -37,6 +48,8 @@ namespace sand::drift {
    * | `drift_velocity` | `double` | mm/ns | Required         | Drift velocity of ionized particles. |
    * | `wire_velocity`  | `double` | mm/ns | Required         | Signal transit speed along the wire. |
    * | `sigma_tdc`      | `double` | ns    | Required         | Gaussian time resolution of the TDC. |
+   * | `integration_time` | `double` | ns  | Required         | Signal integration window.           |
+   * | `dead_time`      | `double` | ns    | Required         | Dead time after the integration window. |
    *
    * \subsection Dependencies
    * | Type                     | Comment                                |
@@ -49,9 +62,9 @@ namespace sand::drift {
    * None; the inputs are unique objects fetched by type (see Dependencies).
    *
    * \subsection Products
-   * |  Name  | Type                  | Comment                |
-   * |--------|-----------------------|------------------------|
-   * | `digi` | `sand::tracker::digi` | Digitized wire signals |
+   * |  Name   | Type                            | Comment                                  |
+   * |---------|---------------------------------|------------------------------------------|
+   * | `digi`  | `sand::tracker::digi_container` | One digi per integration window per fired wire, one signal per contributing hit |
    */
   /**
    * \brief Reads and stores the configuration parameters.
@@ -60,13 +73,15 @@ namespace sand::drift {
 
   void drift_fast_digi::configure(const ufw::config& cfg) {
     process::configure(cfg);
-    m_drift_velocity = cfg.at("drift_velocity");
-    m_wire_velocity  = cfg.at("wire_velocity");
-    m_sigma_tdc      = cfg.at("sigma_tdc");
+    m_drift_velocity   = cfg.at("drift_velocity");
+    m_wire_velocity    = cfg.at("wire_velocity");
+    m_sigma_tdc        = cfg.at("sigma_tdc");
+    m_integration_time = cfg.at("integration_time");
+    m_dead_time        = cfg.at("dead_time");
   }
 
   /// \brief Declares the process I/O: no requirements and a single product \c digi.
-  drift_fast_digi::drift_fast_digi() : process({}, {{"digi", "sand::tracker::digi"}}) {
+  drift_fast_digi::drift_fast_digi() : process({}, {{"digi", "sand::tracker::digi_container"}}) {
     UFW_DEBUG("Creating a drift_fast_digi process at {}", fmt::ptr(this));
   }
 
@@ -74,17 +89,13 @@ namespace sand::drift {
    * \brief Digitizes the current event.
    *
    * Groups the DRIFT hits per wire and fills the \c digi product with one
-   * signal per fired wire.
+   * digi per integration window on each fired wire.
    */
   void drift_fast_digi::run() {
     UFW_DEBUG("Running drift_fast_digi process at {}", fmt::ptr(this));
-    const auto& tree = instance<sand::edep_reader>();
-    const auto& gi   = instance<geoinfo>();
-    auto& digi       = set<sand::tracker::digi>("digi");
-    auto& tgm        = instance<root_tgeomanager>();
     // Two phases: first assign every DRIFT hit (splitting it across wires when
     // needed) to its wire, then turn the hits collected on each wire into one
-    // digitized signal.
+    // digi per integration window, holding one signal per contributing hit.
     std::map<const geoinfo::tracker_info::wire*, std::vector<EDEPHit>> hits_by_wire = group_hits_by_wire();
     digitize_hits_in_wires(hits_by_wire);
   }
@@ -471,76 +482,68 @@ namespace sand::drift {
 
   // TO-DO: For now identical to stt implementation, need to modify for drift specifics
   /**
-   * \brief Builds a signal for every fired wire and appends it to the \c digi product.
+   * \brief Builds the digis of every fired wire and appends them to the \c digi product.
    * \param hits_by_wire The hits of the event grouped per wire.
    * \todo Currently identical to the STT implementation; to be specialized for the drift chamber.
    */
   void drift_fast_digi::digitize_hits_in_wires(
       const std::map<const geoinfo::tracker_info::wire*, std::vector<EDEPHit>>& hits_by_wire) {
-    const auto& gi    = instance<geoinfo>();
-    auto& digi        = set<sand::tracker::digi>("digi");
-    const auto* drift = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
+    auto& digi_out       = set<sand::tracker::digi_container>("digi");
+    std::size_t nsignals = 0;
 
-    for (auto [wire, hits] : hits_by_wire) {
+    for (const auto& [wire, hits] : hits_by_wire) {
       UFW_DEBUG("Station target: {}, station top north corner: {}", wire->parent->target, wire->parent->top_north);
       UFW_DEBUG(" Wire properties: Head {}, Tail {}", wire->head, wire->tail);
       UFW_DEBUG(" Number of hits in wire: {}", hits.size());
 
-      auto signal = process_hits_for_wire(hits, *wire);
-      if (signal) {
-        std::for_each(hits.begin(), hits.end(), [&signal](const auto& hit) { signal->insert(hit.GetId()); });
-        digi.signals.emplace_back(std::move(*signal));
+      auto wire_digis = process_hits_for_wire(hits, *wire);
+      UFW_DEBUG(" Number of digis in wire: {}", wire_digis.size());
+      for (auto& d : wire_digis) {
+        nsignals += d.signals.size();
+        digi_out.digis.emplace_back(std::move(d));
       }
     }
-    UFW_INFO("Digitization complete. Total number of signals created: {}", digi.signals.size());
+    UFW_INFO("Digitization complete. Created {} digis with {} signals in total.", digi_out.digis.size(), nsignals);
   }
 
   /**
-   * \brief Creates a signal from a wire arrival time and a total deposited energy.
-   *
-   * The TDC value is the arrival time smeared with a Gaussian of width
-   * \c sigma_tdc; the ADC value is the total deposited energy.
-   *
-   * \param wire_time  Earliest signal arrival time at the wire readout end [ns].
-   * \param edep_total Total energy deposited on the wire.
-   * \param channel    DAQ channel of the wire.
-   * \return The digitized signal.
+   * \brief Applies the TDC resolution to a time.
+   * \param time The true time [ns].
+   * \return \p time smeared with a Gaussian of width \c sigma_tdc [ns].
    */
-  tracker::digi::signal drift_fast_digi::create_signal(double wire_time, double edep_total, const channel_id& channel) {
+  double drift_fast_digi::smear_time(double time) {
     std::normal_distribution<double> gaussian_error(0.0, m_sigma_tdc); // FIXME should be member
-    auto ran = gaussian_error(random_engine());
-    tracker::digi::signal signal(channel, wire_time + ran, edep_total);
-
-    UFW_DEBUG("  Created signal: Channel(subdetector {}, channel {}), TDC = {}, ADC = {}",
-              static_cast<int>(signal.channel().subdetector), static_cast<int>(signal.channel().channel), signal.tdc(),
-              signal.adc());
-
-    return signal;
+    return time + gaussian_error(random_engine());
   }
 
   /**
-   * \brief Computes the signal of a single wire from the hits assigned to it.
+   * \brief Computes the digis of a single wire from the hits assigned to it.
    *
    * For each hit the points of closest approach between the hit segment and the
-   * wire are found, the drift and in-wire propagation times are evaluated, and
-   * the earliest arrival time over all hits is kept as the wire time. The ADC
-   * is the sum of the deposited energies.
+   * wire are found and the arrival time at the readout end (hit time + drift time
+   * + in-wire propagation time) is evaluated. Arrivals are sorted in time and
+   * grouped into digis: a digi opens at the first arrival not yet used and
+   * collects all arrivals within \c integration_time of it; the arrivals in the
+   * following \c dead_time are discarded; the next arrival opens a new digi.
+   * Each collected arrival becomes a signal holding the raw time, energy and hit
+   * id. The digi TDC is the earliest signal time smeared by \c sigma_tdc, the
+   * digi ADC the sum of the signal energies.
    *
    * \param hits The hits collected on the wire.
    * \param wire The geometry of the wire.
-   * \return The resulting signal, or \c std::nullopt if no valid time was found.
+   * \return The time-ordered digis of the wire; empty if the wire has no hits.
    */
-  std::optional<tracker::digi::signal>
+  tracker::digi_container::digi_collection
   drift_fast_digi::process_hits_for_wire(const std::vector<EDEPHit>& hits,
                                          const sand::geoinfo::drift_info::wire& wire) {
-    const auto& gi     = instance<geoinfo>();
-    const auto* drift  = dynamic_cast<const sand::geoinfo::drift_info*>(&gi.tracker());
-    double wire_time   = std::numeric_limits<double>::max();
-    double drift_time  = std::numeric_limits<double>::max();
-    double signal_time = std::numeric_limits<double>::max();
-    double t_hit       = std::numeric_limits<double>::max();
-    double edep_total  = 0.0;
+    struct arrival {
+      double time;
+      double edep;
+      std::decay_t<decltype(std::declval<const EDEPHit&>().GetId())> hit_id;
+    };
 
+    std::vector<arrival> arrivals;
+    arrivals.reserve(hits.size());
     for (const auto& hit : hits) {
       auto closest_points = closest_points_hit_wire(
           vec_4d(hit.GetStart().X(), hit.GetStart().Y(), hit.GetStart().Z(), hit.GetStart().T()),
@@ -549,26 +552,46 @@ namespace sand::drift {
       const vec_4d& closest_point_hit  = closest_points.first;
       const vec_4d& closest_point_wire = closest_points.second;
 
-      // Update timing parameters directly here
-      double hit_smallest_time = get_min_time(closest_point_hit, m_wire_velocity, wire);
+      const double arrival_time = get_min_time(closest_point_wire, m_wire_velocity, wire);
+      UFW_DEBUG("  Hit {}: closest point on hit {}, on wire {}, arrival time {}", hit.GetId(), closest_point_hit,
+                closest_point_wire, arrival_time);
+      arrivals.push_back({arrival_time, hit.GetEnergyDeposit(), hit.GetId()});
+    }
 
-      if (hit_smallest_time < wire_time) {
-        wire_time   = hit_smallest_time;
-        t_hit       = closest_point_hit.T();
-        drift_time  = closest_point_wire.T() - t_hit;
-        signal_time = hit_smallest_time - closest_point_wire.T();
+    std::stable_sort(arrivals.begin(), arrivals.end(),
+                     [](const arrival& a, const arrival& b) { return a.time < b.time; });
 
-        UFW_DEBUG("Closest point on hit: {}", vec_4d(closest_point_hit));
-        UFW_DEBUG("Closest point on wire: {}", vec_4d(closest_point_wire));
+    tracker::digi_container::digi_collection wire_digis;
+    std::size_t i = 0;
+    while (i < arrivals.size()) {
+      const double window_start = arrivals[i].time;
+      const double window_end   = window_start + m_integration_time;
+      const double dead_end     = window_end + m_dead_time;
+
+      // Signals: raw arrival time and deposited energy of every hit in [window_start, window_end).
+      auto& current      = wire_digis.emplace_back();
+      double digi_energy = 0.0;
+      double digi_time   = std::numeric_limits<double>::max();
+      for (; i < arrivals.size() && arrivals[i].time < window_end; ++i) {
+        tracker::digi_container::digi::signal signal(wire.daq_channel, arrivals[i].time, arrivals[i].edep);
+        signal.insert(arrivals[i].hit_id);
+        digi_energy += signal.energy();
+        digi_time = std::min(digi_time, signal.t());
+        current.signals.push_back(std::move(signal));
       }
-      edep_total += hit.GetEnergyDeposit();
+
+      // Digi: TDC = earliest signal time (smeared by sigma_tdc), ADC = sum of the signal energies.
+      current.set_tdc(smear_time(digi_time));
+      current.set_adc(digi_energy);
+      UFW_DEBUG("  Digi in [{}, {}): TDC = {}, ADC = {}, {} signals.", window_start, window_end, current.tdc(),
+                current.adc(), current.signals.size());
+
+      for (; i < arrivals.size() && arrivals[i].time < dead_end; ++i)
+        UFW_DEBUG("  Hit {} arrives at {} during dead time [{}, {}), discarded.", arrivals[i].hit_id,
+                  arrivals[i].time, window_end, dead_end);
     }
 
-    if (wire_time == std::numeric_limits<double>::max()) {
-      return std::nullopt;
-    }
-
-    return create_signal(wire_time, edep_total, wire.daq_channel);
+    return wire_digis;
   }
 
   // TO-DO: For now identical to stt implementation, need to modify for drift specifics
