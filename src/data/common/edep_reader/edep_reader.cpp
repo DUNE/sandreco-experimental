@@ -26,10 +26,11 @@ namespace sand {
 
 } // namespace sand
 
-ufw::data::factory<sand::edep_reader>::factory(const ufw::config& cfg) : input_file(nullptr), event(new TG4Event()) {
+ufw::data::factory<sand::edep_reader>::factory(const ufw::config& cfg)
+  : input_file(nullptr), input_tree(nullptr), event_owner(new TG4Event()), event(event_owner.get()), m_id(-1) {
   auto path = cfg.path_at("uri");
   input_file.reset(TFile::Open(path.c_str()));
-  input_tree = input_file->Get<TTree>("EDepSimEvents");
+  input_tree = input_file ? input_file->Get<TTree>("EDepSimEvents") : nullptr;
   if (!input_tree) {
     UFW_ERROR("EDepSim tree not found in file '{}'.", path.c_str());
   }

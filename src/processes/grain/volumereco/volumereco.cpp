@@ -2,11 +2,11 @@
 
 #include <volumereco_cl_manager/volumereco_cl_manager.hpp>
 
-#include <unordered_map>
 #include <vector>
 
 #include <hdf5/hdf5.hpp>
 #include <common/sand.h>
+#include <common/timeslicer.h>
 #include <grain/grain.h>
 #include <grain/image.h>
 #include <grain/voxels.h>
@@ -48,21 +48,23 @@ namespace sand::grain {
     m_image_buffers = std::vector<sand::cl::buffer>(array.datasets().size());
     for (auto& image_buffer : m_image_buffers) {
       image_buffer.allocate<CL_MEM_READ_WRITE>(cl_manager.platform().context(),
-                                               camera_height * camera_width * sizeof(float));
+                                               cl_manager.pixels_count() * sizeof(float));
     }
   }
 
   volumereco::volumereco()
-    : process({{"images", "sand::grain::images"}}, {{"photon_amplitudes", "sand::grain::voxels"}}) {}
+    : process({{"images", "sand::grain::images"}, {"slices", "sand::reco::timeranges"}},
+              {{"photon_amplitudes", "sand::grain::voxels"}}) {}
 
   void volumereco::run() {
-    const auto& spill_images_in = get<images>("images");
-    auto& photon_amplitude_out  = set<voxels>("photon_amplitudes");
-    auto& cl_manager            = instance<volumereco_cl_manager>();
+    const auto& images_in      = get<images>("images");
+    const auto& slices_in      = get<reco::timeranges>("slices");
+    auto& photon_amplitude_out = set<voxels>("photon_amplitudes");
+    auto& cl_manager           = instance<volumereco_cl_manager>();
 
     auto voxels            = cl_manager.fiducial();
     const size_t n_voxels  = voxels.size().x() * voxels.size().y() * voxels.size().z();
-    const size_t n_sensors = camera_height * camera_width;
+    const size_t n_sensors = cl_manager.pixels_count();
     const cl::NDRange voxel_shape(voxels.size().x(), voxels.size().y(), voxels.size().z());
     const cl::NDRange sensors_shape(n_sensors);
 
@@ -70,22 +72,23 @@ namespace sand::grain {
     std::vector<float> starting_maximization(n_voxels, 0.f);
 
     int i_event_in_spill{0};
-
-    for (const auto& images_in : spill_images_in.images) {
-      if (!images_in.empty()) {
-        for (const auto& image : images_in) {
+    reco::timeslicer ts(slices_in);
+    auto slices = ts.slice(images_in.begin(), images_in.end());
+    for (auto& slice : slices) {
+      if (!slice.empty()) {
+        for (const auto& image : slice) {
           // Sharing load evenly among GPUs, assuming camera ids range [0, n_cameras -1]
           const size_t idev = image.camera_id % m_n_devices;
-          UFW_DEBUG("Image id: {}, processing on device {}", image.camera_id, idev);
+          UFW_INFO("Image id: {}, processing on device {}", image.camera_id, idev);
           // Copy data to device buffer
-          m_image_buffers[image.camera_id].write(image.amplitude_array<float>().Array(),
+          m_image_buffers[image.camera_id].write(image.amplitude_array<float>().data(),
                                                  cl_manager.platform().queues()[image.camera_id % m_n_devices]);
           // Start with uniform voxel score distribution
           cl_manager.previous_amplitudes()[image.camera_id % m_n_devices].write(
               starting_score.data(), cl_manager.platform().queues()[image.camera_id % m_n_devices]);
         }
         for (int iteration = 0; iteration < m_max_iterations; ++iteration) {
-          UFW_DEBUG("Iteration: {}", iteration);
+          UFW_INFO("Iteration: {}", iteration);
           // Fill maximization buffers with 0
           for (size_t idev = 0; idev < m_n_devices; ++idev) {
             cl_manager.maximization_buffers()[idev].write(starting_maximization, cl_manager.platform().queues()[idev]);
@@ -107,8 +110,8 @@ namespace sand::grain {
                 cl_manager.maximization(), idev, cl::NullRange, voxel_shape, cl::NullRange, maximization_wait_for,
                 /*kernel args*/
                 cl_manager.system_matrix(image.camera_id), cl_manager.inverted_sensitivity()[idev],
-                static_cast<int>(n_sensors), cl_manager.expectation_buffers()[idev],
-                m_image_buffers[image.camera_id], cl_manager.maximization_buffers()[idev]);
+                static_cast<int>(n_sensors), cl_manager.expectation_buffers()[idev], m_image_buffers[image.camera_id],
+                cl_manager.maximization_buffers()[idev]);
           }
           // Be sure that all GPU computations are completed
           cl_manager.wait();
@@ -133,7 +136,7 @@ namespace sand::grain {
         cl::Event ev_multiply_matrices_in_place = cl_manager.enqueue_on_device_with_args(
             cl_manager.multiply_matrices_in_place(), 0, cl::NullRange, voxel_shape, cl::NullRange,
             /*kernel args*/
-            cl_manager.previous_amplitudes()[0], cl_manager.inverted_sensitivity()[0], 1.0f/m_pde);
+            cl_manager.previous_amplitudes()[0], cl_manager.inverted_sensitivity()[0], 1.0f / m_pde);
         // Retrieve voxel score
         photon_amplitude_out.voxels.emplace_back(voxels.size());
         cl_manager.previous_amplitudes()[0].read(photon_amplitude_out.voxels.back(), cl_manager.platform().queues()[0],

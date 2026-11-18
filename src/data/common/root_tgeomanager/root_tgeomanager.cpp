@@ -12,7 +12,7 @@ namespace sand {
     }
     auto filepath = cfg.path_at("geometry");
     m_geomanager  = TGeoManager::Import(filepath.c_str());
-    UFW_INFO("root_tgeomanager at {} now references m_geomenater {}. Current gGeoManager = {}", fmt::ptr(this), fmt::ptr(m_geomanager), fmt::ptr(gGeoManager));
+    UFW_INFO("root_tgeomanager at {} now references m_geomenager {}. Current gGeoManager = {}", fmt::ptr(this), fmt::ptr(m_geomanager), fmt::ptr(gGeoManager));
     if (!m_geomanager) {
       UFW_ERROR("Cannot find valid TGeoManager in '{}'.", filepath.c_str());
     }

@@ -21,15 +21,13 @@ namespace sand::reco {
         m_best(std::numeric_limits<double>::quiet_NaN()),
         m_latest(std::numeric_limits<double>::quiet_NaN()) {}
 
-    explicit timerange(double t, double sigma = 1.0) : m_earliest(t - sigma), m_best(t), m_latest(t + sigma) {}
+    explicit timerange(double t, double sigma = 0.1) : m_earliest(t - sigma), m_best(t), m_latest(t + sigma) {}
 
-    timerange(double e, double b, double l) : m_earliest(e), m_best(b), m_latest(l) {
-      if (!*this) {
-        UFW_ERROR("Inconsistent time interval: ({}, {}, {}).", e, b, l);
+    timerange(double b, double e, double l) : m_earliest(e), m_best(b), m_latest(l) {
+      if (std::isnan(m_best) || m_earliest > m_best || m_best > m_latest) {
+        UFW_ERROR("Inconsistent time interval: {} [{}, {}].", b, e, l);
       }
     }
-
-    explicit operator bool() const { return !std::isnan(m_best) && m_earliest < m_best && m_best < m_latest; }
 
     double best() const { return m_best; }
     double earliest() const { return m_earliest; }
@@ -51,7 +49,9 @@ namespace sand::reco {
 
     bool contains(double t) const { return m_earliest <= t && t <= m_latest; }
 
-    bool span() const { return m_latest - m_earliest; }
+    bool contains(const timerange& other) const { return m_earliest <= other.earliest() && other.latest() <= m_latest; }
+
+    double span() const { return m_latest - m_earliest; }
 
    private:
     double m_earliest;
@@ -71,11 +71,19 @@ namespace sand::reco {
 
   inline bool operator< (const timerange& lhs, const timerange& rhs) { return lhs.best() < rhs.best(); }
 
+  inline bool operator< (const timerange& lhs, double rhs) { return lhs.best() < rhs; }
+
+  inline bool operator< (double lhs, const timerange& rhs) { return lhs < rhs.best(); }
+
   inline double operator- (const timerange& lhs, const timerange& rhs) { return lhs.best() - rhs.best(); }
 
   inline bool consistent(const timerange& lhs, const timerange& rhs) {
     return !(lhs.latest() < rhs.earliest() || rhs.latest() < lhs.earliest());
   }
+
+  inline bool consistent(const timerange& lhs, double rhs) { return !(lhs.latest() < rhs || rhs < lhs.earliest()); }
+
+  inline bool consistent(double lhs, const timerange& rhs) { return !(lhs < rhs.earliest() || rhs.latest() < lhs); }
 
   inline bool close(const timerange& lhs, const timerange& rhs) {
     return lhs.contains(rhs.best()) && rhs.contains(lhs.best());
@@ -92,3 +100,12 @@ namespace sand::reco {
   inline double overlap(const timerange& lhs, const timerange& rhs) { return -distance(lhs, rhs); }
 
 } // namespace sand::reco
+
+template <>
+struct fmt::formatter<sand::reco::timerange> : formatter<string_view> {
+  auto format(const sand::reco::timerange& tr, format_context& ctx) const -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "{:.2f} [{:.2f}, {:.2f}]", tr.best(), tr.earliest(), tr.latest());
+  }
+};
+
+SAND_DATA_COLLECTION(sand::reco, timerange, timeranges)

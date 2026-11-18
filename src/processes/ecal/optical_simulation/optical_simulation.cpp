@@ -1,11 +1,43 @@
-#include <optical_simulation.hpp>
 #include <edep_reader/edep_reader.hpp>
 #include <geoinfo/ecal_info.hpp>
+#include <optical_simulation.hpp>
 #include <ecal/photo_electron.h>
 
 #include <ufw/factory.hpp>
 
 namespace sand::ecal {
+
+  /**
+   * \class sand::ecal::optical_simulation
+   *
+   * \brief Simulates optical light production and propagation in ECAL fibers.
+   *
+   * This process takes energy deposits from the \ref sand::edep_reader and simulates 
+   * the production of scintillation photons in the ECAL fibers. It accounts for 
+   * light yield, attenuation along the fiber length, and the scintillation time 
+   * distribution (using an acceptance-rejection method). The result is a collection 
+   * of photo-electrons (\c sand::ecal::pes) with arrival times at the
+   * PMT ends.
+   *
+   * \subsection Configuration
+   * | Parameter Name | Type | Unit | Required/Default | Description |
+   * |----------------|------|------|------------------|-------------|
+   * | `light_yield`  | `double` | photons/MeV | Required         | Average number of photons produced per unit energy. |
+   *
+   * \subsection Dependencies
+   * | Type | Comment |
+   * |------|---------|
+   * | `sand::edep_reader` | Energy deposits of the event |
+   * | `sand::geoinfo`      | ECAL geometry and fiber info |
+   *
+   * \subsection Requirements
+   * None.
+   *
+   * \subsection Products
+   * | Name | Type | Comment |
+   * |------|------|---------|
+   * | `pes` | `sand::ecal::pes` | Photo-electrons produced |
+   */
 
   /// Configure the optical simulation process by loading parameters from config
   void optical_simulation::configure(const ufw::config& cfg) {
@@ -15,7 +47,7 @@ namespace sand::ecal {
   }
 
   /// Constructor: Initialize the optical simulation process with output PES data
-  optical_simulation::optical_simulation() : process({}, {{"pes", "sand::ecal::pes_container"}}) {
+  optical_simulation::optical_simulation() : process({}, {{"pes", "sand::ecal::pes"}}) {
     UFW_DEBUG("Creating ECAL optical simulation process at {}", fmt::ptr(this));
   }
 
@@ -23,10 +55,10 @@ namespace sand::ecal {
   void optical_simulation::run() {
     UFW_DEBUG("Running ECAL optical simulation process at {}", fmt::ptr(this));
     // Get input energy deposit data and ECAL geometry information
-    const auto& tree  = get<sand::edep_reader>();
-    const auto& gecal = get<geoinfo>().ecal();
+    const auto& tree  = instance<sand::edep_reader>();
+    const auto& gecal = instance<geoinfo>().ecal();
     // Get output photo-electron collection
-    auto& pes = set<sand::ecal::pes_container>("pes");
+    auto& pes = set<sand::ecal::pes>("pes");
 
     // Process each trajectory from the energy deposit record
     for (const auto& trj : tree) {
@@ -75,12 +107,10 @@ namespace sand::ecal {
             // Calculate total arrival time: initial time + scintillation + propagation
             auto arrival_time = h_t + scintillation_time(fiber.scintillation_rise_time, fiber.scintillation_decay_time)
                               + propagation_time(l, fiber.light_velocity);
-            // Create photo-electron with truth hit ID and calculated arrival time
-            pes_container::photo_electron pe_(hit.GetId(), arrival_time);
             // Build complete channel ID from cell geometry
             channel_id chid = gecal.channel({cid, fl});
-            // Store photo-electron in output collection
-            pes.collection[chid].emplace_back(std::move(pe_));
+            // Store the channel, truth hit and arrival time in the flat collection.
+            pes.emplace_back(chid, hit.GetId(), arrival_time);
           }
         }
       }

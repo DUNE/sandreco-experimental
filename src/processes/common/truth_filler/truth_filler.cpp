@@ -4,6 +4,7 @@
 #include <caf/caf_wrapper.hpp>
 #include <edep_reader/edep_reader.hpp>
 #include <genie_reader/genie_reader.hpp>
+#include <spill_maps/spill_maps.hpp>
 
 #include <ufw/factory.hpp>
 #include <ufw/utils.hpp>
@@ -17,10 +18,11 @@ namespace sand::common {
   void truth_filler::run() {
     auto const& genie  = instance<genie_reader>();
     auto const& edep   = instance<edep_reader>();
+    auto const& maps   = instance<spill_maps>();
     auto& truth_branch = set<sand::caf::truth_branch_wrapper>("out_truth_branch");
 
     auto const& primaries   = edep.GetChildrenTrajectories();
-    auto interaction_ranges = filler_details::make_interaction_ranges(primaries);
+    auto interaction_ranges = make_interaction_ranges(primaries);
 
     auto const n_ixn = genie.events_.size();
 
@@ -35,6 +37,8 @@ namespace sand::common {
       auto const& event                 = genie.events_[ixn_idx];
       auto const& stdhep                = genie.stdHeps_[ixn_idx];
 
+      UFW_DEBUG("[first_prim_idx, prim_count] = [{},{}]", first_prim_idx, prim_count);
+      UFW_DEBUG("genie EvtNum {} StdHep N_={} P4_.size()={}", event.EvtNum_, stdhep.N_, stdhep.P4_.size());
       // Create and fill SRTrueInteraction from GENIE
       auto& true_ixn = truth_branch.nu.emplace_back(filler_details::true_interaction_from_genie(event, stdhep));
 
@@ -45,7 +49,7 @@ namespace sand::common {
 
       // Create primaries and secondaries tree
       auto tree = filler_details::build_true_particle_tree(primaries, first_prim_idx, prim_count,
-                                                           static_cast<int>(ixn_idx), true_ixn.id);
+                                                           static_cast<int>(ixn_idx), true_ixn.id, maps.at(ixn_idx));
 
       // Fill CAF fields
       true_ixn.prim     = std::move(tree.prim);

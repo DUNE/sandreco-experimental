@@ -5,6 +5,7 @@
 
 namespace sand::ecal {
 
+  /// Builds a flat collection of pairing hypotheses from digits selected by spill time windows.
   class cell_pair_builder : public ufw::process {
    public:
     cell_pair_builder();
@@ -13,6 +14,9 @@ namespace sand::ecal {
     void run() override;
 
    private:
+    /// Print selected windows and the complete/incomplete pairing hypotheses.
+    bool m_print_output = false;
+
     /// Tolerance added to the physical begin/end time compatibility.
     ///
     /// The builder reconstructs the light-propagation distances from the

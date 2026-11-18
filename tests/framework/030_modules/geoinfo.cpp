@@ -16,8 +16,10 @@ namespace sand::test {
     void run() override;
 
    private:
-    void test_grain();
+    void test_grain(float mm);
     void test_ecal();
+    void test_ecal_neighbours(const sand::geoinfo::ecal_info& ecal,
+                              const std::vector<sand::geoinfo::ecal_info::cell_id>& cell_ids);
     void test_tracker();
 
    private:
@@ -37,7 +39,7 @@ namespace sand::test {
     sand::geoinfo& gi = instance<sand::geoinfo>();
     for (auto name : m_init) {
       UFW_INFO("Initializing: {}", name);
-      if (name == "grain") {
+      if (name == "grain_3mm" || name == "grain_4mm") {
         gi.grain();
       } else if (name == "ecal") {
         gi.ecal();
@@ -47,8 +49,10 @@ namespace sand::test {
     }
     for (auto name : m_test) {
       UFW_INFO("Testing: {}", name);
-      if (name == "grain") {
-        test_grain();
+      if (name == "grain_3mm") {
+        test_grain(3.0);
+      } else if (name == "grain_4mm") {
+        test_grain(4.0);
       } else if (name == "ecal") {
         test_ecal();
       } else if (name == "tracker") {
@@ -57,7 +61,7 @@ namespace sand::test {
     }
   }
 
-  void geoinfo::test_grain() {
+  void geoinfo::test_grain(float mm) {
     auto close        = [](double x, double y) { return std::abs(x - y) < 1e-3; };
     auto area         = [](auto r) { return std::abs(r.top - r.bottom) * std::abs(r.right - r.left); };
     sand::geoinfo& gi = instance<sand::geoinfo>();
@@ -72,7 +76,7 @@ namespace sand::test {
       UFW_ASSERT(close(sum, expected_area), "Camera {} is not the expected area: {} square mm vs {}", lcam.name, sum,
                  expected_area);
     }
-    expected_area = 1024 * 3.0 * 3.0;
+    expected_area = mm == 4.0 ? 1008 * 4.0 * 4.0 : 1024 * 3.0 * 3.0;
     for (const auto& mcam : gi.grain().mask_cameras()) {
       UFW_ASSERT(mcam.z_mask > mcam.z_sipm, "Camera {} has the mask behind the sensor", mcam.name);
       double sum = 0.0;
@@ -94,6 +98,7 @@ namespace sand::test {
     sand::geoinfo& gi = instance<sand::geoinfo>();
 
     const auto& ecal = gi.ecal();
+    std::vector<sand::geoinfo::ecal_info::cell_id> cell_ids;
 
     using face_location = sand::geoinfo::ecal_info::face_location;
     using face_side     = sand::geoinfo::ecal_info::face_side;
@@ -137,6 +142,7 @@ namespace sand::test {
             cid.column        = column;
 
             const auto& cell = ecal.at(cid);
+            cell_ids.push_back(cid);
 
             const auto begin_side = cell.side(face_location::begin);
             const auto end_side   = cell.side(face_location::end);
@@ -198,6 +204,91 @@ namespace sand::test {
 
     UFW_ASSERT(ecal_side_convention_ok,
                "[ECAL SIDE CHECK] At least one ECAL module has inconsistent begin/end side convention");
+    test_ecal_neighbours(ecal, cell_ids);
+  }
+
+  void geoinfo::test_ecal_neighbours(const sand::geoinfo::ecal_info& ecal,
+                                     const std::vector<sand::geoinfo::ecal_info::cell_id>& cell_ids) {
+    using ecal_info = sand::geoinfo::ecal_info;
+    struct cell_geometry {
+      ecal_info::cell_id id;
+      pos_3d position;
+      double y_min = 0.;
+      double y_max = 0.;
+      std::vector<uint32_t> neighbours;
+    };
+    std::vector<cell_geometry> cells;
+    cells.reserve(cell_ids.size());
+    for (const auto cid : cell_ids) {
+      const auto& cell = ecal.at(cid);
+      cell_geometry geometry{cid, cell.offset2position(0.)};
+      // For endcap cells, find the longest straight section along Y and record its min/max Y coordinates. 
+      // Check that the straight section exists and is non-zero length. This is used to determine if two endcap cells overlap in Y.
+      if (cid.region != geo_id::region_t::BARREL) {
+        // offset2position(0.) provides the XZ coordinates used for the endcap distance check.
+        // Require the long straight sections to overlap in Y as well, so upper and lower central
+        // cells with overlapping XZ projections are not counted as neighbours. Ignore the bends.
+        double longest_y = 0.;
+        for (const auto& element : cell.element_collection().elements()) {
+          if (element->type() != ecal_info::shape_element_type::straight) {
+            continue;
+          }
+          const double begin_y  = element->begin_face().centroid().y();
+          const double end_y    = element->end_face().centroid().y();
+          const double length_y = std::abs(end_y - begin_y);
+          if (length_y > longest_y) {
+            longest_y      = length_y;
+            geometry.y_min = std::min(begin_y, end_y);
+            geometry.y_max = std::max(begin_y, end_y);
+          }
+        }
+        UFW_ASSERT(longest_y > 0., "[ECAL NEIGHBOUR CELLS] Cell {} has no straight section along Y", cid.raw);
+      }
+      for (const auto neighbour : ecal.neighbours(cid)) {
+        UFW_ASSERT(ecal.contains(neighbour), "[ECAL NEIGHBOUR CELLS] Cell {} has invalid neighbour {}", cid.raw,
+                   neighbour.raw);
+        geometry.neighbours.push_back(neighbour.raw);
+      }
+      std::sort(geometry.neighbours.begin(), geometry.neighbours.end());
+      UFW_ASSERT(std::adjacent_find(geometry.neighbours.begin(), geometry.neighbours.end())
+                     == geometry.neighbours.end(),
+                 "[ECAL NEIGHBOUR CELLS] Cell {} has duplicate neighbours", cid.raw);
+      cells.push_back(std::move(geometry));
+    }
+
+    // geometry used for test SAND_opt3_DRIFT1: maximum diagonal distances of adjacent cells are 72.2026 mm (barrel) and 66.1026 mm (endcaps).
+    // Cells that are not neighbours are at least 88 mm apart in the relevant projection planes. Expected neighbour check uses geometry, not module/row/column ids.
+    constexpr double barrel_distance = 72.36;
+    constexpr double endcap_distance = 67.;
+    constexpr double y_tolerance     = 1.e-6;
+    size_t pairs_checked             = 0;
+    for (size_t i = 0; i < cells.size(); ++i) {
+      const auto& a     = cells[i];
+      const bool barrel = a.id.region == geo_id::region_t::BARREL;
+      for (size_t j = i; j < cells.size(); ++j) {
+        const auto& b                 = cells[j];
+        // transverse distance is in plane YZ for barrel cells, and in plane XZ for endcap cells.
+        const double transverse       = barrel ? a.position.y() - b.position.y() : a.position.x() - b.position.x();
+        const double dz               = a.position.z() - b.position.z();
+        const double distance_squared = transverse * transverse + dz * dz;
+        const double threshold        = barrel ? barrel_distance : endcap_distance;
+        // Upper/lower central cells overlap in XZ but have disjoint straight-section Y intervals.
+        const bool y_overlap = barrel || std::min(a.y_max, b.y_max) - std::max(a.y_min, b.y_min) > y_tolerance;
+        const bool expected  = a.id.region == b.id.region && y_overlap && distance_squared < threshold * threshold;
+        const bool forward   = std::binary_search(a.neighbours.begin(), a.neighbours.end(), b.id.raw);
+        const bool reverse   = std::binary_search(b.neighbours.begin(), b.neighbours.end(), a.id.raw);
+        // Expected == false is expected for all cells that are not neighbours. 
+        UFW_ASSERT(forward == expected && reverse == expected,
+                   "[ECAL NEIGHBOUR CELLS] (region,module,row,column) ({},{},{},{}) <-> ({},{},{},{}): "
+                   "expected={}, forward={}, reverse={}, projected distance={} mm",
+                   int(a.id.region), int(a.id.module_number), int(a.id.row), int(a.id.column), int(b.id.region),
+                   int(b.id.module_number), int(b.id.row), int(b.id.column), expected, forward, reverse,
+                   std::sqrt(distance_squared));
+        ++pairs_checked;
+      }
+    }
+    UFW_INFO("[ECAL NEIGHBOUR CELLS] Checked {} cells and {} pairs (including self) against geometry distances",
+             cells.size(), pairs_checked);
   }
 
   void geoinfo::test_tracker() {

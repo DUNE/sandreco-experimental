@@ -1,12 +1,13 @@
-#include <caf_streamer.hpp>
-
-#include <TFile.h>
+#include "caf_streamer.hpp"
 
 #include <caf/caf_wrapper.hpp>
 
 #include <ufw/config.hpp>
 #include <ufw/data.hpp>
 #include <ufw/factory.hpp>
+
+#include <TFile.h>
+#include <TTree.h>
 
 #define UFW_IMPLEMENT_STREAMER_FOR_TYPE(type) UFW_DECLARE_RTTI(type)
 #include <caf_streamer_types.hpp>
@@ -30,14 +31,12 @@ namespace sand::caf {
   } // namespace
 
   caf_streamer::~caf_streamer() {
-    if (m_file == nullptr) {
-      return;
-    }
     if (operation() & ufw::op_type::wo) {
       m_file->cd();
-      m_tree->Write(nullptr, TObject::kOverwrite);
+      m_tree->Write(0, TObject::kOverwrite);
     }
     m_file->Close();
+    delete m_caf_ptr;
   }
 
   void caf_streamer::configure(const ufw::config& cfg, ufw::op_type op) {
@@ -63,28 +62,23 @@ namespace sand::caf {
 
   void caf_streamer::prepare(const ufw::public_id& id, const ufw::type_id& type) {
     streamer::prepare(id, type);
-    TClass* tcl = TClass::GetClass(type.c_str(), true, false);
-    UFW_ASSERT(tcl != nullptr, "TClass for '{}' not found: type is not supported.", type);
-    UFW_INFO("Found TClass for '{}'.", type);
-    m_attached_type = type;
+    if (type != ufw::type_of<truth_branch_wrapper>() && type != ufw::type_of<common_reco_branch_wrapper>()
+        && type != ufw::type_of<nd_reco_branch_wrapper>()) {
+      UFW_ERROR("caf_streamer requires a standard_record_wrapper, truth_branch_wrapper, "
+                "common_reco_branch_wrapper or nd_reco_branch_wrapper, got type: {}",
+                ufw::simplified_name(type));
+    }
   }
 
   void caf_streamer::attach(ufw::data::data_base& data, const ufw::public_id& id) {
     streamer::attach(data, id);
 
-    if (m_attached_type == ufw::type_of<standard_record_wrapper>()) {
-      m_data    = static_cast<standard_record_wrapper*>(&data);
-      m_caf_ptr = static_cast<::caf::StandardRecord*>(m_data);
-    } else if (m_attached_type == ufw::type_of<truth_branch_wrapper>()) {
-      m_truth_branch = static_cast<truth_branch_wrapper const*>(&data);
-      m_caf_ptr      = &m_internal_sr;
-    } else {
-      UFW_ERROR("caf_streamer requires a standard_record_wrapper or truth_branch_wrapper, got type: {}",
-                ufw::simplified_name(m_attached_type));
+    if (m_tree->GetBranch(s_data_branch) != nullptr) {
+      return;
     }
 
-    TBranch* id_branch   = nullptr;
-    TBranch* data_branch = nullptr;
+    TBranch* id_branch{nullptr};
+    TBranch* data_branch{nullptr};
 
     if (operation() & ufw::op_type::ro) {
       id_branch = m_tree->GetBranch(s_context_id_branch);
@@ -106,7 +100,6 @@ namespace sand::caf {
       UFW_FATAL("ufw::streamer::operation() returned an invalid value");
     }
 
-    // Prevent ROOT from auto-deleting branch data on GetEntry()
     if (id_branch != nullptr) {
       id_branch->SetAutoDelete(false);
     }
@@ -116,30 +109,50 @@ namespace sand::caf {
   void caf_streamer::read(ufw::context_id id) {
     // Required to avoid crash at program exit (ROOT internal state)
     m_file->cd();
-
+    std::size_t attached = 0;
+    for (const auto& [var, info] : info_map()) {
+      if (info.address != nullptr) {
+        ++attached;
+      }
+    }
     if (m_has_context_id) {
-      if (m_context_id == id) {
-        return;
-      }
-      const long entries = m_tree->GetEntries();
-      for (; m_last_entry < entries; ++m_last_entry) {
-        m_tree->GetEntry(m_last_entry);
-        if (m_context_id == id) {
-          return;
+      if (m_context_id != id) {
+        const long entries = m_tree->GetEntries();
+        for (; m_last_entry != entries; ++m_last_entry) {
+          m_tree->GetEntry(m_last_entry);
+          if (m_context_id == id) {
+            break;
+          }
         }
+        if (m_context_id != id) {
+          UFW_ERROR("Context id '{}' not found.", id);
+        }
+        m_last_read_attached = attached;
       }
-      UFW_ERROR("Context id '{}' not found.", id);
     } else {
       // Standard CAF file: use id directly as entry index
       m_tree->GetEntry(static_cast<long>(id));
+      m_last_read_attached = attached;
+    }
+    if (attached != m_last_read_attached) {
+      // The context was already located, but a variable was attached since the previous read (e.g. a store
+      // dereferenced lazily through an index): re-issue the read to populate the newly attached branch.
+      m_tree->GetEntry(m_last_entry);
+      m_last_read_attached = attached;
     }
   }
 
   void caf_streamer::write(ufw::context_id id) {
     m_file->cd();
 
-    if (m_truth_branch != nullptr) {
-      m_internal_sr.mc = *m_truth_branch;
+    for (auto const& [pub_id, var] : info_map()) {
+      if (var.type == ufw::type_of<truth_branch_wrapper>()) {
+        m_caf_ptr->mc = *static_cast<truth_branch_wrapper const*>(var.address);
+      } else if (var.type == ufw::type_of<common_reco_branch_wrapper>()) {
+        m_caf_ptr->common = *static_cast<common_reco_branch_wrapper const*>(var.address);
+      } else if (var.type == ufw::type_of<nd_reco_branch_wrapper>()) {
+        m_caf_ptr->nd = *static_cast<nd_reco_branch_wrapper const*>(var.address);
+      }
     }
 
     m_context_id = id;

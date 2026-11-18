@@ -75,6 +75,15 @@ namespace sand::hdf5 {
     }
 
     template <typename T>
+    std::unique_ptr<T[]> read(const std::string& dataset) {
+      auto ndr = range(dataset);
+      UFW_ASSERT(ndr.type().getSize() == sizeof(T), "Reading to type of incorrect size.");
+      T* raw = new T[ndr.flat_size()];
+      read(dataset, static_cast<void*>(raw));
+      return std::unique_ptr<T[]>(raw);
+    }
+
+    template <typename T>
     void write(const std::string& dataset, const ndrange& ndr, const T& usrobj) {
       if constexpr (std::is_pointer_v<T>) {
         write(dataset, ndr, static_cast<const void*>(usrobj));
@@ -92,5 +101,22 @@ namespace sand::hdf5 {
   };
 
 } // namespace sand::hdf5
+
+template <>
+struct fmt::formatter<sand::hdf5::ndarray::ndrange> : formatter<string_view> {
+  auto format(const sand::hdf5::ndarray::ndrange& r, format_context& ctx) const -> format_context::iterator {
+    auto szof = r.type().getSize();
+    std::string dims;
+    for (auto d: r) {
+      dims += std::to_string(d);
+      dims += ", ";
+    }
+    if (!dims.empty()) {
+      dims.resize(dims.size() - 2);
+    }
+    return fmt::format_to(ctx.out(), "H5<{}>({})", szof, dims);
+  }
+};
+
 
 UFW_DECLARE_COMPLEX_DATA(sand::hdf5::ndarray);

@@ -1,4 +1,8 @@
-sandreco_add_complex_data(sand_genie_reader)
+set(HDRS
+    GenieWrapper.h
+    genie_reader.hpp)
+
+sandreco_add_complex_data(sand_genie_reader EXPORT_HEADERS ${HDRS})
 
 find_package(EDepSim NAMES EDepSim REQUIRED)
 #find_package(ROOT REQUIRED COMPONENTS Geom Physics Matrix MathCore RIO Tree)
