@@ -23,7 +23,7 @@ void clustering::configure(const ufw::config& cfg)
 }
 
 clustering::clustering()
-: process({{"digi", "sand::tracker::digi"}},
+: process({{"digi", "sand::tracker::digi_container"}},
           {{"clu",  "sand::tracker::cluster_container"}})
 {
     UFW_DEBUG("Creating clustering process at {}", fmt::ptr(this));
@@ -32,6 +32,8 @@ clustering::clustering()
 }
 
 
+channel_id digi_channel(const digi_container::digi& d) { return d.signals.front().channel(); }
+
 void clustering::run()
 {
     const auto& digi = get<sand::tracker::digi>("digi");
@@ -39,47 +41,52 @@ void clustering::run()
 
     auto& clu_out = set<sand::tracker::cluster_container>("clu");
 
-    auto signals_by_station = group_signals_by_station();
+    auto digis_by_station = group_digis_by_station();
 
-    for (const auto& [station, signals] : signals_by_station)
-        clusterize_signals(signals);
+    for (const auto& [station, digis] : digis_by_station)
+        clusterize_digis(digis);
 
     //analyze_cluster_container(clu_out);
 }
 
 std::map<const geoinfo::tracker_info::station*,
-         std::vector<digi::signal>>
-clustering::group_signals_by_station()
+         digi_container::digi_collection>
+clustering::group_digis_by_station()
 {
-    const auto& digi = get<sand::tracker::digi>("digi");
+    const auto& digi = get<sand::tracker::digi_container>("digi");
     const auto& gi   = get<geoinfo>();
 
     std::map<const geoinfo::tracker_info::station*,
-             std::vector<digi::signal>> signals_by_station;
+             digi_container::digi_collection> digis_by_station;
 
-    for (const auto& signal : digi.signals)
+    for (const auto& d : digi.digis)
     {
-        const auto& wire =
-            gi.tracker().wire_at(signal.channel());
+        if (d.signals.empty()) {
+            UFW_WARN("Skipping a digi with no signals: its channel is unknown");
+            continue;
+        }
 
-        signals_by_station[wire.parent].push_back(signal);
+        const auto& wire =
+            gi.tracker().wire_at(digi_channel(d));
+
+        digis_by_station[wire.parent].push_back(d);
     }
 
-    return signals_by_station;
+    return digis_by_station;
 }
 
 
-void clustering::clusterize_signals(
-    const std::vector<digi::signal>& signals)
+void clustering::clusterize_digis(
+    const digi_container::digi_collection& digis)
 {
-    if (signals.empty())
+    if (digis.empty())
         return;
 
     auto& clu_out = set<sand::tracker::cluster_container>("clu");
 
     const auto& gi = get<geoinfo>();
 
-    const size_t n = signals.size();
+    const size_t n = digis.size();
     std::vector<char> visited(n, false);
 
     for (size_t i = 0; i < n; ++i)
@@ -89,7 +96,7 @@ void clustering::clusterize_signals(
 
         cluster_container::cluster current_cluster;
 
-        build_cluster(current_cluster, signals, visited, i, gi);
+        build_cluster(current_cluster, digis, visited, i, gi);
 
         if (!current_cluster.empty())
             clu_out.clusters.push_back(std::move(current_cluster));
@@ -99,32 +106,32 @@ void clustering::clusterize_signals(
 
 void clustering::build_cluster(
     cluster_container::cluster& cluster,
-    const std::vector<digi::signal>& signals,
+    const digi_container::digi_collection& digis,
     std::vector<char>& visited,
     size_t index,
     const geoinfo& gi)
 {
     visited[index] = true;
 
-    cluster.push_back(signals[index]);
+    cluster.push_back(digis[index]);
 
     const auto& wire_i =
-        gi.tracker().wire_at(signals[index].channel());
+        gi.tracker().wire_at(digi_channel(digis[index]));
 
         UFW_DEBUG("Wire {} has {} adjacent wires",
           wire_i.daq_channel,
           wire_i.adjacent_wires.size());
 
-    for (size_t j = 0; j < signals.size(); ++j)
+    for (size_t j = 0; j < digis.size(); ++j)
     {
         if (visited[j])
             continue;
 
         const auto& wire_j =
-            gi.tracker().wire_at(signals[j].channel());
+            gi.tracker().wire_at(digi_channel(digis[j]));
 
         if (wire_i.is_adjacent(&wire_j))
-        build_cluster(cluster, signals, visited, j, gi);
+        build_cluster(cluster, digis, visited, j, gi);
     }
 
 }
