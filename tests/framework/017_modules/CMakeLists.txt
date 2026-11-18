@@ -1,0 +1,3 @@
+sandreco_add_test_process(sand_test_shared_store_resolve)
+
+target_sources(sand_test_shared_store_resolve PRIVATE shared_store_resolve.cpp)

@@ -2,10 +2,13 @@
 
 #include <common/version.h>
 
+#include <cstdint>
 #include <ufw/data.hpp>
+#include <ufw/store.hpp>
 
 #include <set>
 #include <vector>
+
 
 namespace sand {
 
@@ -18,10 +21,12 @@ namespace sand {
     using type = T;
   };
 
+  // Shared-object collections are ufw::data::managed_collection (see
+  // SAND_SHARED_COLLECTION below); no sandreco-side counterpart is needed.
+
 } // namespace sand
 
-#ifndef __CLING__
-#  include <ufw/index.hpp>
+#include <ufw/index.hpp>
 
 class EDEPHit;
 
@@ -34,23 +39,9 @@ namespace sand {
     static bool valid(const index_type&);
   };
 
-  using truth_index = ufw::data::index<truth_adapter>;
+  using truth_index = ufw::data::index<truth_adapter, std::size_t>;
 
 } // namespace sand
-
-#else //__CLING__
-
-namespace sand {
-
-  struct truth_index {
-    std::size_t m_index;
-  };
-
-  bool operator< (const truth_index& lhs, const truth_index& rhs) { return lhs.m_index < rhs.m_index; }
-
-} // namespace sand
-
-#endif //__CLING__
 
 namespace sand {
 
@@ -95,3 +86,19 @@ UFW_DECLARE_UNMANAGED_DATA(sand::truth_index)
     using NAME = sand::spill_data_collection<NS::T>;                                                                   \
   }                                                                                                                    \
   UFW_DECLARE_MANAGED_DATA(NS::NAME)
+
+/**
+ * Declare a per-context store of shared objects addressed through typed keys, the
+ * shared-store counterpart of SAND_DATA_COLLECTION: NS::NAME becomes the collection type
+ * and the registered (streamed) name of the managed variable. UFW_DECLARE_STORE adds the
+ * NS::NAME_store() accessor and the NS::NAME_index key type, and registers the key as
+ * unmanaged data. NAME also becomes the public id of the store variable (the name used
+ * in a process's reqs/prods and as a branch name); the public id space is flat —
+ * namespaces do not qualify it — so NAME must be unique across all stores.
+ */
+#define SAND_SHARED_COLLECTION(NS, T, NAME)                                                                            \
+  UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \
+  namespace NS {                                                                                                       \
+    using NAME = ufw::data::managed_collection<NS::T>;                                                                 \
+  }                                                                                                                    \
+  UFW_DECLARE_STORE(NS, NS::NAME, NAME)
