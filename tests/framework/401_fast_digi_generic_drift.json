@@ -22,7 +22,9 @@
         "sand::drift::drift_fast_generic_digi" : {
             "drift_velocity": 0.05,
             "wire_velocity": 200.0, 
-            "sigma_tdc": 3.5 
+            "sigma_tdc": 3.5,
+            "integration_time": 100.0,
+            "dead_time": 50.0
         },
         "reqs" : {},
         "prods" : {"digi": "drift_digi"}
@@ -31,7 +33,9 @@
         "sand::test::test_drift_digi" : {
             "drift_velocity": 0.05,
             "wire_velocity": 200.0, 
-            "sigma_tdc": 3.5 
+            "sigma_tdc": 3.5,
+            "integration_time": 100.0,
+            "dead_time": 50.0
         },
         "reqs" : {"digi": "drift_digi"},
         "prods" : {}
