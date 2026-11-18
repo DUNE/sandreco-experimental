@@ -36,7 +36,7 @@ namespace sand::test {
     UFW_DEBUG("test_tracker_clustering configured at: {}", fmt::ptr(this));
   }
 
-  test_tracker_clustering::test_tracker_clustering() : process({{"clu", "sand::tracker::cluster_container"}, {"digi", "sand::tracker::digi"}}, {}) {
+  test_tracker_clustering::test_tracker_clustering() : process({{"clu", "sand::tracker::cluster_container"}, {"digi", "sand::tracker::digi_container"}}, {}) {
     UFW_INFO("Creating a test_tracker_clustering process at {}", fmt::ptr(this));
   }
 
@@ -47,14 +47,21 @@ namespace sand::test {
 
 void test_tracker_clustering::analyze_cluster_container()
     {
-        const auto& digi = get<sand::tracker::digi>("digi");
+        const auto& digi_in = get<sand::tracker::digi_container>("digi");
         const auto& clu = get<sand::tracker::cluster_container>("clu");
 
-        const size_t nSignals  = digi.signals.size();
+        const size_t nDigis    = digi_in.digis.size();
         const size_t nClusters = clu.clusters.size();
 
+        size_t nClusteredDigis = 0;
+        for (const auto& c : clu.clusters)
+            nClusteredDigis += c.size();
+
         UFW_DEBUG("============== CLUSTER ANALYSIS ==============");
-        UFW_DEBUG("Total signals  : {}", nSignals);
+        UFW_DEBUG("Total digis    : {}", nDigis);
+        // Every digi with at least one signal is assigned to exactly one cluster.
+        if (nClusteredDigis != nDigis)
+            UFW_ERROR("Clustered digis ({}) differ from input digis ({})", nClusteredDigis, nDigis);
         UFW_DEBUG("Total clusters : {}", nClusters);
 
         if (nClusters == 0) {
@@ -99,7 +106,6 @@ void test_tracker_clustering::log_clusters_sizes()
 void test_tracker_clustering::log_clusters_distribution()
     {
         const auto& clu = get<sand::tracker::cluster_container>("clu");
-        const auto& digi = get<sand::tracker::digi>("digi");
         const auto& gi   = get<geoinfo>();
 
         std::map<int,size_t> station_count;
@@ -110,11 +116,10 @@ void test_tracker_clustering::log_clusters_distribution()
             std::set<int> stations;
             std::set<int> planes;
 
-            for (auto idx : c)
+            for (const auto& d : c)
             {
-                const auto& sig  = idx;
                 const auto& wire =
-                    gi.tracker().wire_at(sig.channel());
+                    gi.tracker().wire_at(d.signals.front().channel());
 
                 stations.insert(wire.parent->daq_link);
 
@@ -141,7 +146,6 @@ void test_tracker_clustering::log_clusters_distribution()
 void test_tracker_clustering::log_clusters_topology()
     {
         const auto& clu = get<sand::tracker::cluster_container>("clu");
-        const auto& digi = get<sand::tracker::digi>("digi");
         const auto& gi   = get<geoinfo>();
 
         UFW_DEBUG("--- Cluster topology ---");
@@ -152,11 +156,10 @@ void test_tracker_clustering::log_clusters_topology()
         {
             std::vector<uint32_t> wire_ids;
 
-            for (auto idx : c)
+            for (const auto& d : c)
             {
-                const auto& sig  = idx;
                 const auto& wire =
-                    gi.tracker().wire_at(sig.channel());
+                    gi.tracker().wire_at(d.signals.front().channel());
 
                 wire_ids.push_back(
                     wire.daq_channel.channel & 0xFFFF
