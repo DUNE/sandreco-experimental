@@ -12,8 +12,10 @@ namespace sand::ecal {
     m_int_time_window = cfg.at("int_time_window");
     // Dead time window during which no new pulses can be detected
     m_dead_time_window = cfg.at("dead_time_window");
-    // Minimum number of photo-electrons required to trigger a digitized signal
-    m_pe_threshold = cfg.at("pe_threshold");
+    // Minimum signal required to trigger a digitized signal
+    m_discri_threshold = cfg.at("discri_threshold");
+    //ADC conversion factor (to get amplitude in mV)
+    m_adc_conversion = cfg.at("adc_conversion");
     // Length of the PMT signal
     m_pmt_signal_length = cfg.at("pmt_signal_length");
     //Number of samples of the PMT waveform
@@ -75,10 +77,9 @@ namespace sand::ecal {
         auto pe_count = std::distance(start_pe, this_pe); // No +1, that's wrong 
 	UFW_DEBUG("Number of pe : {}", pe_count);      
 
-        // Check if pulse meets minimum threshold for digitization
-        if (pe_count >= m_pe_threshold) {
-        // Simulate PMT waveform, to get tdc and ToT
-	  
+	// Simulate PMT waveform, to get tdc and ToT
+        if (pe_count >= 0) {
+
 	  double t_start = start_int_window - m_time_offset;
 	  reco::waveform waveform(pmt, t_start, t_start + m_pmt_signal_length, reco::waveform::source::sim, m_samples);
 	  
@@ -98,10 +99,13 @@ namespace sand::ecal {
 	    if(pmtSignal > 1.e-3) sample = pmtSignal;
 	  }
     
-   // Normalize waveform (assuming 1 pe ~ 1 mV, so peak in mV corresponds to the number of pe)  
+   // Normalize waveform (assuming 1 pe ~ 1 mV, so peak in mV corresponds to the number of pe)
+	  double areawf = std::accumulate(waveform.begin(), waveform.end(), 0.);
 	  double maxwf = *std::max_element(waveform.begin(), waveform.end());
 	  UFW_DEBUG("Max: {}", maxwf);
-	  double scaleFactor = pe_count/maxwf;
+	  //double scaleFactor = pe_count/maxwf;
+	  double scaleFactor = area/(timeStep * m_adc_conversion * maxwf);
+	  
 	  UFW_DEBUG("Scale factor: {}", scaleFactor);
 	  std::transform(waveform.begin(), waveform.end(), waveform.begin(), [scaleFactor](double x) {return x * scaleFactor;});
 	  
@@ -125,23 +129,23 @@ namespace sand::ecal {
     // Calculate tdc and ToT with fixed threshold discriminator
 
 	  auto istep = std::find_if(waveform.begin(), waveform.end(), [this](double value) {
-	    return value > m_pe_threshold;});
+	    return value > m_discri_threshold;});
 	  UFW_DEBUG("Above thr: {}", *istep);
 	  int tBin = std::distance(waveform.begin(), istep);
 	  UFW_DEBUG("Bin above thr: {}", tBin);
 	  double tdc = tBin * timeStep + t_start;
 	  UFW_DEBUG("Tdc: {}", tdc);
+	  double adc = areawf / (timeStep * m_adc_conversion)
+	  UFW_DEBUG("Adc: {}", adc);
   
 	  auto deltaT = std::count_if(waveform.begin(), waveform.end(), [this](double value) {
-	    return value > m_pe_threshold;});
+	    return value > m_discri_threshold;});
 	  double tot = deltaT * timeStep;
     
     // Create digitized signal with PMT channel, timing window, and measurements
- 	  digits_container::digit signal(pmt, tdc,
-    // Calculate ADC value proportional to collected photo-electrons
-    // for now, we just use the number of PEs as the ADC value.
-    // This can be improved by using a more realistic response function.
-					 static_cast<double>(pe_count), tot);
+ 	  digits_container::digit signal(pmt, tdc, adc, tot);
+	  // ADC simulated with a conversion factor 
+					 //	 static_cast<double>(pe_count), tot);
  
     // Collect all truth hits from photo-electrons in this pulse
 	  auto it = start_pe;
@@ -173,12 +177,13 @@ namespace sand::ecal {
 	    break;
     // Restart search from after dead time
 	  start_pe = std::next(this_pe);
-	} else {
+	}
+	//else {
     // Pulse below threshold: advance starting point and continue searching
-          if (start_pe == pe_collection.end())
-            break;
-          start_pe = std::next(start_pe);
-        }
+	//if (start_pe == pe_collection.end())
+	//  break;
+	//start_pe = std::next(start_pe);
+        //}
 	// Update integration window with next starting photo-electron
         start_int_window = start_pe->arrival_time;
         this_pe          = start_pe;

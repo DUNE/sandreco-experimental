@@ -20,8 +20,11 @@ namespace sand::ecal {
   /// @brief Dead time window preventing pulse pile-up detection
     double m_dead_time_window;
 
-  /// @brief Threshold for photo-electron detection
-    double m_pe_threshold;
+  /// @brief Discriminator threshold
+    double m_discri_threshold;
+
+  /// @brief ADC conversion factor 
+    double m_adc_conversion;
 
   /// @brief Integration interval for pmt signal 
     double m_pmt_signal_length;
