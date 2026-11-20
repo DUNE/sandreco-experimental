@@ -10,7 +10,8 @@ std::unique_ptr<float[]> ptr1(new float[4 * 5 * 6 * 8]);
 
 BOOST_AUTO_TEST_CASE(hdf5_read) {
   UFW_INFO("Reading from hdf5!");
-  ufw::config cfg = ufw::json::parse(R"({ "uri" : "../../../tests/data/test_sysmatrix_small.h5" })");
+  ufw::config cfg =
+      ufw::json::parse(std::string(R"({ "uri" : ")") + SAND_TEST_DATA_DIR + R"(/test_sysmatrix_small.h5" })");
   sand::hdf5::ndarray array(cfg);
   auto ds = array.datasets();
   BOOST_TEST(ds.size() == 2);
