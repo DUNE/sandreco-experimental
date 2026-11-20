@@ -11,7 +11,7 @@
  * A wire is a straight segment in a plane of constant z, from the readout end (head) to the far end (tail). The
  * model only uses the wire geometry, so it works for any number of views and any stereo angle.
  *
- * Two models are provided, as in the design document:
+ * Two models are provided:
  *  - wire_position: the wire is a coordinate measurement across the wire, with a flat error. Used in track finding.
  *  - wire_time: the measurement is the TDC time, predicted as
  *      t_TDC = t + L / v_wire + |d| / v_drift + t_offset
@@ -25,11 +25,19 @@
 
 namespace sand::tracker::kalman {
 
+  /**
+   * @brief Geometry of one wire, as used by the measurement models.
+   *
+   * Filled by the reconstruction modules from the wire description of the geometry service; the library does not
+   * depend on it.
+   */
   struct wire_geometry {
     double head[3]; ///< Readout end [mm]
     double tail[3]; ///< Far end [mm]
 
+    /// Plane of the wire [mm]
     double z() const { return 0.5 * (head[2] + tail[2]); }
+    /// Length of the wire [mm]
     double length() const {
       double const dx = tail[0] - head[0], dy = tail[1] - head[1];
       return std::sqrt(dx * dx + dy * dy);
@@ -49,10 +57,13 @@ namespace sand::tracker::kalman {
     double tdc_resolution = 3.5;  ///< [ns]
     double t0_offset      = 0.;   ///< Fixed electronics offset [ns]
 
+    /// Drift time [ns] for a distance r [mm] from the wire
     double drift_time(double r) const { return r / drift_velocity; }
+    /// Drift distance [mm] for a drift time t [ns]
     double drift_distance(double t) const { return t * drift_velocity; }
   };
 
+  /// Predicted measurement and its derivative with respect to the state.
   struct prediction {
     double value{0}; ///< Predicted measurement
     row_t H{};       ///< d(value)/d(state)
@@ -102,6 +113,12 @@ namespace sand::tracker::kalman {
    * The derivatives are evaluated with the left-right side fixed: |d| is replaced by side * d, so that the model is
    * smooth across the wire. This is what the deterministic annealing filter needs, which treats the two sides as two
    * competing measurements.
+   */
+  /**
+   * @param s    State on the wire plane
+   * @param w    Wire
+   * @param side Left-right hypothesis: +1 or -1, the sign of the distance d
+   * @param cal  Reconstruction calibration
    */
   inline prediction wire_time(const state& s, const wire_geometry& w, int side, const reco_calibration& cal) {
     double d, L;

@@ -18,19 +18,22 @@
 
 namespace sand::tracker::kalman {
 
+  /// Output of update().
   struct update_result {
-    state out;
-    double residual{0}; ///< Measured minus predicted, before the update
-    double chi2{0};     ///< Predicted chi2 increment r^2 / (H C H^T + V)
-    double residual_after{0};
+    state out;                ///< Updated state
+    double residual{0};       ///< Measured minus predicted, before the update
+    double chi2{0};           ///< Predicted chi2 increment r^2 / (H C H^T + V)
+    double residual_after{0}; ///< Measured minus predicted, after the update
   };
 
   /**
+   * @brief Kalman update of a state with one scalar measurement.
    * @param in        State on the measurement plane
    * @param pred      Predicted value and derivative row
    * @param measured  Measured value
    * @param variance  Measurement variance
    * @param weight    DAF weight, 0 < weight <= 1
+   * @return Updated state, residuals and chi2 increment
    */
   inline update_result update(const state& in, const prediction& pred, double measured, double variance,
                               double weight = 1.) {

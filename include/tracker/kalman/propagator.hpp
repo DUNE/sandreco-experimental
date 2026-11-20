@@ -26,11 +26,13 @@
 
 namespace sand::tracker::kalman {
 
+  /// Settings of the Runge-Kutta propagation.
   struct propagator_config {
     double max_step  = 50.; ///< Maximum Runge-Kutta step [mm]
     double max_slope = 1e3; ///< Propagation fails if |tx| or |ty| exceed this
   };
 
+  /// Output of propagate().
   struct propagation_result {
     state out;             ///< State on the target plane, covariance transported as F C F^T
     matrix_t F;            ///< Transport Jacobian

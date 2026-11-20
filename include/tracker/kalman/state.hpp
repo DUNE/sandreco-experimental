@@ -23,33 +23,43 @@
  *
  * Since z is the independent variable, the state also carries the sign of p_z (direction): +1 for a particle moving
  * towards larger z, -1 for one moving towards smaller z.
+ *
+ * See docs/kalman_filter.md for an overview of the library.
  */
 
+/**
+ * @namespace sand::tracker::kalman
+ * @brief Kalman filter library for the drift chamber tracker: track state, propagation in a magnetic field, wire
+ * measurement models, update and smoother. Header only, independent of the digit format and of the geometry service.
+ */
 namespace sand::tracker::kalman {
 
-  inline constexpr unsigned int s_dim = 6;
+  inline constexpr unsigned int s_dim = 6; ///< Dimension of the state vector
 
   /// Indices of the state vector components.
   enum par : unsigned int { X = 0, Y = 1, TX = 2, TY = 3, QOP = 4, T = 5 };
 
-  using vector_t     = ROOT::Math::SVector<double, s_dim>;
-  using matrix_t     = ROOT::Math::SMatrix<double, s_dim, s_dim>;
-  using sym_matrix_t = ROOT::Math::SMatrix<double, s_dim, s_dim, ROOT::Math::MatRepSym<double, s_dim>>;
+  using vector_t     = ROOT::Math::SVector<double, s_dim>;        ///< State vector
+  using matrix_t     = ROOT::Math::SMatrix<double, s_dim, s_dim>; ///< General 6 x 6 matrix (Jacobians)
+  using sym_matrix_t = ROOT::Math::SMatrix<double, s_dim, s_dim, ROOT::Math::MatRepSym<double, s_dim>>; ///< Covariance
   using row_t        = ROOT::Math::SVector<double, s_dim>; ///< A 1 x s_dim measurement matrix, stored as a vector
 
   /// Physical constants in the units above.
   inline constexpr double s_c     = 299.792458;  ///< speed of light [mm/ns]
   inline constexpr double s_kappa = 0.299792458; ///< p[MeV] = s_kappa * B[T] * R[mm] for a unit charge
 
+  /// Track state on the plane z: parameters, covariance and direction of motion.
   struct state {
     double z{0};        ///< Reference plane [mm]
     vector_t par{};     ///< (x, y, tx, ty, q/p, t)
     sym_matrix_t cov{}; ///< Covariance of par
     int direction{+1};  ///< Sign of p_z
 
+    /// Momentum [MeV]; HUGE_VAL for q/p = 0 (straight track)
     double momentum() const { return par[QOP] != 0 ? 1. / std::abs(par[QOP]) : HUGE_VAL; }
+    /// Sign of q/p: +1, -1, or 0 for a straight track
     int charge() const { return par[QOP] > 0 ? +1 : (par[QOP] < 0 ? -1 : 0); }
-    /// Unit direction of motion
+    /// Unit vector of the direction of motion, including the sign of p_z
     void direction_cosines(double& ux, double& uy, double& uz) const {
       double const n = std::sqrt(1. + par[TX] * par[TX] + par[TY] * par[TY]);
       ux             = direction * par[TX] / n;
@@ -58,6 +68,7 @@ namespace sand::tracker::kalman {
     }
   };
 
+  /// 6 x 6 identity matrix
   inline matrix_t identity() {
     matrix_t m;
     for (unsigned int i = 0; i < s_dim; ++i) {
