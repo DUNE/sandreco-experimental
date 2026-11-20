@@ -332,7 +332,7 @@ namespace sand::test {
                  j, cluster.E, group.energy);
 
       double e{}, e2{}, t{}, earliest{};
-      double sum[3]{}, sum_sq[3]{};
+      double sum[3]{};
       for (auto const* hit : group.hits) {
         double const de = hit->GetEnergyDeposit();
         auto const mid  = 0.5 * (hit->GetStart() + hit->GetStop());
@@ -342,16 +342,29 @@ namespace sand::test {
         t += de * mid.T();
         for (int k{}; k != 3; ++k) {
           sum[k] += de * c[k];
-          sum_sq[k] += de * c[k] * c[k];
         }
         earliest = (hit == group.hits.front()) ? hit->GetStart().T() : std::min(earliest, hit->GetStart().T());
       }
-      double const neff = e * e / e2;
-      double mean[3]{}, spread[3]{};
+      double mean[3]{};
       for (int k{}; k != 3; ++k) {
-        mean[k]          = sum[k] / e;
-        double const var = sum_sq[k] / e - mean[k] * mean[k];
-        spread[k] = (group.hits.size() < 2 || neff <= 1. || var <= 0.) ? 0. : std::sqrt(neff / (neff - 1.) * var);
+        mean[k] = sum[k] / e;
+      }
+
+      // Second pass, as the reco: squared deviations from the barycenter. The one-pass <x²> - <x>² cancels
+      // catastrophically at SAND coordinates (~2e4 mm) and neff / (neff - 1) amplifies the rounding noise.
+      double dev_sq[3]{};
+      for (auto const* hit : group.hits) {
+        double const de = hit->GetEnergyDeposit();
+        auto const mid  = 0.5 * (hit->GetStart() + hit->GetStop());
+        double const c[3]{mid.X(), mid.Y(), mid.Z()};
+        for (int k{}; k != 3; ++k) {
+          dev_sq[k] += de * (c[k] - mean[k]) * (c[k] - mean[k]);
+        }
+      }
+      double const neff = e * e / e2;
+      double spread[3]{};
+      for (int k{}; k != 3; ++k) {
+        spread[k] = (group.hits.size() < 2 || neff <= 1.) ? 0. : std::sqrt(neff / (neff - 1.) * dev_sq[k] / e);
       }
 
       UFW_ASSERT(near(cluster.position, mean[0] * 0.1, mean[1] * 0.1, mean[2] * 0.1),
@@ -492,10 +505,10 @@ namespace sand::test {
           auto const& points    = trajectory(id).GetTrajectoryPoints();
           auto const in_ecal    = points.find(sand::subdetector_t::ECAL);
           born[k]               = in_ecal != points.end()
-                 && std::any_of(in_ecal->second.begin(), in_ecal->second.end(), [&](EDEPTrajectoryPoint const& point) {
+                               && std::any_of(in_ecal->second.begin(), in_ecal->second.end(), [&](EDEPTrajectoryPoint const& point) {
                       return point.GetPosition().T() == true_part.time
                           && same_position_cm(true_part.start_pos, point.GetPosition());
-                    });
+                                  });
         }
       }
     }
