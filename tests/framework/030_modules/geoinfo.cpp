@@ -7,6 +7,12 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <map>
+#include <optional>
+
 namespace sand::test {
 
   class geoinfo : public ufw::process {
@@ -21,10 +27,19 @@ namespace sand::test {
     void test_ecal_neighbours(const sand::geoinfo::ecal_info& ecal,
                               const std::vector<sand::geoinfo::ecal_info::cell_id>& cell_ids);
     void test_tracker();
+    void test_tracker_materials(const sand::geoinfo::tracker_info& tracker);
 
    private:
     std::vector<std::string> m_init;
     std::vector<std::string> m_test;
+    /// Optional expectations on the tracker material, from the "tracker_materials" configuration object:
+    /// carbon_thickness and c3h6_thickness [mm], target thickness on the test geometry;
+    /// carbon_budget [min, max], sum of x/X0 over a graphite station;
+    /// non_target_budget [min, max], sum of x/X0 over the layers that are not the target in a graphite station.
+    std::optional<double> m_carbon_thickness;
+    std::optional<double> m_c3h6_thickness;
+    std::optional<std::array<double, 2>> m_carbon_budget;
+    std::optional<std::array<double, 2>> m_non_target_budget;
   };
 
   geoinfo::geoinfo() : process({}, {}) {}
@@ -33,6 +48,21 @@ namespace sand::test {
     process::configure(cfg);
     m_init = cfg.value("init", std::vector<std::string>());
     m_test = cfg.value("test", std::vector<std::string>());
+    if (cfg.contains("tracker_materials")) {
+      const auto& tm = cfg.at("tracker_materials");
+      if (tm.contains("carbon_thickness")) {
+        m_carbon_thickness = tm.at("carbon_thickness").get<double>();
+      }
+      if (tm.contains("c3h6_thickness")) {
+        m_c3h6_thickness = tm.at("c3h6_thickness").get<double>();
+      }
+      if (tm.contains("carbon_budget")) {
+        m_carbon_budget = tm.at("carbon_budget").get<std::array<double, 2>>();
+      }
+      if (tm.contains("non_target_budget")) {
+        m_non_target_budget = tm.at("non_target_budget").get<std::array<double, 2>>();
+      }
+    }
   }
 
   void geoinfo::run() {
@@ -222,7 +252,7 @@ namespace sand::test {
     for (const auto cid : cell_ids) {
       const auto& cell = ecal.at(cid);
       cell_geometry geometry{cid, cell.offset2position(0.)};
-      // For endcap cells, find the longest straight section along Y and record its min/max Y coordinates. 
+      // For endcap cells, find the longest straight section along Y and record its min/max Y coordinates.
       // Check that the straight section exists and is non-zero length. This is used to determine if two endcap cells overlap in Y.
       if (cid.region != geo_id::region_t::BARREL) {
         // offset2position(0.) provides the XZ coordinates used for the endcap distance check.
@@ -266,7 +296,7 @@ namespace sand::test {
       const auto& a     = cells[i];
       const bool barrel = a.id.region == geo_id::region_t::BARREL;
       for (size_t j = i; j < cells.size(); ++j) {
-        const auto& b                 = cells[j];
+        const auto& b = cells[j];
         // transverse distance is in plane YZ for barrel cells, and in plane XZ for endcap cells.
         const double transverse       = barrel ? a.position.y() - b.position.y() : a.position.x() - b.position.x();
         const double dz               = a.position.z() - b.position.z();
@@ -277,7 +307,7 @@ namespace sand::test {
         const bool expected  = a.id.region == b.id.region && y_overlap && distance_squared < threshold * threshold;
         const bool forward   = std::binary_search(a.neighbours.begin(), a.neighbours.end(), b.id.raw);
         const bool reverse   = std::binary_search(b.neighbours.begin(), b.neighbours.end(), a.id.raw);
-        // Expected == false is expected for all cells that are not neighbours. 
+        // Expected == false is expected for all cells that are not neighbours.
         UFW_ASSERT(forward == expected && reverse == expected,
                    "[ECAL NEIGHBOUR CELLS] (region,module,row,column) ({},{},{},{}) <-> ({},{},{},{}): "
                    "expected={}, forward={}, reverse={}, projected distance={} mm",
@@ -299,7 +329,93 @@ namespace sand::test {
     UFW_INFO("Target mass report");
     for (auto& [tgt, mass] : targets) {
       UFW_INFO(" - {}:\t\t{} kg", target_names[tgt > 3 ? 3 : tgt], mass);
+      UFW_ASSERT(tgt == sand::geoinfo::tracker_info::TRKONLY || mass > 0, "Target mass {} kg is not positive", mass);
     }
+    test_tracker_materials(tracker);
+  }
+
+  void geoinfo::test_tracker_materials(const sand::geoinfo::tracker_info& tracker) {
+    using tracker_info   = sand::geoinfo::tracker_info;
+    constexpr double tol = 1e-6; // mm
+    // rho * X0 [g/cm2], independent of the density in the geometry: Geant4 10.6.3 G4_GRAPHITE (193.2 mm at
+    // 2.21 g/cm3) and G4_POLYPROPYLENE (497.5 mm at 0.900 g/cm3).
+    const std::map<std::string, double> x0_g_cm2 = {{"Graphite", 42.70}, {"C3H6", 44.77}};
+    // Wire materials: the sampling line must not cross a wire head-on (in the STT it passes between wires).
+    const std::array<std::string, 2> wire_materials = {"Gold", "Tungsten"};
+    bool printed[3]                                 = {false, false, false};
+    std::size_t n_layers                            = 0;
+    for (const auto& sptr : tracker.stations()) {
+      const tracker_info::station& stat = *sptr;
+      const auto& layers                = stat.layers;
+      UFW_ASSERT(!layers.empty(), "Station at z = {} mm has no material layers", stat.top_north.z());
+      n_layers += layers.size();
+      for (std::size_t i = 0; i != layers.size(); ++i) {
+        const auto& l = layers[i];
+        UFW_ASSERT(l.z_max > l.z_min, "Layer {} ({}) has thickness {} mm", i, l.material, l.thickness());
+        UFW_ASSERT(i == 0 || l.z_min >= layers[i - 1].z_max - tol, "Layers {} and {} overlap in z", i - 1, i);
+        UFW_ASSERT(l.radiation_length > 0 && l.density > 0, "Layer {} ({}) has X0 {} mm and density {} g/cm3", i,
+                   l.material, l.radiation_length, l.density);
+        UFW_ASSERT(l.z_over_a > 0.3 && l.z_over_a < 1.0, "Layer {} ({}) has <Z/A> = {}", i, l.material, l.z_over_a);
+        UFW_ASSERT(l.mean_excitation > 10e-6 && l.mean_excitation < 1e-3, "Layer {} ({}) has I = {} MeV", i, l.material,
+                   l.mean_excitation);
+        UFW_ASSERT(std::find(wire_materials.begin(), wire_materials.end(), l.material) == wire_materials.end(),
+                   "Layer {} at z [{}, {}] mm is made of wire material {}", i, l.z_min, l.z_max, l.material);
+      }
+      static const char* station_names[] = {"tracking", "C3H6", "graphite"};
+      UFW_INFO("[TRACKER MATERIAL] station z [{:.2f}, {:.2f}] mm {:<8} {:3} layers, radiation_lengths() = {:.5f}",
+               layers.front().z_min, layers.back().z_max, station_names[stat.target < 3 ? stat.target : 0],
+               layers.size(), stat.radiation_lengths());
+      if (stat.target == tracker_info::TRKONLY) {
+        continue;
+      }
+      // The target is the thickest layer of the target material.
+      const std::string target_name              = stat.target == tracker_info::CARBON ? "Graphite" : "C3H6";
+      const tracker_info::material_layer* target = nullptr;
+      for (const auto& l : layers) {
+        if (l.material == target_name && (!target || l.thickness() > target->thickness())) {
+          target = &l;
+        }
+      }
+      UFW_ASSERT(target, "Station at z = {} mm has no {} layer", stat.top_north.z(), target_name);
+      UFW_ASSERT(std::abs(target->thickness() - stat.target_box.z()) < tol,
+                 "{} layer is {} mm thick, the target box {} mm", target_name, target->thickness(),
+                 stat.target_box.z());
+      UFW_ASSERT(std::abs(target->density - stat.target_density) < 1e-9, "Target density mismatch");
+      const double rho_x0 = target->density * target->radiation_length / 10.0; // g/cm2
+      UFW_ASSERT(std::abs(rho_x0 / x0_g_cm2.at(target_name) - 1.0) < 0.01, "{} has rho X0 = {} g/cm2", target_name,
+                 rho_x0);
+      UFW_ASSERT(target->sternheimer.has_value(), "{} has no Sternheimer parameters", target_name);
+      const auto& expected_thickness = stat.target == tracker_info::CARBON ? m_carbon_thickness : m_c3h6_thickness;
+      if (expected_thickness) {
+        UFW_ASSERT(std::abs(target->thickness() - *expected_thickness) < tol, "{} target is {} mm thick, expected {}",
+                   target_name, target->thickness(), *expected_thickness);
+      }
+      const double budget = stat.radiation_lengths();
+      if (stat.target == tracker_info::CARBON) {
+        if (m_carbon_budget) {
+          UFW_ASSERT(budget > (*m_carbon_budget)[0] && budget < (*m_carbon_budget)[1],
+                     "Graphite station budget {} X0 outside [{}, {}]", budget, (*m_carbon_budget)[0],
+                     (*m_carbon_budget)[1]);
+        }
+        if (m_non_target_budget) {
+          const double rest = budget - target->x_over_x0();
+          UFW_ASSERT(rest > (*m_non_target_budget)[0] && rest < (*m_non_target_budget)[1],
+                     "Graphite station budget without target {} X0 outside [{}, {}]", rest, (*m_non_target_budget)[0],
+                     (*m_non_target_budget)[1]);
+        }
+      }
+      if (!printed[stat.target]) {
+        printed[stat.target] = true;
+        UFW_INFO("[TRACKER MATERIAL] {} station, {} layers, {} X0 in total:", target_name, layers.size(), budget);
+        for (const auto& l : layers) {
+          UFW_INFO("[TRACKER MATERIAL]   z [{:.4f}, {:.4f}] mm {:9.4f} mm {:<16} X0 {:.1f} mm rho {:.4g} g/cm3 "
+                   "Z/A {:.4f} I {:.1f} eV x/X0 {:.3e}{}",
+                   l.z_min, l.z_max, l.thickness(), l.material, l.radiation_length, l.density, l.z_over_a,
+                   l.mean_excitation * 1e6, l.x_over_x0(), l.sternheimer ? " (density effect)" : "");
+        }
+      }
+    }
+    UFW_INFO("[TRACKER MATERIAL] {} stations, {} layers checked", tracker.stations().size(), n_layers);
   }
 
 }; // namespace sand::test
