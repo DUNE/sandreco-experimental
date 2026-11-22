@@ -78,6 +78,11 @@ namespace sand::tracker::kalman {
     return kalman::propagate(in, z_target, mass, *m_field, m_propagator);
   }
 
+  std::optional<propagation_result> engine::propagate(const state& in, double z_target, double mass,
+                                                      const material_budget& material) const {
+    return kalman::propagate(in, z_target, mass, *m_field, material, m_propagator);
+  }
+
   prediction engine::wire_time(const state& s, const wire_geometry& w, int side) const {
     return kalman::wire_time(s, w, side, m_calibration);
   }

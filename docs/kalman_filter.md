@@ -1,13 +1,14 @@
 # Kalman filter library for the tracker
 
 The complex data module `sand_tracker_kalman`, in `src/data/tracker/kalman/`, contains the math of the track fit for
-the SAND tracker: the track state, its propagation through the magnetic field, the measurement models for a single
-wire, the Kalman update and the smoother. Nothing in it is specific to one tracker technology: the measurement model
-applies to drift chambers and straw tubes alike, and is the same model used by the fast digitizations
-`drift_fast_digi` and `stt_fast_digi`.
+the SAND tracker: the track state, its propagation through the magnetic field and the material, the measurement
+models for a single wire, the Kalman update and the smoother. Nothing in it is specific to one tracker technology: the
+measurement model applies to drift chambers and straw tubes alike, and is the same model used by the fast
+digitizations `drift_fast_digi` and `stt_fast_digi`.
 
 Modules link `sand_tracker_kalman` and include the headers as `<kalman/state.hpp>`, `<kalman/propagator.hpp>`,
-`<kalman/measurement.hpp>`, `<kalman/filter.hpp>`, `<kalman/field.hpp>` and `<kalman/engine.hpp>`. The
+`<kalman/material.hpp>`, `<kalman/measurement.hpp>`, `<kalman/filter.hpp>`, `<kalman/field.hpp>` and
+`<kalman/engine.hpp>`. The
 implementation is in `.cpp` files and depends on ROOT `SMatrix` and on ufw (for the engine configuration).
 
 The math knows nothing about digits or about the geometry service. The reconstruction modules read the digits and the
@@ -63,12 +64,101 @@ dt/dz   = d * N * sqrt(1 + m^2 (q/p)^2) / c
 ```
 
 The transport Jacobian `F` is integrated with the same Runge-Kutta steps, and the covariance is transported as
-`F C F^T`. The target plane can be on either side of the starting one. The mass hypothesis enters only the time of
-flight. Energy loss and multiple scattering are not included yet: they will be added by a material model between
-planes.
+`F C F^T`. The target plane can be on either side of the starting one. In this overload the mass hypothesis enters
+only the time of flight.
 
-The function returns nothing if the track becomes steeper than `propagator_config::max_slope`, which happens for
-tracks that curl back in the field.
+`propagate(state, z_target, mass, field, material, config)` also crosses the layers returned by the material budget
+(see "Material" below). For each layer, in order, it propagates in the field to the layer centre, changes q/p by the
+energy loss and adds the scattering noise `Q`; then it propagates to `z_target`. The covariance is accumulated step by
+step as `C <- F_k C F_k^T + Q_k`, so the returned covariance includes the noise, while the returned `F` is the
+product of all the Jacobians (field and material steps) without noise, which is what the smoother expects. With no
+layers in the interval the result is identical to the field-only overload.
+
+Both overloads return nothing if the track becomes steeper than `propagator_config::max_slope`, which happens for
+tracks that curl back in the field; the material overload also returns nothing if the particle stops in a layer.
+
+## Material (`material.hpp`)
+
+Material is a sequence of thin slabs perpendicular to z. A `layer` has its centre `z` and `thickness` along z [mm],
+the radiation length `radiation_length` [mm], `density` [g/cm3], `z_over_a` [mol/g], `mean_excitation` I [MeV] and
+`sternheimer`, the density effect parameters (`density_effect`: a, k, x0, x1, C-bar, delta0, as in the PDG tables of
+atomic and nuclear properties). Left at its default, `sternheimer` disables the density effect correction.
+
+`material_budget` is an interface, like `field`: `crossed_layers(state, z_target)` returns the layers between the
+plane of the state and `z_target`, ordered in the direction of propagation. The interval is half-open according to
+the direction of motion: with `lo` and `hi` the smaller and larger of `s.z` and `z_target`, a layer is included if its
+centre lies in `(lo, hi]` for `direction = +1` and in `[lo, hi)` for `direction = -1` (`layer_in_interval`).
+
+In other words, a layer on a plane belongs to the segment that reaches that plane along the motion, and a state on a
+plane is always physically downstream of the material on it. Propagating along the motion (forward filter), a layer
+on the starting plane is excluded and one on the target plane included; propagating against the motion (backward
+fit), the other way round. A propagation and its reverse cross the same layers, so the two passes agree on the
+state at each plane, a round trip is the identity even with layers on the end planes, and no layer is counted twice.
+
+The state is passed, not only its z, because an implementation stepping through the geometry needs position and
+direction.
+
+Implementations:
+
+- `fixed_material_budget`: a fixed list of layers, independent of x and y. Used in the tests.
+- planned, outside this module: one built from the tracker stations of `tracker_info` (targets and chamber walls
+  as layers at fixed z), and one stepping through the ROOT geometry along the track.
+
+The engine does not own a material budget yet: `engine.propagate(state, z_target, mass, material)` takes it from the
+caller and uses the field and the propagator settings of the engine. There are no configuration keys for the
+material. The budget built from `tracker_info` will come with a later change, which will also decide who owns it.
+
+The material step is done by `material_step(par, layer, mass, loss_sign)`, built from free functions that can be
+used and tested on their own. With `N^2 = 1 + tx^2 + ty^2`:
+
+- path length in the layer: `L = thickness * N`;
+- Highland: `theta0 = 13.6 MeV / (beta p) * |q| * sqrt(L/X0) * (1 + 0.038 ln(L q^2 / (X0 beta^2)))`;
+- noise on the slopes: `Q(tx,tx) = theta0^2 (1 + tx^2) N^2`, `Q(ty,ty) = theta0^2 (1 + ty^2) N^2`,
+  `Q(tx,ty) = theta0^2 tx ty N^2`, all other elements zero;
+- mean energy loss, Bethe-Bloch with the density effect correction:
+
+  ```
+  dE/dx = K q^2 (Z/A) rho / beta^2 * [ 0.5 ln(2 me beta^2 gamma^2 Tmax / I^2) - beta^2 - delta/2 ]
+  Tmax  = 2 me beta^2 gamma^2 / (1 + 2 gamma me/M + (me/M)^2)
+
+  X = log10(beta gamma)
+  delta = 2 ln(10) X - C                        X >= x1
+        = 2 ln(10) X - C + a (x1 - X)^k         x0 <= X < x1
+        = delta0 10^(2 (X - x0))                X < x0  (zero for insulators)
+  ```
+
+  with `K = 0.307075` MeV cm2/mol and `me = 0.51099895` MeV (rho in g/cm3, so dE/dx comes out in MeV/cm and is
+  converted to MeV/mm). The delta parametrisation is the one of Sternheimer, Berger and Seltzer, Atomic Data and
+  Nuclear Data Tables 30 (1984) 261, with the parameters tabulated per material by the PDG (atomic and nuclear
+  properties, muon energy loss tables). With the PDG parameters for graphite this reproduces the ionisation column of
+  the PDG muon table within 0.05% around minimum ionisation. Without them the formula overestimates dE/dx in graphite
+  by about 4% at 300 MeV/c, 10% at 1 GeV/c and 15% at 3 GeV/c for a muon, so the budget implementations should fill
+  them.
+
+The particle loses the energy when the propagation goes along its motion (`sign(z_target - s.z) == direction`) and
+gains it when it goes against the motion, as in the backward fit and in the smoother (`energy_loss_sign`). The new
+momentum gives the new q/p, with the charge sign unchanged. The time is not changed by the material step: the field
+propagation already accounts for the path, with the momentum after each layer.
+
+The energy after a layer solves `E1 = E0 - s L dE/dx(Em)` with `Em = (E0 + E1)/2` and `s = +1` for a loss, `-1` for a
+gain (implicit midpoint, solved by fixed-point iteration). This scheme is symmetric: losing and then gaining the energy
+in the same layer gives back the initial energy, so forward and backward propagation through the same layers are
+inverse to each other. The scattering angle is evaluated at the same midpoint momentum.
+
+The material Jacobian is the identity except for the q/p row. Its elements d(q/p)/d(q/p), d(q/p)/dtx and
+d(q/p)/dty (the last two through the path length) are analytic given dE/dx and its derivative with respect to the
+energy, which is taken by central differences. The noise is not differentiated.
+
+What is neglected:
+
+- shell corrections and higher-order terms of Bethe-Bloch (the PDG table includes them and agrees with this formula
+  within 0.05% at 290-390 MeV/c in graphite);
+- the small step of the Sternheimer delta at X = x0 for conductors (fitted separately in each range);
+- energy-loss straggling: the energy loss is the mean, with no contribution to the q/p variance;
+- the logarithmic term of Highland is applied to each layer separately. For a thick scatterer split into many thin
+  layers, or for many thin layers in sequence, the sum of the per-layer variances is smaller than the variance of the
+  whole thickness, because the log term is computed with the thin per-layer L/X0;
+- charges other than ±1: the state carries only the sign of the charge.
 
 ## Wire measurements (`measurement.hpp`)
 
@@ -110,6 +200,10 @@ per job and every module sees the same instance; and since the library is compil
 every module runs the same code, instead of each one compiling its own copy of header-only functions (which
 duplicates code and can give slightly different numerical results).
 
+The engine owns the magnetic field, the reconstruction calibration and the propagator settings. The material
+description will be added to it when it comes from `tracker_info`, in a later merge request; until then the caller
+passes a `material_budget` to `engine.propagate(state, z_target, mass, material)`.
+
 The engine is configured in the `"globals"` section of the job:
 
 ```json
@@ -145,6 +239,8 @@ CMakeLists. The engine exposes
 
 - `field()`, `calibration()`, `propagator_settings()`: the shared state;
 - `propagate(state, z_target, mass)`: `propagate` with the field and settings of the engine;
+- `propagate(state, z_target, mass, material)`: the material overload of `propagate`, with the field and settings of
+  the engine and the material budget given by the caller;
 - `wire_time(state, wire, side)`: `wire_time` with the calibration of the engine.
 
 The free functions stay available with explicit arguments (the engine calls them), for tests and for code that needs
@@ -164,7 +260,9 @@ wire_geometry w;       // filled from the wire description of the geometry servi
 double tdc;            // from the digit
 int side;              // left-right hypothesis
 
-auto prop = kf.propagate(current, w.z(), 105.66);
+fixed_material_budget const material(layers); // or a budget built from the geometry
+
+auto prop = kf.propagate(current, w.z(), 105.66, material);
 if (!prop) {
   // track lost
 }
@@ -180,6 +278,12 @@ The standalone tests are in `tests/standalone/kalman/`:
 
 - `kalman_propagator`: helix in a uniform field against the analytic solution, round trip forward and back,
   Jacobian against finite differences in both directions, particle moving towards smaller z;
+- `kalman_material`: Highland and Bethe-Bloch reference values (Bethe-Bloch against the PDG table), density effect
+  parametrisation, process noise, interval convention of the material budget, round trip with layers on the end
+  planes, direction of the energy loss, stopping particle, empty budget identical to the field-only propagation,
+  Jacobian with field and material against finite differences, pulls of a toy Monte Carlo with scattering and
+  energy loss, `engine.propagate` with material identical to the free function with the field and settings of the
+  engine;
 - `kalman_filter`: closest approach distance, derivatives of the time model against finite differences, pulls of
   the fitted parameters on toy tracks;
 - `kalman_engine`: engine built from a JSON configuration, defaults and configured values, rejection of invalid
@@ -195,6 +299,8 @@ edep-sim I/O library.
 ## Validation so far
 
 - Propagator against edep-sim truth (1 GeV μ⁻ in the tracker): the mean deviation is a few μm with the field on,
-  against about 1 mm with the field off. The spread, about 0.2 mm, is multiple scattering, not yet modelled. The
-  time of flight agrees within 0.1 ps.
+  against about 1 mm with the field off. The spread, about 0.2 mm, is multiple scattering. The time of flight agrees
+  within 0.1 ps. This comparison predates the material model and used the field-only propagation.
 - Toy fits: pull means within ±0.12 and widths between 0.99 and 1.09 for all parameters.
+- Material toy (2000 muons at 1 GeV/c, ten 4 mm graphite layers, 0.6 T): pulls of x, y, tx, ty at the end with means
+  within ±0.03 and widths between 0.96 and 1.00.

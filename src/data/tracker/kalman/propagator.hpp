@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kalman/field.hpp>
+#include <kalman/material.hpp>
 #include <kalman/state.hpp>
 
 #include <optional>
@@ -21,6 +22,8 @@
  * The Jacobian F = d(state at z1)/d(state at z0) is integrated together with the state with the same fourth-order
  * Runge-Kutta scheme, using dF/dz = A(s) F with A = df/ds. Derivatives of the field with respect to position are
  * neglected, which is exact for a uniform field.
+ *
+ * A second overload of propagate() adds the material effects of the layers crossed (see material.hpp).
  */
 
 namespace sand::tracker::kalman {
@@ -67,5 +70,27 @@ namespace sand::tracker::kalman {
    */
   std::optional<propagation_result> propagate(const state& in, double z_target, double mass, const field& bfield,
                                               const propagator_config& cfg = {});
+
+  /**
+   * @brief Propagate a state to the plane z_target through a magnetic field and material.
+   * @param in       Input state (its covariance is transported).
+   * @param z_target Target plane [mm]. May be upstream or downstream of in.z.
+   * @param mass     Mass hypothesis [MeV], used for the time of flight, the energy loss and the scattering angle.
+   * @param bfield   Magnetic field.
+   * @param material Material budget, queried once for the layers between in.z and z_target.
+   * @param cfg      Runge-Kutta settings.
+   * @return The propagated state, or nothing if the track becomes too steep or stops in the material.
+   *
+   * For each crossed layer, in order: propagate in the field to the layer centre, apply the energy loss to q/p and
+   * add the scattering noise; then propagate to z_target. The energy is lost when the propagation goes along the
+   * motion and gained when it goes against it (see energy_loss_sign()).
+   *
+   * The covariance is accumulated step by step as C <- F_k C F_k^T + Q_k, so the returned covariance includes the
+   * noise. The returned F is the product of all the Jacobians, field and material steps, without noise, as the
+   * smoother expects. path_length is the total length. With no layers crossed the result is the same as the
+   * field-only propagate().
+   */
+  std::optional<propagation_result> propagate(const state& in, double z_target, double mass, const field& bfield,
+                                              const material_budget& material, const propagator_config& cfg = {});
 
 } // namespace sand::tracker::kalman

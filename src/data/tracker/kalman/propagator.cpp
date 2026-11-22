@@ -94,4 +94,40 @@ namespace sand::tracker::kalman {
     return res;
   }
 
+  std::optional<propagation_result> propagate(const state& in, double z_target, double mass, const field& bfield,
+                                              const material_budget& material, const propagator_config& cfg) {
+    auto const layers = material.crossed_layers(in, z_target);
+    if (layers.empty()) {
+      return propagate(in, z_target, mass, bfield, cfg);
+    }
+    int const loss_sign = energy_loss_sign(in.direction, in.z, z_target);
+
+    propagation_result res;
+    res.F     = identity();
+    state cur = in;
+    for (auto const& l : layers) {
+      auto const seg = propagate(cur, l.z, mass, bfield, cfg);
+      if (!seg) {
+        return std::nullopt;
+      }
+      auto const mat = material_step(seg->out.par, l, mass, loss_sign);
+      if (!mat) {
+        return std::nullopt;
+      }
+      cur     = seg->out;
+      cur.par = mat->par;
+      cur.cov = ROOT::Math::Similarity(mat->F, seg->out.cov) + mat->noise;
+      res.F   = mat->F * seg->F * res.F;
+      res.path_length += seg->path_length;
+    }
+    auto const last = propagate(cur, z_target, mass, bfield, cfg);
+    if (!last) {
+      return std::nullopt;
+    }
+    res.out = last->out;
+    res.F   = last->F * res.F;
+    res.path_length += last->path_length;
+    return res;
+  }
+
 } // namespace sand::tracker::kalman

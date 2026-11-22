@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kalman/field.hpp>
+#include <kalman/material.hpp>
 #include <kalman/measurement.hpp>
 #include <kalman/propagator.hpp>
 #include <kalman/state.hpp>
@@ -91,6 +92,18 @@ namespace sand::tracker::kalman {
      * @return As sand::tracker::kalman::propagate()
      */
     std::optional<propagation_result> propagate(const state& in, double z_target, double mass) const;
+
+    /**
+     * @brief Propagate a state to the plane z_target through the material, with the field and the settings of the
+     * engine.
+     * @param in       Input state (its covariance is transported)
+     * @param z_target Target plane [mm]
+     * @param mass     Mass hypothesis [MeV], used for the time of flight, the energy loss and the scattering angle
+     * @param material Material budget, provided by the caller: the engine does not own a material description yet
+     * @return As the material overload of sand::tracker::kalman::propagate()
+     */
+    std::optional<propagation_result> propagate(const state& in, double z_target, double mass,
+                                                const material_budget& material) const;
 
     /**
      * @brief Predicted TDC time for a wire, with the calibration of the engine.
