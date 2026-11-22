@@ -8,6 +8,7 @@
  *
  * The field is given in T at a position in mm, in the global frame. The first implementation is a uniform field;
  * the field read from the BField auxiliary tags of the GDML will be another implementation of the same interface.
+ * The engine owns the field of a job through a pointer to this interface.
  */
 
 namespace sand::tracker::kalman {
@@ -17,7 +18,7 @@ namespace sand::tracker::kalman {
   /// Magnetic field map, queried by the propagator at each Runge-Kutta stage.
   class field {
    public:
-    virtual ~field() = default;
+    virtual ~field();
     /// Field [T] at the global position (x, y, z) [mm]
     virtual field_vector at(double x, double y, double z) const = 0;
   };

@@ -2,7 +2,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <test_helpers.hpp>
-#include <tracker/kalman/propagator.hpp>
+#include <kalman/propagator.hpp>
 
 #include <cmath>
 

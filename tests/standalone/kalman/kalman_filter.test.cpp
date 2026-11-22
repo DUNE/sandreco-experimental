@@ -2,9 +2,9 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <test_helpers.hpp>
-#include <tracker/kalman/filter.hpp>
-#include <tracker/kalman/measurement.hpp>
-#include <tracker/kalman/propagator.hpp>
+#include <kalman/filter.hpp>
+#include <kalman/measurement.hpp>
+#include <kalman/propagator.hpp>
 
 #include <cmath>
 #include <random>

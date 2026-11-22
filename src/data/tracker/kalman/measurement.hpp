@@ -1,12 +1,15 @@
 #pragma once
 
-#include <tracker/kalman/state.hpp>
+#include <kalman/state.hpp>
 
 #include <cmath>
 
 /**
  * @file measurement.hpp
- * @brief Measurement models for a single drift-chamber wire.
+ * @brief Measurement models for a single tracker wire.
+ *
+ * The same model describes a drift-chamber wire and a straw tube: it is the model of the fast digitizations
+ * drift_fast_digi and stt_fast_digi (drift time to the closest approach plus signal propagation along the wire).
  *
  * A wire is a straight segment in a plane of constant z, from the readout end (head) to the far end (tail). The
  * model only uses the wire geometry, so it works for any number of views and any stereo angle.
@@ -74,36 +77,22 @@ namespace sand::tracker::kalman {
    *
    * The coordinate is n . (x - head) with n = (-uy, ux) the in-plane normal to the wire. The measured value for a
    * wire with no drift information is 0, with variance pitch^2 / 12 or max_radius^2 / 3.
+   *
+   * @param s State on the wire plane
+   * @param w Wire
    */
-  inline prediction wire_position(const state& s, const wire_geometry& w) {
-    double ux, uy;
-    w.along(ux, uy);
-    double const nx = -uy, ny = ux;
-    prediction p;
-    p.value = nx * (s.par[X] - w.head[0]) + ny * (s.par[Y] - w.head[1]);
-    p.H[X]  = nx;
-    p.H[Y]  = ny;
-    return p;
-  }
+  prediction wire_position(const state& s, const wire_geometry& w);
 
   namespace detail {
 
-    /// Signed distance of closest approach d and distance L from the readout end, for a straight local track.
-    inline void wire_distance(const vector_t& par, const wire_geometry& w, double& d, double& L) {
-      double ux, uy;
-      w.along(ux, uy);
-      double const nx = -uy, ny = ux;
-      double const dx = par[X] - w.head[0], dy = par[Y] - w.head[1];
-      double const tn = nx * par[TX] + ny * par[TY]; // track slope across the wire
-      d               = (nx * dx + ny * dy) / std::sqrt(1. + tn * tn);
-
-      // Closest point on the wire line: minimise |P + l v - (H + s u)| over l and s, with v = (tx, ty, 1)
-      double const vv = 1. + par[TX] * par[TX] + par[TY] * par[TY];
-      double const uv = ux * par[TX] + uy * par[TY];
-      double const du = dx * ux + dy * uy;
-      double const dv = dx * par[TX] + dy * par[TY];
-      L               = (du - dv * uv / vv) / (1. - uv * uv / vv);
-    }
+    /**
+     * @brief Signed distance of closest approach d and distance L from the readout end, for a straight local track.
+     * @param par State vector on the wire plane
+     * @param w   Wire
+     * @param d   Output: signed distance of closest approach [mm]
+     * @param L   Output: distance of the closest point on the wire from the readout end [mm]
+     */
+    void wire_distance(const vector_t& par, const wire_geometry& w, double& d, double& L);
 
   } // namespace detail
 
@@ -113,34 +102,12 @@ namespace sand::tracker::kalman {
    * The derivatives are evaluated with the left-right side fixed: |d| is replaced by side * d, so that the model is
    * smooth across the wire. This is what the deterministic annealing filter needs, which treats the two sides as two
    * competing measurements.
-   */
-  /**
+   *
    * @param s    State on the wire plane
    * @param w    Wire
    * @param side Left-right hypothesis: +1 or -1, the sign of the distance d
    * @param cal  Reconstruction calibration
    */
-  inline prediction wire_time(const state& s, const wire_geometry& w, int side, const reco_calibration& cal) {
-    double d, L;
-    detail::wire_distance(s.par, w, d, L);
-    prediction p;
-    p.value = s.par[T] + L / cal.wire_velocity + side * d / cal.drift_velocity + cal.t0_offset;
-
-    // Derivatives by central differences of the smooth (side-fixed) model; the model is cheap and exact formulas
-    // would add little. Steps are small compared with the scales of each parameter.
-    static constexpr double eps[s_dim] = {1e-3, 1e-3, 1e-6, 1e-6, 1e-9, 1e-3};
-    for (unsigned int i = 0; i < s_dim; ++i) {
-      vector_t up = s.par, dn = s.par;
-      up[i] += eps[i];
-      dn[i] -= eps[i];
-      double du, lu, dd, ld;
-      detail::wire_distance(up, w, du, lu);
-      detail::wire_distance(dn, w, dd, ld);
-      double const vu = up[T] + lu / cal.wire_velocity + side * du / cal.drift_velocity;
-      double const vd = dn[T] + ld / cal.wire_velocity + side * dd / cal.drift_velocity;
-      p.H[i]          = (vu - vd) / (2. * eps[i]);
-    }
-    return p;
-  }
+  prediction wire_time(const state& s, const wire_geometry& w, int side, const reco_calibration& cal);
 
 } // namespace sand::tracker::kalman

@@ -1,12 +1,18 @@
-# Kalman filter library for the drift chamber tracker
+# Kalman filter library for the tracker
 
-The headers in `include/tracker/kalman/` contain the math of the track fit for the SAND drift chamber tracker: the
-track state, its propagation through the magnetic field, the measurement models for a single wire, the Kalman update
-and the smoother. The library is header only and depends only on ROOT `SMatrix`.
+The complex data module `sand_tracker_kalman`, in `src/data/tracker/kalman/`, contains the math of the track fit for
+the SAND tracker: the track state, its propagation through the magnetic field, the measurement models for a single
+wire, the Kalman update and the smoother. Nothing in it is specific to one tracker technology: the measurement model
+applies to drift chambers and straw tubes alike, and is the same model used by the fast digitizations
+`drift_fast_digi` and `stt_fast_digi`.
 
-The library knows nothing about digits, about the geometry service or about ufw. The reconstruction modules read the
-digits and the wire descriptions, build the inputs described below and call the library. A change in the digit format
-or in the geometry only affects the modules.
+Modules link `sand_tracker_kalman` and include the headers as `<kalman/state.hpp>`, `<kalman/propagator.hpp>`,
+`<kalman/measurement.hpp>`, `<kalman/filter.hpp>`, `<kalman/field.hpp>` and `<kalman/engine.hpp>`. The
+implementation is in `.cpp` files and depends on ROOT `SMatrix` and on ufw (for the engine configuration).
+
+The math knows nothing about digits or about the geometry service. The reconstruction modules read the digits and the
+wire descriptions, build the inputs described below and call the library. A change in the digit format or in the
+geometry only affects the modules.
 
 ## Conventions
 
@@ -95,6 +101,55 @@ contains the residual before and after the update and the chi2 increment.
 `smooth(steps)` is a Rauch-Tung-Striebel smoother over the steps of a forward pass. Each `filter_step` keeps the
 predicted and filtered state on a plane and the Jacobian from the previous plane.
 
+## Engine (`engine.hpp`)
+
+`sand::tracker::kalman::engine` is the complex data object of the library. The seeder, the combinatorial track
+finder, the fit and smoother and the vertex fit all need the same state: magnetic field, material description and
+reconstruction calibration. Keeping that state in one global, unique complex data object means it is configured once
+per job and every module sees the same instance; and since the library is compiled once into `sand_tracker_kalman`,
+every module runs the same code, instead of each one compiling its own copy of header-only functions (which
+duplicates code and can give slightly different numerical results).
+
+The engine is configured in the `"globals"` section of the job:
+
+```json
+"globals" : {
+  "sand::tracker::kalman::engine" : {
+    "field" : [0.6, 0.0, 0.0],
+    "calibration" : { "drift_velocity" : 0.05, "wire_velocity" : 200.0,
+                      "tdc_resolution" : 3.5, "t0_offset" : 0.0 },
+    "propagator" : { "max_step" : 50.0, "max_slope" : 1000.0 }
+  }
+}
+```
+
+| Parameter Name               | Type        | Unit  | Required/Default | Description                                     |
+|------------------------------|-------------|-------|------------------|-------------------------------------------------|
+| `field`                      | `double[3]` | T     | Required         | Uniform magnetic field (Bx, By, Bz).            |
+| `calibration.drift_velocity` | `double`    | mm/ns | 0.05             | Drift velocity assumed by the reconstruction.   |
+| `calibration.wire_velocity`  | `double`    | mm/ns | 200              | Signal propagation speed along the wire.        |
+| `calibration.tdc_resolution` | `double`    | ns    | 3.5              | TDC time resolution.                            |
+| `calibration.t0_offset`      | `double`    | ns    | 0                | Fixed electronics offset.                       |
+| `propagator.max_step`        | `double`    | mm    | 50               | Maximum Runge-Kutta step.                       |
+| `propagator.max_slope`       | `double`    |       | 1000             | Propagation fails if \|tx\| or \|ty\| exceed it.  |
+
+`calibration` and `propagator` are optional, and so is each of their keys; the defaults are those of
+`reco_calibration` and `propagator_config`. Velocities, resolution, step and slope must be positive. Unknown keys are
+rejected, so a misspelt key is an error and not a silent default.
+
+The field is uniform for now. It is owned by the engine through a pointer to the `field` interface, so the field map
+read from the GDML will replace it without changing the modules.
+
+A process gets the engine with `instance<sand::tracker::kalman::engine>()` and links `sand_tracker_kalman` in its
+CMakeLists. The engine exposes
+
+- `field()`, `calibration()`, `propagator_settings()`: the shared state;
+- `propagate(state, z_target, mass)`: `propagate` with the field and settings of the engine;
+- `wire_time(state, wire, side)`: `wire_time` with the calibration of the engine.
+
+The free functions stay available with explicit arguments (the engine calls them), for tests and for code that needs
+a different field or calibration.
+
 ## Example
 
 One step of a forward fit, as a reconstruction module would write it:
@@ -102,18 +157,18 @@ One step of a forward fit, as a reconstruction module would write it:
 ```cpp
 using namespace sand::tracker::kalman;
 
-uniform_field const bfield({0.6, 0., 0.});
-reco_calibration const cal;
+auto const& kf  = instance<engine>();
+auto const& cal = kf.calibration();
 
 wire_geometry w;       // filled from the wire description of the geometry service
 double tdc;            // from the digit
 int side;              // left-right hypothesis
 
-auto prop = propagate(current, w.z(), 105.66, bfield);
+auto prop = kf.propagate(current, w.z(), 105.66);
 if (!prop) {
   // track lost
 }
-auto const pred = wire_time(prop->out, w, side, cal);
+auto const pred = kf.wire_time(prop->out, w, side);
 auto const upd  = update(prop->out, pred, tdc, cal.tdc_resolution * cal.tdc_resolution);
 steps.push_back({prop->out, upd.out, prop->F});
 current = upd.out;
@@ -126,10 +181,16 @@ The standalone tests are in `tests/standalone/kalman/`:
 - `kalman_propagator`: helix in a uniform field against the analytic solution, round trip forward and back,
   Jacobian against finite differences in both directions, particle moving towards smaller z;
 - `kalman_filter`: closest approach distance, derivatives of the time model against finite differences, pulls of
-  the fitted parameters on toy tracks.
+  the fitted parameters on toy tracks;
+- `kalman_engine`: engine built from a JSON configuration, defaults and configured values, rejection of invalid
+  configurations, `engine.propagate` and `engine.wire_time` identical to the free functions with the same field,
+  settings and calibration.
+
+The tests link `sand_tracker_kalman`.
 
 `gun_propagation_check.cpp` is not run by ctest. It compares the propagator with edep-sim trajectories of a particle
-gun and needs an edep-sim file.
+gun and needs an edep-sim file; build it against `sand_tracker_kalman` (include path `src/data/tracker`) and the
+edep-sim I/O library.
 
 ## Validation so far
 

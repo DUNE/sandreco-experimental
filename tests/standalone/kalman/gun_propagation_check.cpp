@@ -12,7 +12,7 @@
 // The magnetic field is uniform inside the region used, as in the GDML of nd_hall_with_lar_tms_sand_drift1
 // (MagIntVol_volume, 0.6 T along global x).
 
-#include <tracker/kalman/propagator.hpp>
+#include <kalman/propagator.hpp>
 
 #include <TFile.h>
 #include <TG4Event.h>

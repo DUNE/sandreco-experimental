@@ -29,8 +29,10 @@
 
 /**
  * @namespace sand::tracker::kalman
- * @brief Kalman filter library for the drift chamber tracker: track state, propagation in a magnetic field, wire
- * measurement models, update and smoother. Header only, independent of the digit format and of the geometry service.
+ * @brief Kalman filter library for the SAND tracker: track state, propagation in a magnetic field, wire measurement
+ * models, update and smoother. The measurement model applies to drift chambers and straw tubes alike. Independent of
+ * the digit format and of the geometry service; the shared state (field, calibration, propagation settings) is held
+ * by the complex data object sand::tracker::kalman::engine.
  */
 namespace sand::tracker::kalman {
 
@@ -69,12 +71,6 @@ namespace sand::tracker::kalman {
   };
 
   /// 6 x 6 identity matrix
-  inline matrix_t identity() {
-    matrix_t m;
-    for (unsigned int i = 0; i < s_dim; ++i) {
-      m(i, i) = 1.;
-    }
-    return m;
-  }
+  matrix_t identity();
 
 } // namespace sand::tracker::kalman
