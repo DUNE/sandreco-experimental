@@ -82,7 +82,6 @@ namespace sand::fast::ecal {
                                       ::caf::TrueParticleID const& id, int index) {
       double e{}, e2{};
       sand::vec_4d weighted{};
-      double x2{}, y2{}, z2{}; // energy-weighted sums of the squared coordinates [MeV mm²]
       EDEPHit const* first{};
       for (auto const& hit : hits) {
         double const de = hit.GetEnergyDeposit();                 // MeV
@@ -90,33 +89,40 @@ namespace sand::fast::ecal {
         e += de;
         e2 += de * de;
         weighted += de * mid;
-        x2 += de * mid.X() * mid.X();
-        y2 += de * mid.Y() * mid.Y();
-        z2 += de * mid.Z() * mid.Z();
         if (first == nullptr || hit.GetStart().T() < first->GetStart().T()) {
           first = &hit;
         }
       }
       auto const barycenter = weighted / e;
 
-      // Legacy spread: sqrt(neff / (neff - 1) * (<x²> - <x>²)), neff = E² / ΣE² the effective number of hits;
-      // 0 for a single hit (neff = 1) or a negative variance from rounding
+      // Energy-weighted sums of the squared deviations from the barycenter [MeV mm²].
+      double x2{}, y2{}, z2{};
+      for (auto const& hit : hits) {
+        double const de = hit.GetEnergyDeposit();
+        auto const mid  = 0.5 * (hit.GetStart() + hit.GetStop());
+        double const dx = mid.X() - barycenter.X();
+        double const dy = mid.Y() - barycenter.Y();
+        double const dz = mid.Z() - barycenter.Z();
+        x2 += de * dx * dx;
+        y2 += de * dy * dy;
+        z2 += de * dz * dz;
+      }
+
       double const neff = e * e / e2;
-      auto const spread = [&](double sum_sq, double mean) {
-        double const var = sum_sq / e - mean * mean;
-        return (hits.size() < 2 || neff <= 1. || var <= 0.) ? 0. : std::sqrt(neff / (neff - 1.) * var);
+      auto const spread = [&](double sum_sq) {
+        return (hits.size() < 2 || neff <= 1.) ? 0. : std::sqrt(neff / (neff - 1.) * sum_sq / e);
       };
 
       ::caf::SRECALCluster cluster{};
-      cluster.id           = index;
-      cluster.E            = static_cast<float>(e); // visible energy [MeV]
-      cluster.position     = position_cm(barycenter);
-      cluster.var_position = ::caf::SRVector3D{static_cast<float>(spread(x2, barycenter.X()) * 0.1), // mm -> cm
-                                               static_cast<float>(spread(y2, barycenter.Y()) * 0.1),
-                                               static_cast<float>(spread(z2, barycenter.Z()) * 0.1)};
-      cluster.time         = static_cast<float>(barycenter.T());
-      cluster.start        = position_cm(first->GetStart());
-      cluster.num_cells    = -1;
+      cluster.id       = index;
+      cluster.E        = static_cast<float>(e); // visible energy [MeV]
+      cluster.position = position_cm(barycenter);
+      cluster.var_position =
+          ::caf::SRVector3D{static_cast<float>(spread(x2) * 0.1), // mm -> cm
+                            static_cast<float>(spread(y2) * 0.1), static_cast<float>(spread(z2) * 0.1)};
+      cluster.time      = static_cast<float>(barycenter.T());
+      cluster.start     = position_cm(first->GetStart());
+      cluster.num_cells = -1;
 
       if (entry != nullptr) {
         auto const& p     = entry->GetMomentum();
