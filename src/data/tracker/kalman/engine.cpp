@@ -38,7 +38,7 @@ namespace sand::tracker::kalman {
   } // namespace
 
   engine::engine(const ufw::config& cfg) {
-    check_keys(cfg, "top level", {"field", "calibration", "propagator"});
+    check_keys(cfg, "top level", {"field", "calibration", "propagator", "daf"});
 
     if (!cfg.contains("field")) {
       UFW_ERROR("sand::tracker::kalman::engine: missing required key 'field'.");
@@ -65,11 +65,73 @@ namespace sand::tracker::kalman {
       m_propagator.max_slope = positive(p, "max_slope", m_propagator.max_slope);
     }
 
+    if (cfg.contains("daf")) {
+      auto const& d = cfg.at("daf");
+      check_keys(d, "daf",
+                 {"temperatures", "chi2_cut", "max_iterations", "convergence_threshold", "min_weight",
+                  "anneal_variance", "initial_weights", "final_prior_scale"});
+      if (d.contains("temperatures")) {
+        auto const& t = d.at("temperatures");
+        if (!t.is_array() || t.empty()) {
+          UFW_ERROR("sand::tracker::kalman::engine: 'temperatures' must be a non-empty array of numbers, got {}.",
+                    t.dump());
+        }
+        m_daf.temperatures.clear();
+        for (auto const& x : t) {
+          if (!x.is_number()) {
+            UFW_ERROR("sand::tracker::kalman::engine: 'temperatures' must be a non-empty array of numbers, got {}.",
+                      t.dump());
+          }
+          m_daf.temperatures.push_back(x.get<double>());
+        }
+      }
+      m_daf.chi2_cut = positive(d, "chi2_cut", m_daf.chi2_cut);
+      if (d.contains("max_iterations")) {
+        auto const& m = d.at("max_iterations");
+        if (!m.is_number_integer() || m.get<long long>() < 0) {
+          UFW_ERROR("sand::tracker::kalman::engine: 'max_iterations' must be a non-negative integer, got {}.",
+                    m.dump());
+        }
+        m_daf.max_iterations = m.get<int>();
+      }
+      m_daf.convergence_threshold = positive(d, "convergence_threshold", m_daf.convergence_threshold);
+      m_daf.min_weight            = d.value("min_weight", m_daf.min_weight);
+      m_daf.final_prior_scale     = positive(d, "final_prior_scale", m_daf.final_prior_scale);
+      if (d.contains("anneal_variance")) {
+        auto const& a = d.at("anneal_variance");
+        if (!a.is_boolean()) {
+          UFW_ERROR("sand::tracker::kalman::engine: 'anneal_variance' must be true or false, got {}.", a.dump());
+        }
+        m_daf.anneal_variance = a.get<bool>();
+      }
+      if (d.contains("initial_weights")) {
+        auto const& iw = d.at("initial_weights");
+        if (iw == "equal") {
+          m_daf.initial_weights = daf_initial_weights::equal;
+        } else if (iw == "prediction") {
+          m_daf.initial_weights = daf_initial_weights::prediction;
+        } else {
+          UFW_ERROR("sand::tracker::kalman::engine: 'initial_weights' must be \"equal\" or \"prediction\", got {}.",
+                    iw.dump());
+        }
+      }
+      if (auto const problem = check(m_daf)) {
+        UFW_ERROR("sand::tracker::kalman::engine: invalid 'daf' configuration: {}.", *problem);
+      }
+    }
+
     auto const b = m_field->at(0., 0., 0.);
     UFW_INFO("sand::tracker::kalman::engine: uniform field ({}, {}, {}) T, drift velocity {} mm/ns, wire velocity {} "
              "mm/ns, TDC resolution {} ns, t0 offset {} ns, max step {} mm, max slope {}.",
              b[0], b[1], b[2], m_calibration.drift_velocity, m_calibration.wire_velocity, m_calibration.tdc_resolution,
              m_calibration.t0_offset, m_propagator.max_step, m_propagator.max_slope);
+    UFW_INFO(
+        "sand::tracker::kalman::engine: DAF with {} temperatures (first {}, last {}), chi2 cut {}, at most {} extra "
+        "passes, convergence threshold {}, minimum weight {}, variance annealing {}, {} initial weights, final prior "
+        "scale {}.",
+        m_daf.temperatures.size(), m_daf.temperatures.front(), m_daf.temperatures.back(), m_daf.chi2_cut,
+        m_daf.max_iterations, m_daf.convergence_threshold, m_daf.min_weight, m_daf.anneal_variance ? "on" : "off",
+        m_daf.initial_weights == daf_initial_weights::prediction ? "prediction" : "equal", m_daf.final_prior_scale);
   }
 
   engine::~engine() = default;
@@ -85,6 +147,11 @@ namespace sand::tracker::kalman {
 
   prediction engine::wire_time(const state& s, const wire_geometry& w, int side) const {
     return kalman::wire_time(s, w, side, m_calibration);
+  }
+
+  daf_result engine::fit(const state& initial, const std::vector<site>& sites, double mass,
+                         const material_budget& material) const {
+    return daf_fit(initial, sites, mass, *m_field, material, m_calibration, m_propagator, m_daf);
   }
 
 } // namespace sand::tracker::kalman

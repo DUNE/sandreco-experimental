@@ -7,8 +7,8 @@ measurement model applies to drift chambers and straw tubes alike, and is the sa
 digitizations `drift_fast_digi` and `stt_fast_digi`.
 
 Modules link `sand_tracker_kalman` and include the headers as `<kalman/state.hpp>`, `<kalman/propagator.hpp>`,
-`<kalman/material.hpp>`, `<kalman/measurement.hpp>`, `<kalman/filter.hpp>`, `<kalman/field.hpp>` and
-`<kalman/engine.hpp>`. The
+`<kalman/material.hpp>`, `<kalman/measurement.hpp>`, `<kalman/filter.hpp>`, `<kalman/daf.hpp>`, `<kalman/field.hpp>`
+and `<kalman/engine.hpp>`. The
 implementation is in `.cpp` files and depends on ROOT `SMatrix` and on ufw (for the engine configuration).
 
 The math knows nothing about digits or about the geometry service. The reconstruction modules read the digits and the
@@ -191,6 +191,170 @@ contains the residual before and after the update and the chi2 increment.
 `smooth(steps)` is a Rauch-Tung-Striebel smoother over the steps of a forward pass. Each `filter_step` keeps the
 predicted and filtered state on a plane and the Jacobian from the previous plane.
 
+## Deterministic annealing filter (`daf.hpp`)
+
+`daf_fit` fits a track when the assignment of the measurements is ambiguous: the two sides of each wire, and other
+digits on the same plane. It is the deterministic annealing filter of R. Frühwirth and A. Strandlie, Comput. Phys.
+Commun. 120 (1999) 197: a Kalman filter and smoother iterated with weights on the competing measurements, annealed
+from a high temperature down to T = 1, with the measurement variance annealed as well (as in GENFIT).
+
+**The seed must give the track time to a few ns.** The time is a parameter of the fit and, while the sides are not
+known, it is nearly degenerate with the drift distances: see "Seed requirements" below.
+
+### Sites and candidates
+
+The input is a list of `site`s, ordered along the motion of the particle (z increasing for `direction = +1`,
+decreasing for `direction = -1`). A site is a wire plane (`z`) with its `measurement_candidate`s: each is a wire, a
+measured TDC and a side (+1 or -1), plus an opaque `id` that the fit does not use (the module puts the index of the
+digit there). A wire digit gives two candidates, one per side; other digits on the same plane are more candidates.
+The wires of a site must lie on its plane (within 1 μm). The sites are built from the digits by the reconstruction
+module; that, the track finder and the competition of several tracks for the same digits are outside this library.
+
+### Algorithm
+
+With `V = tdc_resolution^2`, there is one pass for each temperature `T` of the schedule:
+
+1. weights at `T` from the smoothed states of the previous pass (the first pass uses the initial weights, see
+   below). For candidate `i`, with `r_i` the residual of `wire_time` on the smoothed state:
+
+   ```
+   chi2_i = r_i^2 / (T V)
+   phi_i  = exp(-chi2_i / 2)
+   w_i    = phi_i / (sum_j phi_j + exp(-chi2_cut / (2T)))
+   ```
+
+   The sum runs over the candidates of the same site. The cutoff term is the weight left to "none of them": a
+   single candidate at `r^2 / V = chi2_cut` gets weight 1/2 at any temperature. The weights are computed with a
+   common scale factor, so that candidates far above the cutoff get weight 0 instead of 0 / 0 (`daf_weights`);
+2. forward filter: propagate site by site, with the material; at each site update with every candidate whose weight
+   is above `min_weight`, one after the other, with `update(..., weight)` and measurement variance `T V`, i.e.
+   `T V / w`. With `anneal_variance = false` the variance is `V / w` at every temperature (the weights are the
+   same);
+3. Rauch-Tung-Striebel smoother over the pass.
+
+After the schedule, passes at `T = 1` are repeated until the weights computed from the last pass differ from those
+it used by no more than `convergence_threshold`, or `max_iterations` extra passes are done; `converged` says which.
+
+Final pass: then one more forward filter and smoother at `T = 1`, with those weights fixed and the covariance of the
+prior multiplied by `final_prior_scale` (default 10^4). The states, residuals, `chi2` and `ndf` of the result come
+from this pass. The reason: in the reconstruction the seed is built by the track finder from the same digits that the
+fit uses, so it is not an independent measurement. Keeping its covariance would count those digits twice, make the
+covariance of the result too small and give `chi2/ndf` above 1 (about `sum w / (sum w - 6)`, 1.23 in the toy).
+Inflating it keeps the seed only as the starting point of the linearisation (which in the final pass is the converged
+track anyway), and `chi2` has mean `ndf`. With `final_prior_scale = 1` there is no final pass, and the result is the
+last pass of the annealing, with the seed counted as a measurement: use it when the seed is independent of the digits
+(for example a vertex or a track from another detector).
+
+The default schedule is `{81, 81, 9, 4, 1, 1}`. The first temperature is repeated because the first pass uses the
+initial weights, not weights computed at 81 from a track: without the second pass at 81 the toy loses 1-2% of
+left-right efficiency. With the variance annealed, the first passes are soft fits (σ = 9 × 3.5 ns at T = 81, about
+1.6 mm in drift distance) through the wire positions, which the following temperatures sharpen. Without the variance
+annealing the first pass forces the track onto the wires (see "Seed requirements").
+
+Choices:
+
+- Initial weights (`initial_weights`): `equal` (default) gives `1/n` to the n candidates of each site, so that every
+  site starts with the information of one measurement (0.5 and 0.5 for the two sides of a wire). `prediction`
+  propagates the prior to each site without updates and computes the weights at the first temperature with
+  `r_i^2 / (T V + H C H^T)`, `C` the covariance of the prediction, so that sites far from the prior get nearly equal
+  weights. In the toy, `prediction` loses about 1% of left-right efficiency both with a 5 mm, 10 ns seed and with a
+  1 mm, 2 ns seed, so the default is `equal`.
+- Linearisation: in the first pass the propagation and the measurements are linearised at the predicted state, as in
+  an extended Kalman filter. In the following passes they are linearised around the smoothed track of the previous
+  pass: the propagation Jacobian, the noise and the energy loss are those of the reference track, and
+  `h(x) = h(x_ref) + H (x - x_ref)`. The prior (the initial state and its covariance) stays the same in every pass.
+  With a single candidate per site, `T = {1}`, equal initial weights and weights that stay at 1, the result is the
+  plain filter and smoother.
+- The candidates of a site are all linearised at the same point, so the order in which they are applied does not
+  change the result.
+- A site where no candidate is above `min_weight` is crossed without update and listed in `skipped_sites` (for the
+  last pass). Its weights are still recomputed after the pass, so it can come back.
+
+### Result
+
+`daf_result` holds the smoothed state on each site, the weight of each candidate (`weights[site][candidate]`) and its
+residual on the smoothed state (`residuals[site][candidate]`, in ns), the number of passes (the final pass included)
+and the convergence flag, and
+
+- `chi2`: the filter chi2 of the final pass (of the last pass if there is none), `sum_i w_i r_i^2 / (V + H C H^T)`
+  over the candidates used, with `r_i` the residual and `C` the covariance before the update of that candidate, and
+  `V` not scaled by the temperature;
+- `ndf = sum_i w_i - 6`, all the weights minus the six track parameters;
+- `smoothed_chi2`: `sum_i w_i r_i^2 / V` with the smoothed residuals.
+
+In the toy with the informative seed of the tests (true sides given, weights 1), `chi2/ndf` has mean 1.00 with the
+final pass (1000 tracks) against 1.25 without it; with a seed that is diffuse to begin with it is 0.96-1.03 either
+way. With the sides competing it is 0.91-0.98: sites close to the wire, where the two sides share the weight, count
+as one measurement in `ndf` and contribute little to `chi2`. `smoothed_chi2` is smaller, about 0.8 `ndf`: the
+smoothed track follows part of the scattering.
+
+Failures do not throw. `success` is false and `status` and `reason` say why:
+
+| `status` | When |
+|----------|------|
+| `invalid_config` | the `daf_config` is not valid (`check(cfg)` explains why) |
+| `invalid_input` | no sites, a site without candidates, a side other than ±1, a wire off the plane of its site, sites not strictly ordered along the motion |
+| `propagation_failed` | a propagation failed (track too steep, particle stopped in the material), in a pass or when propagating the prior for the initial weights |
+| `not_positive_definite` | the initial, a filtered or a smoothed covariance is not positive definite, or the smoother could not invert a predicted covariance |
+| `no_measurements` | in a pass every candidate of every site was below `min_weight` |
+
+`reason` gives the pass and the site.
+
+### Configuration
+
+`daf_config`, and the `"daf"` section of the engine configuration:
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `temperatures` | [81, 81, 9, 4, 1, 1] | annealing schedule, one pass per temperature, all positive |
+| `chi2_cut` | 9 | cutoff chi2 (3 sigma), positive |
+| `max_iterations` | 10 | maximum number of extra passes at T = 1, non-negative integer |
+| `convergence_threshold` | 0.001 | converged when no weight changes by more than this, positive |
+| `min_weight` | 0.001 | candidates with a weight not above this are left out of the update, in [0, 1) |
+| `anneal_variance` | true | update with variance `T V / w`; false: `V / w` |
+| `initial_weights` | "equal" | weights of the first pass: "equal" or "prediction" |
+| `final_prior_scale` | 1e4 | factor on the prior covariance in the final pass, at least 1; 1: no final pass |
+
+### Seed requirements
+
+With unknown sides, the two sides of a wire at similar weights act together as a measurement of the time at the wire
+(`t + L/v_wire = TDC`, late by the drift time) and of a track through the wire (`d = 0`). A shift of the track time
+moves all the drift distances together, so if the seed leaves the time free by more than a few ns the annealing can
+settle on a late time with the track pulled towards the wires, and the sides wrong. The position of the seed matters
+much less. Fraction of sites where the true side gets weight above 0.5, by drift distance, in the toy described in
+"Validation" (500 forward tracks per line, default settings), with the pull of the time on the first site and the
+RMS of the q/p pull:
+
+| σ(x, y) | σ(tx, ty) | σ(t) | 0.5-1 mm | 1-2 mm | 2-3 mm | 3-5 mm | t pull mean | q/p pull RMS |
+|---------|-----------|------|----------|--------|--------|--------|-------------|--------------|
+| 10 mm   | 0.05      | 20 ns | 77%   | 77%   | 83%   | 84%   | 5.9  | 1.36 |
+| 5 mm    | 0.05      | 10 ns | 97.1% | 96.7% | 98.0% | 98.2% | 0.78 | 1.04 |
+| 1 mm    | 0.01      | 10 ns | 96.2% | 97.1% | 97.7% | 98.3% | 0.68 | 1.02 |
+| 2 mm    | 0.02      | 5 ns  | 98.7% | 99.3% | 99.4% | 99.3% | 0.30 | 1.00 |
+| 5 mm    | 0.05      | 2 ns  | 99.2% | 99.6% | 99.6% | 99.5% | 0.24 | 1.00 |
+| 2 mm    | 0.02      | 2 ns  | 99.0% | 99.5% | 99.5% | 99.5% | 0.24 | 1.00 |
+| 1 mm    | 0.01      | 2 ns  | 98.7% | 99.4% | 99.6% | 99.6% | 0.24 | 1.00 |
+| 0.5 mm  | 0.005     | 1 ns  | 99.1% | 99.5% | 99.6% | 99.7% | 0.24 | 1.00 |
+
+σ(q/p) is 25% of q/p in the lines with 0.05 on the slopes and 10% in the others. With the true side given, the same
+fit reaches 99.85%: a true hit with a 3 sigma fluctuation has its chi2 above the cutoff and weight below 0.5 by
+construction. Without the variance annealing the 5 mm, 10 ns seed gives 70-80%; with the 1 mm, 2 ns seed the variance
+annealing makes no difference to the efficiency (98.8-99.8% without it).
+
+The track finder must therefore provide the time to about 2-5 ns (from the ECAL, or from a fit of the drift times
+of the seed hits with their sides).
+
+### Known limitations
+
+- Sites close to the wire, where the two sides keep similar weights, pull the time late by about `|d| / v_drift`:
+  the time pull has a mean of +0.2 to +0.3 (0.15-0.22 ns) with a good seed.
+- With small stereo angles, x is measured through the stereo views only; flipping the sides in a few u and v planes
+  and moving x is a nearby local minimum. A few tracks in a thousand end in one; they give the tails of the y and ty
+  pulls (0.4-0.8% beyond 5).
+- The covariance of the result does not include the uncertainty of the assignment.
+- A digit far outside the drift window (hundreds of ns) on a site with few candidates distorts the first pass, which
+  gives it weight 1/n; the module building the sites should not offer such digits.
+
 ## Engine (`engine.hpp`)
 
 `sand::tracker::kalman::engine` is the complex data object of the library. The seeder, the combinatorial track
@@ -200,7 +364,8 @@ per job and every module sees the same instance; and since the library is compil
 every module runs the same code, instead of each one compiling its own copy of header-only functions (which
 duplicates code and can give slightly different numerical results).
 
-The engine owns the magnetic field, the reconstruction calibration and the propagator settings. The material
+The engine owns the magnetic field, the reconstruction calibration, the propagator settings and the settings of the
+deterministic annealing filter. The material
 description will be added to it when it comes from `tracker_info`, in a later merge request; until then the caller
 passes a `material_budget` to `engine.propagate(state, z_target, mass, material)`.
 
@@ -212,7 +377,10 @@ The engine is configured in the `"globals"` section of the job:
     "field" : [0.6, 0.0, 0.0],
     "calibration" : { "drift_velocity" : 0.05, "wire_velocity" : 200.0,
                       "tdc_resolution" : 3.5, "t0_offset" : 0.0 },
-    "propagator" : { "max_step" : 50.0, "max_slope" : 1000.0 }
+    "propagator" : { "max_step" : 50.0, "max_slope" : 1000.0 },
+    "daf" : { "temperatures" : [81, 81, 9, 4, 1, 1], "chi2_cut" : 9.0, "max_iterations" : 10,
+              "convergence_threshold" : 0.001, "min_weight" : 0.001, "anneal_variance" : true,
+              "initial_weights" : "equal", "final_prior_scale" : 1e4 }
   }
 }
 ```
@@ -226,10 +394,20 @@ The engine is configured in the `"globals"` section of the job:
 | `calibration.t0_offset`      | `double`    | ns    | 0                | Fixed electronics offset.                       |
 | `propagator.max_step`        | `double`    | mm    | 50               | Maximum Runge-Kutta step.                       |
 | `propagator.max_slope`       | `double`    |       | 1000             | Propagation fails if \|tx\| or \|ty\| exceed it.  |
+| `daf.temperatures`           | `double[]`  |       | [81, 81, 9, 4, 1, 1] | Annealing schedule of the DAF.              |
+| `daf.chi2_cut`               | `double`    |       | 9                | Cutoff chi2 of the DAF weights.                 |
+| `daf.max_iterations`         | `int`       |       | 10               | Maximum extra DAF passes at T = 1.              |
+| `daf.convergence_threshold`  | `double`    |       | 0.001            | Largest change of a weight at convergence.      |
+| `daf.min_weight`             | `double`    |       | 0.001            | Candidates not above it are left out.           |
+| `daf.anneal_variance`        | `bool`      |       | true             | Update with variance T V / w (false: V / w).    |
+| `daf.initial_weights`        | `string`    |       | "equal"          | First-pass weights: "equal" or "prediction".    |
+| `daf.final_prior_scale`      | `double`    |       | 1e4              | Prior covariance factor of the final pass.      |
 
-`calibration` and `propagator` are optional, and so is each of their keys; the defaults are those of
-`reco_calibration` and `propagator_config`. Velocities, resolution, step and slope must be positive. Unknown keys are
-rejected, so a misspelt key is an error and not a silent default.
+`calibration`, `propagator` and `daf` are optional, and so is each of their keys; the defaults are those of
+`reco_calibration`, `propagator_config` and `daf_config`. Velocities, resolution, step, slope, temperatures, cutoff
+and convergence threshold must be positive, `max_iterations` a non-negative integer, `min_weight` in [0, 1),
+`anneal_variance` a boolean, `initial_weights` "equal" or "prediction" and `final_prior_scale` at least 1.
+Unknown keys are rejected, so a misspelt key is an error and not a silent default.
 
 The field is uniform for now. It is owned by the engine through a pointer to the `field` interface, so the field map
 read from the GDML will replace it without changing the modules.
@@ -237,11 +415,13 @@ read from the GDML will replace it without changing the modules.
 A process gets the engine with `instance<sand::tracker::kalman::engine>()` and links `sand_tracker_kalman` in its
 CMakeLists. The engine exposes
 
-- `field()`, `calibration()`, `propagator_settings()`: the shared state;
+- `field()`, `calibration()`, `propagator_settings()`, `daf_settings()`: the shared state;
 - `propagate(state, z_target, mass)`: `propagate` with the field and settings of the engine;
 - `propagate(state, z_target, mass, material)`: the material overload of `propagate`, with the field and settings of
   the engine and the material budget given by the caller;
-- `wire_time(state, wire, side)`: `wire_time` with the calibration of the engine.
+- `wire_time(state, wire, side)`: `wire_time` with the calibration of the engine;
+- `fit(initial, sites, mass, material)`: `daf_fit` with the field, calibration, propagator and DAF settings of the
+  engine and the material budget given by the caller.
 
 The free functions stay available with explicit arguments (the engine calls them), for tests and for code that needs
 a different field or calibration.
@@ -286,6 +466,11 @@ The standalone tests are in `tests/standalone/kalman/`:
   engine;
 - `kalman_filter`: closest approach distance, derivatives of the time model against finite differences, pulls of
   the fitted parameters on toy tracks;
+- `kalman_daf`: the weight formula; with one candidate per site and `T = {1}` the DAF equals the plain filter and
+  smoother (both initial-weight options); left-right resolution, pulls and chi2/ndf on toy tracks moving along +z and
+  -z, with the wires oriented as in `drift_info`; noise digits; chi2/ndf with and without the final pass; an outlier;
+  failure statuses; independence of the order of the candidates; prior on another plane; `engine.fit` identical to
+  `daf_fit` with the settings of the engine, and the `"daf"` configuration keys read and validated;
 - `kalman_engine`: engine built from a JSON configuration, defaults and configured values, rejection of invalid
   configurations, `engine.propagate` and `engine.wire_time` identical to the free functions with the same field,
   settings and calibration.
@@ -304,3 +489,43 @@ edep-sim I/O library.
 - Toy fits: pull means within ±0.12 and widths between 0.99 and 1.09 for all parameters.
 - Material toy (2000 muons at 1 GeV/c, ten 4 mm graphite layers, 0.6 T): pulls of x, y, tx, ty at the end with means
   within ±0.03 and widths between 0.96 and 1.00.
+- DAF toy (`kalman_daf`). Detector: 30 wire planes 50 mm apart, 10 mm pitch, a 4 mm graphite layer every three
+  planes, 0.6 T along x, calibration defaults (3.5 ns TDC resolution, 0.05 mm/ns drift velocity). The wires are
+  oriented as in `sand::geoinfo::drift_info`: in the 0 degree view (X) they run along x and measure y, the bending
+  coordinate; the U and V views are rotated by -5 and +5 degrees; the readout end is at smaller x. Tracks: 1 GeV/c
+  muons generated with the library, with random scattering at each layer; on each plane the closest wire, its TDC
+  smeared by the resolution. Prior: the true state on the first site smeared with, and carrying, the covariance
+  σ(x, y) = 1 mm, σ(tx, ty) = 0.01, σ(q/p) = 10%, σ(t) = 2 ns. Default DAF settings (final pass included), both
+  sides of each wire as candidates; 250 forward, 200 backward and 250 noise tracks (the numbers of the test; the seed
+  table above uses 500).
+
+  Fraction of sites where the true side gets weight above 0.5, by drift distance:
+
+  | Drift [mm] | 0-0.1 | 0.1-0.25 | 0.25-0.5 | 0.5-1 | 1-2 | 2-3 | 3-5 |
+  |------------|-------|----------|----------|-------|-----|-----|-----|
+  | forward    | 52%   | 80%      | 94%      | 98.9% | 99.8% | 99.7% | 99.5% |
+  | backward   | 56%   | 81%      | 98%      | 99.5% | 99.8% | 99.7% | 99.3% |
+  | 20% noise  | 45%   | 73%      | 94%      | 97.0% | 97.1% | 98.0% | 98.5% |
+
+  Pulls of the smoothed parameters on the first site (core width: RMS of the pulls within ±4; the statistical error
+  of the means is about 0.065):
+
+  | | x | y | tx | ty | q/p | t |
+  |-|---|---|----|----|-----|---|
+  | forward: mean       | -0.01 | 0.08 | 0.04 | -0.11 | 0.06 | 0.22 |
+  | forward: core width | 0.92  | 1.00 | 0.98 | 1.02  | 0.96 | 0.98 |
+  | forward: RMS        | 0.92  | 1.12 | 0.98 | 1.02  | 0.96 | 0.98 |
+  | backward: mean       | 0.04 | -0.01 | 0.03 | -0.01 | -0.13 | 0.18 |
+  | backward: core width | 0.92 | 1.02  | 0.99 | 1.03  | 1.03  | 1.02 |
+  | backward: RMS        | 0.92 | 1.02  | 0.99 | 1.03  | 1.03  | 1.19 |
+  | noise: mean       | -0.02 | -0.03 | -0.06 | -0.01 | -0.03 | 0.31 |
+  | noise: core width | 0.98  | 1.15  | 0.95  | 1.09  | 1.05  | 1.10 |
+  | noise: RMS        | 0.98  | 1.44  | 1.09  | 1.18  | 1.05  | 1.10 |
+
+  With 1000 forward tracks the core widths are 0.98-1.03 and the means within ±0.04, except the time (+0.19).
+  Time on the first site, fitted minus true: +0.16 ns (forward), +0.14 ns (backward), +0.22 ns (noise), for an RMS of
+  0.76-0.99 ns. chi2/ndf has mean 0.91 (forward), 0.93 (backward), 0.98 (noise); with the smoothed residuals 0.79-0.84.
+  Noise (another wire one or two cells away, random TDC in the drift window, on 20% of the planes): mean weight of
+  the noise candidates 0.0009. The fits take 9.7-10.4 passes on average (final pass included); 97% (forward), 94.5%
+  (backward) and 94% (noise) converge within the 10 extra passes. A TDC shifted by 20 sigma gets weight below 1e-61
+  on both sides in 50 tracks out of 50, and the tracks are fitted.
