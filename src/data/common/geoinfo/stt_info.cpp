@@ -12,7 +12,67 @@
 #include <TGeoMatrix.h>
 #include <TGeoTube.h>
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <vector>
+
 namespace sand {
+
+  namespace {
+
+    /**
+     * @brief Midpoint of the gap between adjacent wire positions that is closest to a reference coordinate.
+     * @param positions Transverse positions of the wires of one view [mm], in any order, possibly repeated.
+     * @param reference The coordinate to stay close to [mm], usually the station centre.
+     * @return The midpoint, or @p reference if there are fewer than two distinct positions.
+     */
+    double midpoint_between_wires(std::vector<double> positions, double reference) {
+      constexpr double same = 1e-6; // mm
+      std::sort(positions.begin(), positions.end());
+      positions.erase(
+          std::unique(positions.begin(), positions.end(), [](double a, double b) { return std::abs(a - b) < same; }),
+          positions.end());
+      double best      = reference;
+      double best_dist = std::numeric_limits<double>::infinity();
+      for (std::size_t i = 1; i < positions.size(); ++i) {
+        const double mid = 0.5 * (positions[i - 1] + positions[i]);
+        if (std::abs(mid - reference) < best_dist) {
+          best      = mid;
+          best_dist = std::abs(mid - reference);
+        }
+      }
+      return best;
+    }
+
+    /**
+     * @brief Point (x, y) where the material of an STT station is sampled.
+     *
+     * The straws have their wire on the axis: a line through the station centre can cross a wire head-on, and a
+     * single wire (40 um of gold, 0.012 X0) weighs as much as a graphite target, while a track crosses one only
+     * rarely. The line is moved, in each view, halfway between two adjacent wires (taken over all planes of that
+     * view, so that staggered layers are included), at the gap closest to the station centre.
+     *
+     * @param stat The station, with its wires.
+     * @return Global (x, y) of the sampling line [mm].
+     */
+    std::pair<double, double> stt_sampling_point(const geoinfo::tracker_info::station& stat) {
+      const pos_3d centre = stat.top_north + 0.5 * (stat.bottom_south - stat.top_north);
+      std::vector<double> xs; // positions of vertical wires (along y)
+      std::vector<double> ys; // positions of horizontal wires (along x)
+      for (const auto& w : stat.wires) {
+        const dir_3d d   = w->direction();
+        const pos_3d mid = w->head + 0.5 * d;
+        if (std::abs(d.x()) > std::abs(d.y())) {
+          ys.push_back(mid.y());
+        } else {
+          xs.push_back(mid.x());
+        }
+      }
+      return {midpoint_between_wires(std::move(xs), centre.x()), midpoint_between_wires(std::move(ys), centre.y())};
+    }
+
+  } // namespace
 
   /**
    * @brief Builds the STT geometry by walking the ROOT geometry tree.
@@ -58,7 +118,7 @@ namespace sand {
       centre.SetCoordinates(tran);
       dir_3d halfsize(plane_shape->GetDX(), plane_shape->GetDY(), plane_shape->GetDZ());
       dir_3d boxcorner = nav->to_master(halfsize);
-      stat->thickness = 2.0 * boxcorner.Z();
+      stat->thickness  = 2.0 * boxcorner.Z();
       boxcorner.SetZ(0); // we ignore the thickness here.
       stat->top_north    = centre + boxcorner;
       stat->bottom_south = centre - boxcorner;
@@ -71,14 +131,7 @@ namespace sand {
         // The plane does not carry useful information for us.
         std::string plname = plane->GetName();
         if (plname.find("target") != std::string::npos) {
-          if (auto* target_shape = dynamic_cast<TGeoBBox*>(plane->GetVolume()->GetShape())) {
-            dir_3d target_halfsize(target_shape->GetDX(), target_shape->GetDY(), target_shape->GetDZ());
-            dir_3d target_boxcorner = nav->to_master(target_halfsize);
-            stat->target_box = 2.0 * dir_3d(target_boxcorner.X(), target_boxcorner.Y(), target_boxcorner.Z());
-            stat->target_density = plane->GetVolume()->GetMaterial()->GetDensity() / 6.24e24;
-          } else {
-            UFW_ERROR("Target shape is not a Box");
-          }
+          set_target(*stat, *nav, *plane);
         } else if (plname.find("plane") != std::string::npos) {
           nav->cd(sttpath / smodname / plname);
           nav->for_each_node([&](auto tube) {
@@ -112,6 +165,7 @@ namespace sand {
         }
       });
 
+      stat->layers = sample_material_layers(*nav, sttpath / smodname, stt_sampling_point(*stat));
       stat->set_wire_adjacency();
       add_station(station_ptr(std::move(stat)));
     });

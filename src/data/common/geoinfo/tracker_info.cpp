@@ -6,6 +6,17 @@
 
 #include <BVH.hpp>
 #include <tracker_info.hpp>
+#include <tracker_material.hpp>
+
+#include <TGeoBBox.h>
+#include <TGeoMaterial.h>
+#include <TGeoMatrix.h>
+#include <TGeoNavigator.h>
+#include <TGeoNode.h>
+#include <TGeoVolume.h>
+
+#include <cmath>
+#include <map>
 
 namespace sand {
 
@@ -59,6 +70,136 @@ namespace sand {
   void geoinfo::tracker_info::add_station(station_ptr&& p) { m_stations.emplace_back(std::move(p)); }
 
   /**
+   * @brief Sum of x/X0 over the material layers of the station.
+   * @return The thickness in radiation lengths along the sampling line (dimensionless).
+   */
+  double geoinfo::tracker_info::station::radiation_lengths() const {
+    double sum = 0.0;
+    for (const auto& l : layers) {
+      sum += l.x_over_x0();
+    }
+    return sum;
+  }
+
+  /**
+   * @brief Describes the material of a station by walking the geometry along z through one (x, y) point.
+   *
+   * The navigator is placed at (x, y), by default the centre of the station box, on the upstream face of the box,
+   * and stepped along +z
+   * with FindNextBoundaryAndStep up to the downstream face. Each step inside a volume that belongs to the station
+   * (its path starts with the station path) gives a layer. Consecutive steps in the same volume are merged; steps
+   * in different volumes stay separate layers even if the material is the same, so that e.g. a target and an
+   * adjacent foil of the same plastic remain distinct.
+   * Steps in volumes of other stations (overlaps at the faces) and steps shorter than 1 pm are dropped.
+   *
+   * The result describes the material along that line only. In the STT this is one particular sequence of straw
+   * walls and gas, not an average over the straw plane; the STT passes a point halfway between two adjacent wires
+   * so that no wire is crossed head-on.
+   *
+   * The navigator state is changed: callers that iterate over nodes must cd again afterwards.
+   *
+   * @param nav The navigator to use.
+   * @param station_path Geometry path of the station; its shape must be a box.
+   * @param xy Global (x, y) of the sampling line [mm]; the centre of the station box if empty.
+   * @return The layers, ordered by z and not overlapping.
+   */
+  std::vector<geoinfo::tracker_info::material_layer>
+  geoinfo::tracker_info::sample_material_layers(TGeoNavigator& nav, const geo_path& station_path,
+                                                std::optional<std::pair<double, double>> xy) {
+    constexpr double min_thickness  = 1e-9; // mm
+    constexpr std::size_t max_steps = 100000;
+
+    if (!nav.cd(station_path.c_str())) {
+      UFW_ERROR("Cannot find station '{}' to sample its material.", station_path.c_str());
+    }
+    const std::string prefix = nav.GetPath();
+    auto* box                = dynamic_cast<const TGeoBBox*>(nav.GetCurrentVolume()->GetShape());
+    if (!box) {
+      UFW_ERROR("Station '{}' is not a box, cannot sample its material.", prefix);
+    }
+    const double origin[3] = {box->GetOrigin()[0], box->GetOrigin()[1], box->GetOrigin()[2]};
+    double centre[3];
+    nav.LocalToMaster(origin, centre);
+    // Half extent of the (possibly rotated) box along global z.
+    const double* rot = nav.GetCurrentMatrix()->GetRotationMatrix();
+    const double half_z =
+        std::abs(rot[6]) * box->GetDX() + std::abs(rot[7]) * box->GetDY() + std::abs(rot[8]) * box->GetDZ();
+    if (xy) {
+      centre[0] = xy->first;
+      centre[1] = xy->second;
+    }
+    const double z_begin = centre[2] - half_z;
+    const double z_end   = centre[2] + half_z;
+
+    std::map<const TGeoMaterial*, material_layer> cache;
+    std::vector<material_layer> layers;
+    const TGeoVolume* last_volume = nullptr;
+    nav.InitTrack(centre[0], centre[1], z_begin, 0.0, 0.0, 1.0);
+    double z = z_begin;
+    for (std::size_t step = 0; z < z_end - min_thickness; ++step) {
+      if (step == max_steps || nav.IsOutside()) {
+        UFW_ERROR("Lost the navigator while sampling the material of station '{}' at z = {} mm.", prefix, z);
+      }
+      const TGeoNode* node   = nav.GetCurrentNode();
+      const std::string path = nav.GetPath();
+      const bool inside =
+          path.compare(0, prefix.size(), prefix) == 0 && (path.size() == prefix.size() || path[prefix.size()] == '/');
+      nav.FindNextBoundaryAndStep(z_end - z);
+      const double z_next = std::min(nav.GetCurrentPoint()[2], z_end);
+      if (!(z_next > z)) {
+        // No progress (e.g. a zero-length step on a boundary): push the point forward and locate it again.
+        nav.SetCurrentPoint(centre[0], centre[1], z + min_thickness);
+        nav.FindNode();
+        z += min_thickness;
+        continue;
+      }
+      if (inside && z_next - z > min_thickness) {
+        const TGeoVolume* vol   = node->GetVolume();
+        const TGeoMaterial* mat = vol->GetMaterial();
+        if (!layers.empty() && vol == last_volume && std::abs(layers.back().z_max - z) < min_thickness) {
+          layers.back().z_max = z_next;
+        } else {
+          auto it = cache.find(mat);
+          if (it == cache.end()) {
+            it = cache.emplace(mat, tracker_material::properties(*mat)).first;
+          }
+          material_layer l = it->second;
+          l.z_min          = z;
+          l.z_max          = z_next;
+          layers.push_back(std::move(l));
+        }
+        last_volume = vol;
+      }
+      z = z_next;
+    }
+    return layers;
+  }
+
+  /**
+   * @brief Sets the target box and density of a station from its target volume.
+   * @param stat The station to update.
+   * @param nav A navigator whose current node is the parent of @p target (its rotation is used).
+   * @param target The target node, its shape must be a box.
+   * @throws ufw::exception if the shape is not a box or the density is not plausible (wrong units).
+   */
+  void geoinfo::tracker_info::set_target(station& stat, TGeoNavigator& nav, const TGeoNode& target) {
+    auto* shape = dynamic_cast<const TGeoBBox*>(target.GetVolume()->GetShape());
+    if (!shape) {
+      UFW_ERROR("Target shape is not a Box");
+    }
+    const double half[3] = {shape->GetDX(), shape->GetDY(), shape->GetDZ()};
+    double master[3];
+    nav.LocalToMasterVect(half, master);
+    // The rotation can flip the sign of the components, the size is positive.
+    stat.target_box     = 2.0 * dir_3d(std::abs(master[0]), std::abs(master[1]), std::abs(master[2]));
+    stat.target_density = tracker_material::density(*target.GetVolume()->GetMaterial());
+    if (!(stat.target_density > 0.1 && stat.target_density < 30.0)) {
+      UFW_ERROR("Target '{}' has density {} g/cm3: the geometry densities are not in Geant4 units?", target.GetName(),
+                stat.target_density);
+    }
+  }
+
+  /**
    * @brief Registers a gas volume at a geometry path.
    * @param p The geometry path of the volume.
    * @param v The gas volume.
@@ -106,9 +247,9 @@ namespace sand {
       double t_prime = (A * E - B * D) / denominator; // Parameter along r
 
       // Clamp t to [0, 1] to stay within the segment
-      t = std::max(0.0, std::min(1.0, t));
+      t                    = std::max(0.0, std::min(1.0, t));
       pos_3d clamped_point = seg_start + s * t;
-      t_prime = closest_approach_point(clamped_point);
+      t_prime              = closest_approach_point(clamped_point);
 
       result.first  = t;
       result.second = t_prime;
@@ -221,13 +362,14 @@ namespace sand {
 
   /**
    * @brief Total target mass per material, summed over all stations.
-   * @return A map from target material to its mass.
+   * @return A map from target material to its mass [kg].
    */
   geoinfo::tracker_info::target_mass_t geoinfo::tracker_info::target_masses() const {
+    constexpr double kg_per_g_cm3_mm3 = 1e-6; // 1 g/cm3 * 1 mm3 = 1e-3 g
     target_mass_t map;
     for_each_station([&map](const station& stat) {
-      double vol = stat.target_box.x() * stat.target_box.y() * stat.target_box.z();
-      map[stat.target] += vol * stat.target_density;
+      double vol = stat.target_box.x() * stat.target_box.y() * stat.target_box.z(); // mm3
+      map[stat.target] += vol * stat.target_density * kg_per_g_cm3_mm3;
     });
     return map;
   }

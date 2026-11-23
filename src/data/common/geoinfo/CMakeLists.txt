@@ -4,6 +4,7 @@ set(HDRS drift_info.hpp
          grain_info.hpp
          stt_info.hpp
          tracker_info.hpp
+         tracker_material.hpp
          subdetector_info.hpp
          geoinfo.hpp
          position_info.hpp)
@@ -19,6 +20,7 @@ target_sources(sand_geoinfo PRIVATE
                grain_info.cpp
                stt_info.cpp
                tracker_info.cpp
+               tracker_material.cpp
                subdetector_info.cpp
                geoinfo.cpp
                BVH.hpp

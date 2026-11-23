@@ -17,7 +17,8 @@
     {
       "sand::test::geoinfo" : {
         "init" : ["tracker"],
-        "test" : ["tracker"]
+        "test" : ["tracker"],
+        "tracker_materials" : { "carbon_thickness" : 4.0, "c3h6_thickness" : 5.0 }
         },
       "reqs" : {}
     }
