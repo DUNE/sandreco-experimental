@@ -110,6 +110,13 @@ namespace sand::tracker::kalman {
       if (!seg) {
         return std::nullopt;
       }
+      if (l.extent && !l.extent->contains(seg->out.par[X], seg->out.par[Y])) {
+        // The track crosses the plane of the layer outside the material: field only
+        cur   = seg->out;
+        res.F = seg->F * res.F;
+        res.path_length += seg->path_length;
+        continue;
+      }
       auto const mat = material_step(seg->out.par, l, mass, loss_sign);
       if (!mat) {
         return std::nullopt;

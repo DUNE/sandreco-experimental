@@ -81,9 +81,13 @@ namespace sand::tracker::kalman {
    * @param cfg      Runge-Kutta settings.
    * @return The propagated state, or nothing if the track becomes too steep or stops in the material.
    *
-   * For each crossed layer, in order: propagate in the field to the layer centre, apply the energy loss to q/p and
-   * add the scattering noise; then propagate to z_target. The energy is lost when the propagation goes along the
+   * For each crossed layer, in order: propagate in the field to the layer centre; if the layer has a transverse
+   * extent and the propagated (x, y) is outside it, go on without material; otherwise apply the energy loss to q/p
+   * and add the scattering noise. Then propagate to z_target. The energy is lost when the propagation goes along the
    * motion and gained when it goes against it (see energy_loss_sign()).
+   *
+   * The extent test is a step function of the position: it is not differentiated, so the Jacobian ignores that a
+   * small change of the state could move the track across an edge.
    *
    * The covariance is accumulated step by step as C <- F_k C F_k^T + Q_k, so the returned covariance includes the
    * noise. The returned F is the product of all the Jacobians, field and material steps, without noise, as the
