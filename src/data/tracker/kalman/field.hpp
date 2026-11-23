@@ -6,9 +6,9 @@
  * @file field.hpp
  * @brief Magnetic field interface used by the propagator.
  *
- * The field is given in T at a position in mm, in the global frame. The first implementation is a uniform field;
- * the field read from the BField auxiliary tags of the GDML will be another implementation of the same interface.
- * The engine owns the field of a job through a pointer to this interface.
+ * The field is given in T at a position in mm, in the global frame. uniform_field is defined here; volume_field
+ * (geometry_field.hpp) is the field of the geometry volumes, read from the BField auxiliary tags of the GDML. The
+ * engine owns the field of a job through a pointer to this interface.
  */
 
 namespace sand::tracker::kalman {

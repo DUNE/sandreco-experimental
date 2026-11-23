@@ -7,20 +7,31 @@
 // loss and leaves the field and the equations.
 //
 // Not part of ctest: it needs a simulation file. Usage:
-//   gun_propagation_check <edep-sim file> [B_x in T, default 0.6] [max events, default all]
+//   gun_propagation_check <edep-sim file> [field] [max events, default all] [region]
+// field:  B_x in T of a uniform field along x (default 0.6), or the path of a .gdml file: the field of the volumes of
+//         the geometry stored in the edep-sim file, with the BField tags of that GDML (volume_field)
+// region: "tracker" (default), pairs of points inside a cylinder around the tracker, or "all", every pair of
+//         consecutive points of the primary
 //
-// The magnetic field is uniform inside the region used, as in the GDML of nd_hall_with_lar_tms_sand_drift1
-// (MagIntVol_volume, 0.6 T along global x).
+// The magnetic field is uniform inside the tracker region, as in the GDML of nd_hall_with_lar_tms_sand_drift1
+// (MagIntVol_volume, 0.6 T along global x): there the two fields give the same result. With "all" the pairs also cross
+// the calorimeter, the coil, the yoke (-1.75 T in the barrel) and the region outside SAND.
 
+#include <kalman/geometry_field.hpp>
 #include <kalman/propagator.hpp>
 
 #include <TFile.h>
 #include <TG4Event.h>
 #include <TTree.h>
 
+#include <root_tgeomanager/root_tgeomanager.hpp>
+#include <ufw/config.hpp>
+
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
+#include <string>
 #include <vector>
 
 using namespace sand::tracker::kalman;
@@ -78,16 +89,30 @@ namespace {
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    std::fprintf(stderr, "usage: %s <edep-sim file> [Bx] [max events]\n", argv[0]);
+    std::fprintf(stderr, "usage: %s <edep-sim file> [Bx | GDML file] [max events] [tracker | all]\n", argv[0]);
     return 1;
   }
-  double const bx   = argc > 2 ? std::atof(argv[2]) : 0.6;
-  long const max_ev = argc > 3 ? std::atol(argv[3]) : -1;
+  std::string const field_arg = argc > 2 ? argv[2] : "0.6";
+  long const max_ev           = argc > 3 ? std::atol(argv[3]) : -1;
+  bool const all_points       = argc > 4 && std::string(argv[4]) == "all";
+  bool const gdml_field       = field_arg.size() > 5 && field_arg.substr(field_arg.size() - 5) == ".gdml";
+
+  // The geometry is loaded first, as in a job: the field is applied to the TGeoManager of the edep-sim file
+  std::unique_ptr<sand::root_tgeomanager> geo;
+  std::unique_ptr<field> bf;
+  if (gdml_field) {
+    geo = std::make_unique<sand::root_tgeomanager>(ufw::json{{"geometry", argv[1]}});
+    bf  = std::make_unique<volume_field>(*geo, read_gdml_field_tags(field_arg));
+    std::printf("field: volumes of the geometry, tags from %s\n", field_arg.c_str());
+  } else {
+    bf = std::make_unique<uniform_field>(field_vector{std::atof(field_arg.c_str()), 0., 0.});
+    std::printf("field: uniform, Bx = %g T\n", std::atof(field_arg.c_str()));
+  }
+  std::printf("region: %s\n", all_points ? "all points of the primary" : "tracker");
   auto* f           = TFile::Open(argv[1]);
   auto* t           = f->Get<TTree>("EDepSimEvents");
   TG4Event* ev      = nullptr;
   t->SetBranchAddress("Event", &ev);
-  uniform_field const bf({bx, 0., 0.});
 
   // index 0: momentum at the start point, 1: average momentum of the two points
   stats dx[2], dy[2], dt[2], dtx[2], dty[2], step;
@@ -106,7 +131,9 @@ int main(int argc, char** argv) {
       for (size_t k = 0; k + 1 < tr.Points.size(); ++k) {
         auto const& a = tr.Points[k];
         auto const& b = tr.Points[k + 1];
-        if (!in_tracker(a.Position) || !in_tracker(b.Position) || std::abs(a.Momentum.Z()) < 1e-3) {
+        bool const selected = all_points || (in_tracker(a.Position) && in_tracker(b.Position));
+        // with "all", also skip points where the track is perpendicular to z (huge slopes)
+        if (!selected || std::abs(a.Momentum.Z()) < 1e-3 || (all_points && std::abs(b.Momentum.Z()) < 1e-3)) {
           continue;
         }
         step.add(b.Position.Z() - a.Position.Z());
@@ -121,7 +148,7 @@ int main(int argc, char** argv) {
           s.par[TY]    = a.Momentum.Y() / a.Momentum.Z();
           s.par[QOP]   = q / p;
           s.par[T]     = a.Position.T();
-          auto const r = propagate(s, b.Position.Z(), m, bf);
+          auto const r = propagate(s, b.Position.Z(), m, *bf);
           if (!r) {
             continue;
           }
