@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_kalman_engine_field)
+
+target_sources(sand_test_kalman_engine_field PRIVATE kalman_engine_field.cpp)
+
+target_link_libraries(sand_test_kalman_engine_field PRIVATE sand_tracker_kalman sand_root_tgeomanager)

@@ -1,8 +1,11 @@
 #include <kalman/engine.hpp>
+#include <kalman/geometry_field.hpp>
 
 #include <ufw/config.hpp>
+#include <ufw/context.hpp>
 
 #include <initializer_list>
+#include <string>
 #include <string_view>
 
 namespace sand::tracker::kalman {
@@ -43,11 +46,38 @@ namespace sand::tracker::kalman {
     if (!cfg.contains("field")) {
       UFW_ERROR("sand::tracker::kalman::engine: missing required key 'field'.");
     }
+    std::string field_description;
     auto const& f = cfg.at("field");
-    if (!f.is_array() || f.size() != 3) {
-      UFW_ERROR("sand::tracker::kalman::engine: 'field' must be an array of three numbers [T], got {}.", f.dump());
+    if (f.is_array()) {
+      if (f.size() != 3 || !f[0].is_number() || !f[1].is_number() || !f[2].is_number()) {
+        UFW_ERROR("sand::tracker::kalman::engine: 'field' must be an array of three numbers [T], got {}.", f.dump());
+      }
+      auto const b      = f.get<field_vector>();
+      m_field           = std::make_unique<uniform_field>(b);
+      field_description = fmt::format("uniform field ({}, {}, {}) T", b[0], b[1], b[2]);
+    } else if (f.is_object()) {
+      check_keys(f, "field", {"source", "file"});
+      if (!f.contains("source") || f.at("source") != "gdml") {
+        UFW_ERROR("sand::tracker::kalman::engine: 'field.source' must be \"gdml\", got {}.",
+                  f.contains("source") ? f.at("source").dump() : std::string("nothing"));
+      }
+      if (!f.contains("file")) {
+        UFW_ERROR("sand::tracker::kalman::engine: missing required key 'field.file'.");
+      }
+      if (!f.at("file").is_string()) {
+        UFW_ERROR("sand::tracker::kalman::engine: 'field.file' must be a path, got {}.", f.at("file").dump());
+      }
+      // Relative paths are resolved against ufw-basepath, as for the geometry of root_tgeomanager
+      auto const file   = ufw::config(f).path_at("file");
+      auto const tags   = read_gdml_field_tags(file);
+      auto& geo         = ufw::context::current()->instance<sand::root_tgeomanager>();
+      m_field           = std::make_unique<volume_field>(geo, tags);
+      field_description = fmt::format("field of the geometry volumes, tags from '{}'", file.string());
+    } else {
+      UFW_ERROR("sand::tracker::kalman::engine: 'field' must be an array [Bx, By, Bz] in T or an object "
+                "{{ \"source\" : \"gdml\", \"file\" : <path> }}, got {}.",
+                f.dump());
     }
-    m_field = std::make_unique<uniform_field>(f.get<field_vector>());
 
     if (cfg.contains("calibration")) {
       auto const& c = cfg.at("calibration");
@@ -120,10 +150,9 @@ namespace sand::tracker::kalman {
       }
     }
 
-    auto const b = m_field->at(0., 0., 0.);
-    UFW_INFO("sand::tracker::kalman::engine: uniform field ({}, {}, {}) T, drift velocity {} mm/ns, wire velocity {} "
+    UFW_INFO("sand::tracker::kalman::engine: {}, drift velocity {} mm/ns, wire velocity {} "
              "mm/ns, TDC resolution {} ns, t0 offset {} ns, max step {} mm, max slope {}.",
-             b[0], b[1], b[2], m_calibration.drift_velocity, m_calibration.wire_velocity, m_calibration.tdc_resolution,
+             field_description, m_calibration.drift_velocity, m_calibration.wire_velocity, m_calibration.tdc_resolution,
              m_calibration.t0_offset, m_propagator.max_step, m_propagator.max_slope);
     UFW_INFO(
         "sand::tracker::kalman::engine: DAF with {} temperatures (first {}, last {}), chi2 cut {}, at most {} extra "

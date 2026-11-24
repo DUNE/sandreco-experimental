@@ -48,7 +48,7 @@ namespace sand::tracker::kalman {
    *
    * | Parameter Name               | Type        | Unit  | Required/Default | Description                                    |
    * |------------------------------|-------------|-------|------------------|------------------------------------------------|
-   * | `field`                      | `double[3]` | T     | Required         | Uniform magnetic field (Bx, By, Bz).           |
+   * | `field`                      | see below   | T     | Required         | Uniform field or field of the volumes.         |
    * | `calibration.drift_velocity` | `double`    | mm/ns | 0.05             | Drift velocity assumed by the reconstruction.  |
    * | `calibration.wire_velocity`  | `double`    | mm/ns | 200              | Signal propagation speed along the wire.       |
    * | `calibration.tdc_resolution` | `double`    | ns    | 3.5              | TDC time resolution.                           |
@@ -82,8 +82,17 @@ namespace sand::tracker::kalman {
    * }
    * \endcode
    *
-   * The field is uniform for now; a field map read from the GDML will be another implementation of the
-   * sand::tracker::kalman::field interface, owned by the engine in the same way.
+   * `field` is either an array `[Bx, By, Bz]`, a uniform field, or an object for the field of the geometry volumes
+   * (sand::tracker::kalman::volume_field):
+   * \code{.json}
+   * "field" : { "source" : "gdml", "file" : "geometries/sand/SAND_opt3_DRIFT1.gdml" }
+   * \endcode
+   * The BField tags are read from the GDML `file` (resolved with ufw::config::path_at, so relative paths are relative
+   * to `ufw-basepath`) and applied to the geometry of sand::root_tgeomanager, which must be configured in the same
+   * job. `source` must be `"gdml"`. The GDML must be the one the geometry was made from.
+   *
+   * The engine is not meant to be used from several threads at once: the field of the geometry keeps a navigator and
+   * a cache that are updated by every lookup.
    */
   class engine : ufw::data::base<ufw::data::complex_tag, ufw::data::unique_tag, ufw::data::global_tag> {
    public:

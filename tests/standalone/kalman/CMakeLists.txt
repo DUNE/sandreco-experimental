@@ -7,3 +7,4 @@ foreach(testSrc ${TEST_SRCS})
   add_executable(${testName} ${testSrc})
   add_test_with_libs(${testName} sand_tracker_kalman)
 endforeach(testSrc)
+
