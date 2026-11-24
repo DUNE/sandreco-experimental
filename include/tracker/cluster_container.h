@@ -14,7 +14,7 @@ namespace sand::tracker {
  */
 
   struct cluster_container : ufw::data::base<ufw::data::managed_tag, ufw::data::instanced_tag, ufw::data::context_tag> {
-    using cluster = digi::signal_collection;
+    using cluster = digi_container::digi_collection;
 
     /**
  * @brief Collection of clusters in the tracker. Each cluster contains a vector of digit indices that belong to that cluster.

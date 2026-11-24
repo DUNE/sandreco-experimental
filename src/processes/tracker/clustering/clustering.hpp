@@ -23,10 +23,10 @@ namespace sand::tracker {
       void run() override;
   
     private:
-      std::map<const geoinfo::tracker_info::station *, std::vector<digi::signal>> group_signals_by_station();
-      void clusterize_signals(const std::vector<digi::signal> & signals);
+      std::map<const geoinfo::tracker_info::station *, digi_container::digi_collection> group_digis_by_station();
+      void clusterize_digis(const digi_container::digi_collection& digis);
       void build_cluster(cluster_container::cluster& cluster,
-                   const std::vector<digi::signal>& signals,
+                   const digi_container::digi_collection& digis,
                    std::vector<char>& visited,
                    size_t index,
                    const geoinfo& gi);
