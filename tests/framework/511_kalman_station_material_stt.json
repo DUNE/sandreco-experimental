@@ -1,0 +1,23 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "info",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : ["/usr/local/lib64"]
+  },
+  "globals" : {
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_STT1.sand-events-in-sand_inner_volume.6.edep.root" },
+    "sand::geoinfo" : { },
+    "sand::tracker::kalman::engine" : { "field" : [0.6, 0.0, 0.0], "material" : "tracker_info" }
+  },
+  "contexts" : {
+    "keys" : 1,
+    "locals" : {},
+    "seed" : 1111
+  },
+  "run" : [
+    {
+      "sand::test::kalman_station_material" : { "toy_tracks" : 0 },
+      "reqs" : {}
+    }
+  ]
+}

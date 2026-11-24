@@ -1,0 +1,26 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "info",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : ["/usr/local/lib64"]
+  },
+  "globals" : {
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_flex_DRIFT.inner-volume.spills.8.root" },
+    "sand::geoinfo" : { "generic_drift" : { "view_angle" : [0.0, -0.087266463, 0.087266463, 0.0],
+                                          "view_offset" : [10.0, 10.0, 10.0, 10.0],
+                                          "view_spacing" : [10.0, 10.0, 10.0, 10.0],
+                                          "distance_between_views" : 12 } },
+    "sand::tracker::kalman::engine" : { "field" : [0.6, 0.0, 0.0], "material" : "tracker_info" }
+  },
+  "contexts" : {
+    "keys" : 1,
+    "locals" : {},
+    "seed" : 1111
+  },
+  "run" : [
+    {
+      "sand::test::kalman_station_material" : { "toy_tracks" : 200 },
+      "reqs" : {}
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_kalman_station_material)
+
+target_sources(sand_test_kalman_station_material PRIVATE kalman_station_material.cpp)
+
+target_link_libraries(sand_test_kalman_station_material PRIVATE sand_tracker_kalman sand_geoinfo)

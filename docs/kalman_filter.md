@@ -132,8 +132,11 @@ The transport Jacobian `F` is integrated with the same Runge-Kutta steps, and th
 only the time of flight.
 
 `propagate(state, z_target, mass, field, material, config)` also crosses the layers returned by the material budget
-(see "Material" below). For each layer, in order, it propagates in the field to the layer centre, changes q/p by the
-energy loss and adds the scattering noise `Q`; then it propagates to `z_target`. The covariance is accumulated step by
+(see "Material" below). For each layer, in order, it propagates in the field to the layer centre; if the layer has a
+transverse extent and the propagated (x, y) is outside it, it goes on without material, otherwise it changes q/p by
+the energy loss and adds the scattering noise `Q`; then it propagates to `z_target`. The extent test is a step
+function of the position and is not differentiated: the Jacobian ignores that a small change of the state could move
+the track across an edge. The covariance is accumulated step by
 step as `C <- F_k C F_k^T + Q_k`, so the returned covariance includes the noise, while the returned `F` is the
 product of all the Jacobians (field and material steps) without noise, which is what the smoother expects. With no
 layers in the interval the result is identical to the field-only overload.
@@ -146,7 +149,10 @@ tracks that curl back in the field; the material overload also returns nothing i
 Material is a sequence of thin slabs perpendicular to z. A `layer` has its centre `z` and `thickness` along z [mm],
 the radiation length `radiation_length` [mm], `density` [g/cm3], `z_over_a` [mol/g], `mean_excitation` I [MeV] and
 `sternheimer`, the density effect parameters (`density_effect`: a, k, x0, x1, C-bar, delta0, as in the PDG tables of
-atomic and nuclear properties). Left at its default, `sternheimer` disables the density effect correction.
+atomic and nuclear properties). Left at its default, `sternheimer` disables the density effect correction. The
+optional `extent` (`transverse_extent`: x_min, x_max, y_min, y_max in mm) limits the layer in x and y, for instance to
+the station it belongs to; a layer without it covers the whole plane. The propagation applies a layer with an extent
+only if the track, propagated in the field to the plane of the layer, crosses it inside the extent.
 
 `material_budget` is an interface, like `field`: `crossed_layers(state, z_target)` returns the layers between the
 plane of the state and `z_target`, ordered in the direction of propagation. The interval is half-open according to
@@ -164,13 +170,53 @@ direction.
 
 Implementations:
 
-- `fixed_material_budget`: a fixed list of layers, independent of x and y. Used in the tests.
-- planned, outside this module: one built from the tracker stations of `tracker_info` (targets and chamber walls
-  as layers at fixed z), and one stepping through the ROOT geometry along the track.
+- `fixed_material_budget`: a fixed list of layers, returned as they are (with or without extent). Used in the tests.
+- `station_material_budget` (`station_material.hpp`): the material of the tracker stations from
+  `geoinfo::tracker_info`, see the next section. The engine owns one with `"material" : "tracker_info"`.
+- planned: one stepping through the ROOT geometry along the track.
 
-The engine does not own a material budget yet: `engine.propagate(state, z_target, mass, material)` takes it from the
-caller and uses the field and the propagator settings of the engine. There are no configuration keys for the
-material. The budget built from `tracker_info` will come with a later change, which will also decide who owns it.
+### Material of the tracker stations (`station_material.hpp`)
+
+`station_material_budget` is built from a `geoinfo::tracker_info` (see `docs/geoinfo_tracker_materials.md`). At
+construction every `material_layer` of every station is converted to a `layer` by `to_layer`: centre
+`(z_min + z_max) / 2`, thickness `z_max - z_min`, the same X0, density, <Z/A> and I. The layers of all stations are
+kept in one list sorted in z, each with the transverse extent of its station: the rectangle spanned in x and y by
+the four corners `top_north`, `top_south`, `bottom_south`, `bottom_north`. The tracker description is not referenced
+after construction.
+
+`crossed_layers(s, z_target)` finds the layers in the interval by binary
+search, applies the interval rule above (`layer_in_interval`) and returns them all, ordered along the propagation,
+without looking at x and y. Whether the track crosses a station is decided by `propagate`, at the position propagated
+in the field to the plane of each layer, so the curvature of the track is taken into account: a track that enters a
+station only because it bends into it gets its material, one that bends out of it does not. Since the test uses the
+position on the plane of the layer, a forward propagation and its reverse agree on it (to the precision of the
+propagation). Inside the extent of a station the layers do not depend on x and y: they are those sampled by geoinfo
+along one line per station.
+
+The Sternheimer parameters in geoinfo refer to the density of the table (`reference_density`), not to the density of
+the material in the geometry (graphite 2.23 g/cm3 against 2.265 in the table, C3H6 0.946 against 0.900). `to_layer`
+rescales them to the geometry density with `rescale_density_effect`, `r = rho_geometry / rho_table`:
+
+```
+C  -> C  - ln r
+x0 -> x0 - 0.5 log10 r
+x1 -> x1 - 0.5 log10 r
+a, k, delta0 unchanged
+```
+
+(Sternheimer, Berger and Seltzer, At. Data Nucl. Data Tables 30 (1984) 261). The plasma energy scales as sqrt(rho),
+so `C = 2 ln(I / hbar omega_p) + 1` decreases by `ln r`, and the whole curve delta(X) moves to lower X by
+`0.5 log10 r`: `delta_rho(X) = delta_table(X + 0.5 log10 r)`. Check: the porous graphite entry of Geant4
+(`G4DensityEffectData` index 277, 1.70 g/cm3: a = 0.20762, k = 2.9532, x0 = 0.048, x1 = 2.5387, C = 3.155) rescaled
+to 2.21 g/cm3 gives a = 0.2076, k = 2.9532, x0 = -0.0090, x1 = 2.4817, C = 2.8926. Materials without Sternheimer
+parameters in geoinfo (the chamber gases) get no density effect correction.
+
+The construction stops the job if a layer has a non-positive thickness, radiation length or density.
+
+Speed: `propagate` integrates the field up to every layer centre. In the STT each C3H6 station has a transition
+radiator of about 100 foils with air gaps, about 230 layers per station and 14834 in the tracker, so propagating a
+muon through the whole STT with its material takes about 1.1 s (toy simulation and fit, against 0.05 s for the 645
+layers of the drift chambers). Grouping the radiator foils into one equivalent layer per station is a follow-up.
 
 The material step is done by `material_step(par, layer, mass, loss_sign)`, built from free functions that can be
 used and tested on their own. With `N^2 = 1 + tx^2 + ty^2`:
@@ -428,10 +474,11 @@ per job and every module sees the same instance; and since the library is compil
 every module runs the same code, instead of each one compiling its own copy of header-only functions (which
 duplicates code and can give slightly different numerical results).
 
-The engine owns the magnetic field, the reconstruction calibration, the propagator settings and the settings of the
-deterministic annealing filter. The material
-description will be added to it when it comes from `tracker_info`, in a later merge request; until then the caller
-passes a `material_budget` to `engine.propagate(state, z_target, mass, material)`.
+The engine owns the magnetic field, the reconstruction calibration, the propagator settings, the settings of the
+deterministic annealing filter and, optionally, the material budget. With `"material" : "tracker_info"` it takes
+`geoinfo::tracker_info` from the current context at construction (so `sand::geoinfo` and `sand::root_tgeomanager` must
+be configured in the job) and owns a `station_material_budget` built from it; with `"none"` (the default) it has no
+material.
 
 The engine is configured in the `"globals"` section of the job:
 
@@ -444,7 +491,8 @@ The engine is configured in the `"globals"` section of the job:
     "propagator" : { "max_step" : 50.0, "max_slope" : 1000.0 },
     "daf" : { "temperatures" : [81, 81, 9, 4, 1, 1], "chi2_cut" : 9.0, "max_iterations" : 10,
               "convergence_threshold" : 0.001, "min_weight" : 0.001, "anneal_variance" : true,
-              "initial_weights" : "equal", "final_prior_scale" : 1e4 }
+              "initial_weights" : "equal", "final_prior_scale" : 1e4 },
+    "material" : "tracker_info"
   }
 }
 ```
@@ -466,12 +514,14 @@ The engine is configured in the `"globals"` section of the job:
 | `daf.anneal_variance`        | `bool`      |       | true             | Update with variance T V / w (false: V / w).    |
 | `daf.initial_weights`        | `string`    |       | "equal"          | First-pass weights: "equal" or "prediction".    |
 | `daf.final_prior_scale`      | `double`    |       | 1e4              | Prior covariance factor of the final pass.      |
+| `material`                   | `string`    |       | `"none"`         | `"none"` or `"tracker_info"`.                   |
 
-`calibration`, `propagator` and `daf` are optional, and so is each of their keys; the defaults are those of
-`reco_calibration`, `propagator_config` and `daf_config`. Velocities, resolution, step, slope, temperatures, cutoff
+`calibration`, `propagator`, `daf` and `material` are optional, and so is each of their keys; the defaults are those
+of `reco_calibration`, `propagator_config` and `daf_config`. Velocities, resolution, step, slope, temperatures, cutoff
 and convergence threshold must be positive, `max_iterations` a non-negative integer, `min_weight` in [0, 1),
 `anneal_variance` a boolean, `initial_weights` "equal" or "prediction" and `final_prior_scale` at least 1.
-Unknown keys are rejected, so a misspelt key is an error and not a silent default.
+Unknown keys are rejected, so a misspelt key is an error and not a silent default; so is a `material` other than
+`"none"` and `"tracker_info"`.
 
 `field` is either an array `[Bx, By, Bz]`, a uniform field, or an object for the field of the geometry volumes:
 
@@ -499,10 +549,12 @@ is configured.
 A process gets the engine with `instance<sand::tracker::kalman::engine>()` and links `sand_tracker_kalman` in its
 CMakeLists. The engine exposes
 
-- `field()`, `calibration()`, `propagator_settings()`, `daf_settings()`: the shared state;
-- `propagate(state, z_target, mass)`: `propagate` with the field and settings of the engine;
+- `field()`, `calibration()`, `propagator_settings()`, `daf_settings()`, `material()`: the shared state
+  (`material()` is null with `"none"`);
+- `propagate(state, z_target, mass)`: `propagate` with the field, settings and material of the engine (the
+  field-only `propagate` with `"none"`);
 - `propagate(state, z_target, mass, material)`: the material overload of `propagate`, with the field and settings of
-  the engine and the material budget given by the caller;
+  the engine and the material budget given by the caller instead of the engine's;
 - `wire_time(state, wire, side)`: `wire_time` with the calibration of the engine;
 - `fit(initial, sites, mass, material)`: `daf_fit` with the field, calibration, propagator and DAF settings of the
   engine and the material budget given by the caller.
@@ -524,9 +576,7 @@ wire_geometry w;       // filled from the wire description of the geometry servi
 double tdc;            // from the digit
 int side;              // left-right hypothesis
 
-fixed_material_budget const material(layers); // or a budget built from the geometry
-
-auto prop = kf.propagate(current, w.z(), 105.66, material);
+auto prop = kf.propagate(current, w.z(), 105.66); // material of the engine ("material" : "tracker_info")
 if (!prop) {
   // track lost
 }
@@ -564,6 +614,10 @@ The standalone tests are in `tests/standalone/kalman/`:
   in the tracker identical to the uniform field, time per lookup (printed), configuration errors of the engine;
 - `kalman_geometry_field_synthetic`: inheritance on a small geometry built in the test, with a logical volume placed
   in two mothers: inheritance through all placements, own tags, conflicting fields, `V` and `V_PV` names.
+- `kalman_station_material`: Sternheimer rescaling (porous graphite to 2.21 g/cm3, delta shifted in X in all three
+  ranges, identity and round trip), conversion of a geoinfo layer, the `material` key of the engine, and the
+  transverse extent of a layer tested on the curved track: a 1 GeV/c muon in 0.6 T that enters the extent only because
+  of the curvature gets the material, one that leaves it does not, and the round trip regains the energy.
 
 The tests link `sand_tracker_kalman`. `kalman_geometry_field` reads the sandreco data of the image, the
 `ufw-basepath` of the framework tests. The directory is the CMake cache variable `SANDRECO_IMAGE_DATA_DIR` (default
@@ -573,6 +627,17 @@ The tests link `sand_tracker_kalman`. `kalman_geometry_field` reads the sandreco
 The framework test `500_kalman_engine_geometry_field` builds the engine in a job with
 `"field" : { "source" : "gdml", ... }` and a relative GDML path, and checks the field at points in the tracker, the
 calorimeter, the yoke and outside, and a propagation in the tracker against the uniform field.
+
+The framework tests `510_kalman_station_material_drift`, `511_kalman_station_material_stt` and
+`512_kalman_station_material_generic_drift` (process `sand::test::kalman_station_material` in
+`tests/framework/510_modules`) build the engine with `"material" : "tracker_info"` on the test geometries and check
+that a straight track through the centre of the tracker crosses every layer with a total x/X0 equal to the sum of
+`station::radiation_lengths()`; that the backward propagations cross the same layers in reverse order; that a
+propagation split at every layer centre crosses each layer once; that every layer carries the extent of its station
+and a track outside the stations loses no energy and does not scatter; and that `engine.propagate` is identical to
+`propagate` with an equivalent `fixed_material_budget`. 510 and 512 also fit 200 toy muons through the tracker
+material (filter and smoother, x and y measured after each station) and check the pulls; 511 does not, because of
+the propagation time through the STT radiators.
 
 `gun_propagation_check.cpp` is not run by ctest. It compares the propagator with edep-sim trajectories of a particle
 gun and needs an edep-sim file; build it against `sand_tracker_kalman` and `sand_root_tgeomanager` (include paths

@@ -47,6 +47,17 @@ namespace sand::tracker::kalman {
     bool enabled() const { return c_bar != 0.; }
   };
 
+  /// Rectangle in the x-y plane, global coordinates [mm].
+  struct transverse_extent {
+    double x_min{0}; ///< Smallest x
+    double x_max{0}; ///< Largest x
+    double y_min{0}; ///< Smallest y
+    double y_max{0}; ///< Largest y
+
+    /// Whether (x, y) is inside the rectangle, edges included.
+    bool contains(double x, double y) const { return x >= x_min && x <= x_max && y >= y_min && y <= y_max; }
+  };
+
   /// A thin slab of homogeneous material, perpendicular to the z axis.
   struct layer {
     double z{0};                  ///< Centre of the slab [mm]
@@ -56,6 +67,9 @@ namespace sand::tracker::kalman {
     double z_over_a{0};           ///< Ratio <Z/A> [mol/g]
     double mean_excitation{0};    ///< Mean excitation energy I [MeV]
     density_effect sternheimer{}; ///< Density effect parameters; default: no correction
+    /// Where the slab is in x and y (e.g. the station it belongs to); empty: the slab covers the whole plane. The
+    /// propagation applies the layer only if the propagated track crosses its plane inside the extent.
+    std::optional<transverse_extent> extent{};
   };
 
   /**
@@ -72,7 +86,8 @@ namespace sand::tracker::kalman {
      * @param s        Starting state. Its position and direction are available to implementations that step through
      *                 the geometry.
      * @param z_target Target plane [mm].
-     * @return The layers whose centre lies between s.z and z_target, ordered from s.z towards z_target (empty if
+     * @return The layers whose centre lies between s.z and z_target, whatever their transverse extent (the propagation
+     *         tests the extent at the propagated position), ordered from s.z towards z_target (empty if
      *         z_target == s.z). The interval is half-open according to the direction of motion: with lo and hi the
      *         smaller and larger of s.z and z_target, it is (lo, hi] for s.direction = +1 and [lo, hi) for
      *         s.direction = -1 (see layer_in_interval()).

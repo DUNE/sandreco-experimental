@@ -1,10 +1,13 @@
 #include <kalman/engine.hpp>
 #include <kalman/geometry_field.hpp>
+#include <kalman/station_material.hpp>
 
+#include <geoinfo/geoinfo.hpp>
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
 
 #include <initializer_list>
+#include <memory>
 #include <string>
 #include <string_view>
 
@@ -41,7 +44,7 @@ namespace sand::tracker::kalman {
   } // namespace
 
   engine::engine(const ufw::config& cfg) {
-    check_keys(cfg, "top level", {"field", "calibration", "propagator", "daf"});
+    check_keys(cfg, "top level", {"field", "calibration", "propagator", "daf", "material"});
 
     if (!cfg.contains("field")) {
       UFW_ERROR("sand::tracker::kalman::engine: missing required key 'field'.");
@@ -150,10 +153,29 @@ namespace sand::tracker::kalman {
       }
     }
 
+    std::string material = "none";
+    if (cfg.contains("material")) {
+      auto const& m = cfg.at("material");
+      if (!m.is_string()) {
+        UFW_ERROR("sand::tracker::kalman::engine: 'material' must be \"none\" or \"tracker_info\", got {}.", m.dump());
+      }
+      material = m.get<std::string>();
+    }
+    if (material == "tracker_info") {
+      auto const& gi = ufw::context::current()->instance<sand::geoinfo>();
+      auto budget    = std::make_unique<station_material_budget>(gi.tracker());
+      UFW_INFO("sand::tracker::kalman::engine: material from tracker_info, {} layers in {} stations.",
+               budget->layers().size(), budget->extents().size());
+      m_material = std::move(budget);
+    } else if (material != "none") {
+      UFW_ERROR("sand::tracker::kalman::engine: 'material' must be \"none\" or \"tracker_info\", got \"{}\".",
+                material);
+    }
+
     UFW_INFO("sand::tracker::kalman::engine: {}, drift velocity {} mm/ns, wire velocity {} "
-             "mm/ns, TDC resolution {} ns, t0 offset {} ns, max step {} mm, max slope {}.",
+             "mm/ns, TDC resolution {} ns, t0 offset {} ns, max step {} mm, max slope {}, material {}.",
              field_description, m_calibration.drift_velocity, m_calibration.wire_velocity, m_calibration.tdc_resolution,
-             m_calibration.t0_offset, m_propagator.max_step, m_propagator.max_slope);
+             m_calibration.t0_offset, m_propagator.max_step, m_propagator.max_slope, material);
     UFW_INFO(
         "sand::tracker::kalman::engine: DAF with {} temperatures (first {}, last {}), chi2 cut {}, at most {} extra "
         "passes, convergence threshold {}, minimum weight {}, variance annealing {}, {} initial weights, final prior "
@@ -166,6 +188,9 @@ namespace sand::tracker::kalman {
   engine::~engine() = default;
 
   std::optional<propagation_result> engine::propagate(const state& in, double z_target, double mass) const {
+    if (m_material) {
+      return kalman::propagate(in, z_target, mass, *m_field, *m_material, m_propagator);
+    }
     return kalman::propagate(in, z_target, mass, *m_field, m_propagator);
   }
 

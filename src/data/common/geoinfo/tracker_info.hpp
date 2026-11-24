@@ -2,6 +2,14 @@
 
 #include <geoinfo/subdetector_info.hpp>
 
+#include <optional>
+#include <utility>
+#include <string>
+#include <vector>
+
+class TGeoNavigator;
+class TGeoNode;
+
 namespace sand {
 
   /**
@@ -53,9 +61,9 @@ namespace sand {
                                                                      ///< coordinate, starting from north.
       const station* parent;                                         ///< The parent station
       mutable wire_list adjacent_wires;                              ///< The list of adjacent wires.
-                                        ///< The mutable attribute makes the element of a const object modifiable.
-                                        ///< In this case needed because the adjacency can be attributed only once all
-                                        ///< wires are constructed.
+      ///< The mutable attribute makes the element of a const object modifiable.
+      ///< In this case needed because the adjacency can be attributed only once all
+      ///< wires are constructed.
       bool is_adjacent(const wire* w) const; ///< Check if the wire is adjecent
       channel_id daq_channel;                ///< The unique daq identifier
       pos_3d head;                           ///< The readout end of the wire
@@ -85,6 +93,48 @@ namespace sand {
       NONE    = 255,
     };
 
+    /**
+     * @brief Sternheimer parameters of the density-effect correction to the Bethe formula.
+     *
+     * Notation of Sternheimer, Berger and Seltzer, At. Data Nucl. Data Tables 30 (1984) 261:
+     * with x = log10(beta gamma), delta(x) = 2 ln(10) x - C + a (x1 - x)^k for x0 <= x < x1,
+     * 2 ln(10) x - C for x >= x1, and delta0 10^(2 (x - x0)) for x < x0 (conductors).
+     * The parameters are valid at @ref reference_density; they are not rescaled to the density in the geometry.
+     */
+    struct sternheimer_parameters {
+      double a;                 ///< Coefficient a (dimensionless)
+      double k;                 ///< Exponent k, also called m_s (dimensionless)
+      double x0;                ///< Lower limit x0 of the intermediate region, x = log10(beta gamma)
+      double x1;                ///< Upper limit x1 of the intermediate region, x = log10(beta gamma)
+      double C;                 ///< Constant C, written as -C in the tables (C is positive)
+      double delta0;            ///< Value of delta at x0 for conductors, 0 for insulators
+      double reference_density; ///< Density at which the parameters were computed [g/cm3]
+    };
+
+    /**
+     * @brief A slab of uniform material crossed by a track going along z through a station.
+     *
+     * Layers are obtained by walking the geometry along z at one (x, y) point of the station: the centre for the
+     * drift chambers, halfway between two adjacent wires for the STT, see docs/geoinfo_tracker_materials.md.
+     * They describe the material along that line only.
+     */
+    struct material_layer {
+      double z_min;                                      ///< Upstream face of the layer, global z [mm]
+      double z_max;                                      ///< Downstream face of the layer, global z [mm]
+      double radiation_length;                           ///< Radiation length X0 [mm]
+      double density;                                    ///< Density [g/cm3]
+      double z_over_a;                                   ///< Mean ratio <Z/A> of atomic number to atomic mass [mol/g]
+      double mean_excitation;                            ///< Mean excitation energy I [MeV]
+      std::string material;                              ///< Name of the material in the ROOT geometry
+      std::optional<sternheimer_parameters> sternheimer; ///< Density-effect parameters, empty when unknown
+
+      /// Thickness of the layer along z [mm].
+      double thickness() const { return z_max - z_min; }
+
+      /// Thickness of the layer in units of radiation length (dimensionless).
+      double x_over_x0() const { return thickness() / radiation_length; }
+    };
+
     struct station {
       pos_3d top_north; ///< Top right (looking towards FD) of the sensitive volume
       pos_3d top_south; ///< Top left (looking towards FD) of the sensitive volume
@@ -93,8 +143,9 @@ namespace sand {
       double thickness;
       std::vector<wire_ptr> wires; ///< all the wires in this station, sorted top down, north to south
       target_material target;
-      dir_3d target_box;
-      double target_density; ///< in kg/mm^3 !
+      dir_3d target_box;     ///< Full size of the target box along global x, y, z [mm], all components positive
+      double target_density; ///< Density of the target material [g/cm3]
+      std::vector<material_layer> layers; ///< Material crossed along z at the station centre, ordered by z
       tracker_info* parent;
       channel_id::link_t daq_link; ///< the daq link number for this station (not 1-1)
       template <typename Func>
@@ -108,9 +159,12 @@ namespace sand {
         return wl;
       }
       void set_wire_adjacency();
+
+      /// Thickness of the station material in radiation lengths: the sum of x/X0 over @ref layers (dimensionless).
+      double radiation_lengths() const;
     };
 
-    using target_mass_t = std::map<target_material, double>;
+    using target_mass_t = std::map<target_material, double>; ///< Target mass [kg] per target material
 
    protected:
     using station_ptr = std::unique_ptr<const station>;
@@ -141,6 +195,11 @@ namespace sand {
 
    protected:
     void add_station(station_ptr&&);
+
+    static std::vector<material_layer> sample_material_layers(TGeoNavigator&, const geo_path&,
+                                                              std::optional<std::pair<double, double>> xy = {});
+
+    static void set_target(station&, TGeoNavigator&, const TGeoNode&);
 
     void add_volume(const geo_path&, const gas_volume&);
 

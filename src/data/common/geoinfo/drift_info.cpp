@@ -32,9 +32,9 @@ namespace sand {
     auto nav       = tgm.navigator();
     auto driftpath = gi.root_path() / path();
 
-    m_view_angle   = cfg.value("view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
-    m_view_offset  = cfg.value("view_offset", std::array<double, 3>{20.0, 20.0, 20.0});
-    m_view_spacing = cfg.value("view_spacing", std::array<double, 3>{20.0, 20.0, 20.0});
+    m_view_angle             = cfg.value("view_angle", std::array<double, 3>{0.0, -M_PI / 36.0, M_PI / 36.0});
+    m_view_offset            = cfg.value("view_offset", std::array<double, 3>{20.0, 20.0, 20.0});
+    m_view_spacing           = cfg.value("view_spacing", std::array<double, 3>{20.0, 20.0, 20.0});
     m_distance_between_views = cfg.value("distance_between_views", 10.0);
 
     nav->cd(driftpath);
@@ -71,7 +71,7 @@ namespace sand {
         centre.SetCoordinates(tran);
         dir_3d halfsize(station_shape->GetDX(), station_shape->GetDY(), station_shape->GetDZ());
         dir_3d boxcorner = nav->to_master(halfsize);
-        stat->thickness = 2.0 * boxcorner.Z();
+        stat->thickness  = 2.0 * boxcorner.Z();
         boxcorner.SetZ(0); // we ignore the thickness here.
         stat->top_north    = centre + boxcorner;
         stat->bottom_south = centre - boxcorner;
@@ -94,14 +94,7 @@ namespace sand {
             std::string componentname = component->GetName();
             UFW_DEBUG("Component name: {}", componentname);
             if (componentname.find("Target") != std::string::npos) {
-              if (auto* target_shape = dynamic_cast<TGeoBBox*>(component->GetVolume()->GetShape())) {
-                dir_3d target_halfsize(target_shape->GetDX(), target_shape->GetDY(), target_shape->GetDZ());
-                dir_3d target_boxcorner = nav->to_master(target_halfsize);
-                stat->target_box = 2.0 * dir_3d(target_boxcorner.X(), target_boxcorner.Y(), target_boxcorner.Z());
-                stat->target_density = component->GetVolume()->GetMaterial()->GetDensity() / 6.24e24;
-              } else {
-                UFW_ERROR("Target shape is not a Box");
-              }
+              set_target(*stat, *nav, *component);
             } else if (componentname.find("DriftChamber") != std::string::npos) {
               nav->cd(driftpath / smodname / modname / componentname);
               nav->for_each_node([&](auto driftmodule) {
@@ -116,6 +109,7 @@ namespace sand {
           });
         }
 
+        stat->layers = sample_material_layers(*nav, driftpath / smodname / modname);
         stat->set_wire_adjacency();
         add_station(station_ptr(std::move(stat)));
       });
@@ -391,7 +385,8 @@ namespace sand {
                                                                                     : intersections_global[0];
         w->tail       = (intersections_global[1].x() < intersections_global[0].x()) ? intersections_global[0]
                                                                                     : intersections_global[1];
-        w->max_radius = sqrt(std::pow(drift->view_spacing()[view_ID] / 2.0, 2) + std::pow(drift->distance_between_views() / 2.0, 2));
+        w->max_radius = sqrt(std::pow(drift->view_spacing()[view_ID] / 2.0, 2)
+                             + std::pow(drift->distance_between_views() / 2.0, 2));
         w->daq_channel.subdetector = DRIFT;
         w->daq_channel.link        = daq_link;
         w->daq_channel.channel     = (uint32_t(view_ID) << 16) | uint32_t(wire_index);

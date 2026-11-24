@@ -63,12 +63,18 @@ namespace sand::tracker::kalman {
    * | `daf.anneal_variance`        | `bool`      |       | true             | Update with variance T V / w (false: V / w).   |
    * | `daf.initial_weights`        | `string`    |       | "equal"          | First-pass weights: "equal" or "prediction".   |
    * | `daf.final_prior_scale`      | `double`    |       | 1e4              | Prior covariance factor of the final pass.     |
+   * | `material`                   | `string`    |       | `"none"`         | Material budget used by propagate().           |
    *
    * The `calibration`, `propagator` and `daf` objects are optional, and so is each of their keys. Velocities,
    * resolution, step, slope, temperatures, cutoff and convergence threshold must be positive, max_iterations a
    * non-negative integer, min_weight in [0, 1), anneal_variance a boolean, initial_weights "equal" or "prediction"
    * and final_prior_scale at least 1 (1: no final pass); unknown keys are rejected, so that a misspelt key is not
    * silently ignored.
+   *
+   * `material` is `"none"` (no material: propagate() without a budget is the field-only propagation) or
+   * `"tracker_info"`: the engine takes `geoinfo::tracker_info` from the current context (so `sand::geoinfo` and
+   * `sand::root_tgeomanager` must be configured) and owns a sand::tracker::kalman::station_material_budget built from
+   * it. Any other value is rejected.
    *
    * Example:
    * \code{.json}
@@ -78,7 +84,8 @@ namespace sand::tracker::kalman {
    *   "propagator" : { "max_step" : 50.0, "max_slope" : 1000.0 },
    *   "daf" : { "temperatures" : [81, 81, 9, 4, 1, 1], "chi2_cut" : 9.0, "max_iterations" : 10,
    *             "convergence_threshold" : 0.001, "min_weight" : 0.001, "anneal_variance" : true,
-   *             "initial_weights" : "equal", "final_prior_scale" : 1e4 }
+   *             "initial_weights" : "equal", "final_prior_scale" : 1e4 },
+   *   "material" : "tracker_info"
    * }
    * \endcode
    *
@@ -111,13 +118,17 @@ namespace sand::tracker::kalman {
     const propagator_config& propagator_settings() const { return m_propagator; }
     /// Settings of the deterministic annealing filter used by fit()
     const daf_config& daf_settings() const { return m_daf; }
+    /// Material budget owned by the engine, used by propagate() without an explicit budget; nullptr for "none"
+    const material_budget* material() const { return m_material.get(); }
 
     /**
-     * @brief Propagate a state to the plane z_target with the field and the settings of the engine.
+     * @brief Propagate a state to the plane z_target with the field, the material and the settings of the engine.
      * @param in       Input state (its covariance is transported)
      * @param z_target Target plane [mm]
-     * @param mass     Mass hypothesis [MeV], used only for the time of flight
-     * @return As sand::tracker::kalman::propagate()
+     * @param mass     Mass hypothesis [MeV], used for the time of flight and, with material, for the energy loss and
+     *                 the scattering angle
+     * @return With `"material" : "none"`, as the field-only sand::tracker::kalman::propagate(); otherwise as its
+     *         material overload with the budget of the engine (material()).
      */
     std::optional<propagation_result> propagate(const state& in, double z_target, double mass) const;
 
@@ -127,7 +138,7 @@ namespace sand::tracker::kalman {
      * @param in       Input state (its covariance is transported)
      * @param z_target Target plane [mm]
      * @param mass     Mass hypothesis [MeV], used for the time of flight, the energy loss and the scattering angle
-     * @param material Material budget, provided by the caller: the engine does not own a material description yet
+     * @param material Material budget, used instead of the one of the engine
      * @return As the material overload of sand::tracker::kalman::propagate()
      */
     std::optional<propagation_result> propagate(const state& in, double z_target, double mass,
@@ -155,10 +166,11 @@ namespace sand::tracker::kalman {
                    const material_budget& material) const;
 
    private:
-    std::unique_ptr<kalman::field> m_field; ///< Owned field, behind the abstract interface
-    reco_calibration m_calibration;         ///< Reconstruction calibration
-    propagator_config m_propagator;         ///< Runge-Kutta settings
-    daf_config m_daf;                       ///< Deterministic annealing filter settings
+    std::unique_ptr<kalman::field> m_field;      ///< Owned field, behind the abstract interface
+    reco_calibration m_calibration;              ///< Reconstruction calibration
+    propagator_config m_propagator;              ///< Runge-Kutta settings
+    daf_config m_daf;                            ///< Deterministic annealing filter settings
+    std::unique_ptr<material_budget> m_material; ///< Owned material budget; null for "none"
   };
 
 } // namespace sand::tracker::kalman

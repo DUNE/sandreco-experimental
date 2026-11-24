@@ -110,15 +110,10 @@ namespace sand {
       nav->for_each_node([&](auto subunit){
         std::string subuname = subunit->GetName();
         UFW_DEBUG("Subunit name: {}", subuname);
-        if (subuname.find("ch") == std::string::npos){
-          if (auto* target_shape = dynamic_cast<TGeoBBox*>(subunit->GetVolume()->GetShape())) {
-            dir_3d target_halfsize(target_shape->GetDX(), target_shape->GetDY(), target_shape->GetDZ());
-            dir_3d target_boxcorner = nav->to_master(target_halfsize);
-            stat->target_box = 2.0 * dir_3d(target_boxcorner.X(), target_boxcorner.Y(), target_boxcorner.Z());
-            stat->target_density = subunit->GetVolume()->GetMaterial()->GetDensity() / 6.24e24;
-          } else {
-            UFW_ERROR("Target shape is not a Box");
-          } 
+        if (subuname.find("fr") != std::string::npos) {
+          return; // the frame is not a target
+        } else if (subuname.find("ch") == std::string::npos) {
+          set_target(*stat, *nav, *subunit);
           // return; // since they are subunits with only targets
         } else if (subuname.find("ch") != std::string::npos){
           geo_path chamber_path = driftpath / stname / subuname; 
@@ -137,6 +132,7 @@ namespace sand {
         }
       });
 
+      stat->layers = sample_material_layers(*nav, driftpath / stname);
       stat->set_wire_adjacency();
       // UFW_DEBUG("Adding station {} ", stname);
       add_station(station_ptr(std::move(stat)));
