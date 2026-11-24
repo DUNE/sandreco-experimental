@@ -556,8 +556,10 @@ CMakeLists. The engine exposes
 - `propagate(state, z_target, mass, material)`: the material overload of `propagate`, with the field and settings of
   the engine and the material budget given by the caller instead of the engine's;
 - `wire_time(state, wire, side)`: `wire_time` with the calibration of the engine;
-- `fit(initial, sites, mass, material)`: `daf_fit` with the field, calibration, propagator and DAF settings of the
-  engine and the material budget given by the caller.
+- `fit(initial, sites, mass)`: `daf_fit` with the field, material, calibration, propagator and DAF settings of the
+  engine (an empty budget, i.e. the field-only propagation, with `"none"`);
+- `fit(initial, sites, mass, material)`: the same with the material budget given by the caller instead of the
+  engine's.
 
 The free functions stay available with explicit arguments (the engine calls them), for tests and for code that needs
 a different field or calibration.
@@ -604,7 +606,8 @@ The standalone tests are in `tests/standalone/kalman/`:
   smoother (both initial-weight options); left-right resolution, pulls and chi2/ndf on toy tracks moving along +z and
   -z, with the wires oriented as in `drift_info`; noise digits; chi2/ndf with and without the final pass; an outlier;
   failure statuses; independence of the order of the candidates; prior on another plane; `engine.fit` identical to
-  `daf_fit` with the settings of the engine, and the `"daf"` configuration keys read and validated;
+  `daf_fit` with the settings of the engine, and the `"daf"` configuration keys read and validated; `engine.fit`
+  without a budget and `"material" : "none"` identical to the fit with an empty budget;
 - `kalman_engine`: engine built from a JSON configuration, defaults and configured values, rejection of invalid
   configurations, `engine.propagate` and `engine.wire_time` identical to the free functions with the same field,
   settings and calibration;
@@ -634,8 +637,10 @@ The framework tests `510_kalman_station_material_drift`, `511_kalman_station_mat
 that a straight track through the centre of the tracker crosses every layer with a total x/X0 equal to the sum of
 `station::radiation_lengths()`; that the backward propagations cross the same layers in reverse order; that a
 propagation split at every layer centre crosses each layer once; that every layer carries the extent of its station
-and a track outside the stations loses no energy and does not scatter; and that `engine.propagate` is identical to
-`propagate` with an equivalent `fixed_material_budget`. 510 and 512 also fit 200 toy muons through the tracker
+and a track outside the stations loses no energy and does not scatter; that `engine.propagate` is identical to
+`propagate` with an equivalent `fixed_material_budget`; and that `engine.fit` without a budget is identical to
+`engine.fit` with `engine.material()` and differs from the fit with an empty budget (a DAF fit of a muon on one wire
+per station, TDCs from the true track with energy loss). 510 and 512 also fit 200 toy muons through the tracker
 material (filter and smoother, x and y measured after each station) and check the pulls; 511 does not, because of
 the propagation time through the STT radiators.
 

@@ -839,6 +839,24 @@ BOOST_AUTO_TEST_CASE(engine_fit) {
   }
 }
 
+// 7. engine.fit without a budget uses the material of the engine: with "material" : "none", an empty budget (field-only
+// propagation between the sites). The tracker_info case is checked by the framework test 510.
+BOOST_AUTO_TEST_CASE(engine_fit_default_material) {
+  engine const kf(ufw::json::parse(R"({ "field" : [0.6, 0.0, 0.0], "material" : "none" })"));
+  BOOST_REQUIRE(kf.material() == nullptr);
+
+  small_case c(911);
+  fixed_material_budget const empty({});
+  auto const a = kf.fit(c.prior, c.sites, m_mu);
+  check_same(a, kf.fit(c.prior, c.sites, m_mu, empty));
+  check_same(a, daf_fit(c.prior, c.sites, m_mu, c.bf, empty, c.cal, {}, {}));
+
+  // The toy track crosses material: fitting it without material gives a different result.
+  auto const with_material = kf.fit(c.prior, c.sites, m_mu, c.mb);
+  BOOST_REQUIRE(with_material.success);
+  BOOST_CHECK_NE(a.chi2, with_material.chi2);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 FIX_TEST_EXIT

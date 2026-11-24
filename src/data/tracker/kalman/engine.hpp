@@ -63,7 +63,7 @@ namespace sand::tracker::kalman {
    * | `daf.anneal_variance`        | `bool`      |       | true             | Update with variance T V / w (false: V / w).   |
    * | `daf.initial_weights`        | `string`    |       | "equal"          | First-pass weights: "equal" or "prediction".   |
    * | `daf.final_prior_scale`      | `double`    |       | 1e4              | Prior covariance factor of the final pass.     |
-   * | `material`                   | `string`    |       | `"none"`         | Material budget used by propagate().           |
+   * | `material`                   | `string`    |       | `"none"`         | Material used by propagate() and fit().        |
    *
    * The `calibration`, `propagator` and `daf` objects are optional, and so is each of their keys. Velocities,
    * resolution, step, slope, temperatures, cutoff and convergence threshold must be positive, max_iterations a
@@ -71,7 +71,7 @@ namespace sand::tracker::kalman {
    * and final_prior_scale at least 1 (1: no final pass); unknown keys are rejected, so that a misspelt key is not
    * silently ignored.
    *
-   * `material` is `"none"` (no material: propagate() without a budget is the field-only propagation) or
+   * `material` is `"none"` (no material: propagate() and fit() without a budget use the field-only propagation) or
    * `"tracker_info"`: the engine takes `geoinfo::tracker_info` from the current context (so `sand::geoinfo` and
    * `sand::root_tgeomanager` must be configured) and owns a sand::tracker::kalman::station_material_budget built from
    * it. Any other value is rejected.
@@ -154,12 +154,23 @@ namespace sand::tracker::kalman {
     prediction wire_time(const state& s, const wire_geometry& w, int side) const;
 
     /**
+     * @brief Fit a track with the deterministic annealing filter, with the field, material, calibration, propagator
+     * and DAF settings of the engine.
+     * @param initial Initial state (prior) with its covariance
+     * @param sites   Sites ordered along the motion of the particle
+     * @param mass    Mass hypothesis [MeV]
+     * @return As sand::tracker::kalman::daf_fit() with the budget of the engine (material()); with
+     *         `"material" : "none"`, with an empty budget, i.e. field-only propagation between the sites.
+     */
+    daf_result fit(const state& initial, const std::vector<site>& sites, double mass) const;
+
+    /**
      * @brief Fit a track with the deterministic annealing filter, with the field, calibration, propagator and DAF
-     * settings of the engine.
+     * settings of the engine and a material budget given by the caller instead of the engine's.
      * @param initial  Initial state (prior) with its covariance
      * @param sites    Sites ordered along the motion of the particle
      * @param mass     Mass hypothesis [MeV]
-     * @param material Material budget, provided by the caller: the engine does not own a material description yet
+     * @param material Material budget used instead of material()
      * @return As sand::tracker::kalman::daf_fit()
      */
     daf_result fit(const state& initial, const std::vector<site>& sites, double mass,

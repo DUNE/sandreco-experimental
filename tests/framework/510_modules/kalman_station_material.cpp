@@ -1,3 +1,4 @@
+#include <kalman/daf.hpp>
 #include <kalman/engine.hpp>
 #include <kalman/filter.hpp>
 #include <kalman/material.hpp>
@@ -31,6 +32,8 @@ namespace sand::test {
    *  - splitting the propagation at the layer centres gives the same layers, none counted twice;
    *  - every layer carries the extent of its station, and a track outside the stations crosses no material;
    *  - engine.propagate() without a budget is identical to propagate() with an equivalent fixed_material_budget;
+   *  - engine.fit() without a budget is identical to engine.fit() with the budget of the engine, and differs from the
+   *    fit with an empty budget;
    *  - optionally, a toy fit of muons through the tracker material: pulls of the smoothed parameters.
    *
    * Configuration:
@@ -46,6 +49,7 @@ namespace sand::test {
    private:
     void toy_fit(const tracker::kalman::engine& kf, const tracker::kalman::station_material_budget& budget,
                  double x_centre, double y_centre);
+    void engine_fit(const tracker::kalman::engine& kf, double x_centre, double y_centre);
 
     int m_toy_tracks{0};
     double m_pull_mean{0.2};
@@ -262,9 +266,82 @@ namespace sand::test {
       UFW_INFO("engine.propagate identical to propagate with an equivalent fixed_material_budget.");
     }
 
+    engine_fit(kf, xc, yc);
+
     if (m_toy_tracks > 0) {
       toy_fit(kf, *budget, xc, yc);
     }
+  }
+
+  void kalman_station_material::engine_fit(const engine& kf, double xc, double yc) {
+    // Sites on the downstream end of each station's material, one wire per site, alternately along x and along y,
+    // 1.5 mm from the track; both sides as candidates. The TDC is the prediction of the true track, propagated with
+    // the material of the engine (mean energy loss, no scattering).
+    std::vector<double> planes;
+    for (auto const& st : instance<sand::geoinfo>().tracker().stations()) {
+      if (!st->layers.empty()) {
+        planes.push_back(st->layers.back().z_max);
+      }
+    }
+    std::sort(planes.begin(), planes.end());
+    UFW_ASSERT(planes.size() >= 6, "engine.fit check: only {} stations with material", planes.size());
+
+    state truth = straight(planes.front(), xc, yc, 0.01, -0.02, -1. / 1500., +1);
+    std::vector<site> sites;
+    for (std::size_t i = 0; i < planes.size(); ++i) {
+      if (i > 0) {
+        auto const prop = kf.propagate(truth, planes[i], s_mu);
+        UFW_ASSERT(prop.has_value(), "engine.fit check: propagation to plane {} failed", i);
+        truth.z   = planes[i];
+        truth.par = prop->out.par;
+      }
+      double const off = (i % 4 < 2 ? 1.5 : -1.5);
+      double const x = truth.par[X], y = truth.par[Y];
+      wire_geometry w{};
+      if (i % 2 == 0) {
+        w = {{x - 1000., y + off, planes[i]}, {x + 1000., y + off, planes[i]}};
+      } else {
+        w = {{x + off, y - 1000., planes[i]}, {x + off, y + 1000., planes[i]}};
+      }
+      double d = 0., L = 0.;
+      detail::wire_distance(truth.par, w, d, L);
+      int const side   = d > 0. ? +1 : -1;
+      double const tdc = kf.wire_time(truth, w, side).value;
+      sites.push_back({planes[i], {{w, tdc, +1, 2 * i}, {w, tdc, -1, 2 * i + 1}}});
+    }
+
+    state prior         = straight(planes.front(), xc, yc, 0.01, -0.02, -1. / 1500., +1);
+    prior.cov(X, X)     = 1.;
+    prior.cov(Y, Y)     = 1.;
+    prior.cov(TX, TX)   = 1e-4;
+    prior.cov(TY, TY)   = 1e-4;
+    prior.cov(QOP, QOP) = std::pow(0.2 / 1500., 2);
+    prior.cov(T, T)     = 4.;
+
+    auto const a = kf.fit(prior, sites, s_mu);
+    auto const b = kf.fit(prior, sites, s_mu, *kf.material());
+    fixed_material_budget const empty({});
+    auto const c = kf.fit(prior, sites, s_mu, empty);
+    UFW_ASSERT(a.success && b.success && c.success, "engine.fit check: fit failed");
+    UFW_ASSERT(a.chi2 == b.chi2 && a.ndf == b.ndf && a.iterations == b.iterations,
+               "engine.fit without a budget: chi2 {} ndf {} iterations {}, with the engine budget: {} {} {}", a.chi2,
+               a.ndf, a.iterations, b.chi2, b.ndf, b.iterations);
+    UFW_ASSERT(a.states.size() == b.states.size(), "engine.fit check: different number of states");
+    for (std::size_t k = 0; k < a.states.size(); ++k) {
+      for (unsigned int i = 0; i < s_dim; ++i) {
+        UFW_ASSERT(a.states[k].par[i] == b.states[k].par[i], "engine.fit check: site {} parameter {}: {} vs {}", k, i,
+                   a.states[k].par[i], b.states[k].par[i]);
+        for (unsigned int j = 0; j < s_dim; ++j) {
+          UFW_ASSERT(a.states[k].cov(i, j) == b.states[k].cov(i, j), "engine.fit check: site {} covariance ({}, {})", k,
+                     i, j);
+        }
+      }
+    }
+    UFW_ASSERT(a.chi2 != c.chi2 || a.states.front().par[QOP] != c.states.front().par[QOP],
+               "engine.fit without a budget gives the same result as with an empty budget");
+    UFW_INFO("engine.fit uses the material of the engine: {} sites, chi2 {:.3f} (ndf {:.1f}) with the material, {:.3f} "
+             "with an empty budget; q/p on the first site {:.4e} vs {:.4e} (true {:.4e}).",
+             sites.size(), a.chi2, a.ndf, c.chi2, a.states.front().par[QOP], c.states.front().par[QOP], -1. / 1500.);
   }
 
   void kalman_station_material::toy_fit(const engine& kf, const station_material_budget& budget, double xc, double yc) {

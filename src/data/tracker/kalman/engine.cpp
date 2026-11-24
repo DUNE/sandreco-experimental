@@ -203,6 +203,15 @@ namespace sand::tracker::kalman {
     return kalman::wire_time(s, w, side, m_calibration);
   }
 
+  daf_result engine::fit(const state& initial, const std::vector<site>& sites, double mass) const {
+    if (m_material) {
+      return fit(initial, sites, mass, *m_material);
+    }
+    // An empty budget gives the field-only propagation between the sites
+    fixed_material_budget const none({});
+    return fit(initial, sites, mass, none);
+  }
+
   daf_result engine::fit(const state& initial, const std::vector<site>& sites, double mass,
                          const material_budget& material) const {
     return daf_fit(initial, sites, mass, *m_field, material, m_calibration, m_propagator, m_daf);
