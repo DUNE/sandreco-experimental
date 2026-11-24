@@ -67,6 +67,8 @@ Remember to write a doxygen comment for the class which includes a table of the 
 
 Streamers are tricky. Use the existing ones unless you really need a different file type and cannot convert. Fully featured streamers need to handle I/O of everything under `include/`. If you are an experienced developer, check `tree_streamer` for guidance. A streamer that handles only a handful of types could be made as well, such as `png_streamer`, that only writes 2D images.
 
+`tree_streamer` generates its ROOT dictionaries at configure time from the `UFW_DECLARE_MANAGED_DATA`, `UFW_DECLARE_UNMANAGED_DATA`, `SAND_DATA_COLLECTION` and `SAND_SHARED_COLLECTION` lines found under `include/` (rerun the cmake configure step after adding one). Nested classes of a declared class are included, but base classes and template instances are not: if your type derives from a template such as `sand::reco::digi<T>` or `sand::truth<T>`, declare each instance with `UFW_DECLARE_UNMANAGED_DATA`, as done in `common/digi.h`, `ecal/digit.h` and `grain/digi.h`. Otherwise ROOT falls back to an interpreted description of the class, which cannot stream containers of your types (e.g. the `std::set<T>` of true hits in `sand::truth<T>`), and those members are silently dropped from the file; look for `TStreamerInfo::Build` warnings in the log of the job that writes.
+
 ## Data
 
 Complex data are also somewhat tricky. Some important differences with processes, other than intended use/purpose, is in their build.

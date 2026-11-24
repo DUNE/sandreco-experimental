@@ -88,6 +88,9 @@ UFW_DECLARE_UNMANAGED_DATA(ufw::data::context_tag)
 
 UFW_DECLARE_UNMANAGED_DATA(sand::managed_data_base)
 UFW_DECLARE_UNMANAGED_DATA(sand::truth_index)
+// Template instances get a ROOT dictionary only when declared: without it std::set<T> inside
+// sand::truth<T> is not streamed and the true hits are lost when writing to ROOT files.
+UFW_DECLARE_UNMANAGED_DATA(sand::truth<sand::truth_index>)
 
 #define SAND_DATA_COLLECTION(NS, T, NAME)                                                                              \
   UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \

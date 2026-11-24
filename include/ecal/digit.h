@@ -45,4 +45,8 @@ namespace sand::ecal {
   };
 } // namespace sand::ecal
 
+// Bases of the digits: declared so that the ROOT streamer also writes channel, time and true photo-electrons.
+UFW_DECLARE_UNMANAGED_DATA(sand::truth<sand::ecal::pes_container::photo_electron>)
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::digi<sand::ecal::pes_container::photo_electron>)
+
 UFW_DECLARE_MANAGED_DATA(sand::ecal::digits_container);

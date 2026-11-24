@@ -1,0 +1,34 @@
+{
+  "ufw": {
+    "ufw-loglevel": "debug",
+    "ufw-basepath": "/usr/local/share/sandreco/data",
+    "ufw-ldpath": [
+      "/usr/local/lib64"
+    ]
+  },
+  "globals": {},
+  "contexts": {
+    "keys": 2,
+    "locals": {}
+  },
+  "run": [
+    {
+      "sand::root::tree_streamer": {
+        "uri": "test/ecal_digi_streamer.root",
+        "tree": "ecal_digits"
+      },
+      "read": [
+        "ecal_digits"
+      ]
+    },
+    {
+      "sand::test::ecal_digi_reference_check": {
+        "reference": "test/ecal_digi_streamer_reference.txt"
+      },
+      "reqs": {
+        "digi": "ecal_digits"
+      },
+      "prods": {}
+    }
+  ]
+}

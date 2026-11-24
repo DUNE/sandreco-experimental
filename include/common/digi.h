@@ -43,3 +43,6 @@ namespace sand::reco {
   };
 
 } // namespace sand::reco
+
+// Base of the tracker signals; the dictionary of sand::truth<sand::truth_index> is declared in common/data.h.
+UFW_DECLARE_UNMANAGED_DATA(sand::reco::digi<sand::truth_index>)

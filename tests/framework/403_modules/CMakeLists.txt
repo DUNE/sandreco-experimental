@@ -1,0 +1,3 @@
+sandreco_add_test_process(sand_test_drift_digi_reference_check)
+target_sources(sand_test_drift_digi_reference_check PRIVATE drift_digi_reference_check.cpp)
+target_link_libraries(sand_test_drift_digi_reference_check PRIVATE ROOT::MathCore)

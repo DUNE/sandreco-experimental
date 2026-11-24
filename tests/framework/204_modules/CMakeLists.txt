@@ -1,0 +1,3 @@
+sandreco_add_test_process(sand_test_ecal_digi_reference_write)
+target_sources(sand_test_ecal_digi_reference_write PRIVATE ecal_digi_reference_write.cpp)
+target_link_libraries(sand_test_ecal_digi_reference_write PRIVATE ROOT::MathCore)
