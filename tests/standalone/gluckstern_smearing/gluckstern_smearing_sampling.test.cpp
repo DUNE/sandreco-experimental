@@ -81,8 +81,7 @@ namespace {
                    sand::common::mcs_pt_resolution(geom, b_field, p));
     double const expected_dip_res = std::hypot(sand::common::gluckstern_dip_resolution(geom, sigma_l),
                                                sand::common::mcs_angle_resolution(geom.path_len_over_x0_full, p));
-    double const expected_zy_res  = sand::common::mcs_angle_resolution(geom.path_len_over_x0_transverse, p);
-
+    double const expected_zy_res  = sand::common::mcs_angle_resolution(geom.path_len_over_x0_full, p) / std::cos(dip);
     std::size_t constexpr n_samples = 200'000;
     std::vector<double> pt_ratio;
     std::vector<double> dip_residual;

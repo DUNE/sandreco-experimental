@@ -4,7 +4,7 @@
 
 #include <edep_reader/edep_reader.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
-#include <truth_filler/g4_id_map.hpp>
+#include <spill_maps/spill_maps.hpp>
 
 #include <ufw/factory.hpp>
 
@@ -28,6 +28,9 @@
 namespace sand::common {
 
   namespace {
+
+    constexpr std::array tracker_volumes{subdetector_t::STT, subdetector_t::DRIFT};
+
     double x0(int z, int a) { return 716.408 * a / (z * (z + 1) * std::log(287. / std::sqrt(z))); }
 
     double density(sand::root_tgeomanager& tgm) {
@@ -55,6 +58,22 @@ namespace sand::common {
         return it;
       }
       return hit_map.find(sand::subdetector_t::STT);
+    }
+
+    /// The first trajectory point of `trj` in the tracker (where it enters, or is born if born inside), where the
+    /// tracker would measure the momentum; null if edep-sim stored none there. The edep_reader keeps the first points
+    /// of every entry in step order, so the first entry is the front. The code must not rely on single tracker geometry,
+    /// therefore it loops through tracker_volumes, an array which contains all possible tracker geometries.
+    EDEPTrajectoryPoint const* tracker_entry_point(EDEPTrajectory const& trj) {
+      EDEPTrajectoryPoint const* entry{};
+      for (auto const volume : tracker_volumes) {
+        auto const& first_points = trj.GetFirstPointsInDetector(volume);
+        if (!first_points.empty()
+            && (entry == nullptr || first_points.front().GetPosition().T() < entry->GetPosition().T())) {
+          entry = &first_points.front();
+        }
+      }
+      return entry;
     }
 
     double walk_segment(sand::root_tgeomanager::navigator_ptr const& nav, sand::root_tgeomanager& tgm,
@@ -157,7 +176,7 @@ namespace sand::common {
   }
 
   double mcs_pt_resolution(GlucksternGeometry const& geom, double b_field, double p) {
-    return mcs_angle_resolution(geom.path_len_over_x0_full, p) / (0.3 * b_field * geom.lever_arm);
+    return mcs_angle_resolution(geom.path_len_over_x0_full, p) *  p / (0.3 * b_field * geom.lever_arm);
   }
 
   std::optional<::caf::SRVector3D> smear_momentum_gluckstern(::caf::SRLorentzVector const& true_p,
@@ -172,8 +191,10 @@ namespace sand::common {
         std::hypot(gluckstern_pt_resolution(p_transverse, geom, sigma_t, b_field), mcs_pt_resolution(geom, b_field, p));
     double const dip_res =
         std::hypot(gluckstern_dip_resolution(geom, sigma_l), mcs_angle_resolution(geom.path_len_over_x0_full, p));
-    double const zy_res = mcs_angle_resolution(geom.path_len_over_x0_transverse, p);
 
+    // The projection of the MCS onto the bending plane is shorter by a factor cos(dip angle) and gets bended more
+    double const zy_res = mcs_angle_resolution(geom.path_len_over_x0_full, p) / std::cos(dip_angle);
+    
     if (!std::isfinite(pt_res) || !std::isfinite(dip_res) || !std::isfinite(zy_res)
         || pt_res > kMaxRelativePtResolution) {
       return std::nullopt;
@@ -219,7 +240,7 @@ namespace sand::common {
 
     out_nd.sand = in_nd.sand;
 
-    auto const track_ids = g4_id_maps(edep.GetChildrenTrajectories());
+    auto const& track_ids = instance<sand::spill_maps>();
 
     int n_smeared{};
     int n_out_of_range{};
@@ -242,13 +263,22 @@ namespace sand::common {
       if (it == hit_map.end()) {
         continue;
       }
+      auto const* entry = tracker_entry_point(*trj);
+      if (entry == nullptr) {
+        continue;
+      }
+      auto const& pm = entry->GetMomentum();
+      ::caf::SRLorentzVector entry_p;
+      entry_p.px = pm.X() * 1e-3;
+      entry_p.py = pm.Y() * 1e-3;
+      entry_p.pz = pm.Z() * 1e-3;
 
       auto const geom = gluckstern_geometry_from_hits(tgm, it->second, m_hit_energy_thr);
       if (!geom) {
         continue;
       }
 
-      auto const smeared_p = smear_momentum_gluckstern(true_part.p, *geom, m_sigma_t, m_sigma_l, m_b_field);
+      auto const smeared_p = smear_momentum_gluckstern(entry_p, *geom, m_sigma_t, m_sigma_l, m_b_field);
       if (!smeared_p) {
         ++n_out_of_range; // resolution not physically usable, left unsmeared
         continue;
@@ -257,8 +287,10 @@ namespace sand::common {
       auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
       float const mass     = pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
 
-      track.dir  = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
-      track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass));
+      track.dir = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
+      // smeared_p and mass are in GeV, SRTrack::E is in MeV
+      track.E    = std::hypot(std::hypot(smeared_p->x, smeared_p->y), std::hypot(smeared_p->z, mass)) * 1000.;
+      track.R    = 100. * std::hypot(smeared_p->y, smeared_p->z) / (0.3 * m_b_field); // GeV -> cm
       track.Evis = track.E;
 
       ++n_smeared;

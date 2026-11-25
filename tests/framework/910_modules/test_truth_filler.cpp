@@ -1,7 +1,7 @@
 #include <caf/caf_wrapper.hpp>
 
 #include <edep_reader/edep_reader.hpp>
-#include <truth_filler/g4_id_map.hpp>
+#include <spill_maps/spill_maps.hpp>
 
 #include <ufw/config.hpp>
 #include <ufw/context.hpp>
@@ -58,7 +58,7 @@ namespace sand::test {
     }
 
     // SRTrueParticle::G4ID (per interaction) -> spill-wide edep-sim track id
-    auto const track_ids = sand::common::g4_id_maps(edep.GetChildrenTrajectories());
+    auto const& track_ids  = instance<sand::spill_maps>();
     auto const to_spill_id = [&](int ixn_idx, int g4id) {
       return track_ids.at(static_cast<std::size_t>(ixn_idx)).to_spill_id(g4id);
     };
@@ -102,7 +102,8 @@ namespace sand::test {
 
         check_trajectory(p, ixn_idx, "prim", k);
 
-        UFW_ASSERT(same_id(p.ancestor_id, self_id), "nu[{}].prim[{}]: ancestor_id doesn't point to itself", ixn_idx, k);
+        UFW_ASSERT(same_id(p.ancestor_id, ::caf::TrueParticleID{}),
+                   "nu[{}].prim[{}]: ancestor_id should be unset (no ancestor for a primary)", ixn_idx, k);
         UFW_ASSERT(p.parentID.type == ::caf::TrueParticleID::kUnknown,
                    "nu[{}].prim[{}]: parentID should be unset (no SR parent for a primary)", ixn_idx, k);
         UFW_ASSERT(p.daughters.size() == p.daughtersID.size(), "nu[{}].prim[{}]: daughters/daughtersID size mismatch",
