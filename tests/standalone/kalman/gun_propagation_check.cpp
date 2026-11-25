@@ -6,16 +6,21 @@
 // option "midp" the momentum of the start state is the average of the two points, which removes most of the energy
 // loss and leaves the field and the equations.
 //
+// Masses and charges come from ROOT's TDatabasePDG (mass_from_pdg() for the mass).
+//
 // Not part of ctest: it needs a simulation file. Usage:
 //   gun_propagation_check <edep-sim file> [B_x in T, default 0.6] [max events, default all]
 //
 // The magnetic field is uniform inside the region used, as in the GDML of nd_hall_with_lar_tms_sand_drift1
 // (MagIntVol_volume, 0.6 T along global x).
 
+#include <kalman/particle.hpp>
 #include <kalman/propagator.hpp>
 
+#include <TDatabasePDG.h>
 #include <TFile.h>
 #include <TG4Event.h>
+#include <TParticlePDG.h>
 #include <TTree.h>
 
 #include <cmath>
@@ -45,34 +50,10 @@ namespace {
     double rms() const { return n ? std::sqrt(std::max(0., s2 / n - mean() * mean())) : 0; }
   };
 
-  double mass_of(int pdg) {
-    switch (std::abs(pdg)) {
-    case 13:
-      return 105.6583755;
-    case 211:
-      return 139.57039;
-    case 2212:
-      return 938.27208816;
-    case 11:
-      return 0.51099895;
-    default:
-      return 0.;
-    }
-  }
+  /// Charge in units of e from the particle table (which stores it in units of e/3); 0 for an unknown code.
   int charge_of(int pdg) {
-    switch (pdg) {
-    case 13:
-    case 11:
-    case -211:
-      return -1;
-    case -13:
-    case -11:
-    case 211:
-    case 2212:
-      return +1;
-    default:
-      return 0;
-    }
+    auto const* p = TDatabasePDG::Instance()->GetParticle(pdg);
+    return p ? static_cast<int>(std::lround(p->Charge() / 3.)) : 0;
   }
 } // namespace
 
@@ -88,6 +69,8 @@ int main(int argc, char** argv) {
   TG4Event* ev      = nullptr;
   t->SetBranchAddress("Event", &ev);
   uniform_field const bf({bx, 0., 0.});
+  // Runge-Kutta settings of the check (the library has no defaults)
+  propagator_config const cfg{50., 1e3};
 
   // index 0: momentum at the start point, 1: average momentum of the two points
   stats dx[2], dy[2], dt[2], dtx[2], dty[2], step;
@@ -99,10 +82,10 @@ int main(int argc, char** argv) {
         continue;
       }
       int const q    = charge_of(tr.PDGCode);
-      double const m = mass_of(tr.PDGCode);
       if (q == 0) {
         continue;
       }
+      double const m = mass_from_pdg(tr.PDGCode);
       for (size_t k = 0; k + 1 < tr.Points.size(); ++k) {
         auto const& a = tr.Points[k];
         auto const& b = tr.Points[k + 1];
@@ -121,7 +104,7 @@ int main(int argc, char** argv) {
           s.par[TY]    = a.Momentum.Y() / a.Momentum.Z();
           s.par[QOP]   = q / p;
           s.par[T]     = a.Position.T();
-          auto const r = propagate(s, b.Position.Z(), m, bf);
+          auto const r = propagate(s, b.Position.Z(), m, bf, cfg);
           if (!r) {
             continue;
           }

@@ -26,11 +26,31 @@ namespace sand::tracker::kalman {
       }
     }
 
-    /// Read an optional positive number, keeping the default if the key is absent.
-    double positive(const ufw::json& cfg, const char* key, double def) {
-      double const v = cfg.value(key, def);
+    /// The object `key` of cfg, which must be present.
+    const ufw::json& required_object(const ufw::json& cfg, const char* key) {
+      if (!cfg.contains(key)) {
+        UFW_ERROR("sand::tracker::kalman::engine: missing required key '{}'.", key);
+      }
+      return cfg.at(key);
+    }
+
+    /// The number `where.key` of cfg, which must be present: the library has no default values.
+    double required_number(const ufw::json& cfg, std::string_view where, const char* key) {
+      if (!cfg.contains(key)) {
+        UFW_ERROR("sand::tracker::kalman::engine: missing required key '{}.{}'.", where, key);
+      }
+      auto const& v = cfg.at(key);
+      if (!v.is_number()) {
+        UFW_ERROR("sand::tracker::kalman::engine: '{}.{}' must be a number, got {}.", where, key, v.dump());
+      }
+      return v.get<double>();
+    }
+
+    /// As required_number(), and the value must be positive.
+    double required_positive(const ufw::json& cfg, std::string_view where, const char* key) {
+      double const v = required_number(cfg, where, key);
       if (!(v > 0.)) {
-        UFW_ERROR("sand::tracker::kalman::engine: '{}' must be positive, got {}.", key, v);
+        UFW_ERROR("sand::tracker::kalman::engine: '{}.{}' must be positive, got {}.", where, key, v);
       }
       return v;
     }
@@ -40,6 +60,7 @@ namespace sand::tracker::kalman {
   engine::engine(const ufw::config& cfg) {
     check_keys(cfg, "top level", {"field", "calibration", "propagator"});
 
+    // Field in tesla, as a plain number (see state.hpp)
     if (!cfg.contains("field")) {
       UFW_ERROR("sand::tracker::kalman::engine: missing required key 'field'.");
     }
@@ -49,21 +70,17 @@ namespace sand::tracker::kalman {
     }
     m_field = std::make_unique<uniform_field>(f.get<field_vector>());
 
-    if (cfg.contains("calibration")) {
-      auto const& c = cfg.at("calibration");
-      check_keys(c, "calibration", {"drift_velocity", "wire_velocity", "tdc_resolution", "t0_offset"});
-      m_calibration.drift_velocity = positive(c, "drift_velocity", m_calibration.drift_velocity);
-      m_calibration.wire_velocity  = positive(c, "wire_velocity", m_calibration.wire_velocity);
-      m_calibration.tdc_resolution = positive(c, "tdc_resolution", m_calibration.tdc_resolution);
-      m_calibration.t0_offset      = c.value("t0_offset", m_calibration.t0_offset);
-    }
+    // Every tunable parameter is required: neither the engine nor the structs have default values.
+    auto const& c = required_object(cfg, "calibration");
+    check_keys(c, "calibration", {"drift_velocity", "wire_velocity", "tdc_resolution", "t0_offset"});
+    m_calibration = reco_calibration{
+        required_positive(c, "calibration", "drift_velocity"), required_positive(c, "calibration", "wire_velocity"),
+        required_positive(c, "calibration", "tdc_resolution"), required_number(c, "calibration", "t0_offset")};
 
-    if (cfg.contains("propagator")) {
-      auto const& p = cfg.at("propagator");
-      check_keys(p, "propagator", {"max_step", "max_slope"});
-      m_propagator.max_step  = positive(p, "max_step", m_propagator.max_step);
-      m_propagator.max_slope = positive(p, "max_slope", m_propagator.max_slope);
-    }
+    auto const& p = required_object(cfg, "propagator");
+    check_keys(p, "propagator", {"max_step", "max_slope"});
+    m_propagator = propagator_config{required_positive(p, "propagator", "max_step"),
+                                     required_positive(p, "propagator", "max_slope")};
 
     auto const b = m_field->at(0., 0., 0.);
     UFW_INFO("sand::tracker::kalman::engine: uniform field ({}, {}, {}) T, drift velocity {} mm/ns, wire velocity {} "

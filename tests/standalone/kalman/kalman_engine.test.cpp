@@ -3,6 +3,7 @@
 
 #include <kalman/engine.hpp>
 #include <kalman/measurement.hpp>
+#include <kalman/particle.hpp>
 #include <kalman/propagator.hpp>
 #include <test_helpers.hpp>
 
@@ -10,11 +11,12 @@
 
 #include <cmath>
 #include <exception>
+#include <string>
 
 using namespace sand::tracker::kalman;
 
 namespace {
-  double constexpr m_mu = 105.6583755; // MeV
+  double const m_mu = mass_from_pdg(13); // MeV
 
   state make_state() {
     state s;
@@ -43,39 +45,43 @@ namespace {
 
 BOOST_AUTO_TEST_SUITE(engine_tests)
 
-// Only the field given: calibration and propagator settings keep the defaults of the structs.
-BOOST_AUTO_TEST_CASE(defaults) {
-  engine const kf(ufw::json::parse(R"({ "field" : [0.6, 0.0, 0.0] })"));
-  reco_calibration const cal;
-  propagator_config const pc;
-  BOOST_CHECK_EQUAL(kf.calibration().drift_velocity, cal.drift_velocity);
-  BOOST_CHECK_EQUAL(kf.calibration().wire_velocity, cal.wire_velocity);
-  BOOST_CHECK_EQUAL(kf.calibration().tdc_resolution, cal.tdc_resolution);
-  BOOST_CHECK_EQUAL(kf.calibration().t0_offset, cal.t0_offset);
-  BOOST_CHECK_EQUAL(kf.propagator_settings().max_step, pc.max_step);
-  BOOST_CHECK_EQUAL(kf.propagator_settings().max_slope, pc.max_slope);
-  // The documented defaults
-  BOOST_CHECK_EQUAL(kf.calibration().drift_velocity, 0.05);
-  BOOST_CHECK_EQUAL(kf.calibration().wire_velocity, 200.);
-  BOOST_CHECK_EQUAL(kf.calibration().tdc_resolution, 3.5);
-  BOOST_CHECK_EQUAL(kf.calibration().t0_offset, 0.);
-  BOOST_CHECK_EQUAL(kf.propagator_settings().max_step, 50.);
-  BOOST_CHECK_EQUAL(kf.propagator_settings().max_slope, 1e3);
-  auto const b = kf.field().at(100., -2000., 24000.);
-  BOOST_CHECK_EQUAL(b[0], 0.6);
-  BOOST_CHECK_EQUAL(b[1], 0.);
-  BOOST_CHECK_EQUAL(b[2], 0.);
-}
-
-// Partial sections: given keys are read, missing ones keep their default.
-BOOST_AUTO_TEST_CASE(partial_sections) {
-  engine const kf(ufw::json::parse(
-      R"({ "field" : [0.0, 0.0, 0.5], "calibration" : { "t0_offset" : -3.0 }, "propagator" : { "max_step" : 5.0 } })"));
-  BOOST_CHECK_EQUAL(kf.calibration().t0_offset, -3.);
-  BOOST_CHECK_EQUAL(kf.calibration().drift_velocity, 0.05);
-  BOOST_CHECK_EQUAL(kf.propagator_settings().max_step, 5.);
-  BOOST_CHECK_EQUAL(kf.propagator_settings().max_slope, 1e3);
-  BOOST_CHECK_EQUAL(kf.field().at(0., 0., 0.)[2], 0.5);
+// Every calibration and propagator key is required: removing any one of them, or a whole section, is an error that
+// names the missing key.
+BOOST_AUTO_TEST_CASE(missing_keys) {
+  struct missing {
+    const char* section;
+    const char* key; // nullptr: the whole section is removed
+    const char* name;
+  };
+  missing const cases[] = {
+      {"calibration", "drift_velocity", "calibration.drift_velocity"},
+      {"calibration", "wire_velocity", "calibration.wire_velocity"},
+      {"calibration", "tdc_resolution", "calibration.tdc_resolution"},
+      {"calibration", "t0_offset", "calibration.t0_offset"},
+      {"propagator", "max_step", "propagator.max_step"},
+      {"propagator", "max_slope", "propagator.max_slope"},
+      {"calibration", nullptr, "calibration"},
+      {"propagator", nullptr, "propagator"},
+  };
+  // The full configuration is valid
+  BOOST_CHECK_NO_THROW(engine{full_config()});
+  for (auto const& c : cases) {
+    ufw::config cfg = full_config();
+    if (c.key) {
+      cfg.at(c.section).erase(c.key);
+    } else {
+      cfg.erase(c.section);
+    }
+    bool thrown = false;
+    try {
+      engine const kf(cfg);
+    } catch (const std::exception& e) {
+      thrown = true;
+      BOOST_CHECK_MESSAGE(std::string(e.what()).find("'" + std::string(c.name) + "'") != std::string::npos,
+                          "the error for a missing '" << c.name << "' does not name it: " << e.what());
+    }
+    BOOST_CHECK_MESSAGE(thrown, "no error for a missing '" << c.name << "'");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(configured_values) {
@@ -113,18 +119,18 @@ BOOST_AUTO_TEST_CASE(propagate_matches_free_function) {
       }
     }
   }
-  // The settings of the engine are used: with the default step the result differs (Runge-Kutta truncation).
+  // The settings of the engine are used: with a coarser step the result differs (Runge-Kutta truncation).
   auto const coarse = propagate(in, 1500., m_mu, bf, {200., 50.});
   auto const fine   = kf.propagate(in, 1500., m_mu);
   BOOST_REQUIRE(coarse && fine);
   BOOST_CHECK_NE(coarse->out.par[Y], fine->out.par[Y]);
-  // and max_slope too: a straight track (q/p = 0) with ty = 60 keeps its slope, so it propagates with the default
-  // limit (1000) but not with the one of the engine (50).
+  // and max_slope too: a straight track (q/p = 0) with ty = 60 keeps its slope, so it propagates with a limit of
+  // 1000 but not with the one of the engine (50).
   state steep    = make_state();
   steep.par[TY]  = 60.;
   steep.par[QOP] = 0.;
   BOOST_CHECK(!kf.propagate(steep, 10., m_mu));
-  BOOST_CHECK(propagate(steep, 10., m_mu, bf));
+  BOOST_CHECK(propagate(steep, 10., m_mu, bf, {20., 1e3}));
 }
 
 // engine.wire_time must be the free wire_time with the calibration of the engine.
@@ -151,14 +157,25 @@ BOOST_AUTO_TEST_CASE(invalid_configurations) {
   BOOST_CHECK_THROW(engine(ufw::json::parse(R"({})")), std::exception);
   BOOST_CHECK_THROW(engine(ufw::json::parse(R"({ "field" : [0.6, 0.0] })")), std::exception);
   BOOST_CHECK_THROW(engine(ufw::json::parse(R"({ "field" : 0.6 })")), std::exception);
-  BOOST_CHECK_THROW(engine(ufw::json::parse(R"({ "field" : [0.6, 0, 0], "fields" : 1 })")), std::exception);
-  BOOST_CHECK_THROW(engine(ufw::json::parse(R"({ "field" : [0.6, 0, 0], "calibration" : { "drift_vel" : 1 } })")),
-                    std::exception);
-  BOOST_CHECK_THROW(engine(ufw::json::parse(R"({ "field" : [0.6, 0, 0], "calibration" : { "drift_velocity" : 0 } })")),
-                    std::exception);
-  BOOST_CHECK_THROW(engine(ufw::json::parse(R"({ "field" : [0.6, 0, 0], "propagator" : { "max_step" : -1 } })")),
-                    std::exception);
-  BOOST_CHECK_THROW(engine(ufw::json::parse(R"({ "field" : [0.6, 0, 0], "propagator" : 3 })")), std::exception);
+  // Only the field: the calibration and propagator sections are required
+  BOOST_CHECK_THROW(engine(ufw::json::parse(R"({ "field" : [0.6, 0.0, 0.0] })")), std::exception);
+  // Each of the following is the full configuration with one change
+  auto with = [](const char* section, const char* key, const ufw::json& value) {
+    ufw::config cfg = full_config();
+    if (key) {
+      cfg.at(section)[key] = value;
+    } else {
+      cfg[section] = value;
+    }
+    return cfg;
+  };
+  BOOST_CHECK_THROW(engine(with("fields", nullptr, 1)), std::exception);
+  BOOST_CHECK_THROW(engine(with("calibration", "drift_vel", 1)), std::exception);
+  BOOST_CHECK_THROW(engine(with("calibration", "drift_velocity", 0)), std::exception);
+  BOOST_CHECK_THROW(engine(with("calibration", "wire_velocity", "fast")), std::exception);
+  BOOST_CHECK_THROW(engine(with("calibration", "t0_offset", nullptr)), std::exception);
+  BOOST_CHECK_THROW(engine(with("propagator", "max_step", -1)), std::exception);
+  BOOST_CHECK_THROW(engine(with("propagator", nullptr, 3)), std::exception);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

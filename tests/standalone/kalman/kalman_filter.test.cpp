@@ -4,17 +4,29 @@
 #include <test_helpers.hpp>
 #include <kalman/filter.hpp>
 #include <kalman/measurement.hpp>
+#include <kalman/particle.hpp>
 #include <kalman/propagator.hpp>
 
+#include <Geant4/CLHEP/Units/SystemOfUnits.h>
+#include <TDatabasePDG.h>
+#include <TParticlePDG.h>
+
+#include <algorithm>
 #include <cmath>
+#include <limits>
 #include <random>
+#include <stdexcept>
 #include <vector>
 
 using namespace sand::tracker::kalman;
 
 namespace {
-  double constexpr m_mu = 105.6583755; // MeV
-  double constexpr pi   = 3.14159265358979323846;
+  double const m_mu   = mass_from_pdg(13); // MeV
+  double constexpr pi = CLHEP::pi;
+
+  /// Calibration and Runge-Kutta settings of the toy detector: the library has no defaults, the tests set them.
+  reco_calibration const toy_cal{0.05, 200., 3.5, 0.};
+  propagator_config const toy_prop{50., 1e3};
 
   /// A wire through (x0, y0) at plane z, at angle theta from the x axis, 4 m long, readout end at negative x.
   wire_geometry make_wire(double z, double theta, double x0, double y0) {
@@ -48,7 +60,7 @@ namespace {
     std::vector<toy_hit> hits;
     auto const zs = plane_z();
     for (size_t i = 0; i < zs.size(); ++i) {
-      auto const r    = propagate(truth, zs[i], m_mu, bf);
+      auto const r    = propagate(truth, zs[i], m_mu, bf, toy_prop);
       double const th = plane_angle(i);
       double const nx = -std::sin(th), ny = std::cos(th);
       double const w  = nx * r->out.par[X] + ny * r->out.par[Y]; // coordinate across the wire
@@ -70,7 +82,7 @@ namespace {
     std::vector<filter_step> steps;
     state cur = seed;
     for (auto const& h : hits) {
-      auto const pr = propagate(cur, h.wire.z(), m_mu, bf);
+      auto const pr = propagate(cur, h.wire.z(), m_mu, bf, toy_prop);
       BOOST_REQUIRE(pr);
       auto const pred = wire_time(pr->out, h.wire, h.side, cal);
       auto const up   = update(pr->out, pred, h.tdc, cal.tdc_resolution * cal.tdc_resolution);
@@ -111,8 +123,8 @@ BOOST_AUTO_TEST_CASE(distance_to_wire) {
 }
 
 BOOST_AUTO_TEST_CASE(time_derivatives) {
-  reco_calibration const cal;
-  wire_geometry const w = make_wire(0., 5. * pi / 180., 30., -40.);
+  reco_calibration const& cal = toy_cal;
+  wire_geometry const w       = make_wire(0., 5. * pi / 180., 30., -40.);
   state s;
   s.par[X]   = 400.;
   s.par[Y]   = -3.;
@@ -122,8 +134,8 @@ BOOST_AUTO_TEST_CASE(time_derivatives) {
   s.par[T]   = 12.;
   for (int side : {+1, -1}) {
     auto const p = wire_time(s, w, side, cal);
-    BOOST_CHECK_CLOSE(p.H[T], 1., 1e-6);
-    BOOST_CHECK_SMALL(p.H[QOP], 1e-9);
+    BOOST_CHECK_EQUAL(p.H[T], 1.);
+    BOOST_CHECK_EQUAL(p.H[QOP], 0.);
     // A shift of the track across the wire changes the time by 1/v_drift per mm, with the sign of the side. The
     // distance along the wire also moves slightly with a sloped track, which adds a term of order 1e-5 (1/v_wire).
     double const nx = -std::sin(5. * pi / 180.), ny = std::cos(5. * pi / 180.);
@@ -131,6 +143,117 @@ BOOST_AUTO_TEST_CASE(time_derivatives) {
     double const dd = 1. / std::sqrt(1. + tn * tn);
     BOOST_CHECK_CLOSE(nx * p.H[X] + ny * p.H[Y], side * dd / cal.drift_velocity, 1e-2);
   }
+}
+
+// The analytic derivative row of wire_time must agree with central differences of the same side-fixed model, for
+// many random states and wires: straight (along x or y) and stereo, both sides, to a relative tolerance of 1e-6.
+// The finite-difference steps live only here. The central differences are Richardson-extrapolated (steps h and h/2),
+// which removes the h^2 truncation term; what is left is the rounding of the model value (about 100 ns) divided by the
+// step, which is added to the tolerance. It only matters for derivatives close to zero.
+BOOST_AUTO_TEST_CASE(time_derivatives_vs_finite_differences) {
+  reco_calibration const cal{0.05, 200., 3.5, 7.};
+  double const step[s_dim] = {1e-2, 1e-2, 1e-3, 1e-3, 1e-7, 1e-2};
+  double const angles[]    = {0., pi / 2., 5. * pi / 180., -5. * pi / 180., 0.3, 2.};
+  std::mt19937 rng(4242);
+  std::uniform_real_distribution<double> uni(-1., 1.);
+
+  auto model = [&](const vector_t& par, const wire_geometry& w, int side) {
+    double d, L;
+    detail::wire_distance(par, w, d, L);
+    return par[T] + L / cal.wire_velocity + side * d / cal.drift_velocity + cal.t0_offset;
+  };
+  auto central = [&](const state& s, const wire_geometry& w, int side, unsigned int i, double h) {
+    vector_t up = s.par, dn = s.par;
+    up[i] += h;
+    dn[i] -= h;
+    return (model(up, w, side) - model(dn, w, side)) / (2. * h);
+  };
+
+  int n_checked = 0, n_rounding = 0;
+  double worst = 0.;
+  for (int k = 0; k < 2000; ++k) {
+    double const th = angles[k % 6];
+    double const ux = std::cos(th), uy = std::sin(th);
+    double const nx = -uy, ny = ux;
+    double const length = 2500. + 1500. * uni(rng);
+    double const z      = 1000. * uni(rng);
+    wire_geometry::point const head{2000. * uni(rng), 2000. * uni(rng), z};
+    wire_geometry const w(head, {head[0] + length * ux, head[1] + length * uy, z});
+    // Track within a drift cell of the wire, anywhere along it, with slopes up to 45 degrees
+    double const a = 0.5 * length * (1. + uni(rng)), b = 6. * uni(rng);
+    state s;
+    s.z        = z;
+    s.par[X]   = head[0] + a * ux + b * nx;
+    s.par[Y]   = head[1] + a * uy + b * ny;
+    s.par[TX]  = uni(rng);
+    s.par[TY]  = uni(rng);
+    s.par[QOP] = uni(rng) / 500.;
+    s.par[T]   = 100. * uni(rng);
+    for (int side : {+1, -1}) {
+      auto const p = wire_time(s, w, side, cal);
+      BOOST_CHECK_CLOSE(p.value, model(s.par, w, side), 1e-12);
+      for (unsigned int i = 0; i < s_dim; ++i) {
+        double const h        = step[i];
+        double const fd       = (4. * central(s, w, side, i, 0.5 * h) - central(s, w, side, i, h)) / 3.;
+        double const rounding = 16. * std::numeric_limits<double>::epsilon() * std::abs(p.value) / h;
+        double const relative = 1e-6 * std::max(std::abs(fd), std::abs(p.H[i]));
+        double const diff     = std::abs(p.H[i] - fd);
+        if (i == QOP) {
+          // q/p does not enter the model: both are exactly zero
+          BOOST_CHECK_EQUAL(p.H[i], 0.);
+          BOOST_CHECK_EQUAL(fd, 0.);
+          continue;
+        }
+        if (rounding > relative) {
+          ++n_rounding;
+        } else {
+          worst = std::max(worst, diff / std::max(std::abs(fd), std::abs(p.H[i])));
+        }
+        BOOST_CHECK_MESSAGE(diff <= relative + rounding, "angle " << th << " side " << side << " H[" << i
+                                                                  << "] = " << p.H[i] << " vs finite differences " << fd
+                                                                  << ", difference " << diff);
+        ++n_checked;
+      }
+    }
+  }
+  BOOST_TEST_MESSAGE("analytic H vs central differences: " << n_checked << " derivatives (q/p excluded), worst "
+                                                           << "relative difference " << worst << "; " << n_rounding
+                                                           << " derivatives close to zero, within the rounding bound");
+}
+
+// The constructor of wire_geometry checks that the wire is in a plane of constant z and has a length.
+BOOST_AUTO_TEST_CASE(wire_geometry_checks) {
+  double const tol = s_wire_plane_tolerance;
+  wire_geometry const ok({-100., 5., 300.}, {100., 5., 300. + 0.5 * tol});
+  BOOST_CHECK_CLOSE(ok.length(), 200., 1e-12);
+  BOOST_CHECK_CLOSE(ok.z(), 300. + 0.25 * tol, 1e-12);
+  double ux, uy;
+  ok.along(ux, uy);
+  BOOST_CHECK_CLOSE(ux, 1., 1e-12);
+  BOOST_CHECK_SMALL(uy, 1e-15);
+  BOOST_CHECK_EQUAL(ok.head()[0], -100.);
+  BOOST_CHECK_EQUAL(ok.tail()[0], 100.);
+  // Ends at different z, beyond the tolerance, in either order
+  BOOST_CHECK_THROW(wire_geometry({-100., 5., 300.}, {100., 5., 300. + 2. * tol}), std::invalid_argument);
+  BOOST_CHECK_THROW(wire_geometry({-100., 5., 300. + 2. * tol}, {100., 5., 300.}), std::invalid_argument);
+  BOOST_CHECK_THROW(wire_geometry({0., 0., 0.}, {0., 0., 10.}), std::invalid_argument);
+  // Zero length
+  BOOST_CHECK_THROW(wire_geometry({1., 2., 3.}, {1., 2., 3.}), std::invalid_argument);
+  // NaN coordinates are rejected
+  BOOST_CHECK_THROW(wire_geometry({0., 0., std::nan("")}, {1., 0., 0.}), std::invalid_argument);
+  BOOST_CHECK_THROW(wire_geometry({std::nan(""), 0., 0.}, {1., 0., 0.}), std::invalid_argument);
+}
+
+// Masses come from the particle table, once per code.
+BOOST_AUTO_TEST_CASE(masses_from_pdg) {
+  double const m_mu_table = TDatabasePDG::Instance()->GetParticle(13)->Mass() * CLHEP::GeV;
+  BOOST_CHECK_EQUAL(mass_from_pdg(13), m_mu_table);
+  BOOST_CHECK_EQUAL(mass_from_pdg(13), m_mu_table); // second call, from the cache
+  BOOST_CHECK_EQUAL(mass_from_pdg(-13), m_mu_table);
+  BOOST_CHECK_GT(mass_from_pdg(2212), mass_from_pdg(211));
+  BOOST_CHECK_GT(mass_from_pdg(211), mass_from_pdg(13));
+  BOOST_CHECK_GT(mass_from_pdg(13), mass_from_pdg(11));
+  BOOST_CHECK_THROW(mass_from_pdg(999999), std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -141,7 +264,7 @@ BOOST_AUTO_TEST_SUITE(filter)
 // width, and the smoothed parameters on the first plane as well.
 BOOST_AUTO_TEST_CASE(pulls_on_toy_tracks) {
   uniform_field const bf({0.6, 0., 0.});
-  reco_calibration const cal;
+  reco_calibration const& cal = toy_cal;
   std::mt19937 rng(12345);
   std::normal_distribution<double> g(0., 1.);
 
@@ -161,7 +284,7 @@ BOOST_AUTO_TEST_CASE(pulls_on_toy_tracks) {
     auto const hits = make_hits(truth, bf, cal, 10., rng);
 
     // Seed: truth at the first plane smeared within the seed covariance, iterated three times
-    auto const first = propagate(truth, hits.front().wire.z(), m_mu, bf)->out;
+    auto const first = propagate(truth, hits.front().wire.z(), m_mu, bf, toy_prop)->out;
     state seed       = first;
     seed.cov         = seed_cov();
     for (unsigned int i = 0; i < s_dim; ++i) {
@@ -177,7 +300,7 @@ BOOST_AUTO_TEST_CASE(pulls_on_toy_tracks) {
     }
     auto const sm = smooth(steps);
     BOOST_REQUIRE(sm);
-    auto const last_truth  = propagate(truth, hits.back().wire.z(), m_mu, bf)->out;
+    auto const last_truth  = propagate(truth, hits.back().wire.z(), m_mu, bf, toy_prop)->out;
     state const* fitted[2] = {&steps.back().filtered, &sm->front()};
     state const* truths[2] = {&last_truth, &first};
     for (int w = 0; w < 2; ++w) {

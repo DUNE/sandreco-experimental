@@ -1,9 +1,18 @@
 #include <kalman/propagator.hpp>
 
+#include <Geant4/CLHEP/Units/PhysicalConstants.h>
+#include <Geant4/CLHEP/Units/SystemOfUnits.h>
+
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 namespace sand::tracker::kalman {
+
+  namespace {
+    /// p [MeV] = kappa * B [T] * R [mm] for a unit charge: the field is a number in tesla, see state.hpp
+    constexpr double kappa = CLHEP::c_light * CLHEP::tesla;
+  } // namespace
 
   namespace detail {
 
@@ -13,14 +22,14 @@ namespace sand::tracker::kalman {
       double const ax = tx * ty * b[0] - (1. + tx * tx) * b[1] + ty * b[2];
       double const ay = (1. + ty * ty) * b[0] - tx * ty * b[1] - tx * b[2];
       double const g  = std::sqrt(1. + mass * mass * q * q); // 1/beta
-      double const kq = d * s_kappa * q;
+      double const kq = d * kappa * q;
 
       f[X]   = tx;
       f[Y]   = ty;
       f[TX]  = kq * n * ax;
       f[TY]  = kq * n * ay;
       f[QOP] = 0.;
-      f[T]   = d * n * g / s_c;
+      f[T]   = d * n * g / CLHEP::c_light;
 
       double const dax_dtx = ty * b[0] - 2. * tx * b[1];
       double const dax_dty = tx * b[0] + b[2];
@@ -32,19 +41,24 @@ namespace sand::tracker::kalman {
       A(Y, TY)   = 1.;
       A(TX, TX)  = kq * (tx / n * ax + n * dax_dtx);
       A(TX, TY)  = kq * (ty / n * ax + n * dax_dty);
-      A(TX, QOP) = d * s_kappa * n * ax;
+      A(TX, QOP) = d * kappa * n * ax;
       A(TY, TX)  = kq * (tx / n * ay + n * day_dtx);
       A(TY, TY)  = kq * (ty / n * ay + n * day_dty);
-      A(TY, QOP) = d * s_kappa * n * ay;
-      A(T, TX)   = d * tx / n * g / s_c;
-      A(T, TY)   = d * ty / n * g / s_c;
-      A(T, QOP)  = d * n * (mass * mass * q / g) / s_c;
+      A(TY, QOP) = d * kappa * n * ay;
+      A(T, TX)   = d * tx / n * g / CLHEP::c_light;
+      A(T, TY)   = d * ty / n * g / CLHEP::c_light;
+      A(T, QOP)  = d * n * (mass * mass * q / g) / CLHEP::c_light;
     }
 
   } // namespace detail
 
   std::optional<propagation_result> propagate(const state& in, double z_target, double mass, const field& bfield,
                                               const propagator_config& cfg) {
+    // The settings have no defaults: a value-initialised config (zeros) would divide by zero below
+    if (!(cfg.max_step > 0.) || !(cfg.max_slope > 0.)) {
+      throw std::invalid_argument("sand::tracker::kalman::propagate: max_step and max_slope must be positive (set them "
+                                  "from the configuration)");
+    }
     propagation_result res;
     res.F          = identity();
     vector_t s     = in.par;

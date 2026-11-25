@@ -2,6 +2,7 @@
 
 #include <kalman/field.hpp>
 #include <kalman/measurement.hpp>
+#include <kalman/particle.hpp>
 #include <kalman/propagator.hpp>
 #include <kalman/state.hpp>
 
@@ -30,7 +31,7 @@ namespace sand::tracker::kalman {
    *
    * \code{.cpp}
    * auto& kf = instance<sand::tracker::kalman::engine>();
-   * auto prop = kf.propagate(current, w.z(), mass);
+   * auto prop = kf.propagate(current, w.z(), mass_from_pdg(13));
    * \endcode
    *
    * The operations that need the shared state are available as members (propagate(), wire_time()). The free
@@ -45,15 +46,17 @@ namespace sand::tracker::kalman {
    * | Parameter Name               | Type        | Unit  | Required/Default | Description                                    |
    * |------------------------------|-------------|-------|------------------|------------------------------------------------|
    * | `field`                      | `double[3]` | T     | Required         | Uniform magnetic field (Bx, By, Bz).           |
-   * | `calibration.drift_velocity` | `double`    | mm/ns | 0.05             | Drift velocity assumed by the reconstruction.  |
-   * | `calibration.wire_velocity`  | `double`    | mm/ns | 200              | Signal propagation speed along the wire.       |
-   * | `calibration.tdc_resolution` | `double`    | ns    | 3.5              | TDC time resolution.                           |
-   * | `calibration.t0_offset`      | `double`    | ns    | 0                | Fixed electronics offset.                      |
-   * | `propagator.max_step`        | `double`    | mm    | 50               | Maximum Runge-Kutta step.                      |
-   * | `propagator.max_slope`       | `double`    |       | 1000             | Propagation fails if \|tx\| or \|ty\| exceed it. |
+   * | `calibration.drift_velocity` | `double`    | mm/ns | Required         | Drift velocity assumed by the reconstruction.  |
+   * | `calibration.wire_velocity`  | `double`    | mm/ns | Required         | Signal propagation speed along the wire.       |
+   * | `calibration.tdc_resolution` | `double`    | ns    | Required         | TDC time resolution.                           |
+   * | `calibration.t0_offset`      | `double`    | ns    | Required         | Fixed electronics offset.                      |
+   * | `propagator.max_step`        | `double`    | mm    | Required         | Maximum Runge-Kutta step.                      |
+   * | `propagator.max_slope`       | `double`    |       | Required         | Propagation fails if \|tx\| or \|ty\| exceed it. |
    *
-   * The `calibration` and `propagator` objects are optional, and so is each of their keys. Velocities, resolution,
-   * step and slope must be positive; unknown keys are rejected, so that a misspelt key is not silently ignored.
+   * Every key is required: every tunable parameter comes from the configuration, and neither the engine nor the
+   * structs reco_calibration and propagator_config have default values. A missing key is an error that names it.
+   * Velocities, resolution, step and slope must be positive; unknown keys are rejected, so that a misspelt key is not
+   * silently ignored. The field is a number in tesla (see state.hpp).
    *
    * Example:
    * \code{.json}
@@ -87,7 +90,7 @@ namespace sand::tracker::kalman {
      * @brief Propagate a state to the plane z_target with the field and the settings of the engine.
      * @param in       Input state (its covariance is transported)
      * @param z_target Target plane [mm]
-     * @param mass     Mass hypothesis [MeV], used only for the time of flight
+     * @param mass     Mass hypothesis [MeV], used only for the time of flight (see mass_from_pdg())
      * @return As sand::tracker::kalman::propagate()
      */
     std::optional<propagation_result> propagate(const state& in, double z_target, double mass) const;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Geant4/CLHEP/Units/PhysicalConstants.h>
+#include <Geant4/CLHEP/Units/SystemOfUnits.h>
 #include <Math/SMatrix.h>
 #include <Math/SVector.h>
 
@@ -10,7 +12,18 @@
  * @brief Track state on a plane at fixed z, used by the tracker Kalman filter.
  *
  * Units used throughout sand::tracker::kalman:
- *  - lengths in mm, times in ns, momenta and masses in MeV, magnetic field in T.
+ *  - lengths in mm, times in ns, momenta and masses in MeV: the CLHEP internal units, so values from CLHEP (for
+ *    example CLHEP::c_light in mm/ns) can be used directly;
+ *  - magnetic field in T, as a plain number: in the field interface, in the engine configuration and in the values of
+ *    the GDML. It is not converted to CLHEP internal units (where 1 T = CLHEP::tesla = 0.001).
+ *
+ * Physical constants come from CLHEP (Geant4/CLHEP/Units/PhysicalConstants.h and SystemOfUnits.h), with qualified
+ * names; masses come from the particle table through mass_from_pdg() (particle.hpp). The curvature constant is not
+ * written as a number: it is derived as
+ *
+ *   kappa = CLHEP::c_light * CLHEP::tesla = 0.299792458 MeV / (mm T)
+ *
+ * so that p [MeV] = kappa * B [T] * R [mm] for a unit charge. See docs/kalman_filter.md, section "Track state".
  *
  * The state vector is (x, y, tx, ty, q/p, t) at the reference plane z:
  *  - x, y   : position on the plane [mm]
@@ -24,7 +37,10 @@
  * Since z is the independent variable, the state also carries the sign of p_z (direction): +1 for a particle moving
  * towards larger z, -1 for one moving towards smaller z.
  *
- * See docs/kalman_filter.md for an overview of the library.
+ * Since z is the independent variable, a track is described on planes of fixed z only: a track parallel to the planes
+ * (p_z = 0) cannot be represented, and the propagation stops when |tx| or |ty| exceed propagator_config::max_slope.
+ *
+ * See docs/kalman_filter.md, section "Track state".
  */
 
 /**
@@ -34,6 +50,16 @@
  * the digit format and of the geometry service; the shared state (field, calibration, propagation settings) is held
  * by the complex data object sand::tracker::kalman::engine.
  */
+/**
+ * @namespace sand::tracker::kalman::detail
+ * @brief Helpers that are not part of the public interface of the library.
+ *
+ * The functions in this namespace (detail::derivatives(), detail::wire_distance()) are building blocks of the public
+ * functions propagate() and wire_time(). Reconstruction modules should not call them. They are declared in the
+ * headers, and not hidden in the .cpp files, only because the standalone tests check them directly against analytic
+ * results and finite differences. See docs/kalman_filter.md, section "Public interface and namespace detail".
+ */
+
 namespace sand::tracker::kalman {
 
   inline constexpr unsigned int s_dim = 6; ///< Dimension of the state vector
@@ -46,11 +72,11 @@ namespace sand::tracker::kalman {
   using sym_matrix_t = ROOT::Math::SMatrix<double, s_dim, s_dim, ROOT::Math::MatRepSym<double, s_dim>>; ///< Covariance
   using row_t        = ROOT::Math::SVector<double, s_dim>; ///< A 1 x s_dim measurement matrix, stored as a vector
 
-  /// Physical constants in the units above.
-  inline constexpr double s_c     = 299.792458;  ///< speed of light [mm/ns]
-  inline constexpr double s_kappa = 0.299792458; ///< p[MeV] = s_kappa * B[T] * R[mm] for a unit charge
-
-  /// Track state on the plane z: parameters, covariance and direction of motion.
+  /**
+   * @brief Track state on the plane z: parameters, covariance and direction of motion.
+   *
+   * See docs/kalman_filter.md, section "Track state", for the parameters, their units and the covariance.
+   */
   struct state {
     double z{0};        ///< Reference plane [mm]
     vector_t par{};     ///< (x, y, tx, ty, q/p, t)

@@ -2,14 +2,25 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <test_helpers.hpp>
+#include <kalman/particle.hpp>
 #include <kalman/propagator.hpp>
 
+#include <Geant4/CLHEP/Units/PhysicalConstants.h>
+#include <Geant4/CLHEP/Units/SystemOfUnits.h>
+
 #include <cmath>
+#include <stdexcept>
 
 using namespace sand::tracker::kalman;
 
 namespace {
-  double constexpr m_mu = 105.6583755; // MeV
+  double const m_mu = mass_from_pdg(13); // MeV
+
+  /// p [MeV] = kappa * B [T] * R [mm], as in the propagator
+  double constexpr kappa = CLHEP::c_light * CLHEP::tesla;
+
+  /// Runge-Kutta settings of the tests that do not study them
+  propagator_config const cfg{10., 1e3};
 
   state make_state(double x, double y, double tx, double ty, double qop, double t, int dir = +1) {
     state s;
@@ -36,7 +47,7 @@ BOOST_AUTO_TEST_CASE(helix_in_uniform_field) {
     auto const in  = make_state(0., 0., 0., 0., q / p, 0.);
     auto const res = propagate(in, z1, m_mu, bf, {10., 1e3});
     BOOST_REQUIRE(res);
-    double const R    = p / (s_kappa * B);
+    double const R    = p / (kappa * B);
     double const root = std::sqrt(R * R - z1 * z1);
     double const y    = q * (R - root);
     double const ty   = q * z1 / root;
@@ -45,7 +56,7 @@ BOOST_AUTO_TEST_CASE(helix_in_uniform_field) {
     BOOST_CHECK_SMALL(res->out.par[X], 1e-9);
     BOOST_CHECK_CLOSE(res->out.par[Y], y, 1e-6);
     BOOST_CHECK_CLOSE(res->out.par[TY], ty, 1e-6);
-    BOOST_CHECK_CLOSE(res->out.par[T], s / (beta * s_c), 1e-6);
+    BOOST_CHECK_CLOSE(res->out.par[T], s / (beta * CLHEP::c_light), 1e-6);
     BOOST_CHECK_CLOSE(res->path_length, s, 1e-4);
   }
 }
@@ -101,14 +112,25 @@ BOOST_AUTO_TEST_CASE(jacobian_vs_finite_differences) {
 BOOST_AUTO_TEST_CASE(backward_moving_particle) {
   double const p = 1000., B = 0.6;
   uniform_field const bf({B, 0., 0.});
-  auto const fwd = propagate(make_state(0., 0., 0., 0., -1. / p, 0., +1), 1000., m_mu, bf);
-  auto const bwd = propagate(make_state(0., 0., 0., 0., -1. / p, 0., -1), -1000., m_mu, bf);
+  auto const fwd = propagate(make_state(0., 0., 0., 0., -1. / p, 0., +1), 1000., m_mu, bf, cfg);
+  auto const bwd = propagate(make_state(0., 0., 0., 0., -1. / p, 0., -1), -1000., m_mu, bf, cfg);
   BOOST_REQUIRE(fwd && bwd);
   BOOST_CHECK_LT(fwd->out.par[Y], 0.);
   BOOST_CHECK_CLOSE(fwd->out.par[Y], -bwd->out.par[Y], 1e-6);
   BOOST_CHECK_CLOSE(fwd->out.par[TY], bwd->out.par[TY], 1e-6);
   BOOST_CHECK_GT(bwd->out.par[T], 0.);
   BOOST_CHECK_CLOSE(fwd->out.par[T], bwd->out.par[T], 1e-9);
+}
+
+// The settings have no defaults: a value-initialised config, or a non-positive value, is rejected.
+BOOST_AUTO_TEST_CASE(settings_are_required) {
+  uniform_field const bf({0.6, 0., 0.});
+  auto const in = make_state(0., 0., 0.1, 0.1, -1. / 1000., 0.);
+  BOOST_CHECK_THROW(propagate(in, 100., m_mu, bf, propagator_config{}), std::invalid_argument);
+  BOOST_CHECK_THROW(propagate(in, 100., m_mu, bf, {0., 1e3}), std::invalid_argument);
+  BOOST_CHECK_THROW(propagate(in, 100., m_mu, bf, {10., -1.}), std::invalid_argument);
+  BOOST_CHECK_THROW(propagate(in, 100., m_mu, bf, {std::nan(""), 1e3}), std::invalid_argument);
+  BOOST_CHECK(propagate(in, 100., m_mu, bf, cfg));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
