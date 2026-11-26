@@ -16,20 +16,20 @@ namespace sand::tracker::kalman {
 
   namespace detail {
 
-    void derivatives(const vector_t& s, int d, double mass, const field_vector& b, vector_t& f, matrix_t& A) {
+    void derivatives(const vector_t& s, int sigma, double mass, const field_vector& b, vector_t& f, matrix_t& A) {
       double const tx = s[TX], ty = s[TY], q = s[QOP];
-      double const n  = std::sqrt(1. + tx * tx + ty * ty);
+      double const nv = std::sqrt(1. + tx * tx + ty * ty); // |v|, v = (tx, ty, 1)
       double const ax = tx * ty * b[0] - (1. + tx * tx) * b[1] + ty * b[2];
       double const ay = (1. + ty * ty) * b[0] - tx * ty * b[1] - tx * b[2];
       double const g  = std::sqrt(1. + mass * mass * q * q); // 1/beta
-      double const kq = d * kappa * q;
+      double const kq = sigma * kappa * q;
 
       f[X]   = tx;
       f[Y]   = ty;
-      f[TX]  = kq * n * ax;
-      f[TY]  = kq * n * ay;
+      f[TX]  = kq * nv * ax;
+      f[TY]  = kq * nv * ay;
       f[QOP] = 0.;
-      f[T]   = d * n * g / CLHEP::c_light;
+      f[T]   = sigma * nv * g / CLHEP::c_light; // q/p = 0 gives 1/beta = 1: no mass dependence
 
       double const dax_dtx = ty * b[0] - 2. * tx * b[1];
       double const dax_dty = tx * b[0] + b[2];
@@ -39,15 +39,15 @@ namespace sand::tracker::kalman {
       A          = matrix_t();
       A(X, TX)   = 1.;
       A(Y, TY)   = 1.;
-      A(TX, TX)  = kq * (tx / n * ax + n * dax_dtx);
-      A(TX, TY)  = kq * (ty / n * ax + n * dax_dty);
-      A(TX, QOP) = d * kappa * n * ax;
-      A(TY, TX)  = kq * (tx / n * ay + n * day_dtx);
-      A(TY, TY)  = kq * (ty / n * ay + n * day_dty);
-      A(TY, QOP) = d * kappa * n * ay;
-      A(T, TX)   = d * tx / n * g / CLHEP::c_light;
-      A(T, TY)   = d * ty / n * g / CLHEP::c_light;
-      A(T, QOP)  = d * n * (mass * mass * q / g) / CLHEP::c_light;
+      A(TX, TX)  = kq * (tx / nv * ax + nv * dax_dtx);
+      A(TX, TY)  = kq * (ty / nv * ax + nv * dax_dty);
+      A(TX, QOP) = sigma * kappa * nv * ax;
+      A(TY, TX)  = kq * (tx / nv * ay + nv * day_dtx);
+      A(TY, TY)  = kq * (ty / nv * ay + nv * day_dty);
+      A(TY, QOP) = sigma * kappa * nv * ay;
+      A(T, TX)   = sigma * tx / nv * g / CLHEP::c_light;
+      A(T, TY)   = sigma * ty / nv * g / CLHEP::c_light;
+      A(T, QOP)  = sigma * nv * (mass * mass * q / g) / CLHEP::c_light;
     }
 
   } // namespace detail
@@ -60,40 +60,44 @@ namespace sand::tracker::kalman {
                                   "from the configuration)");
     }
     propagation_result res;
-    res.F          = identity();
-    vector_t s     = in.par;
-    double z       = in.z;
-    double const L = z_target - z;
-    int const nst  = std::max(1, static_cast<int>(std::ceil(std::abs(L) / cfg.max_step)));
-    double const h = L / nst;
-    int const d    = in.direction;
+    res.F           = identity();
+    vector_t s      = in.par;
+    double z        = in.z;
+    double const L  = z_target - z;
+    int const nst   = std::max(1, static_cast<int>(std::ceil(std::abs(L) / cfg.max_step)));
+    double const h  = L / nst;
+    int const sigma = in.direction; // sign of p_z
 
-    vector_t k1, k2, k3, k4;
+    // Stage i (notation of docs/kalman_filter.md): the field b_i is read at the position of the stage state, f_i and
+    // A_i are evaluated there, and J_i is the matching stage of the Jacobian. Reading the field at every stage makes
+    // the scheme a true RK4 in a non-uniform field too; the field gradients are still neglected in A_i.
+    vector_t f1, f2, f3, f4;
     matrix_t A1, A2, A3, A4;
     for (int i = 0; i < nst; ++i) {
       auto const b1 = bfield.at(s[X], s[Y], z);
-      detail::derivatives(s, d, mass, b1, k1, A1);
-      matrix_t const K1 = A1 * res.F;
+      detail::derivatives(s, sigma, mass, b1, f1, A1);
+      matrix_t const J1 = A1 * res.F;
 
-      vector_t const s2 = s + 0.5 * h * k1;
+      vector_t const s2 = s + 0.5 * h * f1;
       auto const b2     = bfield.at(s2[X], s2[Y], z + 0.5 * h);
-      detail::derivatives(s2, d, mass, b2, k2, A2);
-      matrix_t const K2 = A2 * (res.F + 0.5 * h * K1);
+      detail::derivatives(s2, sigma, mass, b2, f2, A2);
+      matrix_t const J2 = A2 * (res.F + 0.5 * h * J1);
 
-      vector_t const s3 = s + 0.5 * h * k2;
-      detail::derivatives(s3, d, mass, b2, k3, A3);
-      matrix_t const K3 = A3 * (res.F + 0.5 * h * K2);
+      vector_t const s3 = s + 0.5 * h * f2;
+      auto const b3     = bfield.at(s3[X], s3[Y], z + 0.5 * h);
+      detail::derivatives(s3, sigma, mass, b3, f3, A3);
+      matrix_t const J3 = A3 * (res.F + 0.5 * h * J2);
 
-      vector_t const s4 = s + h * k3;
+      vector_t const s4 = s + h * f3;
       auto const b4     = bfield.at(s4[X], s4[Y], z + h);
-      detail::derivatives(s4, d, mass, b4, k4, A4);
-      matrix_t const K4 = A4 * (res.F + h * K3);
+      detail::derivatives(s4, sigma, mass, b4, f4, A4);
+      matrix_t const J4 = A4 * (res.F + h * J3);
 
-      double const n0 = std::sqrt(1. + s[TX] * s[TX] + s[TY] * s[TY]);
-      s += h / 6. * (k1 + 2. * k2 + 2. * k3 + k4);
-      res.F += h / 6. * (K1 + 2. * K2 + 2. * K3 + K4);
-      double const n1 = std::sqrt(1. + s[TX] * s[TX] + s[TY] * s[TY]);
-      res.path_length += 0.5 * (n0 + n1) * std::abs(h);
+      double const nv0 = std::sqrt(1. + s[TX] * s[TX] + s[TY] * s[TY]);
+      s += h / 6. * (f1 + 2. * f2 + 2. * f3 + f4);
+      res.F += h / 6. * (J1 + 2. * J2 + 2. * J3 + J4);
+      double const nv1 = std::sqrt(1. + s[TX] * s[TX] + s[TY] * s[TY]);
+      res.path_length += 0.5 * (nv0 + nv1) * std::abs(h);
       z += h;
 
       if (std::abs(s[TX]) > cfg.max_slope || std::abs(s[TY]) > cfg.max_slope) {
@@ -103,7 +107,7 @@ namespace sand::tracker::kalman {
 
     res.out.z         = z_target;
     res.out.par       = s;
-    res.out.direction = d;
+    res.out.direction = sigma;
     res.out.cov       = ROOT::Math::Similarity(res.F, in.cov);
     return res;
   }

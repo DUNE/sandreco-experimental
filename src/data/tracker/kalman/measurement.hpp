@@ -13,16 +13,16 @@
  * The same model describes a drift-chamber wire and a straw tube: it is the model of the fast digitizations
  * drift_fast_digi and stt_fast_digi (drift time to the closest approach plus signal propagation along the wire).
  *
- * A wire is a straight segment in a plane of constant z, from the readout end (head) to the far end (tail). The
+ * A wire is a straight segment in a plane of constant z, from the readout end W0 (head) to the far end (tail). The
  * model only uses the wire geometry, so it works for any number of views and any stereo angle.
  *
  * Two models are provided:
  *  - wire_position: the wire is a coordinate measurement across the wire, with a flat error. Used in track finding.
  *  - wire_time: the measurement is the TDC time, predicted as
- *      t_TDC = t + L / v_wire + side * d / v_drift + t_offset
+ *      t_{TDC} = t + L / v_w + side * d / v_d + t0_offset
  *    with t the track time on the wire plane, d the signed distance of closest approach between track and wire, L
- *    the distance from the closest approach point to the readout end and side the left-right hypothesis. Used in the
- *    final fit.
+ *    the distance from the closest approach point to the readout end, v_w and v_d the wire (signal) and drift
+ *    velocities and side the left-right hypothesis. Used in the final fit.
  *
  * Both return the predicted value and the 1 x 6 derivative row H with respect to the state on the wire plane. The
  * state passed in must already be on the wire plane (state.z == wire z).
@@ -88,13 +88,21 @@ namespace sand::tracker::kalman {
    * Code that builds the struct directly sets every member.
    */
   struct reco_calibration {
-    double drift_velocity; ///< [mm/ns]
-    double wire_velocity;  ///< Signal propagation along the wire [mm/ns]
-    double tdc_resolution; ///< [ns]
-    double t0_offset;      ///< Fixed electronics offset [ns]
+    double drift_velocity; ///< v_d [mm/ns]
+    double wire_velocity;  ///< v_w, signal propagation along the wire [mm/ns]
+    /**
+     * @brief Total resolution on the measured time [ns]: its square is the measurement variance of the time update.
+     *
+     * It includes the TDC resolution and the intrinsic spatial resolution sigma_x of the cell, converted to time:
+     * sigma_t^2 = sigma_{TDC}^2 + (sigma_x / v_d)^2. The current fast digitizations (drift_fast_digi, stt_fast_digi)
+     * smear only the TDC time, so with them it equals their sigma_tdc; the spatial term will be added when the
+     * digitization models it. See docs/kalman_filter.md, section "wire_time".
+     */
+    double time_resolution;
+    double t0_offset; ///< Fixed electronics offset [ns]
 
-    /// Drift time [ns] for a distance r [mm] from the wire
-    double drift_time(double r) const { return r / drift_velocity; }
+    /// Drift time [ns] for a distance [mm] from the wire
+    double drift_time(double distance) const { return distance / drift_velocity; }
     /// Drift distance [mm] for a drift time t [ns]
     double drift_distance(double t) const { return t * drift_velocity; }
   };
@@ -123,19 +131,19 @@ namespace sand::tracker::kalman {
      * @brief Signed distance of closest approach d and distance L from the readout end, for a straight local track.
      *
      * Near the wire plane the track is the straight line P(lambda) = P0 + lambda v, with v = (tx, ty, 1) and
-     * P0 = (x, y, z) its point on the wire plane. The wire is W(mu) = H + mu u, with H the readout end and
-     * u = (ux, uy, 0) the unit vector from head to tail. Delta = P0 - H has zero z component (same plane).
+     * P0 = (x, y, z) its point on the wire plane. The wire is W(mu) = W0 + mu u, with W0 the readout end and
+     * u = (ux, uy, 0) the unit vector from head to tail. Delta = P0 - W0 has zero z component (same plane).
      *
      * The signed distance of closest approach is the projection of Delta on the common normal v x u:
      *
      *     d = Delta . (v x u) / |v x u|
      *
-     * with v x u = (-uy, ux, uy tx - ux ty) and |v x u| = sqrt(1 + t_n^2), which gives
+     * with v x u = (-uy, ux, uy tx - ux ty) and |v x u| = rho = sqrt(1 + t_n^2), which gives
      *
-     *     d = n . Delta / sqrt(1 + t_n^2),   n = (-uy, ux),   t_n = n . (tx, ty)
+     *     d = n . Delta / rho,   n = (-uy, ux),   t_n = n . (tx, ty)
      *
      * d > 0 when the track passes on the side of n. L is the value of mu that minimises
-     * |P0 + lambda v - H - mu u|^2 over lambda and mu:
+     * |P0 + lambda v - W0 - mu u|^2 over lambda and mu:
      *
      *     L = (Delta.u - (Delta.v)(u.v)/(v.v)) / (1 - (u.v)^2/(v.v))
      *
@@ -155,13 +163,14 @@ namespace sand::tracker::kalman {
    *
    * The model is
    *
-   *     t_TDC = t + L / v_wire + side * d / v_drift + t_offset
+   *     t_{TDC} = t + L / v_w + side * d / v_d + t0_offset
    *
-   * with d and L from detail::wire_distance(). The drift time is |d| / v_drift, but |d| is not differentiable at
-   * d = 0, so the model uses side * d with a fixed left-right hypothesis. With the right hypothesis (side = sign of d)
-   * the term equals |d| / v_drift and is never subtracted. With the wrong one it predicts a negative drift time: the
-   * residual is large and the deterministic annealing filter, which treats the two sides as competing measurements,
-   * gives that hypothesis a low weight.
+   * with d and L from detail::wire_distance(). The drift time is |d| / v_d, but |d| is not differentiable at d = 0,
+   * so the model uses side * d with a fixed left-right hypothesis. With the right hypothesis (side = sign of d) the
+   * term equals |d| / v_d and is never subtracted. With the wrong one it predicts a negative drift time, and the
+   * residual is about 2 |d| / v_d: large only far from the wire, where the deterministic annealing filter, which
+   * treats the two sides as competing measurements, gives that hypothesis a low weight. Close to the wire (2 |d| / v_d
+   * comparable with the time resolution) the two hypotheses cannot be told apart.
    *
    * The derivative row H is computed analytically from the same side-fixed model. See docs/kalman_filter.md, section
    * "Wire measurements".

@@ -72,10 +72,10 @@ namespace sand::tracker::kalman {
 
     // Every tunable parameter is required: neither the engine nor the structs have default values.
     auto const& c = required_object(cfg, "calibration");
-    check_keys(c, "calibration", {"drift_velocity", "wire_velocity", "tdc_resolution", "t0_offset"});
+    check_keys(c, "calibration", {"drift_velocity", "wire_velocity", "time_resolution", "t0_offset"});
     m_calibration = reco_calibration{
         required_positive(c, "calibration", "drift_velocity"), required_positive(c, "calibration", "wire_velocity"),
-        required_positive(c, "calibration", "tdc_resolution"), required_number(c, "calibration", "t0_offset")};
+        required_positive(c, "calibration", "time_resolution"), required_number(c, "calibration", "t0_offset")};
 
     auto const& p = required_object(cfg, "propagator");
     check_keys(p, "propagator", {"max_step", "max_slope"});
@@ -84,8 +84,8 @@ namespace sand::tracker::kalman {
 
     auto const b = m_field->at(0., 0., 0.);
     UFW_INFO("sand::tracker::kalman::engine: uniform field ({}, {}, {}) T, drift velocity {} mm/ns, wire velocity {} "
-             "mm/ns, TDC resolution {} ns, t0 offset {} ns, max step {} mm, max slope {}.",
-             b[0], b[1], b[2], m_calibration.drift_velocity, m_calibration.wire_velocity, m_calibration.tdc_resolution,
+             "mm/ns, time resolution {} ns, t0 offset {} ns, max step {} mm, max slope {}.",
+             b[0], b[1], b[2], m_calibration.drift_velocity, m_calibration.wire_velocity, m_calibration.time_resolution,
              m_calibration.t0_offset, m_propagator.max_step, m_propagator.max_slope);
   }
 

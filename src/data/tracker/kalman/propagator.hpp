@@ -9,19 +9,23 @@
  * @file propagator.hpp
  * @brief Runge-Kutta propagation of the track state in z, with the transport Jacobian.
  *
- * Equations of motion with z as independent variable, d = sign(p_z), N = sqrt(1 + tx^2 + ty^2), kappa =
- * CLHEP::c_light * CLHEP::tesla (field B in T, see state.hpp), c = CLHEP::c_light:
+ * Equations of motion with z as independent variable, sigma = sign(p_z), v = (tx, ty, 1), |v| = sqrt(1 + tx^2 + ty^2),
+ * kappa = CLHEP::c_light * CLHEP::tesla (field B in T, see state.hpp), c = CLHEP::c_light:
  *
  *   dx/dz  = tx
  *   dy/dz  = ty
- *   dtx/dz = d * kappa * (q/p) * N * ( tx*ty*Bx - (1 + tx^2)*By + ty*Bz )
- *   dty/dz = d * kappa * (q/p) * N * ( (1 + ty^2)*Bx - tx*ty*By - tx*Bz )
- *   dqop/dz = 0                                   (energy loss is added by the material model, not here)
- *   dt/dz  = d * N * sqrt(1 + m^2 (q/p)^2) / c    (time of flight for the mass hypothesis m)
+ *   dtx/dz = sigma * kappa * (q/p) * |v| * ( tx*ty*Bx - (1 + tx^2)*By + ty*Bz )
+ *   dty/dz = sigma * kappa * (q/p) * |v| * ( (1 + ty^2)*Bx - tx*ty*By - tx*Bz )
+ *   dqop/dz = 0                                       (no energy loss: the library has no material model yet)
+ *   dt/dz  = sigma * |v| * sqrt(1 + m^2 (q/p)^2) / c   (time of flight for the mass hypothesis m)
  *
- * The Jacobian F = d(state at z1)/d(state at z0) is integrated together with the state with the same fourth-order
- * Runge-Kutta scheme, using dF/dz = A(s) F with A = df/ds. Derivatives of the field with respect to position are
- * neglected, which is exact for a uniform field.
+ * For a straight track (q/p = 0) the time of flight uses beta = 1 and the mass hypothesis has no effect.
+ *
+ * The equations are integrated with the classical fourth-order Runge-Kutta scheme; the field is read at the position
+ * of each of the four stages, so the scheme is a true RK4 in a non-uniform field too. The Jacobian
+ * F = d(state at z1)/d(state at z0) is integrated together with the state with the same stages, using dF/dz = A F
+ * with A = df/dx (x the state vector). The derivatives of the field with respect to the position are neglected in A,
+ * which is exact for a uniform field.
  *
  * The derivation of these equations and of the Jacobian is in docs/kalman_filter.md, section "Propagation".
  */
@@ -43,23 +47,23 @@ namespace sand::tracker::kalman {
   struct propagation_result {
     state out;             ///< State on the target plane, covariance transported as F C F^T
     matrix_t F;            ///< Transport Jacobian
-    double path_length{0}; ///< Length travelled [mm]
+    double path_length{0}; ///< Length travelled [mm]; not used by the library yet (intended for a material model)
   };
 
   namespace detail {
 
     /**
-     * @brief Right-hand side f(s) and its Jacobian A = df/ds for the equations above.
+     * @brief Right-hand side f and its Jacobian A = df/d(state) for the equations above.
      *
      * See docs/kalman_filter.md, section "Propagation".
-     * @param s    State vector
-     * @param d    Sign of p_z
-     * @param mass Mass hypothesis [MeV]
-     * @param b    Field at the position of s [T]
-     * @param f    Output: ds/dz
-     * @param A    Output: df/ds
+     * @param s     State vector
+     * @param sigma Sign of p_z
+     * @param mass  Mass hypothesis [MeV]
+     * @param b     Field at the position of s [T]
+     * @param f     Output: d(state)/dz
+     * @param A     Output: df/d(state)
      */
-    void derivatives(const vector_t& s, int d, double mass, const field_vector& b, vector_t& f, matrix_t& A);
+    void derivatives(const vector_t& s, int sigma, double mass, const field_vector& b, vector_t& f, matrix_t& A);
 
   } // namespace detail
 
@@ -67,7 +71,7 @@ namespace sand::tracker::kalman {
    * @brief Propagate a state to the plane z_target.
    * @param in      Input state (its covariance is transported).
    * @param z_target Target plane [mm]. May be upstream or downstream of in.z.
-   * @param mass    Mass hypothesis [MeV], used only for the time of flight.
+   * @param mass    Mass hypothesis [MeV], used only for the time of flight (no effect for q/p = 0, where beta = 1).
    * @param bfield  Magnetic field.
    * @param cfg     Runge-Kutta settings (no default: from the configuration).
    * @return The propagated state and Jacobian, or nothing if the track becomes too steep.

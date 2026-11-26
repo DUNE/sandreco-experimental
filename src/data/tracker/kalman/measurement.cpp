@@ -41,7 +41,7 @@ namespace sand::tracker::kalman {
   namespace detail {
 
     void wire_distance(const vector_t& par, const wire_geometry& w, double& d, double& L) {
-      // Notation of the header and of docs/kalman_filter.md: Delta = P0 - H, v = (tx, ty, 1), u = (ux, uy, 0)
+      // Notation of the header and of docs/kalman_filter.md: Delta = P0 - W0, v = (tx, ty, 1), u = (ux, uy, 0)
       double ux, uy;
       w.along(ux, uy);
       double const nx = -uy, ny = ux;
@@ -65,25 +65,25 @@ namespace sand::tracker::kalman {
     p.value = s.par[T] + L / cal.wire_velocity + side * d / cal.drift_velocity + cal.t0_offset;
 
     // Analytic derivatives of the side-fixed model. In the frame of the wire, with a = Delta . u, b = Delta . n,
-    // t_u = u . (tx, ty), t_n = n . (tx, ty) and S2 = 1 + t_n^2 (see docs/kalman_filter.md, "Wire measurements"):
-    //   d = b / sqrt(S2),   L = a - b t_n t_u / S2
+    // t_u = u . (tx, ty), t_n = n . (tx, ty) and rho^2 = 1 + t_n^2 (see docs/kalman_filter.md, "Wire measurements"):
+    //   d = b / rho,   L = a - b t_n t_u / rho^2
     // (the second is the formula of wire_distance, using v . v = 1 + t_u^2 + t_n^2). x and y enter through a and b,
     // tx and ty through t_u and t_n; q/p does not enter.
     double ux, uy;
     w.along(ux, uy);
     double const nx = -uy, ny = ux;
-    double const b  = nx * (s.par[X] - w.head()[0]) + ny * (s.par[Y] - w.head()[1]);
-    double const tu = ux * s.par[TX] + uy * s.par[TY];
-    double const tn = nx * s.par[TX] + ny * s.par[TY];
-    double const S2 = 1. + tn * tn;
-    double const S  = std::sqrt(S2);
+    double const b    = nx * (s.par[X] - w.head()[0]) + ny * (s.par[Y] - w.head()[1]);
+    double const tu   = ux * s.par[TX] + uy * s.par[TY];
+    double const tn   = nx * s.par[TX] + ny * s.par[TY];
+    double const rho2 = 1. + tn * tn;
+    double const rho  = std::sqrt(rho2);
 
-    double const dd_db  = 1. / S;
-    double const dd_dtn = -b * tn / (S2 * S);
+    double const dd_db  = 1. / rho;
+    double const dd_dtn = -b * tn / (rho2 * rho);
     double const dL_da  = 1.;
-    double const dL_db  = -tn * tu / S2;
-    double const dL_dtu = -b * tn / S2;
-    double const dL_dtn = -b * tu * (1. - tn * tn) / (S2 * S2);
+    double const dL_db  = -tn * tu / rho2;
+    double const dL_dtu = -b * tn / rho2;
+    double const dL_dtn = -b * tu * (1. - tn * tn) / (rho2 * rho2);
 
     // d(t_TDC) with respect to a, b, t_u, t_n
     double const sv  = side / cal.drift_velocity;

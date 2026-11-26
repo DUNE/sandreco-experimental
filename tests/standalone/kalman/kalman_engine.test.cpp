@@ -37,7 +37,7 @@ namespace {
   ufw::config full_config() {
     return ufw::json::parse(R"({
       "field" : [0.6, 0.05, -0.02],
-      "calibration" : { "drift_velocity" : 0.04, "wire_velocity" : 180.0, "tdc_resolution" : 2.5, "t0_offset" : 12.0 },
+      "calibration" : { "drift_velocity" : 0.04, "wire_velocity" : 180.0, "time_resolution" : 2.5, "t0_offset" : 12.0 },
       "propagator" : { "max_step" : 20.0, "max_slope" : 50.0 }
     })");
   }
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(missing_keys) {
   missing const cases[] = {
       {"calibration", "drift_velocity", "calibration.drift_velocity"},
       {"calibration", "wire_velocity", "calibration.wire_velocity"},
-      {"calibration", "tdc_resolution", "calibration.tdc_resolution"},
+      {"calibration", "time_resolution", "calibration.time_resolution"},
       {"calibration", "t0_offset", "calibration.t0_offset"},
       {"propagator", "max_step", "propagator.max_step"},
       {"propagator", "max_slope", "propagator.max_slope"},
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(configured_values) {
   engine const kf(full_config());
   BOOST_CHECK_EQUAL(kf.calibration().drift_velocity, 0.04);
   BOOST_CHECK_EQUAL(kf.calibration().wire_velocity, 180.);
-  BOOST_CHECK_EQUAL(kf.calibration().tdc_resolution, 2.5);
+  BOOST_CHECK_EQUAL(kf.calibration().time_resolution, 2.5);
   BOOST_CHECK_EQUAL(kf.calibration().t0_offset, 12.);
   BOOST_CHECK_EQUAL(kf.propagator_settings().max_step, 20.);
   BOOST_CHECK_EQUAL(kf.propagator_settings().max_slope, 50.);
@@ -171,6 +171,8 @@ BOOST_AUTO_TEST_CASE(invalid_configurations) {
   };
   BOOST_CHECK_THROW(engine(with("fields", nullptr, 1)), std::exception);
   BOOST_CHECK_THROW(engine(with("calibration", "drift_vel", 1)), std::exception);
+  // The old name of the time resolution is an unknown key, so a configuration that still uses it fails
+  BOOST_CHECK_THROW(engine(with("calibration", "tdc_resolution", 3.5)), std::exception);
   BOOST_CHECK_THROW(engine(with("calibration", "drift_velocity", 0)), std::exception);
   BOOST_CHECK_THROW(engine(with("calibration", "wire_velocity", "fast")), std::exception);
   BOOST_CHECK_THROW(engine(with("calibration", "t0_offset", nullptr)), std::exception);

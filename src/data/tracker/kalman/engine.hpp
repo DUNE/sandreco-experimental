@@ -43,15 +43,19 @@ namespace sand::tracker::kalman {
    * \subsection Configuration
    * Key `"sand::tracker::kalman::engine"` in the `"globals"` section of the job.
    *
-   * | Parameter Name               | Type        | Unit  | Required/Default | Description                                    |
-   * |------------------------------|-------------|-------|------------------|------------------------------------------------|
-   * | `field`                      | `double[3]` | T     | Required         | Uniform magnetic field (Bx, By, Bz).           |
-   * | `calibration.drift_velocity` | `double`    | mm/ns | Required         | Drift velocity assumed by the reconstruction.  |
-   * | `calibration.wire_velocity`  | `double`    | mm/ns | Required         | Signal propagation speed along the wire.       |
-   * | `calibration.tdc_resolution` | `double`    | ns    | Required         | TDC time resolution.                           |
-   * | `calibration.t0_offset`      | `double`    | ns    | Required         | Fixed electronics offset.                      |
-   * | `propagator.max_step`        | `double`    | mm    | Required         | Maximum Runge-Kutta step.                      |
-   * | `propagator.max_slope`       | `double`    |       | Required         | Propagation fails if \|tx\| or \|ty\| exceed it. |
+   * | Parameter Name                | Type        | Unit  | Required/Default | Description                                      |
+   * |-------------------------------|-------------|-------|------------------|--------------------------------------------------|
+   * | `field`                       | `double[3]` | T     | Required         | Uniform magnetic field (Bx, By, Bz).             |
+   * | `calibration.drift_velocity`  | `double`    | mm/ns | Required         | Drift velocity assumed by the reconstruction.    |
+   * | `calibration.wire_velocity`   | `double`    | mm/ns | Required         | Signal propagation speed along the wire.         |
+   * | `calibration.time_resolution` | `double`    | ns    | Required         | Total resolution on the measured time (*).       |
+   * | `calibration.t0_offset`       | `double`    | ns    | Required         | Fixed electronics offset.                        |
+   * | `propagator.max_step`         | `double`    | mm    | Required         | Maximum Runge-Kutta step.                        |
+   * | `propagator.max_slope`        | `double`    |       | Required         | Propagation fails if \|tx\| or \|ty\| exceed it. |
+   *
+   * (*) TDC resolution plus the intrinsic spatial resolution divided by the drift velocity, in quadrature; its square
+   * is the measurement variance of the time update. With the current fast digitizations, which smear only the TDC, it
+   * equals their `sigma_tdc`. See reco_calibration::time_resolution.
    *
    * Every key is required: every tunable parameter comes from the configuration, and neither the engine nor the
    * structs reco_calibration and propagator_config have default values. A missing key is an error that names it.
@@ -62,7 +66,7 @@ namespace sand::tracker::kalman {
    * \code{.json}
    * "sand::tracker::kalman::engine" : {
    *   "field" : [0.6, 0.0, 0.0],
-   *   "calibration" : { "drift_velocity" : 0.05, "wire_velocity" : 200.0, "tdc_resolution" : 3.5, "t0_offset" : 0.0 },
+   *   "calibration" : { "drift_velocity" : 0.05, "wire_velocity" : 200.0, "time_resolution" : 3.5, "t0_offset" : 0.0 },
    *   "propagator" : { "max_step" : 50.0, "max_slope" : 1000.0 }
    * }
    * \endcode

@@ -10,9 +10,10 @@
  * @file filter.hpp
  * @brief Kalman update for a scalar measurement, and Rauch-Tung-Striebel smoother.
  *
- * The update uses the Joseph form of the covariance, which stays symmetric and positive definite under rounding.
- * A weight w in (0, 1] scales the measurement variance as V / w: this is the hook for the deterministic annealing
- * filter, where each hypothesis (wire side) enters with its own weight.
+ * The update uses the Joseph form of the covariance, which is much more robust under rounding than the short form
+ * (I - K H) C, and symmetrises the result explicitly. A weight w in (0, 1] scales the measurement variance as V / w:
+ * this is the hook for the deterministic annealing filter, where each hypothesis (wire side) enters with its own
+ * weight. A weight that is zero, negative or NaN is rejected.
  *
  * The formulas are in docs/kalman_filter.md, sections "Kalman update" and "Smoother".
  */
@@ -32,12 +33,18 @@ namespace sand::tracker::kalman {
    *
    * Gain K = C H^T / (H C H^T + V / w), covariance in Joseph form. See docs/kalman_filter.md, section "Kalman update".
    *
+   * Contract on the weight: 0 < weight <= 1. A weight of 0 would make V / w infinite and the covariance NaN, so a
+   * weight that is not positive (including NaN) throws instead of failing silently. A caller that gives a measurement
+   * no weight at all (for example the deterministic annealing filter, for a hypothesis below its minimum weight) must
+   * skip the update, not call it with weight 0.
+   *
    * @param in        State on the measurement plane
    * @param pred      Predicted value and derivative row
    * @param measured  Measured value
    * @param variance  Measurement variance
-   * @param weight    DAF weight, 0 < weight <= 1
+   * @param weight    DAF weight, 0 < weight <= 1. Defaults to 1, a normal measurement.
    * @return Updated state, residuals and chi2 increment
+   * @throws std::invalid_argument if weight is not positive or is NaN
    */
   update_result update(const state& in, const prediction& pred, double measured, double variance, double weight = 1.);
 
@@ -57,8 +64,8 @@ namespace sand::tracker::kalman {
   /**
    * @brief Rauch-Tung-Striebel smoother.
    *
-   * Smoother gain A_k = C_k|k F_{k+1}^T (C_{k+1|k})^-1, then x_k|n and C_k|n backwards from the last plane. See
-   * docs/kalman_filter.md, section "Smoother".
+   * Smoother gain G_k = C_{k|k} F_{k+1}^T (C_{k+1|k})^-1, then x_{k|N} and C_{k|N} backwards from the last plane N.
+   * See docs/kalman_filter.md, section "Smoother".
    *
    * @param steps Forward filter steps in the order they were filtered; steps[0].F is not used.
    * @return Smoothed states, one per step, or nothing if a predicted covariance cannot be inverted.

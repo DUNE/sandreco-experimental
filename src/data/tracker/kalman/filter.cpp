@@ -1,8 +1,18 @@
 #include <kalman/filter.hpp>
 
+#include <sstream>
+#include <stdexcept>
+
 namespace sand::tracker::kalman {
 
   update_result update(const state& in, const prediction& pred, double measured, double variance, double weight) {
+    // Written as !(weight > 0) so that NaN is rejected too. Weight 0 would give V / w = inf and a NaN covariance.
+    if (!(weight > 0.)) {
+      std::ostringstream msg;
+      msg << "sand::tracker::kalman::update: the weight must be positive, got " << weight
+          << " (skip the measurement instead of giving it weight 0)";
+      throw std::invalid_argument(msg.str());
+    }
     update_result res;
     res.out            = in;
     res.residual       = measured - pred.value;
@@ -49,16 +59,16 @@ namespace sand::tracker::kalman {
       if (!Cinv.Invert()) {
         return std::nullopt;
       }
-      matrix_t const Ak = cur.filtered.cov * ROOT::Math::Transpose(next.F) * Cinv;
+      matrix_t const Gk = cur.filtered.cov * ROOT::Math::Transpose(next.F) * Cinv;
       out[k]            = cur.filtered;
-      out[k].par += Ak * (out[k + 1].par - next.predicted.par);
+      out[k].par += Gk * (out[k + 1].par - next.predicted.par);
       matrix_t dC;
       for (unsigned int i = 0; i < s_dim; ++i) {
         for (unsigned int j = 0; j < s_dim; ++j) {
           dC(i, j) = out[k + 1].cov(i, j) - next.predicted.cov(i, j);
         }
       }
-      matrix_t const C = cur.filtered.cov + Ak * dC * ROOT::Math::Transpose(Ak);
+      matrix_t const C = cur.filtered.cov + Gk * dC * ROOT::Math::Transpose(Gk); // smoother gain G_k
       for (unsigned int i = 0; i < s_dim; ++i) {
         for (unsigned int j = 0; j <= i; ++j) {
           out[k].cov(i, j) = 0.5 * (C(i, j) + C(j, i));

@@ -56,7 +56,7 @@ namespace {
   /// Truth track, generated with the same propagator (no material): the test checks the filter, not the physics.
   std::vector<toy_hit> make_hits(const state& truth, const field& bf, const reco_calibration& cal, double pitch,
                                  std::mt19937& rng) {
-    std::normal_distribution<double> gauss(0., cal.tdc_resolution);
+    std::normal_distribution<double> gauss(0., cal.time_resolution);
     std::vector<toy_hit> hits;
     auto const zs = plane_z();
     for (size_t i = 0; i < zs.size(); ++i) {
@@ -85,7 +85,7 @@ namespace {
       auto const pr = propagate(cur, h.wire.z(), m_mu, bf, toy_prop);
       BOOST_REQUIRE(pr);
       auto const pred = wire_time(pr->out, h.wire, h.side, cal);
-      auto const up   = update(pr->out, pred, h.tdc, cal.tdc_resolution * cal.tdc_resolution);
+      auto const up   = update(pr->out, pred, h.tdc, cal.time_resolution * cal.time_resolution);
       steps.push_back({pr->out, up.out, pr->F});
       cur = up.out;
     }
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(distance_to_wire) {
   detail::wire_distance(s.par, w, d, L);
   BOOST_CHECK_CLOSE(d, 2., 1e-9);
   BOOST_CHECK_CLOSE(L, 2000., 1e-9);
-  // Slope across the wire shortens the distance by 1/sqrt(1 + ty^2)
+  // A slope across the wire shortens the distance by a factor 1/sqrt(1 + t_n^2), here with t_n = ty
   s.par[TY] = 0.5;
   detail::wire_distance(s.par, w, d, L);
   BOOST_CHECK_CLOSE(d, 2. / std::sqrt(1.25), 1e-9);
@@ -136,8 +136,8 @@ BOOST_AUTO_TEST_CASE(time_derivatives) {
     auto const p = wire_time(s, w, side, cal);
     BOOST_CHECK_EQUAL(p.H[T], 1.);
     BOOST_CHECK_EQUAL(p.H[QOP], 0.);
-    // A shift of the track across the wire changes the time by 1/v_drift per mm, with the sign of the side. The
-    // distance along the wire also moves slightly with a sloped track, which adds a term of order 1e-5 (1/v_wire).
+    // A shift of the track across the wire changes the time by 1/v_d per mm, with the sign of the side. The
+    // distance along the wire also moves slightly with a sloped track, which adds a term of order 1e-5 (1/v_w).
     double const nx = -std::sin(5. * pi / 180.), ny = std::cos(5. * pi / 180.);
     double const tn = nx * s.par[TX] + ny * s.par[TY];
     double const dd = 1. / std::sqrt(1. + tn * tn);
@@ -259,6 +259,37 @@ BOOST_AUTO_TEST_CASE(masses_from_pdg) {
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(filter)
+
+// The weight must be positive: weight 0 would make V / w infinite and the covariance NaN, a negative weight a negative
+// variance. Both, and NaN, throw instead of returning a corrupted state; a small positive weight is accepted and pulls
+// the state less than weight 1.
+BOOST_AUTO_TEST_CASE(update_rejects_non_positive_weight) {
+  state s;
+  for (unsigned int i = 0; i < s_dim; ++i) {
+    s.cov(i, i) = 1.;
+  }
+  prediction p;
+  p.H[X] = 1.;
+  p.H[T] = 1.;
+  for (double w : {0., -0.0, -0.5, std::nan(""), -std::numeric_limits<double>::infinity()}) {
+    BOOST_CHECK_THROW(update(s, p, 2., 1., w), std::invalid_argument);
+  }
+  auto const full  = update(s, p, 2., 1.); // default weight: a normal measurement
+  auto const one   = update(s, p, 2., 1., 1.);
+  auto const small = update(s, p, 2., 1., 1e-3);
+  BOOST_CHECK_EQUAL(full.out.par[X], one.out.par[X]);
+  BOOST_CHECK_EQUAL(full.out.cov(X, X), one.out.cov(X, X));
+  BOOST_CHECK_GT(small.out.par[X], 0.);
+  BOOST_CHECK_LT(small.out.par[X], one.out.par[X]);
+  for (unsigned int i = 0; i < s_dim; ++i) {
+    BOOST_CHECK(std::isfinite(small.out.par[i]));
+    for (unsigned int j = 0; j < s_dim; ++j) {
+      BOOST_CHECK(std::isfinite(small.out.cov(i, j)));
+    }
+  }
+  // The chi2 increment uses the unweighted variance, so it does not depend on the weight
+  BOOST_CHECK_EQUAL(small.chi2, one.chi2);
+}
 
 // Fit toy tracks with the TDC model: the fitted parameters on the last plane must have pulls with zero mean and unit
 // width, and the smoothed parameters on the first plane as well.

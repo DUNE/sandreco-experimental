@@ -34,8 +34,8 @@
  * The time parameter is the track time on the reference plane: the track t0, in the sense used by the
  * reconstruction, is the value of t on the first (or vertex) plane.
  *
- * Since z is the independent variable, the state also carries the sign of p_z (direction): +1 for a particle moving
- * towards larger z, -1 for one moving towards smaller z.
+ * Since z is the independent variable, the state also carries the sign of p_z (direction, sigma in the formulas): +1
+ * for a particle moving towards larger z, -1 for one moving towards smaller z.
  *
  * Since z is the independent variable, a track is described on planes of fixed z only: a track parallel to the planes
  * (p_z = 0) cannot be represented, and the propagation stops when |tx| or |ty| exceed propagator_config::max_slope.

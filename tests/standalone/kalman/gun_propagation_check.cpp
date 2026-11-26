@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
   propagator_config const cfg{50., 1e3};
 
   // index 0: momentum at the start point, 1: average momentum of the two points
-  stats dx[2], dy[2], dt[2], dtx[2], dty[2], step;
+  stats dx[2], dy[2], dt[2], dtx[2], dty[2], step, path;
   long const n = max_ev > 0 ? std::min<long>(max_ev, t->GetEntries()) : t->GetEntries();
   for (long i = 0; i < n; ++i) {
     t->GetEntry(i);
@@ -108,6 +108,9 @@ int main(int argc, char** argv) {
           if (!r) {
             continue;
           }
+          if (w == 0) {
+            path.add(r->path_length);
+          }
           dx[w].add(r->out.par[X] - b.Position.X());
           dy[w].add(r->out.par[Y] - b.Position.Y());
           dt[w].add(r->out.par[T] - b.Position.T());
@@ -117,7 +120,9 @@ int main(int argc, char** argv) {
       }
     }
   }
-  std::printf("pairs of points: %.0f, mean step in z %.1f mm (rms %.1f)\n", step.n, step.mean(), step.rms());
+  std::printf("events: %ld, pairs of points: %.0f, mean step in z %.1f mm (rms %.1f), mean path length %.1f mm (rms "
+              "%.1f)\n",
+              n, step.n, step.mean(), step.rms(), path.mean(), path.rms());
   char const* label[2] = {"p at start point", "average p of the two points"};
   for (int w = 0; w < 2; ++w) {
     std::printf("%s\n", label[w]);
