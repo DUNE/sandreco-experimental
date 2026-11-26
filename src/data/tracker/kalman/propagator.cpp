@@ -68,9 +68,10 @@ namespace sand::tracker::kalman {
     double const h  = L / nst;
     int const sigma = in.direction; // sign of p_z
 
-    // Stage i (notation of docs/kalman_filter.md): the field b_i is read at the position of the stage state, f_i and
-    // A_i are evaluated there, and J_i is the matching stage of the Jacobian. Reading the field at every stage makes
-    // the scheme a true RK4 in a non-uniform field too; the field gradients are still neglected in A_i.
+    // Stage i (notation of docs/kalman_filter.md): the field b_i is read at the position of the stage state, f_i
+    // (phi_i in the document) and A_i are evaluated there, and J_i is the matching stage of the Jacobian. Reading the
+    // field at every stage makes the scheme a true RK4 in a non-uniform field too; the field gradients are still
+    // neglected in A_i.
     vector_t f1, f2, f3, f4;
     matrix_t A1, A2, A3, A4;
     for (int i = 0; i < nst; ++i) {

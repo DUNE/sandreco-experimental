@@ -19,15 +19,17 @@
  *   dqop/dz = 0                                       (no energy loss: the library has no material model yet)
  *   dt/dz  = sigma * |v| * sqrt(1 + m^2 (q/p)^2) / c   (time of flight for the mass hypothesis m)
  *
+ * These six derivatives form the right-hand side phi (f in the code) of dx/dz = phi(x, z), with x the state vector.
  * For a straight track (q/p = 0) the time of flight uses beta = 1 and the mass hypothesis has no effect.
  *
  * The equations are integrated with the classical fourth-order Runge-Kutta scheme; the field is read at the position
  * of each of the four stages, so the scheme is a true RK4 in a non-uniform field too. The Jacobian
  * F = d(state at z1)/d(state at z0) is integrated together with the state with the same stages, using dF/dz = A F
- * with A = df/dx (x the state vector). The derivatives of the field with respect to the position are neglected in A,
- * which is exact for a uniform field.
+ * with A = dphi/dx. The derivatives of the field with respect to the position are neglected in A, which is exact for
+ * a uniform field.
  *
- * The derivation of these equations and of the Jacobian is in docs/kalman_filter.md, section "Propagation".
+ * The derivation of these equations and of the Jacobian is in docs/kalman_filter.md, sections "2.2 Propagator f" and
+ * "2.3 Propagation matrix F".
  */
 
 namespace sand::tracker::kalman {
@@ -53,15 +55,15 @@ namespace sand::tracker::kalman {
   namespace detail {
 
     /**
-     * @brief Right-hand side f and its Jacobian A = df/d(state) for the equations above.
+     * @brief Right-hand side phi (f in the code) and its Jacobian A = dphi/dx for the equations above.
      *
-     * See docs/kalman_filter.md, section "Propagation".
+     * See docs/kalman_filter.md, sections "2.2 Propagator f" and "2.3 Propagation matrix F".
      * @param s     State vector
      * @param sigma Sign of p_z
      * @param mass  Mass hypothesis [MeV]
      * @param b     Field at the position of s [T]
-     * @param f     Output: d(state)/dz
-     * @param A     Output: df/d(state)
+     * @param f     Output: phi = d(state)/dz
+     * @param A     Output: A = dphi/d(state)
      */
     void derivatives(const vector_t& s, int sigma, double mass, const field_vector& b, vector_t& f, matrix_t& A);
 
@@ -81,7 +83,7 @@ namespace sand::tracker::kalman {
    * The direction of motion is a property of the particle (in.direction) and is not changed by propagating to a
    * plane on the other side: propagating a forward-going track to smaller z simply runs the equations backwards.
    *
-   * See docs/kalman_filter.md, section "Propagation".
+   * See docs/kalman_filter.md, section "2.2 Propagator f".
    */
   std::optional<propagation_result> propagate(const state& in, double z_target, double mass, const field& bfield,
                                               const propagator_config& cfg);

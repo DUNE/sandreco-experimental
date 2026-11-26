@@ -40,7 +40,7 @@ namespace sand::tracker::kalman {
    *
    * The measurement model applies to drift chambers and straw tubes alike.
    *
-   * \subsection Configuration
+   * \par Configuration
    * Key `"sand::tracker::kalman::engine"` in the `"globals"` section of the job.
    *
    * | Parameter Name                | Type        | Unit  | Required/Default | Description                                      |

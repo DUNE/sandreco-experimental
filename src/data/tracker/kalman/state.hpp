@@ -23,7 +23,8 @@
  *
  *   kappa = CLHEP::c_light * CLHEP::tesla = 0.299792458 MeV / (mm T)
  *
- * so that p [MeV] = kappa * B [T] * R [mm] for a unit charge. See docs/kalman_filter.md, section "Track state".
+ * so that p [MeV] = kappa * B [T] * R [mm] for a unit charge. See docs/kalman_filter.md, section
+ * "0.3 Field and curvature constant kappa".
  *
  * The state vector is (x, y, tx, ty, q/p, t) at the reference plane z:
  *  - x, y   : position on the plane [mm]
@@ -40,7 +41,7 @@
  * Since z is the independent variable, a track is described on planes of fixed z only: a track parallel to the planes
  * (p_z = 0) cannot be represented, and the propagation stops when |tx| or |ty| exceed propagator_config::max_slope.
  *
- * See docs/kalman_filter.md, section "Track state".
+ * See docs/kalman_filter.md, section "2.1 State x and covariance C".
  */
 
 /**
@@ -57,7 +58,7 @@
  * The functions in this namespace (detail::derivatives(), detail::wire_distance()) are building blocks of the public
  * functions propagate() and wire_time(). Reconstruction modules should not call them. They are declared in the
  * headers, and not hidden in the .cpp files, only because the standalone tests check them directly against analytic
- * results and finite differences. See docs/kalman_filter.md, section "Public interface and namespace detail".
+ * results and finite differences. See docs/kalman_filter.md, section "3.5 Public interface and namespace detail".
  */
 
 namespace sand::tracker::kalman {
@@ -75,7 +76,8 @@ namespace sand::tracker::kalman {
   /**
    * @brief Track state on the plane z: parameters, covariance and direction of motion.
    *
-   * See docs/kalman_filter.md, section "Track state", for the parameters, their units and the covariance.
+   * See docs/kalman_filter.md, section "2.1 State x and covariance C", for the parameters, their units and the
+   * covariance.
    */
   struct state {
     double z{0};        ///< Reference plane [mm]

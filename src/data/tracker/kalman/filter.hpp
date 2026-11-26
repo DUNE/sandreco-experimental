@@ -15,7 +15,7 @@
  * this is the hook for the deterministic annealing filter, where each hypothesis (wire side) enters with its own
  * weight. A weight that is zero, negative or NaN is rejected.
  *
- * The formulas are in docs/kalman_filter.md, sections "Kalman update" and "Smoother".
+ * The formulas are in docs/kalman_filter.md, sections "2.8 Gain K and update" and "2.9 Smoother".
  */
 
 namespace sand::tracker::kalman {
@@ -31,7 +31,8 @@ namespace sand::tracker::kalman {
   /**
    * @brief Kalman update of a state with one scalar measurement.
    *
-   * Gain K = C H^T / (H C H^T + V / w), covariance in Joseph form. See docs/kalman_filter.md, section "Kalman update".
+   * Gain K = C H^T / (H C H^T + V / w), covariance in Joseph form. See docs/kalman_filter.md, section
+   * "2.8 Gain K and update".
    *
    * Contract on the weight: 0 < weight <= 1. A weight of 0 would make V / w infinite and the covariance NaN, so a
    * weight that is not positive (including NaN) throws instead of failing silently. A caller that gives a measurement
@@ -53,7 +54,7 @@ namespace sand::tracker::kalman {
    *
    * The smoother needs, at each plane k + 1, the predicted state x_{k+1|k} with its covariance, the filtered state
    * x_{k+1|k+1}, and the transport Jacobian F_{k+1} from plane k to plane k + 1. See docs/kalman_filter.md, section
-   * "Smoother".
+   * "2.9 Smoother".
    */
   struct filter_step {
     state predicted; ///< Before the update at this plane
@@ -65,7 +66,7 @@ namespace sand::tracker::kalman {
    * @brief Rauch-Tung-Striebel smoother.
    *
    * Smoother gain G_k = C_{k|k} F_{k+1}^T (C_{k+1|k})^-1, then x_{k|N} and C_{k|N} backwards from the last plane N.
-   * See docs/kalman_filter.md, section "Smoother".
+   * See docs/kalman_filter.md, section "2.9 Smoother".
    *
    * @param steps Forward filter steps in the order they were filtered; steps[0].F is not used.
    * @return Smoothed states, one per step, or nothing if a predicted covariance cannot be inverted.

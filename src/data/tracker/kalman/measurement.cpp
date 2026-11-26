@@ -65,7 +65,8 @@ namespace sand::tracker::kalman {
     p.value = s.par[T] + L / cal.wire_velocity + side * d / cal.drift_velocity + cal.t0_offset;
 
     // Analytic derivatives of the side-fixed model. In the frame of the wire, with a = Delta . u, b = Delta . n,
-    // t_u = u . (tx, ty), t_n = n . (tx, ty) and rho^2 = 1 + t_n^2 (see docs/kalman_filter.md, "Wire measurements"):
+    // t_u = u . (tx, ty), t_n = n . (tx, ty) and rho^2 = 1 + t_n^2 (see docs/kalman_filter.md, section
+    // "2.6 Projection matrix H"):
     //   d = b / rho,   L = a - b t_n t_u / rho^2
     // (the second is the formula of wire_distance, using v . v = 1 + t_u^2 + t_n^2). x and y enter through a and b,
     // tx and ty through t_u and t_n; q/p does not enter.

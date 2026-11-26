@@ -27,7 +27,8 @@
  * Both return the predicted value and the 1 x 6 derivative row H with respect to the state on the wire plane. The
  * state passed in must already be on the wire plane (state.z == wire z).
  *
- * See docs/kalman_filter.md, section "Wire measurements", for the formulas.
+ * See docs/kalman_filter.md, sections "2.5 Measurement prediction h" and "2.6 Projection matrix H", for the
+ * formulas.
  */
 
 namespace sand::tracker::kalman {
@@ -96,7 +97,7 @@ namespace sand::tracker::kalman {
      * It includes the TDC resolution and the intrinsic spatial resolution sigma_x of the cell, converted to time:
      * sigma_t^2 = sigma_{TDC}^2 + (sigma_x / v_d)^2. The current fast digitizations (drift_fast_digi, stt_fast_digi)
      * smear only the TDC time, so with them it equals their sigma_tdc; the spatial term will be added when the
-     * digitization models it. See docs/kalman_filter.md, section "wire_time".
+     * digitization models it. See docs/kalman_filter.md, section "2.7 Measurement noise V".
      */
     double time_resolution;
     double t0_offset; ///< Fixed electronics offset [ns]
@@ -118,7 +119,7 @@ namespace sand::tracker::kalman {
    *
    * The coordinate is n . (x - head) with n = (-uy, ux) the in-plane normal to the wire. The measured value for a
    * wire with no drift information is 0, with variance pitch^2 / 12 or max_radius^2 / 3.
-   * See docs/kalman_filter.md, section "Wire measurements".
+   * See docs/kalman_filter.md, section "2.5 Measurement prediction h".
    *
    * @param s State on the wire plane
    * @param w Wire
@@ -147,7 +148,7 @@ namespace sand::tracker::kalman {
      *
      *     L = (Delta.u - (Delta.v)(u.v)/(v.v)) / (1 - (u.v)^2/(v.v))
      *
-     * See docs/kalman_filter.md, section "Wire measurements".
+     * See docs/kalman_filter.md, section "2.5 Measurement prediction h".
      *
      * @param par State vector on the wire plane
      * @param w   Wire
@@ -173,7 +174,7 @@ namespace sand::tracker::kalman {
    * comparable with the time resolution) the two hypotheses cannot be told apart.
    *
    * The derivative row H is computed analytically from the same side-fixed model. See docs/kalman_filter.md, section
-   * "Wire measurements".
+   * "2.6 Projection matrix H".
    *
    * @param s    State on the wire plane
    * @param w    Wire
