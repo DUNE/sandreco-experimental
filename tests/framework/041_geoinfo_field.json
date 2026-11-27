@@ -1,0 +1,36 @@
+{
+  "ufw" : {
+    "ufw-loglevel" : "debug",
+    "ufw-basepath" : "/usr/local/share/sandreco/data",
+    "ufw-ldpath" : ["/usr/local/lib64"]
+  },
+  "globals" : {
+    "sand::root_tgeomanager" : { "geometry" : "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root" },
+    "sand::geoinfo" : {
+      "field" : { "source" : "gdml", "file" : "geometries/sand/SAND_opt3_DRIFT1.gdml" }
+    }
+  },
+  "contexts" : {
+    "keys" : 3,
+    "locals" : {},
+    "seed" : 1111
+  },
+  "run" : [
+    {
+      "sand::test::geoinfo_field" : {
+        "points" : [
+          { "where" : "tracker",           "position" : [0.0, -2384.73, 23910.0],     "field" : [0.6, 0.0, 0.0] },
+          { "where" : "tracker",           "position" : [-1000.0, -1884.73, 24810.0], "field" : [0.6, 0.0, 0.0] },
+          { "where" : "calorimeter",       "position" : [0.0, -2384.73, 26010.0],     "field" : [0.6, 0.0, 0.0] },
+          { "where" : "yoke barrel",       "position" : [0.0, -2384.73, 26910.0],     "field" : [-1.746067, 0.0, 0.0] },
+          { "where" : "yoke barrel",       "position" : [0.0, 615.27, 23910.0],       "field" : [-1.746067, 0.0, 0.0] },
+          { "where" : "yoke endcap",       "position" : [1960.0, -884.73, 23910.0],   "field" : [0.0, 0.0, 0.0] },
+          { "where" : "yoke endcap",       "position" : [-1960.0, -884.73, 23910.0],  "field" : [0.0, 0.0, 0.0] },
+          { "where" : "outside SAND",      "position" : [0.0, -2384.73, 30000.0],     "field" : [0.0, 0.0, 0.0] },
+          { "where" : "outside the world", "position" : [0.0, 0.0, 1.0e9],            "field" : [0.0, 0.0, 0.0] }
+        ]
+      },
+      "reqs" : {}
+    }
+  ]
+}

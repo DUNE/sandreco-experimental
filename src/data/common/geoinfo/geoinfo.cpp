@@ -14,6 +14,7 @@
 #include <drift_info.hpp>
 #include <generic_drift_info.hpp>
 #include <ecal_info.hpp>
+#include <field_info.hpp>
 #include <geoinfo.hpp>
 #include <grain_info.hpp>
 #include <stt_info.hpp>
@@ -42,7 +43,9 @@ namespace sand {
    * Reads the per-subdetector configuration (each passed as its own JSON object,
    * with global parameters as top-level keys) and, by inspecting the geometry
    * tree, decides whether the tracker is an STT or a drift chamber, merging the
-   * matching subdetector parameters into the tracker configuration.
+   * matching subdetector parameters into the tracker configuration. If the configuration has a "field" key, the
+   * magnetic field is built here (see field_info::create()), so that configuration errors and GDML tags that do not
+   * match the geometry are reported when the job starts.
    *
    * @param cfg The geoinfo configuration object.
    */
@@ -57,6 +60,13 @@ namespace sand {
 
     auto& tgm = ufw::context::current()->instance<root_tgeomanager>();
     auto nav  = tgm.navigator();
+
+    if (cfg.contains("field")) {
+      m_field = field_info::create(cfg.at("field"), tgm);
+      UFW_INFO("Magnetic field: {}.", m_field->description());
+    } else {
+      UFW_DEBUG("No magnetic field configured.");
+    }
 
     UFW_DEBUG("Using root path '{}'.", m_root_path.c_str());
     nav->cd(m_root_path.c_str());
@@ -104,6 +114,19 @@ namespace sand {
 
   /// @brief Default destructor.
   geoinfo::~geoinfo() = default;
+
+  const geoinfo::field_info& geoinfo::field() const {
+    if (!m_field) {
+      field_not_configured e;
+      SPDLOG_ERROR("{}", e.what());
+      throw e;
+    }
+    return *m_field;
+  }
+
+  dir_3d geoinfo::field_at(const pos_3d& p) const { return field().at(p); }
+
+  geoinfo::field_probe geoinfo::make_field_probe() const { return field_probe(field()); }
 
   /// @brief Lazily constructs the ECAL geometry description.
   void geoinfo::init_ecal() const { m_ecal.reset(new ecal_info(*this, ecal_path, m_ecal_cfg)); }

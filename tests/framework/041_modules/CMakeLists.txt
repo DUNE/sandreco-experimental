@@ -1,0 +1,5 @@
+sandreco_add_test_process(sand_test_geoinfo_field)
+
+target_sources(sand_test_geoinfo_field PRIVATE geoinfo_field.cpp)
+
+target_link_libraries(sand_test_geoinfo_field PRIVATE ROOT::Core ROOT::Geom sand_geoinfo sand_root_tgeomanager)

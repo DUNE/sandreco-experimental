@@ -4,6 +4,8 @@
 
 #include <ufw/config.hpp>
 
+#include <memory>
+
 namespace sand {
 
   /**
@@ -20,6 +22,18 @@ namespace sand {
     class generic_drift_info;
     class stt_info;
     class position_info;
+    class field_info;
+    class uniform_field;
+    class volume_field;
+    class field_probe;
+
+    /// Thrown by field(), field_at() and make_field_probe() when the configuration has no "field" key.
+    class field_not_configured : public ufw::exception {
+     public:
+      field_not_configured()
+        : ufw::exception("sand::geoinfo: no magnetic field configured. Add a \"field\" key to the sand::geoinfo "
+                         "configuration: [Bx, By, Bz] in T, or {{ \"source\" : \"gdml\", \"file\" : <path> }}.") {}
+    };
 
    private:
     class invalid_geo_id : public ufw::exception {
@@ -55,6 +69,51 @@ namespace sand {
       return *m_tracker;
     }
 
+    /**
+     * @name Magnetic field
+     *
+     * The field is configured by the "field" key of the geoinfo configuration (see field_info::create() and
+     * docs/geoinfo.md): a uniform field `[Bx, By, Bz]` in T, or `{ "source" : "gdml", "file" : <path> }` for the
+     * field of the geometry volumes read from the BField tags of the GDML. Without the key there is no field and
+     * field_at() and make_field_probe() throw field_not_configured; nothing else changes.
+     *
+     * Positions are in mm in the global frame of the geometry loaded by sand::root_tgeomanager; fields are in tesla.
+     * The declarations of field_info and field_probe are in geoinfo/field_info.hpp.
+     *
+     * \par Threads
+     * geoinfo is shared by all modules and keeps no lookup state for the field. field_at() uses the shared navigator
+     * of sand::root_tgeomanager, as get_info() does, so it must not be called from several threads at once and it
+     * moves that navigator. A field_probe has its own navigator and cache: keep one per caller (and per thread).
+     * @{
+     */
+
+    /// Whether a field is configured
+    bool has_field() const { return static_cast<bool>(m_field); }
+
+    /**
+     * @brief The configured field.
+     * @throws field_not_configured if there is no "field" key
+     */
+    const field_info& field() const;
+
+    /**
+     * @brief Magnetic field [T] at a global position [mm].
+     *
+     * Each call locates the point from the top of the geometry with the shared navigator, which is moved; for
+     * lookups at nearby points (propagation) a field_probe is up to about twice as fast. Points outside the world
+     * have zero field.
+     *
+     * @throws field_not_configured if there is no "field" key
+     */
+    dir_3d field_at(const pos_3d& p) const;
+
+    /**
+     * @brief A new probe for fast field lookups, to be kept by the caller (see field_probe).
+     * @throws field_not_configured if there is no "field" key
+     */
+    field_probe make_field_probe() const;
+    /// @}
+
     geo_id id(const geo_path&) const;
 
     geo_path path(geo_id) const;
@@ -83,6 +142,7 @@ namespace sand {
     ufw::config m_ecal_cfg;
     ufw::config m_tracker_cfg;
     subdetector_t m_tracker_type = NONE;
+    std::unique_ptr<const field_info> m_field; ///< Magnetic field, null if not configured
 
     const geo_path& root_path() const { return m_root_path; }
 
