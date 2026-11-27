@@ -42,15 +42,26 @@ namespace sand::fast::tracker {
     /// its first point under DRIFT if the particle is born there and under STT if it enters it, so both lists are
     /// checked even in a single design.
     EDEPTrajectoryPoint const* entry_point(EDEPTrajectory const& trj) {
-      EDEPTrajectoryPoint const* entry{};
+      // The candidates are the fronts of the lists; the earliest one is the first met along the trajectory points,
+      // which are in step order. Times cannot be compared: ~1e12 ns after the spill building, so points a few um
+      // apart can have exactly the same time.
+      std::vector<EDEPTrajectoryPoint const*> candidates;
       for (auto const volume : tracker_volumes) {
-        auto const& first_points = trj.GetFirstPointsInDetector(volume);
-        if (!first_points.empty()
-            && (entry == nullptr || first_points.front().GetPosition().T() < entry->GetPosition().T())) {
-          entry = &first_points.front();
+        if (auto const& first_points = trj.GetFirstPointsInDetector(volume); !first_points.empty()) {
+          candidates.push_back(&first_points.front());
         }
       }
-      return entry;
+      if (candidates.size() < 2) {
+        return candidates.empty() ? nullptr : candidates.front();
+      }
+      for (auto const& point : trj.GetTrajectoryPointsVect()) {
+        for (auto const* candidate : candidates) {
+          if (*candidate == point) {
+            return candidate;
+          }
+        }
+      }
+      return candidates.front();
     }
 
     ::caf::SRVector3D normalize_to_direction(double x, double y, double z) {

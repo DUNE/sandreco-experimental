@@ -167,20 +167,28 @@ namespace sand::test {
       return th;
     }
 
-    /// The earliest trajectory point in a region, null if edep-sim stored none there
+    /// The earliest trajectory point in a region, null if edep-sim stored none there. The points of each subdetector
+    /// are in step order, so the candidates are their fronts; the earliest one is the first met along the trajectory
+    /// points. Times cannot be compared: ~1e12 ns after the spill building, so points a few um apart can have exactly
+    /// the same time.
     EDEPTrajectoryPoint const* find_entry_point(EDEPTrajectory const& trj, region r) {
-      EDEPTrajectoryPoint const* entry{};
+      std::vector<EDEPTrajectoryPoint const*> candidates;
       for (auto const& [det, points] : trj.GetTrajectoryPoints()) {
-        if (!is_in(det, r)) {
-          continue;
+        if (is_in(det, r) && !points.empty()) {
+          candidates.push_back(&points.front());
         }
-        for (auto const& point : points) {
-          if (entry == nullptr || point.GetPosition().T() < entry->GetPosition().T()) {
-            entry = &point;
+      }
+      if (candidates.size() < 2) {
+        return candidates.empty() ? nullptr : candidates.front();
+      }
+      for (auto const& point : trj.GetTrajectoryPointsVect()) {
+        for (auto const* candidate : candidates) {
+          if (*candidate == point) {
+            return candidate;
           }
         }
       }
-      return entry;
+      return candidates.front();
     }
 
     /// edep-sim positions are in mm, CAF positions in cm (same expression as the reco, so equality is exact).
@@ -330,14 +338,14 @@ namespace sand::test {
       UFW_ASSERT(close(cluster.E, group.energy), "ixn[{}].part[{}]: ECAL cluster E {} MeV isn't the deposit {} MeV", i,
                  j, cluster.E, group.energy);
 
-      double e{}, e2{}, t{}, earliest{};
+      double e{}, cross{}, t{}, earliest{};
       double sum[3]{};
       for (auto const* hit : group.hits) {
         double const de = hit->GetEnergyDeposit();
         auto const mid  = 0.5 * (hit->GetStart() + hit->GetStop());
         double const c[3]{mid.X(), mid.Y(), mid.Z()};
+        cross += de * e; // Σ_{i<j} de_i de_j, as the reco
         e += de;
-        e2 += de * de;
         t += de * mid.T();
         for (int k{}; k != 3; ++k) {
           sum[k] += de * c[k];
@@ -350,7 +358,8 @@ namespace sand::test {
       }
 
       // Second pass, as the reco: squared deviations from the barycenter. The one-pass <x²> - <x>² cancels
-      // catastrophically at SAND coordinates (~2e4 mm) and neff / (neff - 1) amplifies the rounding noise.
+      // catastrophically at SAND coordinates (~2e4 mm). neff / (neff - 1) = e² / (2 cross): neff - 1 cancels when one
+      // hit dominates, and the test sums the hits in another order than the reco.
       double dev_sq[3]{};
       for (auto const* hit : group.hits) {
         double const de = hit->GetEnergyDeposit();
@@ -360,10 +369,9 @@ namespace sand::test {
           dev_sq[k] += de * (c[k] - mean[k]) * (c[k] - mean[k]);
         }
       }
-      double const neff = e * e / e2;
       double spread[3]{};
       for (int k{}; k != 3; ++k) {
-        spread[k] = (group.hits.size() < 2 || neff <= 1.) ? 0. : std::sqrt(neff / (neff - 1.) * dev_sq[k] / e);
+        spread[k] = (group.hits.size() < 2 || cross <= 0.) ? 0. : std::sqrt(e * dev_sq[k] / (2. * cross));
       }
 
       UFW_ASSERT(near(cluster.position, mean[0] * 0.1, mean[1] * 0.1, mean[2] * 0.1),
@@ -371,7 +379,9 @@ namespace sand::test {
       UFW_ASSERT(near(cluster.time, t / e), "ixn[{}].part[{}]: ECAL cluster time {} ns isn't the energy-weighted {} ns",
                  i, j, cluster.time, t / e);
       UFW_ASSERT(near(cluster.var_position, spread[0] * 0.1, spread[1] * 0.1, spread[2] * 0.1),
-                 "ixn[{}].part[{}]: ECAL cluster var_position isn't the spread of its hits", i, j);
+                 "ixn[{}].part[{}]: ECAL cluster var_position ({}, {}, {}) cm isn't the spread of its {} hits ({}, {}, {}) cm",
+                 i, j, cluster.var_position.x, cluster.var_position.y, cluster.var_position.z, group.hits.size(),
+                 spread[0] * 0.1, spread[1] * 0.1, spread[2] * 0.1);
       UFW_ASSERT(std::any_of(group.hits.begin(), group.hits.end(),
                              [&](EDEPHit const* hit) {
                                return hit->GetStart().T() == earliest
@@ -477,8 +487,10 @@ namespace sand::test {
     };
 
     // The ECAL groups, bottom-up from the truth: every true particle with ECAL hits gives them to its cluster root,
-    // found by climbing parentID while the particle is a secondary born inside the ECAL. "Born inside" = the
-    // particle's generation point (time and start_pos from the truth) is one of its ECAL trajectory points.
+    // found by climbing parentID while the particle is a secondary born inside the ECAL. "Born inside" = the first
+    // trajectory point (in step order) is filed under the ECAL. Not "start_pos and time of the truth match one of the
+    // ECAL points": ~1e12 ns after the spill building, the next step a few um away can have the same time and,
+    // rounded to float cm, the same position, so a particle born just outside the ECAL would be taken as born inside.
     std::vector<std::vector<ecal_group>> prim_group(truth.nu.size());
     std::vector<std::vector<ecal_group>> sec_group(truth.nu.size());
     std::vector<std::vector<char>> prim_born_in_ecal(truth.nu.size());
@@ -500,14 +512,12 @@ namespace sand::test {
         born.resize(n);
         for (std::size_t k{}; k != n; ++k) {
           ::caf::TrueParticleID const id{static_cast<int>(t), type, static_cast<int>(k)};
-          auto const& true_part = resolve_true(truth, id);
-          auto const& points    = trajectory(id).GetTrajectoryPoints();
-          auto const in_ecal    = points.find(sand::subdetector_t::ECAL);
-          born[k]               = in_ecal != points.end()
-                               && std::any_of(in_ecal->second.begin(), in_ecal->second.end(), [&](EDEPTrajectoryPoint const& point) {
-                      return point.GetPosition().T() == true_part.time
-                          && same_position_cm(true_part.start_pos, point.GetPosition());
-                                  });
+          auto const& trj     = trajectory(id);
+          auto const& points  = trj.GetTrajectoryPoints();
+          auto const in_ecal  = points.find(sand::subdetector_t::ECAL);
+          auto const in_steps = trj.GetTrajectoryPointsVect();
+          born[k] = in_ecal != points.end() && !in_ecal->second.empty() && !in_steps.empty()
+                 && in_ecal->second.front() == in_steps.front();
         }
       }
     }

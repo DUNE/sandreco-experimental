@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <numeric>
 #include <random>
+#include <vector>
 
 namespace sand::common {
 
@@ -65,15 +66,26 @@ namespace sand::common {
     /// of every entry in step order, so the first entry is the front. The code must not rely on single tracker geometry,
     /// therefore it loops through tracker_volumes, an array which contains all possible tracker geometries.
     EDEPTrajectoryPoint const* tracker_entry_point(EDEPTrajectory const& trj) {
-      EDEPTrajectoryPoint const* entry{};
+      // The candidates are the fronts of the lists; the earliest one is the first met along the trajectory points,
+      // which are in step order. Times cannot be compared: ~1e12 ns after the spill building, so points a few um
+      // apart can have exactly the same time.
+      std::vector<EDEPTrajectoryPoint const*> candidates;
       for (auto const volume : tracker_volumes) {
-        auto const& first_points = trj.GetFirstPointsInDetector(volume);
-        if (!first_points.empty()
-            && (entry == nullptr || first_points.front().GetPosition().T() < entry->GetPosition().T())) {
-          entry = &first_points.front();
+        if (auto const& first_points = trj.GetFirstPointsInDetector(volume); !first_points.empty()) {
+          candidates.push_back(&first_points.front());
         }
       }
-      return entry;
+      if (candidates.size() < 2) {
+        return candidates.empty() ? nullptr : candidates.front();
+      }
+      for (auto const& point : trj.GetTrajectoryPointsVect()) {
+        for (auto const* candidate : candidates) {
+          if (*candidate == point) {
+            return candidate;
+          }
+        }
+      }
+      return candidates.front();
     }
 
     double walk_segment(sand::root_tgeomanager::navigator_ptr const& nav, sand::root_tgeomanager& tgm,

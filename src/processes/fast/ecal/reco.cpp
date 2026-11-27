@@ -18,20 +18,15 @@ namespace sand::fast::ecal {
 
     /// True if the trajectory starts inside the ECAL. The edep_reader files the first point of the trajectory as the
     /// front of the first points of the subdetector where it starts, so the trajectory is born in the ECAL if the
-    /// front of the ECAL first points is not later than the front of any other subdetector.
+    /// front of the ECAL first points is the first point of the trajectory. Times cannot be compared: ~1e12 ns after
+    /// the spill building, so points a few um apart can have exactly the same time.
     bool born_inside_ecal(EDEPTrajectory const& trj) {
       auto const& ecal_first_points = trj.GetFirstPointsInDetector(subdetector_t::ECAL);
       if (ecal_first_points.empty()) {
         return false;
       }
-      double const t_ecal = ecal_first_points.front().GetPosition().T();
-      for (unsigned c = subdetector_t::kSandBegin; c != subdetector_t::kLoopableEnd; ++c) {
-        auto const& first_points = trj.GetFirstPointsInDetector(static_cast<subdetector_t>(c));
-        if (!first_points.empty() && first_points.front().GetPosition().T() < t_ecal) {
-          return false;
-        }
-      }
-      return true;
+      auto const points = trj.GetTrajectoryPointsVect();
+      return !points.empty() && ecal_first_points.front() == points.front();
     }
 
     /// The first trajectory point of `trj` in the ECAL (where it enters, or is born if born inside), null if edep-sim
@@ -80,14 +75,15 @@ namespace sand::fast::ecal {
     /// num_cells is -1 (not computed: counting the cells needs sand::geoinfo).
     ::caf::SRECALCluster cluster_from(std::vector<EDEPHit> const& hits, EDEPTrajectoryPoint const* entry,
                                       ::caf::TrueParticleID const& id, int index) {
-      double e{}, e2{};
+      // cross = Σ_{i<j} de_i de_j = (e² - Σde²) / 2, summed term by term: all the terms are >= 0, so no cancellation.
+      double e{}, cross{};
       sand::vec_4d weighted{};
       EDEPHit const* first{};
       for (auto const& hit : hits) {
         double const de = hit.GetEnergyDeposit();                 // MeV
         auto const mid  = 0.5 * (hit.GetStart() + hit.GetStop()); // mm, ns
+        cross += de * e;
         e += de;
-        e2 += de * de;
         weighted += de * mid;
         if (first == nullptr || hit.GetStart().T() < first->GetStart().T()) {
           first = &hit;
@@ -108,9 +104,10 @@ namespace sand::fast::ecal {
         z2 += de * dz * dz;
       }
 
-      double const neff = e * e / e2;
+      // Legacy correction neff / (neff - 1), neff = e² / Σde², rewritten as e² / (e² - Σde²) = e² / (2 cross): with one
+      // dominant hit neff → 1 and neff - 1 would cancel, so that the order of the sums would change the result.
       auto const spread = [&](double sum_sq) {
-        return (hits.size() < 2 || neff <= 1.) ? 0. : std::sqrt(neff / (neff - 1.) * sum_sq / e);
+        return (hits.size() < 2 || cross <= 0.) ? 0. : std::sqrt(e * sum_sq / (2. * cross));
       };
 
       ::caf::SRECALCluster cluster{};
