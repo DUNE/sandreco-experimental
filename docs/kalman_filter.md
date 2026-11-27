@@ -872,85 +872,37 @@ the `field` interface (section 3.1), in place of the uniform field.
 ### 5.1 Standalone tests
 
 The standalone tests are in `tests/standalone/kalman/` and are run by ctest. They link `sand_tracker_kalman` and
-`ROOT::EG`. They are grouped below by the building block they check; the executables are `kalman_propagator`,
-`kalman_filter` and `kalman_engine`.
+`ROOT::EG`. The table lists them by the section they check; the executables are `kalman_propagator`, `kalman_filter`
+and `kalman_engine`.
 
-State and particle hypothesis (section 2.1). The propagation tests of section 2.2 also check the state with direction
--1, with q/p = 0 and the momentum for |q| = 2.
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `hypotheses_from_pdg` | `kalman_filter` | `hypothesis_from_pdg` against `TDatabasePDG`: mass, \|q\| = 1 for the charged leptons, pions, kaons and protons; exception for unknown codes and neutral particles. |
-| `hypothesis_is_checked` | `kalman_propagator` | `propagate()` rejects a particle hypothesis with \|q\| <= 0, negative mass or NaN. |
-
-Propagator (section 2.2):
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `helix_in_uniform_field` | `kalman_propagator` | Helix in a uniform field against the analytic solution: radius R = p_{perp} / (kappa \|q\| B), time of flight with the muon mass from the table. |
-| `alpha_time_of_flight_and_momentum` | `kalman_propagator` | An alpha (\|q\| = 2, added to the particle table by the test) against the exact kinematics: radius, time of flight with 1/beta = sqrt(1 + m^2/p^2), momentum \|q\| / \|q/p\| (section 2.1), and the same time of flight as a unit charge of mass m/2. |
-| `round_trip` | `kalman_propagator` | Propagation forward and back to the start plane. |
-| `backward_moving_particle` | `kalman_propagator` | A particle moving towards smaller z (direction -1, section 2.1). |
-| `fourth_order_in_non_uniform_field` | `kalman_propagator` | Fourth-order convergence in a non-uniform field: the error ratio when the step is halved is about 16; it is 4 if stage 3 reuses the field of stage 2. |
-| `straight_track_time_independent_of_mass` | `kalman_propagator` | Straight track (q/p = 0, section 2.1) with a time of flight independent of the mass. |
-| `settings_are_required` | `kalman_propagator` | Rejection of unset propagation settings (section 3.2). |
-
-Propagation matrix F (section 2.3):
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `derivatives_vs_finite_differences` | `kalman_propagator` | Every element of A = dphi/dx against central differences of phi, on 200 random states (general field, both directions, muon, alpha and proton), and the zero elements exactly zero. |
-| `jacobian_vs_finite_differences` | `kalman_propagator` | The integrated F against finite differences, in both directions. |
-
-Measurement prediction h (section 2.5):
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `distance_to_wire` | `kalman_filter` | Distance of closest approach d and position along the wire L. |
-| `wire_geometry_checks` | `kalman_filter` | Checks of the `wire_geometry` constructor. |
-| `wire_position_is_linear` | `kalman_filter` | The row H of `wire_position` independent of the state, and h(x + dx) = h(x) + H dx for large changes of the position and of the slopes. |
-
-Projection matrix H (section 2.6):
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `time_derivatives` | `kalman_filter` | dt_{TDC}/dt = 1, dt_{TDC}/d(q/p) = 0, and the derivative across the wire equal to side / (rho v_d) up to the small term from L. |
-| `time_derivatives_vs_finite_differences` | `kalman_filter` | The whole row of the time model against Richardson-extrapolated central differences of the same model, on 2000 random states and wires (straight and stereo, both sides); relative tolerance 1e-6 plus the rounding bound of the differences, which only matters for derivatives close to zero. |
-
-Update (section 2.8):
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `update_rejects_non_positive_weight` | `kalman_filter` | A weight that is zero, negative or NaN rejected; the default weight equal to 1; a small weight pulls less, a weight above 1 is accepted and pulls more; chi2 independent of the weight. |
-| `symmetrize_takes_symmetric_part` | `kalman_filter` | `detail::symmetrize()` equal to (C + C^T) / 2 element by element, and an exactly symmetric matrix returned unchanged, bit for bit. |
-
-Smoother (section 2.9) and the whole filter:
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `pulls_on_toy_tracks` | `kalman_filter` | Pulls of the fitted parameters on toy tracks: filtered on the last plane (section 2.8) and smoothed on the first (section 5.3). |
-
-Engine (section 3):
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `configured_values` | `kalman_engine` | Engine built from a JSON configuration, configured values. |
-| `missing_keys` | `kalman_engine` | An error naming each missing key. |
-| `invalid_configurations` | `kalman_engine` | Rejection of invalid configurations. |
-| `propagate_matches_free_function` | `kalman_engine` | `engine.propagate` identical to `propagate()` with the same field and settings (section 2.2). |
-| `wire_time_matches_free_function` | `kalman_engine` | `engine.wire_time` identical to `wire_time()` with the same calibration (section 2.5). |
-
-Helix parametrisation (appendix A):
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `helix_parametrisation` | `kalman_propagator` | State built from the helix parameters (both charge signs, positive, negative and zero dip, four values of phi_h, a unit charge and an alpha), propagated with the Runge-Kutta propagator to another point of the helix and compared with it: position within 10 nm, slopes within 1e-8, path length within 1e-4 relative; also \|v\|, the momentum and the inverse relations. |
-
-Equivalent forms of the covariance update (appendix B):
-
-| Test | Executable | What it checks |
-|------|------------|----------------|
-| `covariance_forms_agree` | `kalman_filter` | The Joseph form computed by `update()`, the short form and the information form equal for the optimal gain, with and without a weight. |
+| Section | Test | Executable | What it checks |
+|---------|------|------------|----------------|
+| 2.1 | `hypotheses_from_pdg` | `kalman_filter` | `hypothesis_from_pdg` against `TDatabasePDG`: mass, \|q\| = 1 for the charged leptons, pions, kaons and protons; exception for unknown codes and neutral particles. |
+| 2.1 | `hypothesis_is_checked` | `kalman_propagator` | `propagate()` rejects a particle hypothesis with \|q\| <= 0, negative mass or NaN. |
+| 2.2 | `helix_in_uniform_field` | `kalman_propagator` | Helix in a uniform field against the analytic solution: radius R = p_{perp} / (kappa \|q\| B), time of flight with the muon mass from the table. |
+| 2.2 | `alpha_time_of_flight_and_momentum` | `kalman_propagator` | An alpha (\|q\| = 2, added to the particle table by the test) against the exact kinematics: radius, time of flight with 1/beta = sqrt(1 + m^2/p^2), momentum \|q\| / \|q/p\| (section 2.1), and the same time of flight as a unit charge of mass m/2. |
+| 2.2 | `round_trip` | `kalman_propagator` | Propagation forward and back to the start plane. |
+| 2.2 | `backward_moving_particle` | `kalman_propagator` | A particle moving towards smaller z (direction -1, section 2.1). |
+| 2.2 | `fourth_order_in_non_uniform_field` | `kalman_propagator` | Fourth-order convergence in a non-uniform field: the error ratio when the step is halved is about 16; it is 4 if stage 3 reuses the field of stage 2. |
+| 2.2 | `straight_track_time_independent_of_mass` | `kalman_propagator` | Straight track (q/p = 0, section 2.1) with a time of flight independent of the mass. |
+| 2.2 | `settings_are_required` | `kalman_propagator` | Rejection of unset propagation settings (section 3.2). |
+| 2.3 | `derivatives_vs_finite_differences` | `kalman_propagator` | Every element of A = dphi/dx against central differences of phi, on 200 random states (general field, both directions, muon, alpha and proton), and the zero elements exactly zero. |
+| 2.3 | `jacobian_vs_finite_differences` | `kalman_propagator` | The integrated F against finite differences, in both directions. |
+| 2.5 | `distance_to_wire` | `kalman_filter` | Distance of closest approach d and position along the wire L. |
+| 2.5 | `wire_geometry_checks` | `kalman_filter` | Checks of the `wire_geometry` constructor. |
+| 2.5 | `wire_position_is_linear` | `kalman_filter` | The row H of `wire_position` independent of the state, and h(x + dx) = h(x) + H dx for large changes of the position and of the slopes. |
+| 2.6 | `time_derivatives` | `kalman_filter` | dt_{TDC}/dt = 1, dt_{TDC}/d(q/p) = 0, and the derivative across the wire equal to side / (rho v_d) up to the small term from L. |
+| 2.6 | `time_derivatives_vs_finite_differences` | `kalman_filter` | The whole row of the time model against Richardson-extrapolated central differences of the same model, on 2000 random states and wires (straight and stereo, both sides); relative tolerance 1e-6 plus the rounding bound of the differences, which only matters for derivatives close to zero. |
+| 2.8 | `update_rejects_non_positive_weight` | `kalman_filter` | A weight that is zero, negative or NaN rejected; the default weight equal to 1; a small weight pulls less, a weight above 1 is accepted and pulls more; chi2 independent of the weight. |
+| 2.8 | `symmetrize_takes_symmetric_part` | `kalman_filter` | `detail::symmetrize()` equal to (C + C^T) / 2 element by element, and an exactly symmetric matrix returned unchanged, bit for bit. |
+| 2.9 | `pulls_on_toy_tracks` | `kalman_filter` | Pulls of the fitted parameters on toy tracks: filtered on the last plane (section 2.8) and smoothed on the first (section 5.3). |
+| 3 | `configured_values` | `kalman_engine` | Engine built from a JSON configuration, configured values. |
+| 3 | `missing_keys` | `kalman_engine` | An error naming each missing key. |
+| 3 | `invalid_configurations` | `kalman_engine` | Rejection of invalid configurations. |
+| 3 | `propagate_matches_free_function` | `kalman_engine` | `engine.propagate` identical to `propagate()` with the same field and settings (section 2.2). |
+| 3 | `wire_time_matches_free_function` | `kalman_engine` | `engine.wire_time` identical to `wire_time()` with the same calibration (section 2.5). |
+| A | `helix_parametrisation` | `kalman_propagator` | State built from the helix parameters (both charge signs, positive, negative and zero dip, four values of phi_h, a unit charge and an alpha), propagated with the Runge-Kutta propagator to another point of the helix and compared with it: position within 10 nm, slopes within 1e-8, path length within 1e-4 relative; also \|v\|, the momentum and the inverse relations. |
+| B | `covariance_forms_agree` | `kalman_filter` | The Joseph form computed by `update()`, the short form and the information form equal for the optimal gain, with and without a weight. |
 
 `gun_propagation_check.cpp` is not run by ctest. It compares the propagator with edep-sim trajectories of a particle
 gun (section 5.2) and needs an edep-sim file; build it against `sand_tracker_kalman` (include path `src/data/tracker`
@@ -1032,9 +984,7 @@ alternating charge, the true side for every hit (so there is no left-right ambig
 and about `1/sqrt(2 n_toys)` on its width.
 
 In ctest, with `n_toys` = 300 (errors 0.058 on the mean and 0.041 on the width), all the means and widths are within
-2.3 standard deviations of their expected values; the largest deviation is the width of the smoothed x, 1.094. The q/p
-pulls are the same on the two planes: without material q/p is constant along the track, and the smoothed value on the
-first plane is the filtered value on the last.
+2.3 standard deviations of their expected values; the largest deviation is the width of the smoothed x, 1.094.
 
 The same study with `n_toys` = 3000 (run outside ctest, which keeps 300 for its run time; errors 0.018 on the mean,
 0.013 on the width):
@@ -1047,6 +997,9 @@ The same study with `n_toys` = 3000 (run outside ctest, which keeps 300 for its 
 | ty        | -0.040                     | 0.995 | +0.034                      | 1.005 |
 | q/p       | -0.038                     | 0.995 | -0.038                      | 0.995 |
 | t         | +0.000                     | 1.001 | +0.001                      | 1.001 |
+
+In both runs the q/p pulls are the same on the two planes: without material q/p is constant along the track, and the
+smoothed value on the first plane is the filtered value on the last.
 
 All widths are within 1.5 standard deviations of 1, so the 1.094 of the ctest run is a fluctuation. The means are
 within 2.3 standard deviations of 0; the pulls of the parameters of one track are strongly correlated, so the twelve
@@ -1127,8 +1080,8 @@ The relations above are checked by `helix_parametrisation` (section 5.1).
 
 ## Appendix B. Equivalent forms of the covariance update
 
-**Equivalent forms.** With S = H C_{k|k-1} H^T + V and the optimal gain K = C_{k|k-1} H^T S^-1 (S is a scalar here, so
-S^-1 = 1/S), the Joseph form (section 2.8) reduces to two other forms in common use. Expanding it:
+With S = H C_{k|k-1} H^T + V and the optimal gain K = C_{k|k-1} H^T S^-1 (S is a scalar here, so S^-1 = 1/S), the
+Joseph form (section 2.8) reduces to two other forms in common use. Expanding it:
 
 ```
 C_{k|k} = C_{k|k-1} - K H C_{k|k-1} - C_{k|k-1} H^T K^T + K (H C_{k|k-1} H^T + V) K^T
