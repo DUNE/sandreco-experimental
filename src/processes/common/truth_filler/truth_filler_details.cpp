@@ -4,19 +4,17 @@
 #include <edep_reader/EDEPTree.h>
 #include <edep_reader/EDEPTrajectory.h>
 #include <genie_reader/GenieWrapper.h>
+#include <particle_table/particle_table.hpp>
 #include <sand.h>
 
 #include <duneanaobj/StandardRecord/SRTrueInteraction.h>
 #include <duneanaobj/StandardRecord/SRTrueParticle.h>
-
-#include <TDatabasePDG.h>
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <limits>
 #include <numeric>
-#include <string_view>
 #include <vector>
 
 namespace sand::common::filler_details {
@@ -59,7 +57,7 @@ namespace sand::common::filler_details {
     /// @param target_mass  mass of the target nucleus, needed for t.
     [[nodiscard]] Kinematics calculate_kinematics(sand::mom_4d const& nu_p4, sand::mom_4d const& lep_p4,
                                                   sand::mom_4d const* pion_p4 = nullptr, double target_mass = 0) {
-      // auto const nucleon_mass = static_cast<float>(TDatabasePDG::Instance()->GetParticle(2212)->Mass());
+      // ND_CAFMaker value (Mnuc); the proton mass in sand::particle_table is 0.9382721 GeV
       auto const nucleon_mass = 0.939;
       auto q                  = nu_p4 - lep_p4;
 
@@ -86,12 +84,8 @@ namespace sand::common::filler_details {
     return abs_pdg == 2000030000;
   }
 
-  bool is_lepton_pdg(int pdg) {
-    if (auto* p = TDatabasePDG::Instance()->GetParticle(pdg)) {
-      char const* pclass = p->ParticleClass();
-      return pclass && std::string_view{pclass} == "Lepton";
-    }
-    return false;
+  bool is_lepton_pdg(int pdg, sand::particle_table const& table) {
+    return table.contains(pdg) && table.particle_class(pdg) == "Lepton";
   }
 
   /// @return index (in `stdhep`) of the stable final-state pion of a coherent event, -1 if there is none.
@@ -105,7 +99,7 @@ namespace sand::common::filler_details {
     return -1;
   }
 
-  int find_final_lepton(StdHep const& stdhep) {
+  int find_final_lepton(StdHep const& stdhep, sand::particle_table const& table) {
     const auto daughters = stdhep.daughters_indexes_of_part(static_cast<int>(StdHepIndex::nu));
     if (daughters.empty()) {
       UFW_ERROR("Nu produced no daughters");
@@ -114,13 +108,14 @@ namespace sand::common::filler_details {
     if (daughters.size() != 1) {
       UFW_ERROR("Nu produced {} leptons, expected 1", daughters.size());
     }
-    if (!is_lepton_pdg(stdhep.Pdg_[daughters[0]]) && !is_darkneutrino_pdg(stdhep.Pdg_[daughters[0]])) {
+    if (!is_lepton_pdg(stdhep.Pdg_[daughters[0]], table) && !is_darkneutrino_pdg(stdhep.Pdg_[daughters[0]])) {
       UFW_ERROR("Nu didn't produce a lepton, PDG: {}", stdhep.Pdg_[daughters[0]]);
     }
     return daughters[0];
   }
 
-  ::caf::SRTrueInteraction true_interaction_from_genie(GRooTrackerEvent const& event, StdHep const& stdhep) {
+  ::caf::SRTrueInteraction true_interaction_from_genie(GRooTrackerEvent const& event, StdHep const& stdhep,
+                                                       sand::particle_table const& table) {
     ::caf::SRTrueInteraction ixn{};
 
     auto summary = parse_evt_code(event.EvtCode_);
@@ -155,8 +150,8 @@ namespace sand::common::filler_details {
       UFW_WARN("Coherent event {} has no final-state pion: t not filled", ixn.id);
     }
     const double target_mass = stdhep.P4_[static_cast<int>(StdHepIndex::tgt)].M();
-    auto kinematics          = calculate_kinematics(nu_p4, stdhep.P4_.at(find_final_lepton(stdhep)),
-                                           pion_idx >= 0 ? &stdhep.P4_.at(pion_idx) : nullptr, target_mass);
+    auto kinematics          = calculate_kinematics(nu_p4, stdhep.P4_.at(find_final_lepton(stdhep, table)),
+                                                    pion_idx >= 0 ? &stdhep.P4_.at(pion_idx) : nullptr, target_mass);
     ixn.Q2                   = kinematics.Q2;
     ixn.q0                   = kinematics.q0;
     ixn.modq                 = kinematics.modq;

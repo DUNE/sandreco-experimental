@@ -9,8 +9,9 @@
 #include <ufw/context.hpp>
 #include <ufw/factory.hpp>
 
-#include <TDatabasePDG.h>
-#include <TParticlePDG.h>
+#include <particle_table/particle_table.hpp>
+
+#include <Geant4/CLHEP/Units/SystemOfUnits.h>
 
 #include <cmath>
 #include <cstddef>
@@ -47,9 +48,9 @@ namespace sand::common {
                                smeared * std::cos(dip_angle) * std::cos(zy_angle)};
     }
 
-    float pdg_mass(int pdg) {
-      auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(pdg);
-      return pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
+    /// Rest mass of `pdg` [GeV], 0 for codes not in the table
+    float pdg_mass(sand::particle_table const& table, int pdg) {
+      return table.contains(pdg) ? static_cast<float>(table.mass(pdg) / CLHEP::GeV) : 0.f;
     }
   } // namespace
 
@@ -74,13 +75,13 @@ namespace sand::common {
     return smeared;
   }
 
-  ::caf::SRRecoParticle smear_particle(::caf::SRRecoParticle const& reco_part, double momentum_res, double x_res,
-                                       double y_res, double z_res) {
+  ::caf::SRRecoParticle smear_particle(::caf::SRRecoParticle const& reco_part, sand::particle_table const& table,
+                                       double momentum_res, double x_res, double y_res, double z_res) {
     ::caf::SRRecoParticle smeared = reco_part;
 
     smeared.p = smear_momentum(reco_part.p, momentum_res);
 
-    float const mass = pdg_mass(reco_part.pdg);
+    float const mass = pdg_mass(table, reco_part.pdg);
     smeared.E        = std::hypot(std::hypot(smeared.p.x, smeared.p.y), std::hypot(smeared.p.z, mass));
 
     smeared.start = smear_position(reco_part.start, x_res, y_res, z_res);
@@ -105,6 +106,7 @@ namespace sand::common {
   void gauss_smearing::run() {
     auto const& in_common = get<sand::caf::common_reco_branch_wrapper>("in_common");
     auto& out_common      = set<sand::caf::common_reco_branch_wrapper>("out_common");
+    auto const& table     = instance<sand::particle_table>();
 
     out_common.ixn.sandreco.reserve(in_common.ixn.sandreco.size());
 
@@ -114,7 +116,7 @@ namespace sand::common {
 
       for (std::size_t i{}; i != reco_ixn.part.sandreco.size(); ++i) {
         smeared_ixn.part.sandreco[i] =
-            smear_particle(reco_ixn.part.sandreco[i], m_momentum_res, m_x_res, m_y_res, m_z_res);
+            smear_particle(reco_ixn.part.sandreco[i], table, m_momentum_res, m_x_res, m_y_res, m_z_res);
       }
     }
 

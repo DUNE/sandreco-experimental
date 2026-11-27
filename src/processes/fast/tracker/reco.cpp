@@ -2,12 +2,11 @@
 
 #include <caf/caf_wrapper.hpp>
 #include <edep_reader/edep_reader.hpp>
+#include <particle_table/particle_table.hpp>
 #include <spill_maps/spill_maps.hpp>
 
 #include <ufw/factory.hpp>
 #include <ufw/utils.hpp>
-
-#include <TDatabasePDG.h>
 
 #include <array>
 #include <cmath>
@@ -93,14 +92,14 @@ namespace sand::fast::tracker {
     }
 
     /// Mass hypothesis from the true pdg (perfect PID) [MeV]
-    double mass_mev(int pdg) {
-      auto const* p = TDatabasePDG::Instance()->GetParticle(pdg);
-      return p != nullptr ? p->Mass() * 1000. : 0.; // TDatabasePDG masses are in GeV
+    double mass_mev(sand::particle_table const& table, int pdg) {
+      return table.contains(pdg) ? table.mass(pdg) : 0.; // CLHEP units: MeV = 1
     }
 
-    short charge_from_pdg(int pdg) {
-      if (auto const* p = TDatabasePDG::Instance()->GetParticle(pdg)) {
-        double const q = p->Charge() / 3.0;
+    /// Sign of the charge of `pdg` (+1, -1, or 0 for neutral particles and codes not in the table)
+    short charge_from_pdg(sand::particle_table const& table, int pdg) {
+      if (table.contains(pdg)) {
+        double const q = table.charge(pdg);
         if (q > 0.5) {
           return 1;
         }
@@ -125,7 +124,8 @@ namespace sand::fast::tracker {
 
     /// The track of `trj`, which must have hits in the tracker. Position, time, length and Evis from the hits; momentum
     /// (dir, E) at the entry point, E NaN without one; enddir from the last hit
-    ::caf::SRTrack track_from(EDEPTrajectory const& trj, ::caf::TrueParticleID const& id, double b_field) {
+    ::caf::SRTrack track_from(EDEPTrajectory const& trj, ::caf::TrueParticleID const& id, double b_field,
+                              sand::particle_table const& table) {
       auto const& hits  = tracker_hits(trj);
       auto const* entry = entry_point(trj);
       ::caf::SRTrack track{};
@@ -140,13 +140,13 @@ namespace sand::fast::tracker {
       track.enddir = direction_of(hits.back());
       if (entry != nullptr) {
         auto const& p  = entry->GetMomentum(); // MeV
-        auto const m   = mass_mev(trj.GetPDGCode());
+        auto const m   = mass_mev(table, trj.GetPDGCode());
         track.E        = static_cast<float>(std::sqrt(p.Mag2() + m * m)); // MeV
         auto const p_T = std::hypot(p.Y(), p.Z());                        // transverse to the field, along x
         track.R        = (p_T * 1e-3) / (0.3 * b_field) * 100.;           // MeV -> GeV, m -> cm
       }
 
-      track.charge = charge_from_pdg(trj.GetPDGCode());
+      track.charge = charge_from_pdg(table, trj.GetPDGCode());
       track.qual   = 1.f;
 
       track.truth.push_back(id);
@@ -190,6 +190,7 @@ namespace sand::fast::tracker {
   void reco::run() {
     auto const& edep    = instance<sand::edep_reader>();
     auto const& id_maps = instance<sand::spill_maps>();
+    auto const& table   = instance<sand::particle_table>();
     auto const& truth   = get<sand::caf::truth_branch_wrapper>("in_truth");
     auto& tracker       = set<sand::caf::tracker_reco_wrapper>("out_tracker");
 
@@ -222,7 +223,7 @@ namespace sand::fast::tracker {
           }
 
           if (is_track_like(p.pdg)) {
-            tracker.tracks.push_back(track_from(*trj, id, m_b_field));
+            tracker.tracks.push_back(track_from(*trj, id, m_b_field, table));
           } else if (is_shower_like(p.pdg)) {
             tracker.showers.push_back(shower_from(*trj, id));
           }

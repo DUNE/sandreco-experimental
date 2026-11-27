@@ -4,6 +4,7 @@
 #include <caf/caf_wrapper.hpp>
 #include <edep_reader/edep_reader.hpp>
 #include <genie_reader/genie_reader.hpp>
+#include <particle_table/particle_table.hpp>
 #include <spill_maps/spill_maps.hpp>
 
 #include <ufw/factory.hpp>
@@ -19,6 +20,7 @@ namespace sand::common {
     auto const& genie  = instance<genie_reader>();
     auto const& edep   = instance<edep_reader>();
     auto const& maps   = instance<spill_maps>();
+    auto const& table  = instance<particle_table>();
     auto& truth_branch = set<sand::caf::truth_branch_wrapper>("out_truth_branch");
 
     auto const& primaries   = edep.GetChildrenTrajectories();
@@ -40,7 +42,7 @@ namespace sand::common {
       UFW_DEBUG("[first_prim_idx, prim_count] = [{},{}]", first_prim_idx, prim_count);
       UFW_DEBUG("genie EvtNum {} StdHep N_={} P4_.size()={}", event.EvtNum_, stdhep.N_, stdhep.P4_.size());
       // Create and fill SRTrueInteraction from GENIE
-      auto& true_ixn = truth_branch.nu.emplace_back(filler_details::true_interaction_from_genie(event, stdhep));
+      auto& true_ixn = truth_branch.nu.emplace_back(filler_details::true_interaction_from_genie(event, stdhep, table));
 
       // Add pre-FSI hadrons from GENIE StdHep
       auto prefsi      = filler_details::make_prefsi_particles(stdhep, true_ixn.id);

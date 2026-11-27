@@ -14,6 +14,10 @@ namespace caf {
 class StdHep;
 class GRooTrackerEvent;
 
+namespace sand {
+  class particle_table;
+} // namespace sand
+
 namespace sand::common::filler_details {
 
   /// Result of build_true_particle_tree(): one interaction's primaries and secondaries,
@@ -28,19 +32,21 @@ namespace sand::common::filler_details {
     int npi0{};
   };
 
-  /// @return true if TDatabasePDG classifies `pdg` as a Lepton.
-  [[nodiscard]] bool is_lepton_pdg(int pdg);
+  /// @return true if `table` classifies `pdg` as a Lepton; false for codes not in the table.
+  [[nodiscard]] bool is_lepton_pdg(int pdg, sand::particle_table const& table);
 
   [[nodiscard]] bool is_darkneutrino_pdg(int pdg);
 
   [[nodiscard]] inline bool is_bindino_pdg(int pdg) { return pdg == 2000000101; }
 
   /// @return index (in `stdhep`) of the neutrino's single daughter, i.e. the final-state lepton.
-  [[nodiscard]] int find_final_lepton(StdHep const& stdhep);
+  /// @param table used to check that the daughter is a lepton (an error is logged otherwise).
+  [[nodiscard]] int find_final_lepton(StdHep const& stdhep, sand::particle_table const& table);
 
   /// Builds the vertex-level SRTrueInteraction from a GENIE gRooTracker event.
-  [[nodiscard]] ::caf::SRTrueInteraction true_interaction_from_genie(GRooTrackerEvent const& event,
-                                                                     StdHep const& stdhep);
+  /// @param table particle properties, used to identify the final-state lepton.
+  [[nodiscard]] ::caf::SRTrueInteraction
+  true_interaction_from_genie(GRooTrackerEvent const& event, StdHep const& stdhep, sand::particle_table const& table);
 
   /// Builds one SRTrueParticle from StdHep entry `index`. Used for `prefsi` only.
   [[nodiscard]] ::caf::SRTrueParticle true_particle_from_genie(std::size_t index, StdHep const& stdhep,

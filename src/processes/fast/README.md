@@ -31,7 +31,8 @@ Configuration examples: `tests/framework/900_fast_reco.json` (perfect),
 field by field by `sand::test::fast_reco_test` (`tests/framework/900_modules`).
 
 Required instances: `sand::edep_reader`, `sand::genie_reader` and `sand::spill_maps` (per spill),
-`sand::root_tgeomanager` and `sand::geoinfo` (global, for the target of the vertexing).
+`sand::root_tgeomanager` and `sand::geoinfo` (global, for the target of the vertexing), `sand::particle_table`
+(global, masses and charges for the tracker and GRAIN recos and the smearing).
 
 ## What a fast CAF means
 
