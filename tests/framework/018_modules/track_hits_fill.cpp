@@ -10,17 +10,23 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <fstream>
-#include <iomanip>
-#include <numeric>
 #include <random>
-#include <sstream>
+#include <string>
+#include <vector>
 
 namespace sand::test {
 
   // Fills the three hit stores with randomized stub hits and a track referencing every hit in a
   // shuffled order (see 018_track_hits_write.json), and records all values in a csv file so that
   // 019_track_hits_read.json can verify the round trip through the root file.
+  //
+  // The numeric columns hold the bit pattern of the value, so the read-back values can be
+  // compared bit by bit instead of within a tolerance (doubles printed in decimal would need 17
+  // significant digits to round-trip exactly). The ecal dummy is a string member and is written
+  // verbatim; the grain and tracker dummies are a float and a double, encoded like the others.
   struct track_hits_fill : public ufw::process {
     track_hits_fill();
     void run() override;
@@ -33,10 +39,16 @@ namespace sand::test {
     const std::size_t n_tracker = 6;
     const std::size_t n_ecal    = 6;
 
-    std::string fmt(double v) {
-      std::ostringstream oss;
-      oss << std::setprecision(15) << v;
-      return oss.str();
+    std::string bits(double v) {
+      std::uint64_t b = 0;
+      std::memcpy(&b, &v, sizeof(b));
+      return std::to_string(b);
+    }
+
+    std::string bits(float v) {
+      std::uint32_t b = 0;
+      std::memcpy(&b, &v, sizeof(b));
+      return std::to_string(b);
     }
 
   } // namespace
@@ -64,7 +76,6 @@ namespace sand::test {
     const auto csv_file = ufw::config::expand_path(csv_path, ufw::config::io::write | ufw::config::io::file);
     std::ofstream csv(csv_file, ctx == 0 ? std::ios::trunc : std::ios::app);
     UFW_ASSERT(csv, "The csv file {} could not be opened for writing.", csv_file.string());
-    csv << std::setprecision(15);
     if (ctx == 0) {
       csv << "context,store,index,cx,cy,cz,ax,ay,az,t_earliest,t_best,t_latest,width,dummy\n";
     }
@@ -74,58 +85,58 @@ namespace sand::test {
       const auto c = h.centre();
       const auto a = h.axis();
       const auto t = h.t();
-      std::ostringstream oss;
-      oss << std::setprecision(15) << ctx << "," << store_name << "," << i << ',' << c.x() << ',' << c.y() << ','
-          << c.z() << ',' << a.x() << ',' << a.y() << ',' << a.z() << ',' << t.earliest() << ',' << t.best() << ','
-          << t.latest() << ',' << h.width() << ',' << dummy << "\n";
-      csv << oss.str();
+      csv << ctx << ',' << store_name << ',' << i << ',' << bits(c.x()) << ',' << bits(c.y()) << ',' << bits(c.z()) << ','
+          << bits(a.x()) << ',' << bits(a.y()) << ',' << bits(a.z()) << ',' << bits(t.earliest()) << ',' << bits(t.best())
+          << ',' << bits(t.latest()) << ',' << bits(h.width()) << ',' << dummy << "\n";
     };
 
+    // Fill the stores, collecting the keys minted by the insertions (the only way to get them).
+    std::vector<sand::grain::grain_hits_index> gkeys;
     for (std::size_t i = 0; i < n_grain; ++i) {
       auto h = sand::grain::hit{pos_3d(real(gen), real(gen), real(gen)),
                                 dir_3d(real(gen), real(gen), real(gen)),
                                 reco::timerange(real(gen), 1.0),
                                 realw(gen),
                                 realf(gen)};
-      gh.push_back(h);
-      emit("grain", i, h, fmt(h.test_float()));
+      gkeys.push_back(gh.push_back(h));
+      emit("grain", i, h, bits(h.test_float()));
     }
+    std::vector<sand::tracker::tracker_hits_index> tkeys;
     for (std::size_t i = 0; i < n_tracker; ++i) {
       auto h = sand::tracker::hit{pos_3d(real(gen), real(gen), real(gen)),
                                   dir_3d(real(gen), real(gen), real(gen)),
                                   reco::timerange(real(gen), 1.0),
                                   realw(gen),
                                   real(gen)};
-      th.push_back(h);
-      emit("tracker", i, h, fmt(h.test_double()));
+      tkeys.push_back(th.push_back(h));
+      emit("tracker", i, h, bits(h.test_double()));
     }
+    std::vector<sand::ecal::ecal_hits_index> ekeys;
     for (std::size_t i = 0; i < n_ecal; ++i) {
       auto h = sand::ecal::hit{pos_3d(real(gen), real(gen), real(gen)),
                                dir_3d(real(gen), real(gen), real(gen)),
                                reco::timerange(real(gen), 1.0),
                                realw(gen),
                                std::to_string(string_id(gen))};
-      eh.push_back(h);
+      ekeys.push_back(eh.push_back(h));
       emit("ecal", i, h, h.test_string());
     }
 
     // Assemble the track: every pushed hit is referenced exactly once, in a random
     // (shuffled) order within each store's key vector.
-    auto shuffled = [&](std::size_t n) {
-      std::vector<std::size_t> perm(n);
-      std::iota(perm.begin(), perm.end(), 0);
-      std::shuffle(perm.begin(), perm.end(), gen);
-      return perm;
-    };
-    auto& tr = set<reco::track>("track");
-    for (const auto i : shuffled(n_grain)) {
-      tr.push(sand::grain::grain_hits_index{i});
+    auto shuffle_keys = [&](auto& keys) { std::shuffle(keys.begin(), keys.end(), gen); };
+    auto& tr          = set<reco::track>("track");
+    shuffle_keys(gkeys);
+    for (const auto& k : gkeys) {
+      tr.push(k);
     }
-    for (const auto i : shuffled(n_tracker)) {
-      tr.push(sand::tracker::tracker_hits_index{i});
+    shuffle_keys(tkeys);
+    for (const auto& k : tkeys) {
+      tr.push(k);
     }
-    for (const auto i : shuffled(n_ecal)) {
-      tr.push(sand::ecal::ecal_hits_index{i});
+    shuffle_keys(ekeys);
+    for (const auto& k : ekeys) {
+      tr.push(k);
     }
   }
 

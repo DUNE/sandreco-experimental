@@ -30,7 +30,8 @@ namespace sand {
 
 // Per-context store of shared objects, addressed through the typed key sand::shared_index.
 // Provides sand::shared (the collection type and the registered variable name), the
-// sand::shared_store() accessor and the sand::shared_index key type.
+// sand::shared_store() accessor and the sand::shared_index key type. The single-value
+// insertions of the store mint the keys; they cannot be constructed any other way.
 SAND_SHARED_COLLECTION(sand, shared_object, shared)
 
 namespace sand {

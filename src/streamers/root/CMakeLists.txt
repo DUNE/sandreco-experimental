@@ -53,8 +53,9 @@ foreach(USER_TYPE_PATH ${USER_TYPES})
   endforeach()
 endforeach()
 #Capture SAND_SHARED_COLLECTION(NS, T, NAME): link the element type, the collection type
-#(NS::NAME, a typedef of ufw::data::managed_collection<NS::T>, resolved by rootcling) and
-#the typed key.
+#NS::NAME (a sand::keyed_store whose single-value insertions mint keys) and the typed key.
+#Also link the concrete base classes of the key and the store chains: the runtime streamer
+#builder needs their TClasses (rootmap entries) to stream the derived classes deterministically.
 foreach(USER_TYPE_PATH ${USER_TYPES})
   file(STRINGS "${CMAKE_SOURCE_DIR}/include/${USER_TYPE_PATH}" USER_FILE_LINES REGEX "^SAND_SHARED_COLLECTION")
   foreach(LINE ${USER_FILE_LINES})
@@ -62,6 +63,11 @@ foreach(USER_TYPE_PATH ${USER_TYPES})
     list(APPEND USER_TYPES_LINKDEF "${CMAKE_MATCH_1}::${CMAKE_MATCH_2}")
     list(APPEND USER_TYPES_LINKDEF "${CMAKE_MATCH_1}::${CMAKE_MATCH_3}")
     list(APPEND USER_TYPES_LINKDEF "${CMAKE_MATCH_1}::${CMAKE_MATCH_3}_index")
+    list(APPEND USER_TYPES_LINKDEF
+         "ufw::data::index<ufw::data::sequential_adapter<${CMAKE_MATCH_1}::${CMAKE_MATCH_3}, &${CMAKE_MATCH_1}::${CMAKE_MATCH_3}_store>, std::size_t>")
+    list(APPEND USER_TYPES_LINKDEF "ufw::data::sequential_adapter<${CMAKE_MATCH_1}::${CMAKE_MATCH_3}, &${CMAKE_MATCH_1}::${CMAKE_MATCH_3}_store>")
+    list(APPEND USER_TYPES_LINKDEF "sand::keyed_store<${CMAKE_MATCH_1}::${CMAKE_MATCH_2}, ${CMAKE_MATCH_1}::${CMAKE_MATCH_3}_index>")
+    list(APPEND USER_TYPES_LINKDEF "ufw::data::managed_collection<${CMAKE_MATCH_1}::${CMAKE_MATCH_2}>")
   endforeach()
 endforeach()
 
