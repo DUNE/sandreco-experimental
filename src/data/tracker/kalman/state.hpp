@@ -27,7 +27,7 @@
  *   kappa = CLHEP::c_light * CLHEP::tesla = 0.299792458 MeV / (mm T)
  *
  * so that p [MeV] = kappa * |q| * B [T] * R [mm], q in units of e. See docs/kalman_filter.md, section
- * "0.3 Field and curvature constant kappa".
+ * "0.2 Units, frame and field".
  *
  * The state vector is (x, y, tx, ty, q/p, t) at the reference plane z:
  *  - x, y   : position on the plane [mm]
@@ -62,7 +62,7 @@
  * The functions in this namespace (detail::derivatives(), detail::wire_distance(), detail::symmetrize()) are building
  * blocks of the public functions propagate(), wire_time(), update() and smooth(). Reconstruction modules should not
  * call them. They are declared in the headers, and not hidden in the .cpp files, only because the standalone tests
- * check them directly against analytic results, finite differences and exact expectations. See docs/kalman_filter.md, section "3.5 Public interface and namespace detail".
+ * check them directly against analytic results, finite differences and exact expectations. See docs/kalman_filter.md, section "3.4 Public interface and namespace detail".
  */
 
 namespace sand::tracker::kalman {

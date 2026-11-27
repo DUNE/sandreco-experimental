@@ -87,7 +87,7 @@ namespace sand::tracker::kalman {
      * asymmetries that rounding leaves in a product such as A C A^T. For a matrix that is already exactly symmetric
      * the result is the same matrix, bit for bit.
      *
-     * See docs/kalman_filter.md, sections "2.8 Gain K and update" and "3.5 Public interface and namespace detail".
+     * See docs/kalman_filter.md, sections "2.8 Gain K and update" and "3.4 Public interface and namespace detail".
      * @param C General matrix, symmetric up to rounding
      * @return Symmetric matrix with elements (C(i, j) + C(j, i)) / 2
      */

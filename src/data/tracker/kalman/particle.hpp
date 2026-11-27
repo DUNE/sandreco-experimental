@@ -6,8 +6,8 @@
  *
  * The library takes the particle hypothesis as an argument (propagate(), engine::propagate(), momentum()). Code that
  * needs the hypothesis of a particle species gets it from the particle table by PDG code with hypothesis_from_pdg(),
- * instead of writing the values. See docs/kalman_filter.md, section "2.2 Propagator f", paragraph "Particle
- * hypothesis".
+ * instead of writing the values. See docs/kalman_filter.md, section "2.1 State x and covariance C", paragraph
+ * "Particle hypothesis".
  */
 
 namespace sand::tracker::kalman {

@@ -327,7 +327,7 @@ BOOST_AUTO_TEST_CASE(update_rejects_non_positive_weight) {
 }
 
 // For the optimal gain the Joseph form computed by update() equals the short form (I - K H) C and the information form
-// [C^-1 + H^T (V/w)^-1 H]^-1 (docs/kalman_filter.md, section 2.8), with and without a weight.
+// [C^-1 + H^T (V/w)^-1 H]^-1 (docs/kalman_filter.md, appendix B), with and without a weight.
 BOOST_AUTO_TEST_CASE(covariance_forms_agree) {
   std::mt19937 rng(777);
   std::uniform_real_distribution<double> u(-1., 1.);

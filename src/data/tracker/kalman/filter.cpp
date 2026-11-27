@@ -35,8 +35,8 @@ namespace sand::tracker::kalman {
     vector_t const K = CHt / S;
     res.out.par += K * res.residual;
 
-    // Joseph form: (I - K H) C (I - K H)^T + K v K^T; see docs/kalman_filter.md, section 2.8, for its derivation and
-    // its equivalence with the short and the information forms
+    // Joseph form: (I - K H) C (I - K H)^T + K v K^T; see docs/kalman_filter.md, section 2.8, for its derivation, and
+    // appendix B for its equivalence with the short and the information forms
     matrix_t const IKH = matrix_t(ROOT::Math::SMatrixIdentity{}) - ROOT::Math::TensorProd(K, pred.H);
     matrix_t C         = IKH * in.cov * ROOT::Math::Transpose(IKH);
     C += v * ROOT::Math::TensorProd(K, K);
