@@ -91,8 +91,9 @@ namespace sand::tracker::kalman {
 
   engine::~engine() = default;
 
-  std::optional<propagation_result> engine::propagate(const state& in, double z_target, double mass) const {
-    return kalman::propagate(in, z_target, mass, *m_field, m_propagator);
+  std::optional<propagation_result> engine::propagate(const state& in, double z_target,
+                                                      const particle_hypothesis& hyp) const {
+    return kalman::propagate(in, z_target, hyp, *m_field, m_propagator);
   }
 
   prediction engine::wire_time(const state& s, const wire_geometry& w, int side) const {

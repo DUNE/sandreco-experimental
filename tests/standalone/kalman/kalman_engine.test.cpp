@@ -16,7 +16,7 @@
 using namespace sand::tracker::kalman;
 
 namespace {
-  double const m_mu = mass_from_pdg(13); // MeV
+  particle_hypothesis const mu = hypothesis_from_pdg(13); // muon: mass from the table, |q| = 1
 
   state make_state() {
     state s;
@@ -105,8 +105,8 @@ BOOST_AUTO_TEST_CASE(propagate_matches_free_function) {
   propagator_config const pc{20., 50.};
   auto const in = make_state();
   for (double z : {1500., -800.}) {
-    auto const a = kf.propagate(in, z, m_mu);
-    auto const b = propagate(in, z, m_mu, bf, pc);
+    auto const a = kf.propagate(in, z, mu);
+    auto const b = propagate(in, z, mu, bf, pc);
     BOOST_REQUIRE(a && b);
     BOOST_CHECK_EQUAL(a->out.z, b->out.z);
     BOOST_CHECK_EQUAL(a->out.direction, b->out.direction);
@@ -120,8 +120,8 @@ BOOST_AUTO_TEST_CASE(propagate_matches_free_function) {
     }
   }
   // The settings of the engine are used: with a coarser step the result differs (Runge-Kutta truncation).
-  auto const coarse = propagate(in, 1500., m_mu, bf, {200., 50.});
-  auto const fine   = kf.propagate(in, 1500., m_mu);
+  auto const coarse = propagate(in, 1500., mu, bf, {200., 50.});
+  auto const fine   = kf.propagate(in, 1500., mu);
   BOOST_REQUIRE(coarse && fine);
   BOOST_CHECK_NE(coarse->out.par[Y], fine->out.par[Y]);
   // and max_slope too: a straight track (q/p = 0) with ty = 60 keeps its slope, so it propagates with a limit of
@@ -129,8 +129,8 @@ BOOST_AUTO_TEST_CASE(propagate_matches_free_function) {
   state steep    = make_state();
   steep.par[TY]  = 60.;
   steep.par[QOP] = 0.;
-  BOOST_CHECK(!kf.propagate(steep, 10., m_mu));
-  BOOST_CHECK(propagate(steep, 10., m_mu, bf, {20., 1e3}));
+  BOOST_CHECK(!kf.propagate(steep, 10., mu));
+  BOOST_CHECK(propagate(steep, 10., mu, bf, {20., 1e3}));
 }
 
 // engine.wire_time must be the free wire_time with the calibration of the engine.

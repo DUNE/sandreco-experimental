@@ -16,12 +16,14 @@ namespace sand::tracker::kalman {
 
   namespace detail {
 
-    void derivatives(const vector_t& s, int sigma, double mass, const field_vector& b, vector_t& f, matrix_t& A) {
+    void derivatives(const vector_t& s, int sigma, const particle_hypothesis& hyp, const field_vector& b, vector_t& f,
+                     matrix_t& A) {
       double const tx = s[TX], ty = s[TY], q = s[QOP];
       double const nv = std::sqrt(1. + tx * tx + ty * ty); // |v|, v = (tx, ty, 1)
       double const ax = tx * ty * b[0] - (1. + tx * tx) * b[1] + ty * b[2];
       double const ay = (1. + ty * ty) * b[0] - tx * ty * b[1] - tx * b[2];
-      double const g  = std::sqrt(1. + mass * mass * q * q); // 1/beta
+      double const mq = hyp.mass / hyp.abs_charge;       // m/|q|: 1/beta = sqrt(1 + m^2/p^2), p = |q|/|q/p|
+      double const g  = std::sqrt(1. + mq * mq * q * q); // 1/beta
       double const kq = sigma * kappa * q;
 
       f[X]   = tx;
@@ -29,7 +31,7 @@ namespace sand::tracker::kalman {
       f[TX]  = kq * nv * ax;
       f[TY]  = kq * nv * ay;
       f[QOP] = 0.;
-      f[T]   = sigma * nv * g / CLHEP::c_light; // q/p = 0 gives 1/beta = 1: no mass dependence
+      f[T]   = sigma * nv * g / CLHEP::c_light; // q/p = 0 gives 1/beta = 1: no dependence on the hypothesis
 
       double const dax_dtx = ty * b[0] - 2. * tx * b[1];
       double const dax_dty = tx * b[0] + b[2];
@@ -47,20 +49,25 @@ namespace sand::tracker::kalman {
       A(TY, QOP) = sigma * kappa * nv * ay;
       A(T, TX)   = sigma * tx / nv * g / CLHEP::c_light;
       A(T, TY)   = sigma * ty / nv * g / CLHEP::c_light;
-      A(T, QOP)  = sigma * nv * (mass * mass * q / g) / CLHEP::c_light;
+      A(T, QOP)  = sigma * nv * (mq * mq * q / g) / CLHEP::c_light;
     }
 
   } // namespace detail
 
-  std::optional<propagation_result> propagate(const state& in, double z_target, double mass, const field& bfield,
-                                              const propagator_config& cfg) {
+  std::optional<propagation_result> propagate(const state& in, double z_target, const particle_hypothesis& hyp,
+                                              const field& bfield, const propagator_config& cfg) {
     // The settings have no defaults: a value-initialised config (zeros) would divide by zero below
     if (!(cfg.max_step > 0.) || !(cfg.max_slope > 0.)) {
       throw std::invalid_argument("sand::tracker::kalman::propagate: max_step and max_slope must be positive (set them "
                                   "from the configuration)");
     }
+    // |q| divides the mass in the time of flight; written with ! so that NaN is rejected too
+    if (!(hyp.abs_charge > 0.) || !(hyp.mass >= 0.)) {
+      throw std::invalid_argument("sand::tracker::kalman::propagate: the particle hypothesis needs abs_charge > 0 and "
+                                  "mass >= 0 (see hypothesis_from_pdg())");
+    }
     propagation_result res;
-    res.F           = identity();
+    res.F           = ROOT::Math::SMatrixIdentity();
     vector_t s      = in.par;
     double z        = in.z;
     double const L  = z_target - z;
@@ -76,22 +83,22 @@ namespace sand::tracker::kalman {
     matrix_t A1, A2, A3, A4;
     for (int i = 0; i < nst; ++i) {
       auto const b1 = bfield.at(s[X], s[Y], z);
-      detail::derivatives(s, sigma, mass, b1, f1, A1);
+      detail::derivatives(s, sigma, hyp, b1, f1, A1);
       matrix_t const J1 = A1 * res.F;
 
       vector_t const s2 = s + 0.5 * h * f1;
       auto const b2     = bfield.at(s2[X], s2[Y], z + 0.5 * h);
-      detail::derivatives(s2, sigma, mass, b2, f2, A2);
+      detail::derivatives(s2, sigma, hyp, b2, f2, A2);
       matrix_t const J2 = A2 * (res.F + 0.5 * h * J1);
 
       vector_t const s3 = s + 0.5 * h * f2;
       auto const b3     = bfield.at(s3[X], s3[Y], z + 0.5 * h);
-      detail::derivatives(s3, sigma, mass, b3, f3, A3);
+      detail::derivatives(s3, sigma, hyp, b3, f3, A3);
       matrix_t const J3 = A3 * (res.F + 0.5 * h * J2);
 
       vector_t const s4 = s + h * f3;
       auto const b4     = bfield.at(s4[X], s4[Y], z + h);
-      detail::derivatives(s4, sigma, mass, b4, f4, A4);
+      detail::derivatives(s4, sigma, hyp, b4, f4, A4);
       matrix_t const J4 = A4 * (res.F + h * J3);
 
       double const nv0 = std::sqrt(1. + s[TX] * s[TX] + s[TY] * s[TY]);

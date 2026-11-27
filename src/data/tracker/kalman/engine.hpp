@@ -31,7 +31,7 @@ namespace sand::tracker::kalman {
    *
    * \code{.cpp}
    * auto& kf = instance<sand::tracker::kalman::engine>();
-   * auto prop = kf.propagate(current, w.z(), mass_from_pdg(13));
+   * auto prop = kf.propagate(current, w.z(), hypothesis_from_pdg(13));
    * \endcode
    *
    * The operations that need the shared state are available as members (propagate(), wire_time()). The free
@@ -94,10 +94,10 @@ namespace sand::tracker::kalman {
      * @brief Propagate a state to the plane z_target with the field and the settings of the engine.
      * @param in       Input state (its covariance is transported)
      * @param z_target Target plane [mm]
-     * @param mass     Mass hypothesis [MeV], used only for the time of flight (see mass_from_pdg())
+     * @param hyp      Particle hypothesis, used only for the time of flight (see hypothesis_from_pdg())
      * @return As sand::tracker::kalman::propagate()
      */
-    std::optional<propagation_result> propagate(const state& in, double z_target, double mass) const;
+    std::optional<propagation_result> propagate(const state& in, double z_target, const particle_hypothesis& hyp) const;
 
     /**
      * @brief Predicted TDC time for a wire, with the calibration of the engine.

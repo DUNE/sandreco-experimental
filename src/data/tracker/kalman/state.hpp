@@ -1,5 +1,7 @@
 #pragma once
 
+#include <kalman/particle.hpp>
+
 #include <Geant4/CLHEP/Units/PhysicalConstants.h>
 #include <Geant4/CLHEP/Units/SystemOfUnits.h>
 #include <Math/SMatrix.h>
@@ -18,18 +20,20 @@
  *    the GDML. It is not converted to CLHEP internal units (where 1 T = CLHEP::tesla = 0.001).
  *
  * Physical constants come from CLHEP (Geant4/CLHEP/Units/PhysicalConstants.h and SystemOfUnits.h), with qualified
- * names; masses come from the particle table through mass_from_pdg() (particle.hpp). The curvature constant is not
+ * names; masses and charges come from the particle table through hypothesis_from_pdg() (particle.hpp). The curvature
+ * constant is not
  * written as a number: it is derived as
  *
  *   kappa = CLHEP::c_light * CLHEP::tesla = 0.299792458 MeV / (mm T)
  *
- * so that p [MeV] = kappa * B [T] * R [mm] for a unit charge. See docs/kalman_filter.md, section
+ * so that p [MeV] = kappa * |q| * B [T] * R [mm], q in units of e. See docs/kalman_filter.md, section
  * "0.3 Field and curvature constant kappa".
  *
  * The state vector is (x, y, tx, ty, q/p, t) at the reference plane z:
  *  - x, y   : position on the plane [mm]
  *  - tx, ty : slopes dx/dz, dy/dz
- *  - q/p    : charge over momentum [1/MeV], charge in units of e
+ *  - q/p    : charge over momentum [1/MeV], charge in units of e. The curvature depends on q/p only; the momentum
+ *             p = |q| / |q/p| needs the absolute charge of the particle hypothesis (momentum(), particle.hpp)
  *  - t      : time at which the particle crosses the plane [ns]
  *
  * The time parameter is the track time on the reference plane: the track t0, in the sense used by the
@@ -85,9 +89,7 @@ namespace sand::tracker::kalman {
     sym_matrix_t cov{}; ///< Covariance of par
     int direction{+1};  ///< Sign of p_z
 
-    /// Momentum [MeV]; HUGE_VAL for q/p = 0 (straight track)
-    double momentum() const { return par[QOP] != 0 ? 1. / std::abs(par[QOP]) : HUGE_VAL; }
-    /// Sign of q/p: +1, -1, or 0 for a straight track
+    /// Sign of q/p, that is the sign of the charge: +1, -1, or 0 for a straight track
     int charge() const { return par[QOP] > 0 ? +1 : (par[QOP] < 0 ? -1 : 0); }
     /// Unit vector of the direction of motion, including the sign of p_z
     void direction_cosines(double& ux, double& uy, double& uz) const {
@@ -98,7 +100,20 @@ namespace sand::tracker::kalman {
     }
   };
 
-  /// 6 x 6 identity matrix
-  matrix_t identity();
+  /**
+   * @brief Momentum of the state for a particle hypothesis: p = |q| / |q/p|.
+   *
+   * A free function of the state and of the hypothesis, rather than a member of state, because the state carries
+   * only q/p: the momentum needs the absolute charge, which is part of the hypothesis (an alpha has |q| = 2). The mass
+   * of the hypothesis is not used.
+   *
+   * See docs/kalman_filter.md, section "2.1 State x and covariance C".
+   * @param s   State
+   * @param hyp Particle hypothesis; only hyp.abs_charge is used
+   * @return Momentum [MeV]; HUGE_VAL for q/p = 0 (straight track)
+   */
+  inline double momentum(const state& s, const particle_hypothesis& hyp) {
+    return s.par[QOP] != 0 ? hyp.abs_charge / std::abs(s.par[QOP]) : HUGE_VAL;
+  }
 
 } // namespace sand::tracker::kalman

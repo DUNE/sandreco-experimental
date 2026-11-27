@@ -6,7 +6,8 @@
 // option "midp" the momentum of the start state is the average of the two points, which removes most of the energy
 // loss and leaves the field and the equations.
 //
-// Masses and charges come from ROOT's TDatabasePDG (mass_from_pdg() for the mass).
+// The particle hypothesis (mass and |q|) comes from ROOT's TDatabasePDG through hypothesis_from_pdg(); the sign of the
+// charge from the same table. q/p = sign(q) |q| / p, with q in units of e.
 //
 // Not part of ctest: it needs a simulation file. Usage:
 //   gun_propagation_check <edep-sim file> [B_x in T, default 0.6] [max events, default all]
@@ -50,10 +51,10 @@ namespace {
     double rms() const { return n ? std::sqrt(std::max(0., s2 / n - mean() * mean())) : 0; }
   };
 
-  /// Charge in units of e from the particle table (which stores it in units of e/3); 0 for an unknown code.
-  int charge_of(int pdg) {
+  /// Sign of the charge from the particle table (which stores the charge in units of |e|/3); 0 for an unknown code.
+  int charge_sign(int pdg) {
     auto const* p = TDatabasePDG::Instance()->GetParticle(pdg);
-    return p ? static_cast<int>(std::lround(p->Charge() / 3.)) : 0;
+    return p ? (p->Charge() > 0 ? +1 : (p->Charge() < 0 ? -1 : 0)) : 0;
   }
 } // namespace
 
@@ -81,11 +82,12 @@ int main(int argc, char** argv) {
       if (tr.ParentId != -1) {
         continue;
       }
-      int const q    = charge_of(tr.PDGCode);
-      if (q == 0) {
-        continue;
+      int const sign = charge_sign(tr.PDGCode);
+      if (sign == 0) {
+        continue; // neutral or not in the table: no hypothesis
       }
-      double const m = mass_from_pdg(tr.PDGCode);
+      particle_hypothesis const hyp = hypothesis_from_pdg(tr.PDGCode);
+      double const q                = sign * hyp.abs_charge;
       for (size_t k = 0; k + 1 < tr.Points.size(); ++k) {
         auto const& a = tr.Points[k];
         auto const& b = tr.Points[k + 1];
@@ -104,7 +106,7 @@ int main(int argc, char** argv) {
           s.par[TY]    = a.Momentum.Y() / a.Momentum.Z();
           s.par[QOP]   = q / p;
           s.par[T]     = a.Position.T();
-          auto const r = propagate(s, b.Position.Z(), m, bf, cfg);
+          auto const r = propagate(s, b.Position.Z(), hyp, bf, cfg);
           if (!r) {
             continue;
           }

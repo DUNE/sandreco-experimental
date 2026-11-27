@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kalman/field.hpp>
+#include <kalman/particle.hpp>
 #include <kalman/state.hpp>
 
 #include <optional>
@@ -17,10 +18,13 @@
  *   dtx/dz = sigma * kappa * (q/p) * |v| * ( tx*ty*Bx - (1 + tx^2)*By + ty*Bz )
  *   dty/dz = sigma * kappa * (q/p) * |v| * ( (1 + ty^2)*Bx - tx*ty*By - tx*Bz )
  *   dqop/dz = 0                                       (no energy loss: the library has no material model yet)
- *   dt/dz  = sigma * |v| * sqrt(1 + m^2 (q/p)^2) / c   (time of flight for the mass hypothesis m)
+ *   dt/dz  = sigma * |v| * sqrt(1 + (m/|q|)^2 (q/p)^2) / c   (time of flight for the hypothesis m, |q|)
+ *
+ * with q the charge in units of e. The curvature depends on q/p only and is valid for any charge; the charge enters
+ * separately only the time of flight, through 1/beta = sqrt(1 + m^2/p^2) with p = |q| / |q/p|.
  *
  * These six derivatives form the right-hand side phi (f in the code) of dx/dz = phi(x, z), with x the state vector.
- * For a straight track (q/p = 0) the time of flight uses beta = 1 and the mass hypothesis has no effect.
+ * For a straight track (q/p = 0) the time of flight uses beta = 1 and the particle hypothesis has no effect.
  *
  * The equations are integrated with the classical fourth-order Runge-Kutta scheme; the field is read at the position
  * of each of the four stages, so the scheme is a true RK4 in a non-uniform field too. The Jacobian
@@ -60,12 +64,13 @@ namespace sand::tracker::kalman {
      * See docs/kalman_filter.md, sections "2.2 Propagator f" and "2.3 Propagation matrix F".
      * @param s     State vector
      * @param sigma Sign of p_z
-     * @param mass  Mass hypothesis [MeV]
+     * @param hyp   Particle hypothesis (mass and |q|), used only for the time of flight
      * @param b     Field at the position of s [T]
      * @param f     Output: phi = d(state)/dz
      * @param A     Output: A = dphi/d(state)
      */
-    void derivatives(const vector_t& s, int sigma, double mass, const field_vector& b, vector_t& f, matrix_t& A);
+    void derivatives(const vector_t& s, int sigma, const particle_hypothesis& hyp, const field_vector& b, vector_t& f,
+                     matrix_t& A);
 
   } // namespace detail
 
@@ -73,19 +78,20 @@ namespace sand::tracker::kalman {
    * @brief Propagate a state to the plane z_target.
    * @param in      Input state (its covariance is transported).
    * @param z_target Target plane [mm]. May be upstream or downstream of in.z.
-   * @param mass    Mass hypothesis [MeV], used only for the time of flight (no effect for q/p = 0, where beta = 1).
+   * @param hyp     Particle hypothesis (mass and |q|, see hypothesis_from_pdg()), used only for the time of flight
+   *                (no effect for q/p = 0, where beta = 1).
    * @param bfield  Magnetic field.
    * @param cfg     Runge-Kutta settings (no default: from the configuration).
    * @return The propagated state and Jacobian, or nothing if the track becomes too steep.
    * @throws std::invalid_argument if cfg.max_step or cfg.max_slope is not positive (for example a value-initialised
-   *         propagator_config).
+   *         propagator_config), or if hyp.abs_charge is not positive or hyp.mass is negative or NaN.
    *
    * The direction of motion is a property of the particle (in.direction) and is not changed by propagating to a
    * plane on the other side: propagating a forward-going track to smaller z simply runs the equations backwards.
    *
    * See docs/kalman_filter.md, section "2.2 Propagator f".
    */
-  std::optional<propagation_result> propagate(const state& in, double z_target, double mass, const field& bfield,
-                                              const propagator_config& cfg);
+  std::optional<propagation_result> propagate(const state& in, double z_target, const particle_hypothesis& hyp,
+                                              const field& bfield, const propagator_config& cfg);
 
 } // namespace sand::tracker::kalman

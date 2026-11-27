@@ -30,12 +30,13 @@ What the library does not do:
 Modules link `sand_tracker_kalman` and include the headers as `<kalman/state.hpp>`, `<kalman/particle.hpp>`,
 `<kalman/propagator.hpp>`, `<kalman/measurement.hpp>`, `<kalman/filter.hpp>`, `<kalman/field.hpp>` and
 `<kalman/engine.hpp>`. The implementation is in `.cpp` files and depends on ROOT `SMatrix`, on the CLHEP units of the
-Geant4 installation (header only), on ROOT's `TDatabasePDG` (for `mass_from_pdg`) and on ufw (for the engine
+Geant4 installation (header only), on ROOT's `TDatabasePDG` (for `hypothesis_from_pdg`) and on ufw (for the engine
 configuration).
 
 The document reads top to bottom: section 1 summarises the Kalman filter and names the vectors and matrices it
 uses; section 2 describes each of them, with its formula, the code that computes it, its approximations and its
-tests; sections 3 to 5 cover the configuration, the planned extensions and the validation. The Doxygen documentation
+tests; sections 3 to 5 cover the configuration, the planned extensions and the validation; appendix A relates the
+state to the helix parametrisation of other SAND track fits. The Doxygen documentation
 of each function points to its section here.
 
 ### 0.2 Units and reference frame
@@ -74,8 +75,8 @@ kappa = CLHEP::c_light * CLHEP::tesla = 0.299792458   [MeV / (mm T)]
 p [MeV] = kappa * |q| * B [T] * R [mm]        (q in units of e)
 ```
 
-Masses are an argument of the library (the mass hypothesis); code that needs the mass of a species gets it from the
-particle table (section 2.2).
+Mass and absolute charge are an argument of the library (the particle hypothesis); code that needs them for a species
+gets them from the particle table (section 2.2).
 
 ### 0.4 Notation
 
@@ -88,19 +89,20 @@ product, `a x b` the vector product, `|a|` the norm, `M^T` the transpose, `M^-1`
 Each symbol has one meaning in the whole document and in the Doxygen documentation. Subscripts are written with braces
 when they are more than one character (`x_{k|k}`); a subscript makes a different symbol (`v` and `v_d`). The state
 vector is written with a plane label or an argument (`x_{k|j}`, `x(z)`), the coordinate x without. In the dimension
-column, n is a column vector of n components and n x m a matrix; the column is empty for scalars, and says scalar in
-rows that mix them with vectors. The names in the code are members of the structs of the library, or local variables of
-the function named in parentheses.
+column. In the "dimension" column, n means a column vector with n components (the state x is 6), n x m a matrix (C and
+F are 6 x 6; H is 1 x 6, a row), and an empty cell a scalar (r, V). Rows that group vectors and scalars say "scalar"
+explicitly. The "name in the code" column gives either a member of a library struct (`prediction::H`) or a local
+variable followed by its function in parentheses (`S` (`update()`) is the variable `S` inside `update()`).
 
 | Symbol | Meaning | Unit | Dimension | Name in the code |
 |--------|---------|------|-----------|------------------|
 | x, y, z | global coordinates; z is also the independent variable and labels the planes | mm | | `state::par[X]`, `state::par[Y]`, `state::z` |
 | tx, ty | slopes dx/dz, dy/dz | | | `state::par[TX]`, `state::par[TY]` |
-| q | charge, in units of e | e | | sign: `state::charge()` |
-| p, p_{perp} | momentum; its component perpendicular to the field | MeV | | `state::momentum()`; — |
+| q, \|q\| | charge, in units of e; its absolute value, part of the particle hypothesis | e | | sign: `state::charge()`; `particle_hypothesis::abs_charge` |
+| p, p_{perp} | momentum, p = \|q\| / \|q/p\|; its component perpendicular to the field | MeV | | `momentum(state, particle_hypothesis)`; — |
 | q/p | charge over momentum | 1/MeV | | `state::par[QOP]` |
 | t | time at which the track crosses a plane | ns | | `state::par[T]` |
-| m | mass hypothesis | MeV | | argument `mass` of `propagate()`; `mass_from_pdg()` |
+| m | mass of the particle hypothesis | MeV | | `particle_hypothesis::mass`; argument `hyp` of `propagate()`, from `hypothesis_from_pdg()` |
 | beta, E | velocity over c; energy | MeV (E) | | 1/beta: `g` (`detail::derivatives()`) |
 | c, kappa | `CLHEP::c_light`; curvature constant `CLHEP::c_light * CLHEP::tesla` | mm/ns, MeV/(mm T) | | `CLHEP::c_light`; `kappa` (`propagator.cpp`) |
 | B = (Bx, By, Bz) | magnetic field | T | 3 | `field_vector`, returned by `field::at()` |
@@ -117,6 +119,8 @@ the function named in parentheses.
 | P, P0 | point on the track; track point on the wire plane | mm | 3 | P0: (`par[X]`, `par[Y]`, `z`) |
 | lambda, mu | parameters along the local track line and along the wire | mm | | — |
 | phi, A | right-hand side dx(z)/dz of the equations of motion; its Jacobian dphi/dx | | 6; 6 x 6 | outputs `f`, `A` of `detail::derivatives()` |
+| phi_x, phi_y, phi_tx, phi_ty, phi_t | components of phi: dx/dz, dy/dz, dtx/dz, dty/dz, dt/dz | | | `f[X]`, ... (`detail::derivatives()`) |
+| a_x, a_y | field terms of dtx/dz and dty/dz (section 2.3) | T | | `ax`, `ay` (`detail::derivatives()`) |
 | step | Runge-Kutta step | mm | | `h` (`propagate()`) |
 | phi_i, A_i, B_i, J_i | phi, A and field at Runge-Kutta stage i; stage i of the Jacobian | | 6; 6 x 6; 3; 6 x 6 | `f1`..`f4`, `A1`..`A4`, `b1`..`b4`, `J1`..`J4` (`propagate()`) |
 | R | radius of the helix | mm | | — (used in the tests) |
@@ -138,13 +142,13 @@ the function named in parentheses.
 | measured, predicted | measured value; value predicted by a measurement model, h_k(x) | | | argument `measured` of `update()`; `prediction::value` |
 | H, H_k | projection matrix: derivative row d(predicted)/dx of a measurement model; on plane k | | 1 x 6 | `prediction::H` (`row_t`, stored as a 6-vector) |
 | V, w | measurement variance (time_resolution^2 for `wire_time`); weight of the measurement | | 1 x 1; scalar | arguments `variance` and `weight` of `update()` |
-| r, S, K | residual; its variance; Kalman gain | | scalar; scalar; 6 | `update_result::residual`; `r` (`update()`); `K` (`update()`) |
+| r, S, K | residual; its variance; Kalman gain | | scalar; scalar; 6 | `update_result::residual`; `S` (`update()`); `K` (`update()`) |
+| e_{k\|j}, eps | error of the state estimate x_{k\|j} - x (x the true state); error of the measurement (section 2.8) | | 6; scalar | — |
 | chi2 | chi2 increment of a measurement | | | `update_result::chi2` |
-| I | identity matrix | | 6 x 6 | `identity()` |
+| I | identity matrix | | 6 x 6 | `ROOT::Math::SMatrixIdentity` |
 | G_k | smoother gain on plane k | | 6 x 6 | `Gk` (`smooth()`) |
-
-Note that the variance S of the residual is the local variable `r` of `update()`; the residual is
-`update_result::residual`.
+| R~, lambda_dip, phi_h | helix parameters: signed radius, dip angle, azimuth around the axis of the helix (appendix A) | mm, , | | — |
+| zc, yc, x0, phi_{h0} | axis of the helix in the bending plane; x and phi_h at a reference point of the helix (appendix A) | mm, mm, mm, | | — (used in the tests) |
 
 ## 1. The Kalman filter in brief
 
@@ -205,7 +209,7 @@ C_{k|N} = C_{k|k} + G_k (C_{k+1|N} - C_{k+1|k}) G_k^T
 
 | Step | Inputs | Outputs | Implemented by |
 |------|--------|---------|----------------|
-| 1. Propagation | x_{k-1\|k-1}, C_{k-1\|k-1}, z of plane k, mass, field | x_{k\|k-1}, C_{k\|k-1}, F_k, path length | `propagate()` (`propagator.hpp`), `engine::propagate()` |
+| 1. Propagation | x_{k-1\|k-1}, C_{k-1\|k-1}, z of plane k, particle hypothesis, field | x_{k\|k-1}, C_{k\|k-1}, F_k, path length | `propagate()` (`propagator.hpp`), `engine::propagate()` |
 | 2. Measurement prediction | x_{k\|k-1}, wire, side, calibration | predicted, H_k | `wire_time()`, `wire_position()` (`measurement.hpp`), `engine::wire_time()` |
 | 3. Filtering | x_{k\|k-1}, C_{k\|k-1}, predicted, H_k, measured, V, w | x_{k\|k}, C_{k\|k}, r, chi2, residual after the update | `update()` (`filter.hpp`) |
 | 4. Smoothing | for every plane: x_{k\|k-1}, C_{k\|k-1}, x_{k\|k}, C_{k\|k}, F_k | x_{k\|N}, C_{k\|N} | `smooth()` (`filter.hpp`), with the steps stored as `filter_step` |
@@ -232,7 +236,7 @@ and the consequences of using z as the independent variable.
 |-------|-----------|---------|
 | `X`, `Y` | x, y | position on the plane [mm] |
 | `TX`, `TY` | tx, ty | slopes dx/dz, dy/dz |
-| `QOP` | q/p | charge over momentum [1/MeV] |
+| `QOP` | q/p | charge over momentum [1/MeV], q in units of e |
 | `T` | t | time at which the particle crosses the plane [ns] |
 
 ```
@@ -257,17 +261,31 @@ crossings of planes at fixed z, which is where the tracker measures it. Conseque
 - the direction is a property of the particle, not of the propagation: propagating a state to a plane behind it
   runs the equations backwards and keeps `direction`.
 
-**Straight tracks.** A straight track has q/p = 0. `state::momentum()` returns `HUGE_VAL` for it and
-`state::charge()` returns 0; its time of flight is described in section 2.2.
+**Charge and momentum.** The state carries q/p, with q the signed charge in units of e, and not p: the curvature
+depends on q/p only (section 2.2), so the state describes the trajectory of a particle of any charge. The momentum
+needs the absolute charge |q|, which is part of the particle hypothesis (section 2.2):
 
-**Implementation.** `state.hpp`: struct `state` (`z`, `par`, `cov`, `direction`, and the helpers `momentum()`,
-`charge()`, `direction_cosines()`), the index enum `par`, the matrix types `vector_t`, `matrix_t`, `sym_matrix_t`,
-`row_t` and `identity()`.
+```
+p = |q| / |q/p|
+```
+
+It is computed by the free function `momentum(state, particle_hypothesis)`, which uses only the `abs_charge` of the
+hypothesis. It is a free function of the state and the hypothesis, rather than a member of `state`, because the state
+alone does not know |q|: an alpha (|q| = 2) and a unit charge with the same q/p have momenta that differ by a factor 2.
+`state::charge()` returns the sign of q/p, that is the sign of the charge.
+
+**Straight tracks.** A straight track has q/p = 0. `momentum()` returns `HUGE_VAL` for it and `state::charge()`
+returns 0; its time of flight is described in section 2.2.
+
+**Implementation.** `state.hpp`: struct `state` (`z`, `par`, `cov`, `direction`, and the helpers `charge()`,
+`direction_cosines()`), the free function `momentum()`, the index enum `par` and the matrix types `vector_t`,
+`matrix_t`, `sym_matrix_t`, `row_t`. The identity matrix is `ROOT::Math::SMatrixIdentity`
+(`matrix_t I(ROOT::Math::SMatrixIdentity{})`, or `F = ROOT::Math::SMatrixIdentity()`).
 
 **Approximations.** None: the state is exact for any trajectory that crosses the planes with p_z != 0.
 
-**Tests.** `backward_moving_particle` (direction -1) and `straight_track_time_independent_of_mass` (q/p = 0) in
-`kalman_propagator`.
+**Tests.** `backward_moving_particle` (direction -1), `straight_track_time_independent_of_mass` (q/p = 0) and
+`alpha_time_of_flight_and_momentum` (momentum for |q| = 2) in `kalman_propagator`.
 
 ### 2.2 Propagator f
 
@@ -275,7 +293,7 @@ The propagator carries the state of section 2.1 from one plane to the next (step
 derives the equations of motion and their integration.
 
 **Definition.** The propagator f_k gives the state on plane k from the state on plane k - 1 by integrating the
-equations of motion of a charged particle in the magnetic field. `propagate(state, z_target, mass, field, config)`
+equations of motion of a charged particle in the magnetic field. `propagate(state, z_target, hyp, field, config)`
 moves a state to another plane with a fourth-order Runge-Kutta in z and transports its covariance (section 2.3).
 
 **Equations of motion.** For a particle of charge q (in units of e) and momentum p in a static magnetic field, with s
@@ -312,14 +330,24 @@ The other components:
 dx/dz   = tx
 dy/dz   = ty
 dqop/dz = 0                                         (no energy loss in the propagator)
-dt/dz   = (ds/dz) / (beta c) = sigma * |v| * sqrt(1 + m^2 (q/p)^2) / c
+dt/dz   = (ds/dz) / (beta c) = sigma * |v| * sqrt(1 + (m/|q|)^2 (q/p)^2) / c
 ```
 
-where 1/beta = E/p = sqrt(1 + m^2/p^2) = sqrt(1 + m^2 (q/p)^2) for a unit charge and m is the mass hypothesis. The
-mass enters only the time of flight. These six derivatives form the right-hand side phi(x, z) = dx(z)/dz.
+where m and |q| are the mass and the absolute charge of the particle hypothesis, and
 
-**Straight tracks.** For q/p = 0 the time of flight uses 1/beta = sqrt(1 + m^2 * 0) = 1, that is beta = 1, and the
-mass hypothesis has no effect: dt/dz = sigma |v| / c.
+```
+1/beta = E/p = sqrt(1 + m^2/p^2),    p = |q| / |q/p|    =>    1/beta = sqrt(1 + m^2 (q/p)^2 / q^2)
+```
+
+These six derivatives form the right-hand side phi(x, z) = dx(z)/dz.
+
+**Where the charge enters.** The curvature terms dtx/dz and dty/dz depend on q/p only: they are valid for any charge,
+and |q| does not appear in them. The particle hypothesis enters only the time of flight, and there only through the
+ratio m/|q|: an alpha (|q| = 2) has the time of flight of a unit charge of mass m/2 with the same q/p. For |q| = 1 the
+formula is the usual sqrt(1 + m^2 (q/p)^2).
+
+**Straight tracks.** For q/p = 0 the time of flight uses 1/beta = sqrt(1 + (m/|q|)^2 * 0) = 1, that is beta = 1, and
+the particle hypothesis has no effect: dt/dz = sigma |v| / c.
 
 **Runge-Kutta integration.** With the state vector x(z) and the right-hand side phi(x, z) above, each step of length
 step (|step| <= `max_step`, the interval being divided into equal steps) is the classical fourth-order Runge-Kutta
@@ -340,7 +368,7 @@ stage 2 reused for stage 3 the error would decrease only as step^2 (the test `fo
 checks the order). For a uniform field the two are identical. A negative step propagates towards smaller z.
 
 **Time of flight and path length.** The time t is integrated with the other components, so `propagate()` returns
-the time on the target plane for the mass hypothesis. The path length is accumulated with the trapezoidal rule on
+the time on the target plane for the particle hypothesis. The path length is accumulated with the trapezoidal rule on
 ds/dz over each step:
 
 ```
@@ -355,21 +383,28 @@ it when it is added.
 the global frame (`field::at()`). `uniform_field` is the only implementation for now; the field read from the
 geometry will be a second implementation of the same interface (section 4.3).
 
-**Mass hypothesis.** The mass is an argument of `propagate()`. Code that needs the mass of a species calls
-`mass_from_pdg(pdg)` (`particle.hpp`), which reads ROOT's `TDatabasePDG` (in GeV, converted with `CLHEP::GeV`),
-caches the value and throws `std::invalid_argument` for an unknown code.
+**Particle hypothesis.** The struct `particle_hypothesis` (`particle.hpp`) holds the mass m [MeV] and the absolute
+charge |q| [e] of the particle assumed by the fit; it is an argument of `propagate()` and `engine::propagate()`, and
+`momentum()` takes it too. `propagate()` throws `std::invalid_argument` if |q| is not positive or m is negative (or
+either is NaN). Code that needs the hypothesis of a species calls `hypothesis_from_pdg(pdg)`, which reads ROOT's
+`TDatabasePDG`: the mass in GeV, converted with `CLHEP::GeV`, and the charge in units of |e|/3, converted to units of e
+(|q| = |Charge()| / 3). It caches the values and throws `std::invalid_argument` for an unknown code and for a neutral
+particle. The default table of ROOT has no nuclei: a nucleus such as the alpha (1000020040) is found only if the job
+has added it to `TDatabasePDG` (as the test does); otherwise the caller builds the `particle_hypothesis` directly.
 
 **Implementation.** `propagator.hpp`, `propagator.cpp`: `propagate()` does the Runge-Kutta loop and returns a
 `propagation_result` (`out`, `F`, `path_length`), or nothing if the track becomes too steep (|tx| or |ty| above
-`max_slope`); `detail::derivatives()` computes phi (output `f`) and A. `propagate()` throws `std::invalid_argument` if
-`max_step` or `max_slope` is not positive, as in a value-initialised `propagator_config`.
+`max_slope`); `detail::derivatives()` computes phi (output `f`) and A, with m/|q| in the local `mq`. `propagate()`
+throws `std::invalid_argument` if `max_step` or `max_slope` is not positive, as in a value-initialised
+`propagator_config`. `particle.hpp`, `particle.cpp`: `particle_hypothesis`, `hypothesis_from_pdg()`.
 
-**Approximations.** The charge is ±1 in the time of flight; energy loss and multiple scattering are not included:
-the library has no material model yet (sections 2.4 and 4.2).
+**Approximations.** Energy loss and multiple scattering are not included: the library has no material model yet
+(sections 2.4 and 4.2). The charge of the particle is any: the curvature uses q/p and the time of flight m/|q|.
 
-**Tests.** In `kalman_propagator`: `helix_in_uniform_field`, `round_trip`, `backward_moving_particle`,
-`fourth_order_in_non_uniform_field`, `straight_track_time_independent_of_mass`, `settings_are_required`; in
-`kalman_filter`: `masses_from_pdg`. The comparison with the edep-sim truth is in section 5.2.
+**Tests.** In `kalman_propagator`: `helix_in_uniform_field`, `alpha_time_of_flight_and_momentum` (|q| = 2 against
+the exact kinematics), `round_trip`, `backward_moving_particle`, `fourth_order_in_non_uniform_field`,
+`straight_track_time_independent_of_mass`, `hypothesis_is_checked`, `settings_are_required`; in `kalman_filter`:
+`hypotheses_from_pdg`. The comparison with the edep-sim truth is in section 5.2.
 
 ### 2.3 Propagation matrix F
 
@@ -397,6 +432,46 @@ J_4 = A_4 (F + step J_3)
 F(z + step) = F + step/6 (J_1 + 2 J_2 + 2 J_3 + J_4)
 ```
 
+**Elements of A.** A = dphi/dx is computed analytically. With |v| = sqrt(1 + tx^2 + ty^2), the field terms
+
+```
+a_x = tx ty Bx - (1 + tx^2) By + ty Bz
+a_y = (1 + ty^2) Bx - tx ty By - tx Bz
+```
+
+and the components of phi (section 2.2)
+
+```
+phi_tx = sigma kappa (q/p) |v| a_x
+phi_ty = sigma kappa (q/p) |v| a_y
+phi_t  = sigma |v| sqrt(1 + (m/|q|)^2 (q/p)^2) / c
+```
+
+using d|v|/dtx = tx / |v|, d|v|/dty = ty / |v|, and the derivatives of a_x and a_y with respect to the slopes, the
+non-zero elements are
+
+```
+dphi_x/dtx  = 1
+dphi_y/dty  = 1
+
+dphi_tx/dtx    = sigma kappa (q/p) [ (tx/|v|) a_x + |v| (ty Bx - 2 tx By) ]
+dphi_tx/dty    = sigma kappa (q/p) [ (ty/|v|) a_x + |v| (tx Bx + Bz) ]
+dphi_tx/d(q/p) = sigma kappa |v| a_x
+
+dphi_ty/dtx    = sigma kappa (q/p) [ (tx/|v|) a_y + |v| (-ty By - Bz) ]
+dphi_ty/dty    = sigma kappa (q/p) [ (ty/|v|) a_y + |v| (2 ty Bx - tx By) ]
+dphi_ty/d(q/p) = sigma kappa |v| a_y
+
+dphi_t/dtx     = sigma (tx/|v|) sqrt(1 + (m/|q|)^2 (q/p)^2) / c
+dphi_t/dty     = sigma (ty/|v|) sqrt(1 + (m/|q|)^2 (q/p)^2) / c
+dphi_t/d(q/p)  = sigma |v| (m/|q|)^2 (q/p) / (c sqrt(1 + (m/|q|)^2 (q/p)^2))
+```
+
+All the other elements are zero: q/p is constant (no energy loss), so its row is zero, and phi does not depend on x,
+y and t once the field gradients are neglected, so their columns are zero. In the code, `ax`, `ay` are a_x, a_y, `nv`
+is |v|, `kq` is sigma kappa (q/p) and `g` is the square root; the terms in parentheses are `dax_dtx`, `dax_dty`,
+`day_dtx`, `day_dty`.
+
 The covariance is transported as
 
 ```
@@ -412,8 +487,10 @@ The caller keeps F in `filter_step::F` for the smoother.
 **Approximations.** The field is read at every stage, but its derivatives with respect to the position (the field
 gradients) are neglected in A, which is exact for a uniform field.
 
-**Tests.** `jacobian_vs_finite_differences` in `kalman_propagator` (both directions); the pulls of the toy fits
-(section 5.3) check the transported covariance as a whole.
+**Tests.** `derivatives_vs_finite_differences` in `kalman_propagator` checks every element of A above against central
+differences of phi (general field, both directions, unit charge and alpha), and that the zero elements are exactly
+zero; `jacobian_vs_finite_differences` checks the integrated F (both directions); the pulls of the toy fits (section
+5.3) check the transported covariance as a whole.
 
 ### 2.4 Process noise matrix Q
 
@@ -655,22 +732,90 @@ x_{k|k} = x_{k|k-1} + K r
 C_{k|k} = (I - K H) C_{k|k-1} (I - K H)^T + K (V / w) K^T
 ```
 
-**Weight.** The weight w in (0, 1] scales the measurement variance as V / w: a measurement with a small weight pulls
-the state less. It is the hook for the deterministic annealing filter (section 4.1), where each wire side enters with
-its own weight; w = 1 is the ordinary Kalman update, and is the default value of the argument.
+**Weight.** The weight w scales the measurement variance as V / w: a measurement with a small weight pulls the state
+less. It is the hook for the deterministic annealing filter (section 4.1), where each wire side enters with its own
+weight in (0, 1]; w = 1 is the ordinary Kalman update, and is the default value of the argument.
 
-**Weight contract.** The weight must be positive. With w = 0 the variance V / w is infinite and the covariance becomes
-NaN (0 times infinity in the Joseph form); a negative weight is a negative variance. `update()` therefore throws
-`std::invalid_argument` for w <= 0 and for NaN, instead of returning a corrupted state. A caller that gives a
+**Weight contract.** The weight must be positive. Weights above 1 are accepted: they scale the measurement variance
+down (V / w < V), as for a more precise measurement; in the deterministic annealing filter the weights are in (0, 1].
+With w = 0 the variance V / w is infinite and the covariance becomes NaN (0 times infinity in the Joseph form); a
+negative weight is a negative variance. `update()` therefore throws `std::invalid_argument` for w <= 0 and for NaN,
+instead of returning a corrupted state. A caller that gives a
 measurement no weight must skip the update: the deterministic annealing filter, which drops the hypotheses below its
 minimum weight, never calls `update()` with w = 0 (it is not part of the library yet; this is the contract it will
 follow).
 
-**Joseph form.** The covariance is updated in Joseph form rather than as `C_{k|k} = (I - K H) C_{k|k-1}`. The two are
-equal for the optimal gain, but the short form subtracts two nearly equal matrices when the measurement is precise,
-and under rounding it can lose symmetry and positive definiteness. The Joseph form is a sum of two positive
-semidefinite terms: in exact arithmetic it is positive semidefinite for any gain, and in floating point it is much
-more robust under rounding than the short form, although not immune. The result is also symmetrised explicitly, as
+**Joseph form: derivation.** Let x be the true state on plane k, e_{k|k-1} = x_{k|k-1} - x the error of the prediction
+and eps = measured - h_k(x) the error of the measurement, with zero mean and
+
+```
+<e_{k|k-1} e_{k|k-1}^T> = C_{k|k-1},    <eps^2> = V,    <e_{k|k-1} eps> = 0     (prediction and measurement independent)
+```
+
+To first order, r = measured - h_k(x_{k|k-1}) = eps - H e_{k|k-1}, so the error of the updated state is
+
+```
+e_{k|k} = x_{k|k} - x = e_{k|k-1} + K (eps - H e_{k|k-1}) = (I - K H) e_{k|k-1} + K eps
+```
+
+and its covariance, the cross terms vanishing because e_{k|k-1} and eps are independent, is
+
+```
+C_{k|k} = <e_{k|k} e_{k|k}^T> = (I - K H) C_{k|k-1} (I - K H)^T + K V K^T          (Joseph form)
+```
+
+Nothing in this derivation uses the value of K: the Joseph form is the covariance of the updated state for any gain.
+
+**Equivalent forms.** With S = H C_{k|k-1} H^T + V and the optimal gain K = C_{k|k-1} H^T S^-1 (S is a scalar here, so
+S^-1 = 1/S), the Joseph form reduces to two other forms in common use. Expanding it:
+
+```
+C_{k|k} = C_{k|k-1} - K H C_{k|k-1} - C_{k|k-1} H^T K^T + K (H C_{k|k-1} H^T + V) K^T
+        = C_{k|k-1} - K H C_{k|k-1} - C_{k|k-1} H^T K^T + K S K^T
+```
+
+and for the optimal gain K S K^T = C_{k|k-1} H^T S^-1 S K^T = C_{k|k-1} H^T K^T, so the last two terms cancel:
+
+```
+C_{k|k} = C_{k|k-1} - K H C_{k|k-1} = (I - K H) C_{k|k-1}                          (short form)
+```
+
+The short form is also the information form
+
+```
+C_{k|k} = [ C_{k|k-1}^-1 + H^T V^-1 H ]^-1                                         (information form)
+```
+
+To show it, multiply the bracket by the short form and use C_{k|k-1}^-1 K = H^T S^-1 and
+H K = H C_{k|k-1} H^T S^-1 = (S - V) S^-1 = I - V S^-1:
+
+```
+[ C_{k|k-1}^-1 + H^T V^-1 H ] (C_{k|k-1} - K H C_{k|k-1})
+  = I - H^T S^-1 H C_{k|k-1} + H^T V^-1 H C_{k|k-1} - H^T V^-1 (I - V S^-1) H C_{k|k-1}
+  = I - H^T S^-1 H C_{k|k-1} + H^T V^-1 H C_{k|k-1} - H^T V^-1 H C_{k|k-1} + H^T S^-1 H C_{k|k-1}
+  = I
+```
+
+This is the Woodbury identity, [P^-1 + H^T V^-1 H]^-1 = P - P H^T (V + H P H^T)^-1 H P, with P = C_{k|k-1}.
+
+**Conditions of the equivalence.** The three forms are equal when
+
+- the gain is the optimal one, K = C_{k|k-1} H^T S^-1 (the Joseph form holds for any K; the short and the information
+  forms only for this one);
+- for the information form, C_{k|k-1} and V are invertible;
+- the arithmetic is exact.
+
+With a weight, V becomes V / w everywhere: in S, in the second term of the Joseph form and in the information form
+(V^-1 becomes w V^-1).
+
+**Why the Joseph form.** The library updates the covariance in Joseph form. It is a sum of two positive semidefinite
+terms, so in exact arithmetic it is positive semidefinite for any gain; and since it is correct for any K, a gain
+perturbed by rounding gives an error of second order in the perturbation, where the short form has a first-order error.
+The short form subtracts two nearly equal matrices when the measurement is precise, and under rounding it can lose
+symmetry and positive definiteness. The information form needs two 6 x 6 inversions (C_{k|k-1}^-1, then the bracket)
+and is fragile when C_{k|k-1} is very large, as in a fit started from an inflated prior: C_{k|k-1}^-1 is then tiny,
+H^T V^-1 H has rank 1, and the bracket is nearly singular in the directions not yet measured. The Joseph form is not
+immune to rounding, but it is much more robust than the other two. The result is also symmetrised explicitly, as
 (C + C^T) / 2, before it is stored in the symmetric matrix.
 
 **Outputs.**
@@ -686,14 +831,16 @@ prediction independently of the weight; for w = 1 it is r^2 / S. The residual af
 residual of the updated state: measured - predicted(x_{k|k}) to first order in x_{k|k} - x_{k|k-1}.
 
 **Implementation.** `filter.hpp`, `filter.cpp`: `update()` returns an `update_result` (`out`, `residual`, `chi2`,
-`residual_after`). The formulas are those of references [1] and [2].
+`residual_after`); the variance of the residual is the local `S`, the gain `K`, and I - K H the local `IKH`. The
+formulas are those of references [1] and [2].
 
 **Approximations.** The measurement model is linearised around x_{k|k-1} (extended Kalman filter): the update is
 exact for a linear model and the residual after the update is first order.
 
-**Tests.** `update_rejects_non_positive_weight` in `kalman_filter` (weight zero, negative or NaN rejected, default
-weight equal to 1, a small weight pulls less, chi2 independent of the weight); the pulls of the toy fits (section
-5.3).
+**Tests.** In `kalman_filter`: `update_rejects_non_positive_weight` (weight zero, negative or NaN rejected, default
+weight equal to 1, a small weight pulls less, a weight above 1 pulls more, chi2 independent of the weight) and
+`covariance_forms_agree` (Joseph, short and information forms equal for the optimal gain, with and without a weight);
+the pulls of the toy fits (section 5.3).
 
 ### 2.9 Smoother
 
@@ -747,7 +894,8 @@ functions (which duplicates code and can give slightly different numerical resul
 The engine exposes
 
 - `field()`, `calibration()`, `propagator_settings()`: the shared state;
-- `propagate(state, z_target, mass)`: `propagate` with the field and settings of the engine;
+- `propagate(state, z_target, hyp)`: `propagate` with the field and settings of the engine, for the particle
+  hypothesis `hyp`;
 - `wire_time(state, wire, side)`: `wire_time` with the calibration of the engine.
 
 The free functions stay available with explicit arguments (the engine calls them), for tests and for code that needs
@@ -799,13 +947,13 @@ using namespace sand::tracker::kalman;
 
 auto const& kf  = instance<engine>();
 auto const& cal = kf.calibration();
-double const m  = mass_from_pdg(13); // muon hypothesis
+auto const hyp  = hypothesis_from_pdg(13); // muon hypothesis: mass and |q| = 1
 
 wire_geometry const w(head, tail);   // ends from the wire description of the geometry service
 double tdc;                          // from the digit
 int side;                            // left-right hypothesis
 
-auto prop = kf.propagate(current, w.z(), m);
+auto prop = kf.propagate(current, w.z(), hyp);
 if (!prop) {
   // track lost
 }
@@ -832,7 +980,7 @@ The rule applies to configuration parameters, not to function arguments: the wei
 caller, and only the deterministic annealing filter passes a different value.
 
 Physical constants are not configuration and are not written as numbers either: they come from CLHEP (sections 0.2
-and 0.3) and masses from the particle table (`mass_from_pdg`).
+and 0.3) and masses and charges from the particle table (`hypothesis_from_pdg`).
 
 The only fixed number in the library is `s_wire_plane_tolerance` (section 2.5), a geometric sanity check of the wire
 description, not a physics or configuration value.
@@ -899,12 +1047,20 @@ The standalone tests are in `tests/standalone/kalman/` and are run by ctest. The
 - `helix_in_uniform_field`: helix in a uniform field against the analytic solution (radius
   R = p_{perp} / (kappa |q| B), with p_{perp} the momentum component perpendicular to the field, time of flight with
   the muon mass from the table);
+- `alpha_time_of_flight_and_momentum`: an alpha (|q| = 2, added to the particle table by the test) against the exact
+  kinematics: radius, time of flight with 1/beta = sqrt(1 + m^2/p^2), momentum |q| / |q/p|, and the same time of
+  flight as a unit charge of mass m/2;
+- `derivatives_vs_finite_differences`: every element of A = dphi/dx (section 2.3) against central differences of phi,
+  on 200 random states (general field, both directions, muon, alpha and proton), and the zero elements exactly zero;
+- `helix_parametrisation`: the relations of appendix A between the state and the helix parameters, against the
+  analytic helix and the propagator;
 - `round_trip`: propagation forward and back to the start plane;
 - `jacobian_vs_finite_differences`: the Jacobian F against finite differences, in both directions;
 - `backward_moving_particle`: a particle moving towards smaller z;
 - `fourth_order_in_non_uniform_field`: fourth-order convergence in a non-uniform field (the error ratio when the step
   is halved is about 16; it is 4 if stage 3 reuses the field of stage 2);
 - `straight_track_time_independent_of_mass`: straight track with a time of flight independent of the mass;
+- `hypothesis_is_checked`: rejection of a particle hypothesis with |q| <= 0, negative mass or NaN;
 - `settings_are_required`: rejection of unset propagation settings.
 
 `kalman_filter` (sections 2.5 to 2.9):
@@ -915,9 +1071,12 @@ The standalone tests are in `tests/standalone/kalman/` and are run by ctest. The
   central differences on 2000 random states and wires (straight and stereo, both sides, relative tolerance 1e-6 plus
   the rounding bound of the differences, which only matters for derivatives close to zero);
 - `wire_geometry_checks`: checks of the `wire_geometry` constructor;
-- `masses_from_pdg`: `mass_from_pdg` against `TDatabasePDG`;
-- `update_rejects_non_positive_weight`: `update()` rejecting a weight that is zero, negative or NaN, and the default
-  weight equal to 1;
+- `hypotheses_from_pdg`: `hypothesis_from_pdg` against `TDatabasePDG` (mass, |q| = 1 for the charged leptons, pions,
+  kaons and protons, exception for unknown codes and neutral particles);
+- `update_rejects_non_positive_weight`: `update()` rejecting a weight that is zero, negative or NaN, the default
+  weight equal to 1, and a weight above 1 accepted;
+- `covariance_forms_agree`: the Joseph, short and information forms of the covariance update (section 2.8) equal for
+  the optimal gain;
 - `pulls_on_toy_tracks`: pulls of the fitted parameters on toy tracks (section 5.3).
 
 `kalman_engine` (section 3):
@@ -942,7 +1101,9 @@ of a full simulation, in which the particle also crosses material.
 SAND, with the kinetic energy given in the tables. For each pair of consecutive true trajectory points of the primary
 inside the tracker (a cylinder of radius 1.5 m around the SAND axis, |x| < 1.5 m), the true state at the first point is
 propagated to the z of the second and compared with the true state there (propagated minus true). The momentum of the
-start state is the true momentum at the first point.
+start state is the true momentum at the first point; the particle hypothesis comes from `hypothesis_from_pdg()` and
+q/p = sign(q) |q| / p. All the samples have |q| = 1, and the numbers below did not change when the charge was added to
+the hypothesis.
 
 Reference sample, μ⁻ of 1 GeV kinetic energy: 13231 pairs of points. The propagation distance between the two points of
 a pair is 106.8 mm on average in z (rms 60.2 mm), 107.8 mm along the track (rms 60.8 mm). The statistical error on a
@@ -1040,6 +1201,84 @@ The same study with `n_toys` = 3000 (run outside ctest, which keeps 300 for its 
 All widths are within 1.5 standard deviations of 1, so the 1.094 of the 300-track sample is a fluctuation. The means are
 within 2.3 standard deviations of 0; the pulls of the parameters of one track are strongly correlated, so the twelve
 entries are not independent tests.
+
+## Appendix A. Relation to the helix parametrisation
+
+Other SAND track fits describe a track in a uniform field along x by the helix parameters (x, y, 1/R~,
+tan lambda_dip, phi_h) (phi_h is called phi in those fits; the subscript keeps it apart from the right-hand side phi of
+section 2.2). This appendix derives the relations between them and the state of section 2.1.
+
+**Helix.** Take the field B = (Bx, 0, 0) with Bx > 0, as in SAND. The bending plane is (z, y). From the equation of
+motion of section 2.2, dtau/ds = kappa (q/p) (tau x B) with tau x B = (0, tau_z Bx, -tau_y Bx): the transverse
+direction (tau_z, tau_y) rotates in the (z, y) plane, from z towards y when q > 0 (counterclockwise) and the other way
+when q < 0, with radius R = p_{perp} / (kappa |q| Bx), p_{perp} = p cos lambda_dip the momentum component
+perpendicular to the field. The component along the field is constant: p_x = p sin lambda_dip, which defines the dip
+angle lambda_dip from the bending plane. With phi_h the azimuth of the track point around the axis of the helix
+(zc, yc), and phi_{h0} its value at x = x0, the helix is
+
+```
+z = zc + R cos phi_h
+y = yc + R sin phi_h
+x = x0 + sign(q) R tan(lambda_dip) (phi_h - phi_{h0})
+```
+
+The particle moves towards increasing phi_h for q > 0 and decreasing phi_h for q < 0: its transverse arc length grows
+as R dphi_h sign(q), and x grows by tan(lambda_dip) per unit of transverse arc length. The direction of motion is
+
+```
+(p_x, p_y, p_z) = p ( sin lambda_dip,  sign(q) cos lambda_dip cos phi_h,  -sign(q) cos lambda_dip sin phi_h )
+```
+
+and the signed curvature is 1/R~ = sign(q) / R. (For Bx < 0, replace sign(q) by sign(q Bx) everywhere and Bx by |Bx|
+in R.)
+
+**Slopes.** Differentiating the helix with respect to phi_h, dz/dphi_h = -R sin phi_h, dy/dphi_h = R cos phi_h and
+dx/dphi_h = sign(q) R tan(lambda_dip), so
+
+```
+ty = (dy/dphi_h) / (dz/dphi_h) = -cot phi_h
+tx = (dx/dphi_h) / (dz/dphi_h) = -sign(q) tan(lambda_dip) / sin phi_h
+```
+
+and the direction of the state is sigma = sign(p_z) = -sign(q) sign(sin phi_h). The state cannot represent the points
+with sin phi_h = 0, where the track is parallel to the planes (section 2.1).
+
+**Charge over momentum.** From p cos lambda_dip = kappa |q| Bx R, with q in units of e:
+
+```
+q/p = sign(q) |q| cos(lambda_dip) / (kappa |q| Bx R) = cos(lambda_dip) (1/R~) / (kappa Bx)
+```
+
+|q| cancels: the helix fixes q/p, not p, as the curvature of section 2.2 depends on q/p only. The momentum then needs
+the particle hypothesis, p = |q| / |q/p| (section 2.1).
+
+**Inverse relations.** From a state (with sign(q) = sign(q/p)):
+
+```
+tan(lambda_dip) = sigma tx / sqrt(1 + ty^2)
+phi_h           = atan2(-sign(q) sigma, sign(q) sigma ty)
+1/R~            = (q/p) kappa Bx / cos(lambda_dip)
+```
+
+**Path length in a layer.** Since ds/dz = sigma |v| (section 2.2), a layer of thickness Delta z (small enough for v to
+be constant across it) is crossed over the path length (Delta l in the helix fits)
+
+```
+Delta s = |Delta z| |v|,    |v| = sqrt(1 + tx^2 + ty^2) = 1 / (cos(lambda_dip) |sin phi_h|)
+```
+
+the last form from 1 + tan^2(lambda_dip) / sin^2(phi_h) + cot^2(phi_h) = (1 + tan^2(lambda_dip)) / sin^2(phi_h).
+Between two points of the helix the path length is R |phi_{h1} - phi_{h0}| / cos(lambda_dip).
+
+**Covariance update.** The helix fits update the covariance in the information form
+C_{k|k} = [C_{k|k-1}^-1 + H^T V^-1 H]^-1. For the optimal gain it is equivalent to the Joseph form used by this
+library (section 2.8), which is the more robust of the two under rounding.
+
+**Check.** `helix_parametrisation` in `kalman_propagator` builds the state from the helix parameters with the relations
+above (both charge signs, positive, negative and zero dip, four values of phi_h, a unit charge and an alpha),
+propagates it with the Runge-Kutta propagator to another point of the helix, and compares it with the helix there:
+position within 10 nm, slopes within 1e-8, path length within 1e-4 relative; it also checks |v|, the momentum and the
+inverse relations.
 
 ## 6. References
 

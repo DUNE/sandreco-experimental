@@ -18,14 +18,15 @@ namespace sand::tracker::kalman {
     res.residual       = measured - pred.value;
     double const v     = variance / weight;
     vector_t const CHt = in.cov * pred.H;
-    double const r     = ROOT::Math::Dot(pred.H, CHt) + v;
+    double const S     = ROOT::Math::Dot(pred.H, CHt) + v; // variance of the residual
     res.chi2           = res.residual * res.residual / (ROOT::Math::Dot(pred.H, CHt) + variance);
 
-    vector_t const K = CHt / r;
+    vector_t const K = CHt / S;
     res.out.par += K * res.residual;
 
-    // Joseph form: (I - K H) C (I - K H)^T + K v K^T
-    matrix_t IKH = identity();
+    // Joseph form: (I - K H) C (I - K H)^T + K v K^T; see docs/kalman_filter.md, section 2.8, for its derivation and
+    // its equivalence with the short and the information forms
+    matrix_t IKH(ROOT::Math::SMatrixIdentity{});
     for (unsigned int i = 0; i < s_dim; ++i) {
       for (unsigned int j = 0; j < s_dim; ++j) {
         IKH(i, j) -= K[i] * pred.H[j];

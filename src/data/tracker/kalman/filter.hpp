@@ -11,9 +11,10 @@
  * @brief Kalman update for a scalar measurement, and Rauch-Tung-Striebel smoother.
  *
  * The update uses the Joseph form of the covariance, which is much more robust under rounding than the short form
- * (I - K H) C, and symmetrises the result explicitly. A weight w in (0, 1] scales the measurement variance as V / w:
+ * (I - K H) C, and symmetrises the result explicitly. A positive weight w scales the measurement variance as V / w:
  * this is the hook for the deterministic annealing filter, where each hypothesis (wire side) enters with its own
- * weight. A weight that is zero, negative or NaN is rejected.
+ * weight in (0, 1]. Weights above 1 are accepted and scale the variance down. A weight that is zero, negative or NaN
+ * is rejected.
  *
  * The formulas are in docs/kalman_filter.md, sections "2.8 Gain K and update" and "2.9 Smoother".
  */
@@ -31,19 +32,21 @@ namespace sand::tracker::kalman {
   /**
    * @brief Kalman update of a state with one scalar measurement.
    *
-   * Gain K = C H^T / (H C H^T + V / w), covariance in Joseph form. See docs/kalman_filter.md, section
+   * Gain K = C H^T / S with S = H C H^T + V / w, covariance in Joseph form. See docs/kalman_filter.md, section
    * "2.8 Gain K and update".
    *
-   * Contract on the weight: 0 < weight <= 1. A weight of 0 would make V / w infinite and the covariance NaN, so a
-   * weight that is not positive (including NaN) throws instead of failing silently. A caller that gives a measurement
-   * no weight at all (for example the deterministic annealing filter, for a hypothesis below its minimum weight) must
-   * skip the update, not call it with weight 0.
+   * Contract on the weight: weight > 0. The deterministic annealing filter uses weights in (0, 1]; a weight above 1 is
+   * accepted too and scales the measurement variance down (V / w < V), as for a more precise measurement. A weight of
+   * 0 would make V / w infinite and the covariance NaN, so a weight that is not positive (including NaN) throws instead
+   * of failing silently. A caller that gives a measurement no weight at all (for example the deterministic annealing
+   * filter, for a hypothesis below its minimum weight) must skip the update, not call it with weight 0.
    *
    * @param in        State on the measurement plane
    * @param pred      Predicted value and derivative row
    * @param measured  Measured value
    * @param variance  Measurement variance
-   * @param weight    DAF weight, 0 < weight <= 1. Defaults to 1, a normal measurement.
+   * @param weight    Weight of the measurement, > 0 (in (0, 1] for the DAF; above 1 scales V down). Defaults to 1, a
+   *                  normal measurement.
    * @return Updated state, residuals and chi2 increment
    * @throws std::invalid_argument if weight is not positive or is NaN
    */

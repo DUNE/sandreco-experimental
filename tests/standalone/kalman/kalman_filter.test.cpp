@@ -21,7 +21,7 @@
 using namespace sand::tracker::kalman;
 
 namespace {
-  double const m_mu   = mass_from_pdg(13); // MeV
+  particle_hypothesis const mu = hypothesis_from_pdg(13); // muon: mass from the table, |q| = 1
   double constexpr pi = CLHEP::pi;
 
   /// Calibration and Runge-Kutta settings of the toy detector: the library has no defaults, the tests set them.
@@ -60,7 +60,7 @@ namespace {
     std::vector<toy_hit> hits;
     auto const zs = plane_z();
     for (size_t i = 0; i < zs.size(); ++i) {
-      auto const r    = propagate(truth, zs[i], m_mu, bf, toy_prop);
+      auto const r    = propagate(truth, zs[i], mu, bf, toy_prop);
       double const th = plane_angle(i);
       double const nx = -std::sin(th), ny = std::cos(th);
       double const w  = nx * r->out.par[X] + ny * r->out.par[Y]; // coordinate across the wire
@@ -82,7 +82,7 @@ namespace {
     std::vector<filter_step> steps;
     state cur = seed;
     for (auto const& h : hits) {
-      auto const pr = propagate(cur, h.wire.z(), m_mu, bf, toy_prop);
+      auto const pr = propagate(cur, h.wire.z(), mu, bf, toy_prop);
       BOOST_REQUIRE(pr);
       auto const pred = wire_time(pr->out, h.wire, h.side, cal);
       auto const up   = update(pr->out, pred, h.tdc, cal.time_resolution * cal.time_resolution);
@@ -244,16 +244,23 @@ BOOST_AUTO_TEST_CASE(wire_geometry_checks) {
   BOOST_CHECK_THROW(wire_geometry({std::nan(""), 0., 0.}, {1., 0., 0.}), std::invalid_argument);
 }
 
-// Masses come from the particle table, once per code.
-BOOST_AUTO_TEST_CASE(masses_from_pdg) {
+// Masses and charges come from the particle table, once per code; the table gives the charge in units of |e|/3.
+BOOST_AUTO_TEST_CASE(hypotheses_from_pdg) {
   double const m_mu_table = TDatabasePDG::Instance()->GetParticle(13)->Mass() * CLHEP::GeV;
-  BOOST_CHECK_EQUAL(mass_from_pdg(13), m_mu_table);
-  BOOST_CHECK_EQUAL(mass_from_pdg(13), m_mu_table); // second call, from the cache
-  BOOST_CHECK_EQUAL(mass_from_pdg(-13), m_mu_table);
-  BOOST_CHECK_GT(mass_from_pdg(2212), mass_from_pdg(211));
-  BOOST_CHECK_GT(mass_from_pdg(211), mass_from_pdg(13));
-  BOOST_CHECK_GT(mass_from_pdg(13), mass_from_pdg(11));
-  BOOST_CHECK_THROW(mass_from_pdg(999999), std::invalid_argument);
+  BOOST_CHECK_EQUAL(hypothesis_from_pdg(13).mass, m_mu_table);
+  BOOST_CHECK_EQUAL(hypothesis_from_pdg(13).mass, m_mu_table); // second call, from the cache
+  BOOST_CHECK_EQUAL(hypothesis_from_pdg(-13).mass, m_mu_table);
+  BOOST_CHECK_GT(hypothesis_from_pdg(2212).mass, hypothesis_from_pdg(211).mass);
+  BOOST_CHECK_GT(hypothesis_from_pdg(211).mass, hypothesis_from_pdg(13).mass);
+  BOOST_CHECK_GT(hypothesis_from_pdg(13).mass, hypothesis_from_pdg(11).mass);
+  for (int pdg : {11, -11, 13, -13, 211, -211, 321, 2212, -2212}) {
+    BOOST_CHECK_EQUAL(hypothesis_from_pdg(pdg).abs_charge, 1.);
+  }
+  BOOST_CHECK_THROW(hypothesis_from_pdg(999999), std::invalid_argument);
+  // Neutral particles cannot be fitted
+  for (int pdg : {22, 2112, 111, 14}) {
+    BOOST_CHECK_THROW(hypothesis_from_pdg(pdg), std::invalid_argument);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -262,7 +269,7 @@ BOOST_AUTO_TEST_SUITE(filter)
 
 // The weight must be positive: weight 0 would make V / w infinite and the covariance NaN, a negative weight a negative
 // variance. Both, and NaN, throw instead of returning a corrupted state; a small positive weight is accepted and pulls
-// the state less than weight 1.
+// the state less than weight 1, a weight above 1 is accepted and pulls it more (V / w < V).
 BOOST_AUTO_TEST_CASE(update_rejects_non_positive_weight) {
   state s;
   for (unsigned int i = 0; i < s_dim; ++i) {
@@ -281,6 +288,10 @@ BOOST_AUTO_TEST_CASE(update_rejects_non_positive_weight) {
   BOOST_CHECK_EQUAL(full.out.cov(X, X), one.out.cov(X, X));
   BOOST_CHECK_GT(small.out.par[X], 0.);
   BOOST_CHECK_LT(small.out.par[X], one.out.par[X]);
+  auto const big = update(s, p, 2., 1., 4.);
+  BOOST_CHECK_GT(big.out.par[X], one.out.par[X]);
+  BOOST_CHECK_LT(big.out.cov(X, X), one.out.cov(X, X));
+  BOOST_CHECK_EQUAL(big.chi2, one.chi2);
   for (unsigned int i = 0; i < s_dim; ++i) {
     BOOST_CHECK(std::isfinite(small.out.par[i]));
     for (unsigned int j = 0; j < s_dim; ++j) {
@@ -289,6 +300,64 @@ BOOST_AUTO_TEST_CASE(update_rejects_non_positive_weight) {
   }
   // The chi2 increment uses the unweighted variance, so it does not depend on the weight
   BOOST_CHECK_EQUAL(small.chi2, one.chi2);
+}
+
+// For the optimal gain the Joseph form computed by update() equals the short form (I - K H) C and the information form
+// [C^-1 + H^T (V/w)^-1 H]^-1 (docs/kalman_filter.md, section 2.8), with and without a weight.
+BOOST_AUTO_TEST_CASE(covariance_forms_agree) {
+  std::mt19937 rng(777);
+  std::uniform_real_distribution<double> u(-1., 1.);
+  for (int n = 0; n < 100; ++n) {
+    // Random positive definite covariance M M^T + diagonal
+    matrix_t M;
+    for (unsigned int i = 0; i < s_dim; ++i) {
+      for (unsigned int j = 0; j < s_dim; ++j) {
+        M(i, j) = u(rng);
+      }
+    }
+    matrix_t const MMt = M * ROOT::Math::Transpose(M);
+    state s;
+    for (unsigned int i = 0; i < s_dim; ++i) {
+      for (unsigned int j = 0; j <= i; ++j) {
+        s.cov(i, j) = MMt(i, j) + (i == j ? 0.1 : 0.);
+      }
+    }
+    prediction p;
+    for (unsigned int i = 0; i < s_dim; ++i) {
+      p.H[i] = u(rng);
+    }
+    double const V = 0.5 + 0.5 * u(rng);
+    for (double w : {1., 0.3, 2.5}) {
+      auto const res = update(s, p, 1., V, w);
+      double const v = V / w;
+      // Short form
+      vector_t const CHt = s.cov * p.H;
+      double const S     = ROOT::Math::Dot(p.H, CHt) + v;
+      matrix_t IKH(ROOT::Math::SMatrixIdentity{});
+      for (unsigned int i = 0; i < s_dim; ++i) {
+        for (unsigned int j = 0; j < s_dim; ++j) {
+          IKH(i, j) -= CHt[i] / S * p.H[j];
+        }
+      }
+      matrix_t const C_short = IKH * s.cov;
+      // Information form
+      sym_matrix_t info = s.cov;
+      BOOST_REQUIRE(info.Invert());
+      for (unsigned int i = 0; i < s_dim; ++i) {
+        for (unsigned int j = 0; j <= i; ++j) {
+          info(i, j) += p.H[i] * p.H[j] / v;
+        }
+      }
+      BOOST_REQUIRE(info.Invert());
+      for (unsigned int i = 0; i < s_dim; ++i) {
+        for (unsigned int j = 0; j < s_dim; ++j) {
+          double const scale = std::sqrt(res.out.cov(i, i) * res.out.cov(j, j));
+          BOOST_CHECK_SMALL((res.out.cov(i, j) - C_short(i, j)) / scale, 1e-9);
+          BOOST_CHECK_SMALL((res.out.cov(i, j) - info(i, j)) / scale, 1e-9);
+        }
+      }
+    }
+  }
 }
 
 // Fit toy tracks with the TDC model: the fitted parameters on the last plane must have pulls with zero mean and unit
@@ -315,7 +384,7 @@ BOOST_AUTO_TEST_CASE(pulls_on_toy_tracks) {
     auto const hits = make_hits(truth, bf, cal, 10., rng);
 
     // Seed: truth at the first plane smeared within the seed covariance, iterated three times
-    auto const first = propagate(truth, hits.front().wire.z(), m_mu, bf, toy_prop)->out;
+    auto const first = propagate(truth, hits.front().wire.z(), mu, bf, toy_prop)->out;
     state seed       = first;
     seed.cov         = seed_cov();
     for (unsigned int i = 0; i < s_dim; ++i) {
@@ -331,7 +400,7 @@ BOOST_AUTO_TEST_CASE(pulls_on_toy_tracks) {
     }
     auto const sm = smooth(steps);
     BOOST_REQUIRE(sm);
-    auto const last_truth  = propagate(truth, hits.back().wire.z(), m_mu, bf, toy_prop)->out;
+    auto const last_truth  = propagate(truth, hits.back().wire.z(), mu, bf, toy_prop)->out;
     state const* fitted[2] = {&steps.back().filtered, &sm->front()};
     state const* truths[2] = {&last_truth, &first};
     for (int w = 0; w < 2; ++w) {
