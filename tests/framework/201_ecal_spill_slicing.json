@@ -10,15 +10,7 @@
     "sand::root_tgeomanager": {
       "geometry": "test/SAND_opt3_DRIFT1.sand-events-in-sand_inner_volume.2.edep.root"
     },
-    "sand::geoinfo": {},
-    "sand::grain::geant_gdml_parser": {
-      "gdml-masks": {
-        "path": "geometries/grain/grain-masks_3mm_32x32/main.gdml"
-      },
-      "gdml-lenses": {
-        "path": "geometries/grain/grain-lenses/glass_Biglenses_Bigcryo_XeDopedOk_asbuilt_mod.gdml"
-      }
-    }
+    "sand::geoinfo": {}
   },
   "contexts": {
     "keys": 2,
@@ -30,21 +22,37 @@
   },
   "run": [
     {
-      "sand::root::tree_streamer": {
-        "uri": "test/ecal_fast_digi.root",
-        "tree": "ecal_fast_digi"
+      "sand::ecal::optical_simulation": {
+        "light_yield": 18.5
       },
-      "read": [
-        "ecal_digits"
-      ]
+      "reqs": {},
+      "prods": {
+        "pes": "ecal_photo_electrons"
+      }
     },
     {
-      "sand::ecal::spill_slicer_placeholder": {},
+      "sand::ecal::fast_digi": {
+        "int_time_window": 30.0,
+        "dead_time_window": 0.0,
+        "pe_threshold": 2.5,
+        "constant_fraction": 0.15
+      },
+      "reqs": {
+        "pes": "ecal_photo_electrons"
+      },
+      "prods": {
+        "digi": "ecal_digits"
+      }
+    },
+    {
+      "sand::ecal::spill_slicer": {
+        "print_output": true
+      },
       "reqs": {
         "digi": "ecal_digits"
       },
       "prods": {
-        "digit_slices": "digit_ecal_slices"
+        "timeranges": "ecal_timeranges"
       }
     }
   ]

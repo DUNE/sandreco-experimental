@@ -56,12 +56,12 @@
       ]
     },
     {
-      "sand::ecal::spill_slicer_placeholder": {},
+      "sand::ecal::spill_slicer": {},
       "reqs": {
         "digi": "ecal_digits"
       },
       "prods": {
-        "digit_slices": "digit_ecal_slices"
+        "timeranges": "ecal_timeranges"
       }
     },
     {
@@ -70,10 +70,11 @@
         "keep_incomplete": true
       },
       "reqs": {
-        "digit_slices": "digit_ecal_slices"
+        "digi": "ecal_digits",
+        "timeranges": "ecal_timeranges"
       },
       "prods": {
-        "cell_pair_slices": "ecal_cell_pair_slices"
+        "cell_pairs": "ecal_cell_pairs"
       }
     },
     {
@@ -83,10 +84,10 @@
         "apply_attenuation_correction": true
       },
       "reqs": {
-        "cell_pair_slices": "ecal_cell_pair_slices"
+        "cell_pairs": "ecal_cell_pairs"
       },
       "prods": {
-        "reco_cell_slices": "ecal_reco_cell_slices"
+        "reco_cells": "ecal_reco_cells"
       }
     },
     {
@@ -95,7 +96,7 @@
         "tree": "ecal_reco_cell_builder"
       },
       "write": [
-        "ecal_reco_cell_slices"
+        "ecal_reco_cells"
       ]
     }
   ]

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/data.h>
 #include <common/sand.h>
 #include <common/timerange.h>
 #include <ecal/cell_pair.h>
@@ -25,4 +26,4 @@ namespace sand::ecal {
 
 } // namespace sand::ecal
 
-UFW_DECLARE_UNMANAGED_DATA(sand::ecal::reco_cell);
+SAND_DATA_COLLECTION(sand::ecal, reco_cell, reco_cells)

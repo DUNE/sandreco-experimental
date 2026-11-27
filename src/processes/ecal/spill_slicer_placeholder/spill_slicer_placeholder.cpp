@@ -18,7 +18,7 @@ namespace sand::ecal {
    * \subsection Requirements
    * | Name | Type | Comment |
    * |------|------|---------|
-   * | `digi` | `sand::ecal::digits_container` | Input digitized signals |
+   * | `digi` | `sand::ecal::digits` | Input digitized signals |
    *
    * \subsection Products
    * | Name | Type | Comment |
@@ -29,16 +29,16 @@ namespace sand::ecal {
   void spill_slicer_placeholder::configure(const ufw::config& cfg) { process::configure(cfg); }
 
   spill_slicer_placeholder::spill_slicer_placeholder()
-    : process({{"digi", "sand::ecal::digits_container"}}, {{"digit_slices", "sand::ecal::digit_slices_container"}}) {
+    : process({{"digi", "sand::ecal::digits"}}, {{"digit_slices", "sand::ecal::digit_slices_container"}}) {
     UFW_DEBUG("Creating ECAL digit spill slicer process at {}", fmt::ptr(this));
   }
 
   void spill_slicer_placeholder::run() {
     UFW_DEBUG("Running ECAL digit spill slicer process at {}", fmt::ptr(this));
-    auto& digi         = get<sand::ecal::digits_container>("digi");
+    const auto& digi   = get<sand::ecal::digits>("digi");
     auto& digit_slices = set<sand::ecal::digit_slices_container>("digit_slices");
-    digit_slices.collection.emplace_back(digi.digits);
-    UFW_INFO("ECAL digit spill slicer: input digits = {}, output slices = {}", digi.digits.size(),
+    digit_slices.collection.emplace_back(digi.begin(), digi.end());
+    UFW_INFO("ECAL digit spill slicer: input digits = {}, output slices = {}", digi.size(),
              digit_slices.collection.size());
   }
 } // namespace sand::ecal

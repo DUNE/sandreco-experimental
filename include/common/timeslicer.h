@@ -27,7 +27,7 @@ namespace sand::reco {
       It begin() const { return m_begin; }
       It end() const { return m_end; }
       bool empty() const { return m_begin == m_end; }
-      std::size_t size() const { return std::distance(m_begin(), m_end()); }
+      std::size_t size() const { return std::distance(m_begin, m_end); }
       It m_begin;
       It m_end;
     };

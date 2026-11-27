@@ -16,7 +16,7 @@ namespace sand::ecal {
    * the production of scintillation photons in the ECAL fibers. It accounts for 
    * light yield, attenuation along the fiber length, and the scintillation time 
    * distribution (using an acceptance-rejection method). The result is a collection 
-   * of photo-electrons (\c sand::ecal::pes_container) with arrival times at the 
+   * of photo-electrons (\c sand::ecal::pes) with arrival times at the
    * PMT ends.
    *
    * \subsection Configuration
@@ -36,7 +36,7 @@ namespace sand::ecal {
    * \subsection Products
    * | Name | Type | Comment |
    * |------|------|---------|
-   * | `pes` | `sand::ecal::pes_container` | Photo-electrons produced |
+   * | `pes` | `sand::ecal::pes` | Photo-electrons produced |
    */
 
   /// Configure the optical simulation process by loading parameters from config
@@ -47,7 +47,7 @@ namespace sand::ecal {
   }
 
   /// Constructor: Initialize the optical simulation process with output PES data
-  optical_simulation::optical_simulation() : process({}, {{"pes", "sand::ecal::pes_container"}}) {
+  optical_simulation::optical_simulation() : process({}, {{"pes", "sand::ecal::pes"}}) {
     UFW_DEBUG("Creating ECAL optical simulation process at {}", fmt::ptr(this));
   }
 
@@ -58,7 +58,7 @@ namespace sand::ecal {
     const auto& tree  = instance<sand::edep_reader>();
     const auto& gecal = instance<geoinfo>().ecal();
     // Get output photo-electron collection
-    auto& pes = set<sand::ecal::pes_container>("pes");
+    auto& pes = set<sand::ecal::pes>("pes");
 
     // Process each trajectory from the energy deposit record
     for (const auto& trj : tree) {
@@ -107,12 +107,10 @@ namespace sand::ecal {
             // Calculate total arrival time: initial time + scintillation + propagation
             auto arrival_time = h_t + scintillation_time(fiber.scintillation_rise_time, fiber.scintillation_decay_time)
                               + propagation_time(l, fiber.light_velocity);
-            // Create photo-electron with truth hit ID and calculated arrival time
-            pes_container::photo_electron pe_(hit.GetId(), arrival_time);
             // Build complete channel ID from cell geometry
             channel_id chid = gecal.channel({cid, fl});
-            // Store photo-electron in output collection
-            pes.collection[chid].emplace_back(std::move(pe_));
+            // Store the channel, truth hit and arrival time in the flat collection.
+            pes.emplace_back(chid, hit.GetId(), arrival_time);
           }
         }
       }

@@ -5,6 +5,10 @@
 
 #include <ufw/factory.hpp>
 
+#include <algorithm>
+#include <map>
+#include <vector>
+
 namespace sand::ecal {
   /**
    * \class sand::ecal::fast_digi
@@ -33,12 +37,12 @@ namespace sand::ecal {
    * \subsection Requirements
    * | Name | Type | Comment |
    * |------|------|---------|
-   * | `pes` | `sand::ecal::pes_container` | Input photo-electron data from PMTs |
+   * | `pes` | `sand::ecal::pes` | Input photo-electron data from PMTs |
    *
    * \subsection Products
    * | Name | Type | Comment |
    * |------|------|---------|
-   * | `digi` | `sand::ecal::digits_container` | Digitized signals after processing |
+   * | `digi` | `sand::ecal::digits` | Digitized signals after processing |
    */
 
   /// Configure digitization parameters from configuration file
@@ -55,7 +59,7 @@ namespace sand::ecal {
   }
 
   /// Constructor: Initialize digitization process with PES input and DIGI output
-  fast_digi::fast_digi() : process({{"pes", "sand::ecal::pes_container"}}, {{"digi", "sand::ecal::digits_container"}}) {
+  fast_digi::fast_digi() : process({{"pes", "sand::ecal::pes"}}, {{"digi", "sand::ecal::digits"}}) {
     UFW_DEBUG("Creating a ecal fast digitization process at {}", fmt::ptr(this));
   }
 
@@ -66,12 +70,18 @@ namespace sand::ecal {
     // Get ECAL geometry information
     const auto& gecal = instance<geoinfo>().ecal();
     // Get input photo-electron collection
-    auto& pes = get<sand::ecal::pes_container>("pes");
+    const auto& pes = get<sand::ecal::pes>("pes");
     // Get output digitized signal collection
-    auto& digi = set<sand::ecal::digits_container>("digi");
+    auto& digi = set<sand::ecal::digits>("digi");
+
+    // Group the flat input locally, preserving each channel's original PE order.
+    std::map<channel_id, std::vector<pe>> channel_pes;
+    for (const auto& photo_electron : pes) {
+      channel_pes[photo_electron.channel].push_back(photo_electron);
+    }
 
     // Process photo-electrons for each PMT channel
-    for (auto [pmt, pe_collection] : pes.collection) {
+    for (auto& [pmt, pe_collection] : channel_pes) {
       // Sort photo-electrons by arrival time for temporal processing
       std::sort(pe_collection.begin(), pe_collection.end(),
                 [](const auto& a, const auto& b) { return a.arrival_time < b.arrival_time; });
@@ -95,7 +105,7 @@ namespace sand::ecal {
           auto tdc = std::next(start_pe, int(m_constant_fraction * pe_count))->arrival_time;
 
           // Create digitized signal with PMT channel, timing window, and measurements
-          digits_container::digit signal(
+          digit signal(
               pmt, tdc,
               // Calculate ADC value proportional to collected photo-electrons
               // for now, we just use the number of PEs as the ADC value.
@@ -113,7 +123,7 @@ namespace sand::ecal {
             it++;
           }
           // Store the digitized signal in output collection
-          digi.digits.push_back(signal);
+          digi.push_back(signal);
 
           // Skip photo-electrons in the dead time window after signal detection
           while (this_pe != pe_collection.end() && this_pe->arrival_time < end_int_window + m_dead_time_window) {

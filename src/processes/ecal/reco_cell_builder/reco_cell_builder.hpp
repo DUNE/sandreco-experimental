@@ -4,6 +4,7 @@
 
 namespace sand::ecal {
 
+  /// Reconstructs a flat collection of cells independently from complete, unambiguous pairs.
   class reco_cell_builder : public ufw::process {
    public:
     reco_cell_builder();

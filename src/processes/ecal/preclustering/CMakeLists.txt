@@ -1,0 +1,5 @@
+sandreco_add_process(sand_ecal_preclustering)
+
+target_sources(sand_ecal_preclustering PRIVATE preclustering.cpp)
+
+target_link_libraries(sand_ecal_preclustering PRIVATE sand_geoinfo)
