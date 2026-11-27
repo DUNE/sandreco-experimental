@@ -244,8 +244,10 @@ x = (x, y, tx, ty, q/p, t)        at the plane z
 ```
 
 The time is part of the state, so the fit determines the track time together with the trajectory. This is needed
-inside the 10 μs spill, where the time of each track is not known in advance. The track t0, in the sense used by
-the reconstruction, is the value of t on the first (or vertex) plane.
+inside the 10 μs spill, where the time of each track is not known in advance. For the same reason the measurement
+of the final fit is the raw TDC time and not a drift distance computed before the fit, which would need the track time
+from outside (section 2.5, "Two measurement models"). The track t0, in the sense used by the reconstruction, is the
+value of t on the first (or vertex) plane.
 
 The covariance `C` is the symmetric 6 x 6 matrix of the same parameters, in the same order and units
 (`sym_matrix_t`).
@@ -526,6 +528,36 @@ state on its plane. Two models are provided (header `measurement.hpp`):
 Both need the state on the wire plane (`state.z == wire.z()`) and return a `prediction`: the predicted value and its
 derivative row `H` = d(value)/d(state) (section 2.6).
 
+**Two measurement models.** The two models measure different quantities of the same wire hit (the formulas are given
+below in this section):
+
+| | `wire_time` | `wire_position` |
+|-|-------------|-----------------|
+| Measured value | the TDC time of the digit | 0: the track passes on the wire |
+| Prediction | t_{TDC} = t + L / v_w + side * d / v_d + t0_offset | n . Delta |
+| Units of the residual | ns | mm |
+| Variance V (section 2.7) | sigma_t^2, with sigma_t = `time_resolution` | flat over the cell |
+| Needs the track time | yes: t enters the prediction | no |
+| Used in | final fit | track finding |
+
+The filter does not know what the measurement is: `update()` (section 2.8) needs only the measured value, the
+prediction h with its row H, and V. The residual r and its variance S have the units of the measurement (ns and ns^2,
+or mm and mm^2), and the gain K = C H^T / S converts them to the units of the state: K_i has the units of parameter i
+divided by those of the measurement, so K r is a change of the state. The same `update()` therefore serves both
+models. Each update is independent of the others, so the two models could even be mixed in one fit, one per wire;
+the reconstruction does not do it.
+
+*Why the raw TDC time is the measurement.* An alternative is to convert the TDC time into a distance from the wire (a
+drift radius) before the fit, and to fit the radii. The conversion needs the track time, to subtract it from the TDC
+time, and the position along the wire, to subtract the propagation time of the signal L / v_w. Neither is known in
+advance in the spill (section 2.1). In the `wire_time` model they are the state parameter t and the quantity L
+computed from the state, so the fit estimates them together with the trajectory instead of taking them from outside.
+
+*Linear and non-linear model.* `wire_position` is exactly linear in the state, n . Delta = nx (x - W0x) + ny (y - W0y):
+its H is exact for any state, and the update with it is a true linear Kalman filter, with no linearisation error.
+`wire_time` is non-linear in the slopes (through rho and the product t_n t_u in d and L) and is linearised around the
+predicted state: the update with it is an extended Kalman filter (section 2.8).
+
 **Wire geometry.** A wire is described by `wire_geometry`, built from its two ends in the global frame: `head` is the
 readout end W0 and `tail` the far end. The models assume that the wire lies in a plane of constant z, so the
 constructor checks it: it throws `std::invalid_argument` if `|head.z - tail.z|` exceeds `s_wire_plane_tolerance` =
@@ -633,7 +665,8 @@ Used in track finding, with the wire position as measurement (value 0) and a fla
 the drift is linear in the distance (constant drift velocity); the time of flight from the plane to the closest
 approach point is neglected.
 
-**Tests.** In `kalman_filter`: `distance_to_wire`, `wire_geometry_checks`; in `kalman_engine`:
+**Tests.** In `kalman_filter`: `distance_to_wire`, `wire_geometry_checks`, `wire_position_is_linear` (H independent of
+the state and h(x + dx) = h(x) + H dx for large changes of position and slopes); in `kalman_engine`:
 `wire_time_matches_free_function`.
 
 ### 2.6 Projection matrix H
@@ -831,15 +864,22 @@ prediction independently of the weight; for w = 1 it is r^2 / S. The residual af
 residual of the updated state: measured - predicted(x_{k|k}) to first order in x_{k|k} - x_{k|k-1}.
 
 **Implementation.** `filter.hpp`, `filter.cpp`: `update()` returns an `update_result` (`out`, `residual`, `chi2`,
-`residual_after`); the variance of the residual is the local `S`, the gain `K`, and I - K H the local `IKH`. The
-formulas are those of references [1] and [2].
+`residual_after`); the variance of the residual is the local `S`, the gain `K`, and I - K H the local `IKH`. The code
+is written in matrix form, as the formulas: the outer products K H and K K^T are `ROOT::Math::TensorProd(K, H)` and
+`ROOT::Math::TensorProd(K, K)`, so that `IKH = I - TensorProd(K, H)` and `C += v * TensorProd(K, K)`, with v = V / w.
+The symmetrisation is `detail::symmetrize()`, which returns (C + C^T) / 2 as a `sym_matrix_t`: it is a helper
+because SMatrix does not allow assigning a general matrix to a symmetric one, so the copy into the symmetric
+covariance must be written element by element; taking the mean of C and C^T, rather than one triangle, also removes
+the rounding asymmetries of the product. The formulas are those of references [1] and [2].
 
 **Approximations.** The measurement model is linearised around x_{k|k-1} (extended Kalman filter): the update is
-exact for a linear model and the residual after the update is first order.
+exact for a linear model, such as `wire_position`, and for the non-linear `wire_time` the residual after the update is
+first order (section 2.5, "Two measurement models").
 
 **Tests.** In `kalman_filter`: `update_rejects_non_positive_weight` (weight zero, negative or NaN rejected, default
 weight equal to 1, a small weight pulls less, a weight above 1 pulls more, chi2 independent of the weight) and
-`covariance_forms_agree` (Joseph, short and information forms equal for the optimal gain, with and without a weight);
+`covariance_forms_agree` (Joseph, short and information forms equal for the optimal gain, with and without a weight),
+`symmetrize_takes_symmetric_part` ((C + C^T) / 2 exactly, a symmetric matrix unchanged bit for bit);
 the pulls of the toy fits (section 5.3).
 
 ### 2.9 Smoother
@@ -867,8 +907,9 @@ the first step). Since the predicted covariance is stored as it was used by the 
 the prediction would be included automatically; there is none yet, as the library has no material model (section
 2.4).
 
-**Implementation.** `smooth()` in `filter.cpp`; the gain is the local `Gk`, the smoothed covariance is symmetrised
-as in the update. The function returns nothing if a predicted covariance cannot be inverted.
+**Implementation.** `smooth()` in `filter.cpp`; the gain is the local `Gk`, the difference C_{k+1|N} - C_{k+1|k}
+the local `dC`, and the smoothed covariance is symmetrised with `detail::symmetrize()`, as in the update (section
+2.8). The function returns nothing if a predicted covariance cannot be inverted.
 
 **Approximations.** Those of the filter: the smoother uses the Jacobians of the forward pass, linearised around the
 filtered states.
@@ -995,10 +1036,12 @@ Everything in `sand::tracker::kalman` is the public interface, used by the recon
 The nested namespace `sand::tracker::kalman::detail` holds helpers that are not part of that interface:
 
 - `detail::derivatives()`: right-hand side of the equations of motion and its Jacobian, used by `propagate()`;
-- `detail::wire_distance()`: distance of closest approach and position along the wire, used by `wire_time()`.
+- `detail::wire_distance()`: distance of closest approach and position along the wire, used by `wire_time()`;
+- `detail::symmetrize()`: symmetric part (C + C^T) / 2 of a general matrix, used by `update()` and `smooth()` to store
+  the new covariance (section 2.8).
 
 Modules should not call them. They are declared in the headers, rather than hidden in the `.cpp` files, only because
-the standalone tests check them directly against analytic results and finite differences.
+the standalone tests check them directly against analytic results, finite differences and exact expectations.
 
 ## 4. Extensions
 
@@ -1071,12 +1114,16 @@ The standalone tests are in `tests/standalone/kalman/` and are run by ctest. The
   central differences on 2000 random states and wires (straight and stereo, both sides, relative tolerance 1e-6 plus
   the rounding bound of the differences, which only matters for derivatives close to zero);
 - `wire_geometry_checks`: checks of the `wire_geometry` constructor;
+- `wire_position_is_linear`: the row H of `wire_position` independent of the state, and h(x + dx) = h(x) + H dx for
+  large changes of the position and of the slopes (section 2.5);
 - `hypotheses_from_pdg`: `hypothesis_from_pdg` against `TDatabasePDG` (mass, |q| = 1 for the charged leptons, pions,
   kaons and protons, exception for unknown codes and neutral particles);
 - `update_rejects_non_positive_weight`: `update()` rejecting a weight that is zero, negative or NaN, the default
   weight equal to 1, and a weight above 1 accepted;
 - `covariance_forms_agree`: the Joseph, short and information forms of the covariance update (section 2.8) equal for
   the optimal gain;
+- `symmetrize_takes_symmetric_part`: `detail::symmetrize()` equal to (C + C^T) / 2 element by element, and an exactly
+  symmetric matrix returned unchanged, bit for bit;
 - `pulls_on_toy_tracks`: pulls of the fitted parameters on toy tracks (section 5.3).
 
 `kalman_engine` (section 3):

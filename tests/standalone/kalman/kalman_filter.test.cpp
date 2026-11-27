@@ -263,6 +263,30 @@ BOOST_AUTO_TEST_CASE(hypotheses_from_pdg) {
   }
 }
 
+// wire_position is exactly linear in the state (docs/kalman_filter.md, section 2.5): its row H does not depend on the
+// state, and h(x + dx) = h(x) + H dx for any dx, also for large changes of the position and of the slopes.
+BOOST_AUTO_TEST_CASE(wire_position_is_linear) {
+  std::mt19937 rng(99);
+  std::uniform_real_distribution<double> u(-1., 1.);
+  for (int n = 0; n < 100; ++n) {
+    auto const wire = make_wire(500., pi * u(rng), 100. * u(rng), 100. * u(rng));
+    state a, b;
+    a.z = b.z = wire.z();
+    vector_t const scale{500., 500., 2., 2., 1e-3, 100.};
+    for (unsigned int i = 0; i < s_dim; ++i) {
+      a.par[i] = scale[i] * u(rng);
+      b.par[i] = scale[i] * u(rng);
+    }
+    auto const pa = wire_position(a, wire);
+    auto const pb = wire_position(b, wire);
+    for (unsigned int i = 0; i < s_dim; ++i) {
+      BOOST_CHECK_EQUAL(pa.H[i], pb.H[i]);
+    }
+    double const linear = pa.value + ROOT::Math::Dot(pa.H, b.par - a.par);
+    BOOST_CHECK_SMALL(pb.value - linear, 1e-9 * scale[X]);
+  }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(filter)
@@ -355,6 +379,34 @@ BOOST_AUTO_TEST_CASE(covariance_forms_agree) {
           BOOST_CHECK_SMALL((res.out.cov(i, j) - C_short(i, j)) / scale, 1e-9);
           BOOST_CHECK_SMALL((res.out.cov(i, j) - info(i, j)) / scale, 1e-9);
         }
+      }
+    }
+  }
+}
+
+// detail::symmetrize() returns (C + C^T) / 2 exactly, and an exactly symmetric matrix unchanged, bit for bit
+// (docs/kalman_filter.md, section 2.8).
+BOOST_AUTO_TEST_CASE(symmetrize_takes_symmetric_part) {
+  std::mt19937 rng(4242);
+  std::uniform_real_distribution<double> u(-1., 1.);
+  for (int n = 0; n < 100; ++n) {
+    matrix_t A;
+    for (unsigned int i = 0; i < s_dim; ++i) {
+      for (unsigned int j = 0; j < s_dim; ++j) {
+        A(i, j) = u(rng);
+      }
+    }
+    sym_matrix_t const S = detail::symmetrize(A);
+    for (unsigned int i = 0; i < s_dim; ++i) {
+      for (unsigned int j = 0; j < s_dim; ++j) {
+        BOOST_CHECK_EQUAL(S(i, j), 0.5 * (A(i, j) + A(j, i)));
+      }
+    }
+    matrix_t const sym   = A + ROOT::Math::Transpose(A); // exactly symmetric
+    sym_matrix_t const T = detail::symmetrize(sym);
+    for (unsigned int i = 0; i < s_dim; ++i) {
+      for (unsigned int j = 0; j < s_dim; ++j) {
+        BOOST_CHECK_EQUAL(T(i, j), sym(i, j));
       }
     }
   }

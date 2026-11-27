@@ -59,10 +59,10 @@
  * @namespace sand::tracker::kalman::detail
  * @brief Helpers that are not part of the public interface of the library.
  *
- * The functions in this namespace (detail::derivatives(), detail::wire_distance()) are building blocks of the public
- * functions propagate() and wire_time(). Reconstruction modules should not call them. They are declared in the
- * headers, and not hidden in the .cpp files, only because the standalone tests check them directly against analytic
- * results and finite differences. See docs/kalman_filter.md, section "3.5 Public interface and namespace detail".
+ * The functions in this namespace (detail::derivatives(), detail::wire_distance(), detail::symmetrize()) are building
+ * blocks of the public functions propagate(), wire_time(), update() and smooth(). Reconstruction modules should not
+ * call them. They are declared in the headers, and not hidden in the .cpp files, only because the standalone tests
+ * check them directly against analytic results, finite differences and exact expectations. See docs/kalman_filter.md, section "3.5 Public interface and namespace detail".
  */
 
 namespace sand::tracker::kalman {

@@ -76,4 +76,23 @@ namespace sand::tracker::kalman {
    */
   std::optional<std::vector<state>> smooth(const std::vector<filter_step>& steps);
 
+  namespace detail {
+
+    /**
+     * @brief Symmetric part (C + C^T) / 2 of a general 6 x 6 matrix, as a symmetric matrix.
+     *
+     * update() and smooth() compute the new covariance as a general matrix_t and store it in a sym_matrix_t. SMatrix
+     * does not allow assigning a general matrix to a symmetric one, so the copy has to be written element by element;
+     * this helper is that copy. Taking (C + C^T) / 2, instead of one of the two triangles, also removes the small
+     * asymmetries that rounding leaves in a product such as A C A^T. For a matrix that is already exactly symmetric
+     * the result is the same matrix, bit for bit.
+     *
+     * See docs/kalman_filter.md, sections "2.8 Gain K and update" and "3.5 Public interface and namespace detail".
+     * @param C General matrix, symmetric up to rounding
+     * @return Symmetric matrix with elements (C(i, j) + C(j, i)) / 2
+     */
+    sym_matrix_t symmetrize(const matrix_t& C);
+
+  } // namespace detail
+
 } // namespace sand::tracker::kalman
