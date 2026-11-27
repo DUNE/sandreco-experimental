@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
 #include <string>
 
 namespace {
@@ -35,7 +36,32 @@ namespace {
     ~temp_table() { std::filesystem::remove(path); }
   };
 
-  std::string const light_nuclei = std::string{SAND_PARTICLE_TABLE_DIR} + "/light_nuclei.txt";
+  std::string const light_nuclei = std::string{SAND_PARTICLE_TABLE_DIR} + "/light_nuclei.json";
+
+  /// A valid particle entry of the extra table.
+  std::string const valid_entry = R"({ "pdg": 9900002, "name": "x", "class": "Test", "mass": 1.5, "charge": 1 })";
+
+  /// @return an extra table in JSON with the given entries of the "particles" array.
+  std::string table_json(std::string const& entries) {
+    return R"({ "source": "test", "particles": [ )" + entries + " ] }";
+  }
+
+  /// Checks that the table built with `extra_table` = `path` throws invalid_table, with a message naming the file and
+  /// containing each of `parts`.
+  void check_invalid(std::filesystem::path const& path, std::initializer_list<std::string> parts) {
+    try {
+      sand::particle_table const table{config_with_extra_table(path)};
+      BOOST_ERROR("no invalid_table for " << path);
+    } catch (sand::particle_table::invalid_table const& e) {
+      std::string const what = e.what();
+      BOOST_TEST_CONTEXT(what) {
+        BOOST_TEST(what.find(path.string()) != std::string::npos);
+        for (auto const& part : parts) {
+          BOOST_TEST(what.find(part) != std::string::npos, "'" << part << "' in the message");
+        }
+      }
+    }
+  }
 
 } // namespace
 
@@ -95,67 +121,140 @@ BOOST_AUTO_TEST_CASE(unknown_code) {
 }
 
 BOOST_AUTO_TEST_CASE(extra_table_adds_and_overrides) {
-  temp_table const extra{"sand_particle_table_test.txt", R"(# comment
-#    i   NAME.............  KF AP   CLASS      Q        MASS     WIDTH  2*I+1 I3 2*S+1 FLVR TrkCod N(dec)
-    1 fake_proton        2212  1 100 Test        6 1.500000e+00 0.000000e+00 -100 -1 -100 -1   -1   0
-    2 newpart         9900001  1 100 Exotic     -3 2.000000e+00 1.000000e-03 -100 -1 -100 -1   -1   2
-#----------------------------------------------------------------------
-         1     0   5.00000e-01   2       13      -13                                     mu-        mu+
-         2     0   5.00000e-01   2       11      -11                                     e-         e+
-
-    3 antinewpart    -9900001       2     0
-)"};
+  temp_table const extra{"sand_particle_table_test.json", R"({
+  "source": "test",
+  "particles": [
+    { "pdg": 2212, "name": "fake_proton", "class": "Test", "mass": 1500.0, "charge": 2 },
+    { "pdg": 9900001, "name": "newpart", "class": "Exotic", "mass": 2000, "charge": -1 },
+    { "pdg": -9900001, "name": "antinewpart", "class": "Exotic", "mass": 2000.5, "charge": 1 },
+    { "pdg": -9900005, "name": "lonely_anti", "class": "Exotic", "mass": 1.5, "charge": 0 }
+  ]
+})"};
   sand::particle_table const base{ufw::json::object()};
   sand::particle_table const table{config_with_extra_table(extra.path)};
 
-  BOOST_TEST(table.size() == base.size() + 2);
+  BOOST_TEST(table.size() == base.size() + 3);
 
+  // A code of the base is replaced
   BOOST_TEST(table.at(2212).name == "fake_proton");
   BOOST_TEST(table.mass(2212) == 1500.);
   BOOST_TEST(table.charge(2212) == 2.);
   BOOST_TEST(table.particle_class(2212) == "Test");
   // The antiproton is not in the file: unchanged
+  BOOST_TEST(table.at(-2212).name == base.at(-2212).name);
   BOOST_TEST(table.mass(-2212) == base.mass(-2212));
+  BOOST_TEST(table.charge(-2212) == base.charge(-2212));
+  BOOST_TEST(table.particle_class(-2212) == base.particle_class(-2212));
 
+  // A new code is added, mass in MeV as written
   BOOST_REQUIRE(table.contains(9900001));
+  BOOST_TEST(table.at(9900001).name == "newpart");
   BOOST_TEST(table.mass(9900001) == 2000.);
   BOOST_TEST(table.charge(9900001) == -1.);
   BOOST_TEST(table.particle_class(9900001) == "Exotic");
+  // An explicit antiparticle is added with its own values
   BOOST_REQUIRE(table.contains(-9900001));
   BOOST_TEST(table.at(-9900001).name == "antinewpart");
-  BOOST_TEST(table.mass(-9900001) == 2000.);
+  BOOST_TEST(table.mass(-9900001) == 2000.5);
   BOOST_TEST(table.charge(-9900001) == 1.);
+  // A negative code does not need the opposite particle, and nothing is generated
+  BOOST_REQUIRE(table.contains(-9900005));
+  BOOST_TEST(table.charge(-9900005) == 0.);
+  BOOST_TEST(!table.contains(9900005));
 
   // ROOT's global database is not modified
   BOOST_TEST(TDatabasePDG::Instance()->GetParticle(9900001) == nullptr);
   BOOST_TEST(TDatabasePDG::Instance()->GetParticle(2212)->Mass() == 0.9382721);
 }
 
-BOOST_AUTO_TEST_CASE(extra_table_invalid) {
-  temp_table const bad_number{"sand_particle_table_bad.txt",
-                              "    1 x  9900002  0 100 Test  3 abc 0. -100 -1 -100 -1 -1 0\n"};
-  BOOST_CHECK_THROW(sand::particle_table{config_with_extra_table(bad_number.path)},
-                    sand::particle_table::invalid_table);
-  temp_table const bad_anti{"sand_particle_table_bad_anti.txt", "    1 x  -9900003  1 0\n"};
-  BOOST_CHECK_THROW(sand::particle_table{config_with_extra_table(bad_anti.path)}, sand::particle_table::invalid_table);
-  temp_table const missing_decays{"sand_particle_table_bad_decays.txt",
-                                  "    1 x  9900004  0 100 Test  3 1. 0. -100 -1 -100 -1 -1 1\n"};
-  BOOST_CHECK_THROW(sand::particle_table{config_with_extra_table(missing_decays.path)},
-                    sand::particle_table::invalid_table);
+BOOST_AUTO_TEST_CASE(extra_table_missing_key) {
+  temp_table const top{"sand_particle_table_missing_top.json", R"({ "source": "test" })"};
+  check_invalid(top.path, {"top level", "missing key 'particles'"});
+  temp_table const entry{
+      "sand_particle_table_missing_entry.json",
+      table_json(valid_entry + R"(, { "pdg": 9900003, "name": "y", "class": "Test", "charge": 0 })")};
+  check_invalid(entry.path, {"particles[1] (PDG 9900003)", "missing key 'mass'"});
+}
+
+BOOST_AUTO_TEST_CASE(extra_table_unknown_key) {
+  temp_table const top{"sand_particle_table_unknown_top.json",
+                       R"({ "source": "test", "particles": [], "version": 2 })"};
+  check_invalid(top.path, {"top level", "unknown key 'version'"});
+  temp_table const entry{
+      "sand_particle_table_unknown_entry.json",
+      table_json(R"({ "pdg": 9900003, "name": "y", "class": "Test", "mass": 1, "charge": 0, "width": 0 })")};
+  check_invalid(entry.path, {"particles[0] (PDG 9900003)", "unknown key 'width'"});
+}
+
+BOOST_AUTO_TEST_CASE(extra_table_wrong_type) {
+  temp_table const source{"sand_particle_table_type_source.json", R"({ "source": 1, "particles": [] })"};
+  check_invalid(source.path, {"top level", "'source' must be a string"});
+  temp_table const particles{"sand_particle_table_type_particles.json", R"({ "source": "test", "particles": {} })"};
+  check_invalid(particles.path, {"top level", "'particles' must be an array"});
+  temp_table const pdg{"sand_particle_table_type_pdg.json",
+                       table_json(R"({ "pdg": "13", "name": "y", "class": "Test", "mass": 1, "charge": 0 })")};
+  check_invalid(pdg.path, {"particles[0]", "'pdg' must be an integer"});
+  temp_table const name{"sand_particle_table_type_name.json",
+                        table_json(R"({ "pdg": 9900003, "name": 3, "class": "Test", "mass": 1, "charge": 0 })")};
+  check_invalid(name.path, {"particles[0] (PDG 9900003)", "'name' must be a string"});
+  temp_table const mass{"sand_particle_table_type_mass.json",
+                        table_json(R"({ "pdg": 9900003, "name": "y", "class": "Test", "mass": "1", "charge": 0 })")};
+  check_invalid(mass.path, {"particles[0] (PDG 9900003)", "'mass' must be a number"});
+  temp_table const entry{"sand_particle_table_type_entry.json", table_json(valid_entry + ", 42")};
+  check_invalid(entry.path, {"particles[1]", "must be an object"});
+}
+
+BOOST_AUTO_TEST_CASE(extra_table_negative_mass) {
+  temp_table const extra{"sand_particle_table_negative_mass.json",
+                         table_json(R"({ "pdg": 9900003, "name": "y", "class": "Test", "mass": -1, "charge": 0 })")};
+  check_invalid(extra.path, {"particles[0] (PDG 9900003)", "negative 'mass'"});
+}
+
+BOOST_AUTO_TEST_CASE(extra_table_non_integer_charge) {
+  temp_table const extra{"sand_particle_table_fractional_charge.json",
+                         table_json(R"({ "pdg": 9900003, "name": "y", "class": "Test", "mass": 1, "charge": 0.5 })")};
+  check_invalid(extra.path, {"particles[0] (PDG 9900003)", "'charge' must be an integer"});
+}
+
+BOOST_AUTO_TEST_CASE(extra_table_repeated_code) {
+  temp_table const extra{"sand_particle_table_repeated.json", table_json(valid_entry + ", " + valid_entry)};
+  check_invalid(extra.path, {"particles[1] (PDG 9900002)", "repeated"});
+}
+
+BOOST_AUTO_TEST_CASE(extra_table_missing_file) {
+  auto const path = std::filesystem::temp_directory_path() / "sand_particle_table_does_not_exist.json";
+  std::filesystem::remove(path);
+  check_invalid(path, {});
+}
+
+BOOST_AUTO_TEST_CASE(extra_table_invalid_json) {
+  temp_table const extra{"sand_particle_table_invalid.json", R"({ "source": "test", "particles": [ )"};
+  check_invalid(extra.path, {"not valid JSON"});
 }
 
 BOOST_AUTO_TEST_CASE(light_nuclei_file) {
+  struct nucleus {
+    int pdg;
+    char const* name;
+    double mass; // MeV, CODATA 2022
+    double charge;
+  };
+  nucleus const nuclei[] = {{1000010020, "deuteron", 1875.61294500, 1.},
+                            {1000010030, "triton", 2808.92113668, 1.},
+                            {1000020030, "He3", 2808.39161112, 2.},
+                            {alpha_pdg, "alpha", 3727.3794118, 2.}};
   sand::particle_table const table{config_with_extra_table(light_nuclei)};
-  BOOST_REQUIRE(table.contains(alpha_pdg));
-  BOOST_TEST(table.charge(alpha_pdg) == 2.);
-  BOOST_TEST(table.mass(alpha_pdg) == 3727.3794118, boost::test_tools::tolerance(1e-12)); // CODATA 2022
-  BOOST_TEST(table.particle_class(alpha_pdg) == "Ion");
-  BOOST_TEST(table.charge(1000010020) == 1.);
-  BOOST_TEST(table.mass(1000010020) == 1875.612945, boost::test_tools::tolerance(1e-12));
-  BOOST_TEST(table.charge(1000010030) == 1.);
-  BOOST_TEST(table.mass(1000010030) == 2808.92113668, boost::test_tools::tolerance(1e-12));
-  BOOST_TEST(table.charge(1000020030) == 2.);
-  BOOST_TEST(table.mass(1000020030) == 2808.39161112, boost::test_tools::tolerance(1e-12));
+  for (auto const& n : nuclei) {
+    BOOST_TEST_CONTEXT("PDG " << n.pdg) {
+      BOOST_REQUIRE(table.contains(n.pdg));
+      BOOST_TEST(table.at(n.pdg).name == n.name);
+      // Read as written in the file, in MeV: no conversion
+      BOOST_TEST(table.mass(n.pdg) == n.mass);
+      BOOST_TEST(table.charge(n.pdg) == n.charge);
+      BOOST_TEST(table.particle_class(n.pdg) == "Ion");
+      BOOST_TEST(!table.contains(-n.pdg));
+    }
+  }
   // Nothing else changes
   sand::particle_table const base{ufw::json::object()};
   BOOST_TEST(table.size() == base.size() + 4);

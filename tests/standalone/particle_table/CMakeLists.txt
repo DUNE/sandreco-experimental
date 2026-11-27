@@ -1,8 +1,8 @@
 include(${CMAKE_SOURCE_DIR}/tools/cmake/standalone_test.cmake)
 
 # The CI runs the tests without src/ and without the install: read the light-nuclei table from a copy in the build tree
-configure_file(${CMAKE_SOURCE_DIR}/src/data/common/particle_table/light_nuclei.txt
-               ${CMAKE_CURRENT_BINARY_DIR}/light_nuclei.txt COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/src/data/common/particle_table/light_nuclei.json
+               ${CMAKE_CURRENT_BINARY_DIR}/light_nuclei.json COPYONLY)
 
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.test.cpp)
 

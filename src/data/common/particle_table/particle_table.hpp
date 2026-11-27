@@ -16,8 +16,8 @@ namespace sand {
    * @brief Read-only table of particle properties, keyed by PDG code.
    *
    * At construction the table copies every particle of ROOT's TDatabasePDG (the default
-   * `$ROOTSYS/etc/pdg_table.txt`), then optionally merges the particles of the file given by the configuration key
-   * `extra_table`. After construction the object is never modified, so it can be read from any process without locks.
+   * `$ROOTSYS/etc/pdg_table.txt`), then optionally merges the particles of the JSON file given by the configuration
+   * key `extra_table`. After construction the object is never modified, so it can be read from any process without locks.
    *
    * Units: masses in CLHEP units (MeV = 1, so a mass is a number of MeV; divide by `CLHEP::GeV` to get GeV), charges in
    * units of the positron charge `e`.
@@ -29,7 +29,7 @@ namespace sand {
    public:
     /// Properties of one particle.
     struct particle {
-      std::string name;           ///< Name, as in the TDatabasePDG text format (e.g. "mu-").
+      std::string name;           ///< Name, as in TDatabasePDG (e.g. "mu-").
       double mass{};              ///< Mass in CLHEP units (MeV).
       double charge{};            ///< Charge in units of e (ROOT stores it in units of |e|/3).
       std::string particle_class; ///< ROOT's particle class, e.g. "Lepton", "Meson", "Baryon".
@@ -42,18 +42,19 @@ namespace sand {
       explicit unknown_pdg(int pdg) : exception("PDG code {} is not in the particle table.", pdg) {}
     };
 
-    /// Thrown when the file given by `extra_table` is not in the TDatabasePDG text format.
+    /// Thrown when the file given by `extra_table` cannot be read or is not a valid particle table in JSON.
     class invalid_table : public ufw::exception {
      public:
-      /// @param source file name, @param line 1-based line number, @param reason what is wrong.
-      invalid_table(std::string const& source, std::size_t line, std::string const& reason)
-        : exception("Invalid particle table '{}', line {}: {}.", source, line, reason) {}
+      /// @param source file name, @param where position of the error in the file: "file", "top level" or the entry,
+      /// e.g. "particles[3] (PDG 1000020040)", @param reason what is wrong.
+      invalid_table(std::string const& source, std::string const& where, std::string const& reason)
+        : exception("Invalid particle table '{}', {}: {}.", source, where, reason) {}
     };
 
     /**
      * @brief Builds the table.
-     * @param cfg optional key `extra_table`: path (resolved with `ufw::config::path_at`) of a file in the
-     *            TDatabasePDG text format, whose particles are added to the table or replace those with the same code.
+     * @param cfg optional key `extra_table`: path (resolved with `ufw::config::path_at`) of a JSON file (see the
+     *            README), whose particles are added to the table or replace those with the same code.
      */
     explicit particle_table(ufw::config const& cfg);
 

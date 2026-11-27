@@ -1,0 +1,9 @@
+{
+  "source": "CODATA 2022 nuclear masses (no electrons), NIST",
+  "particles": [
+    { "pdg": 1000010020, "name": "deuteron", "class": "Ion", "mass": 1875.61294500, "charge": 1 },
+    { "pdg": 1000010030, "name": "triton",   "class": "Ion", "mass": 2808.92113668, "charge": 1 },
+    { "pdg": 1000020030, "name": "He3",      "class": "Ion", "mass": 2808.39161112, "charge": 2 },
+    { "pdg": 1000020040, "name": "alpha",    "class": "Ion", "mass": 3727.3794118,  "charge": 2 }
+  ]
+}

@@ -61,41 +61,47 @@ stores 7 significant digits (the muon is 105.6584 MeV, the PDG value is 105.6583
 
 | Key | Default | Meaning |
 |---|---|---|
-| `extra_table` | none | file in the TDatabasePDG text format, resolved with `path_at` (relative to `ufw-basepath`) |
+| `extra_table` | none | JSON file of extra particles, resolved with `path_at` (relative to `ufw-basepath`) |
 
-Each particle of the file is added to the table, or replaces the particle with the same code. ROOT's global
-`TDatabasePDG` is not modified: the file is parsed by `particle_table` itself, because `TDatabasePDG::ReadPDGTable`
-would change the database seen by every other user of ROOT in the job, and cannot replace a code that already
-exists (`AddParticle` refuses it with a warning).
+Each particle of the file is added to the table, or replaces the particle with the same code (the log names each
+replaced code). The file is read by `particle_table`; ROOT's global `TDatabasePDG` is not modified.
 
 ### Format
 
-The format of `$ROOTSYS/etc/pdg_table.txt`. Lines starting with `#` and empty lines are skipped. A particle line has
-15 fields:
-
-```
-#    i   NAME.............  KF AP   CLASS      Q        MASS     WIDTH  2*I+1 I3 2*S+1 FLVR TrkCod N(dec)
-    4 alpha         1000020040  0 100 Ion         6 3.7273794118  0.000000e+00 -100 -1    1 -1   -1   0
-```
-
-index, name, PDG code, antiparticle flag, class number (`100`, not named in ROOT's header comment), class, charge
-in units of |e|/3, mass in GeV, width in GeV, 2I+1, I3, 2S+1, flavour, tracking code, number of decay channels.
-`particle_table` uses the name, code, class, charge and mass; the other fields must be present but are not used. A
-particle line with N(dec) > 0 is followed by N(dec) decay lines, which are skipped.
-
-An antiparticle line has a negative code and no properties of its own: same mass and class as the particle with the
-opposite code (as it is in the table at that line), opposite charge.
-
-```
-   22 mu+                 -13      21     0
+```json
+{
+  "source": "CODATA 2022 nuclear masses (no electrons), NIST",
+  "particles": [
+    { "pdg": 1000020040, "name": "alpha", "class": "Ion", "mass": 3727.3794118, "charge": 2 }
+  ]
+}
 ```
 
-Replacing a particle does not replace its antiparticle: list both to change both. A malformed line stops the job
-with `particle_table::invalid_table`, naming the file and the line.
+At the top level, two keys, both required: `source` (string: where the values come from) and `particles` (array).
+Each entry of `particles` has five keys, all required:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `pdg` | integer | PDG code |
+| `name` | string | name |
+| `class` | string | particle class, as ROOT's (`"Ion"`, `"Lepton"`, ...) |
+| `mass` | number | mass in MeV, i.e. CLHEP units: stored as written, ≥ 0 |
+| `charge` | integer | charge in units of e |
+
+The charge is an integer: the extra particles have no fractional charge (quarks and diquarks are already in ROOT's
+table).
+
+Antiparticles are explicit entries with a negative code and their own values: nothing is generated from the
+particle, and an entry with a negative code does not need the opposite one. Replacing a particle does not replace
+its antiparticle: list both to change both.
+
+A missing or unknown key, a value of the wrong type, a negative mass, a non-integer charge, a code repeated in the
+file, a missing file or invalid JSON stop the job with `particle_table::invalid_table`, naming the file and the
+entry (index in `particles` and, when it can be read, the PDG code).
 
 ### Light nuclei
 
-`light_nuclei.txt` (installed in `<prefix>/share/sandreco/data/particle_table/`) adds the light nuclei, which are
+`light_nuclei.json` (installed in `<prefix>/share/sandreco/data/particle_table/`) adds the light nuclei, which are
 not in ROOT's table:
 
 | PDG code | Name | Charge | Mass [MeV] |
@@ -111,7 +117,7 @@ default; a job loads it with:
 
 ```json
 "globals": {
-  "sand::particle_table": { "extra_table": "particle_table/light_nuclei.txt" }
+  "sand::particle_table": { "extra_table": "particle_table/light_nuclei.json" }
 }
 ```
 
@@ -123,6 +129,6 @@ the framework tests.
 | File | Content |
 |---|---|
 | `particle_table.hpp/.cpp` | the framework data `sand::particle_table` |
-| `light_nuclei.txt` | optional table of the light nuclei |
+| `light_nuclei.json` | optional table of the light nuclei |
 
 Tests: `tests/standalone/particle_table`.

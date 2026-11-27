@@ -6,54 +6,53 @@
 #include <THashList.h>
 #include <TParticlePDG.h>
 
-#include <cstdlib>
+#include <algorithm>
 #include <fstream>
-#include <sstream>
-#include <stdexcept>
-#include <type_traits>
-#include <vector>
+#include <initializer_list>
+#include <limits>
+#include <string>
+#include <unordered_set>
 
 namespace sand {
 
   namespace {
 
-    /// Fields of a particle line in the TDatabasePDG text format: index, name, code, antiparticle flag, class number,
-    /// class, charge, mass, width, 2I+1, I3, 2S+1, flavour, tracking code, number of decay channels.
-    constexpr std::size_t particle_line_fields = 15;
-    /// Fields of an antiparticle line: index, name, (negative) code, index of the particle.
-    constexpr std::size_t antiparticle_line_fields = 4;
-
-    bool is_skipped(std::string const& line) {
-      auto const first = line.find_first_not_of(" \t\r");
-      return first == std::string::npos || line[first] == '#';
+    /// Throws invalid_table unless `obj` has exactly the keys `keys`.
+    void check_keys(ufw::json const& obj, std::initializer_list<std::string> keys, std::string const& source,
+                    std::string const& where) {
+      for (auto const& key : keys) {
+        if (!obj.contains(key)) {
+          UFW_EXCEPT(particle_table::invalid_table, source, where, "missing key '" + key + "'");
+        }
+      }
+      for (auto const& item : obj.items()) {
+        if (std::find(keys.begin(), keys.end(), item.key()) == keys.end()) {
+          UFW_EXCEPT(particle_table::invalid_table, source, where, "unknown key '" + item.key() + "'");
+        }
+      }
     }
 
-    std::vector<std::string> split(std::string const& line) {
-      std::istringstream in{line};
-      std::vector<std::string> tokens;
-      for (std::string t; in >> t;) {
-        tokens.push_back(t);
+    /// @return `obj[key]` as a string; throws invalid_table if it is not a string.
+    std::string get_string(ufw::json const& obj, std::string const& key, std::string const& source,
+                           std::string const& where) {
+      auto const& value = obj.at(key);
+      if (!value.is_string()) {
+        UFW_EXCEPT(particle_table::invalid_table, source, where, "'" + key + "' must be a string");
       }
-      return tokens;
+      return value.get<std::string>();
     }
 
-    template <typename T>
-    T parse_number(std::string const& token, std::string const& source, std::size_t line_no, char const* what) {
-      try {
-        std::size_t used{};
-        T value{};
-        if constexpr (std::is_integral_v<T>) {
-          value = std::stoi(token, &used);
-        } else {
-          value = std::stod(token, &used);
-        }
-        if (used == token.size()) {
-          return value;
-        }
-      } catch (std::logic_error const&) {
+    /// @return `obj[key]` as an int; throws invalid_table if it is not an integer or does not fit in an int.
+    int get_int(ufw::json const& obj, std::string const& key, std::string const& source, std::string const& where) {
+      auto const& value = obj.at(key);
+      if (!value.is_number_integer()) {
+        UFW_EXCEPT(particle_table::invalid_table, source, where, "'" + key + "' must be an integer");
       }
-      UFW_EXCEPT(particle_table::invalid_table, source, line_no,
-                 std::string{"cannot read "} + what + " '" + token + "'");
+      auto const as_double = value.get<double>();
+      if (as_double < std::numeric_limits<int>::min() || as_double > std::numeric_limits<int>::max()) {
+        UFW_EXCEPT(particle_table::invalid_table, source, where, "'" + key + "' is out of range");
+      }
+      return value.get<int>();
     }
 
   } // namespace
@@ -64,10 +63,19 @@ namespace sand {
     UFW_INFO("particle_table: {} particles from TDatabasePDG.", n_root);
 
     if (cfg.is_object() && cfg.contains("extra_table")) {
-      auto const path = cfg.path_at("extra_table");
+      std::filesystem::path path;
+      try {
+        path = cfg.path_at("extra_table");
+      } catch (ufw::exception const& e) {
+        std::string reason = e.what();
+        if (!reason.empty() && reason.back() == '.') {
+          reason.pop_back();
+        }
+        UFW_EXCEPT(invalid_table, cfg.at("extra_table").get<std::string>(), "file", reason);
+      }
       std::ifstream in{path};
       if (!in) {
-        UFW_EXCEPT(invalid_table, path.string(), 0, "cannot open the file");
+        UFW_EXCEPT(invalid_table, path.string(), "file", "cannot open the file");
       }
       merge_table(in, path.string());
     }
@@ -95,50 +103,54 @@ namespace sand {
   }
 
   void particle_table::merge_table(std::istream& in, std::string const& source) {
+    ufw::json table;
+    try {
+      table = ufw::json::parse(in);
+    } catch (ufw::json::parse_error const& e) {
+      UFW_EXCEPT(invalid_table, source, "file", std::string{"not valid JSON: "} + e.what());
+    }
+    if (!table.is_object()) {
+      UFW_EXCEPT(invalid_table, source, "top level", "must be an object");
+    }
+    check_keys(table, {"source", "particles"}, source, "top level");
+    static_cast<void>(get_string(table, "source", source, "top level"));
+    auto const& particles = table.at("particles");
+    if (!particles.is_array()) {
+      UFW_EXCEPT(invalid_table, source, "top level", "'particles' must be an array");
+    }
+
     std::size_t n_added{};
     std::size_t n_replaced{};
-    std::size_t line_no{};
-    std::size_t decays_to_skip{};
+    std::unordered_set<int> codes_in_file;
 
-    for (std::string line; std::getline(in, line);) {
-      ++line_no;
-      if (is_skipped(line)) {
-        continue;
+    for (std::size_t i = 0; i < particles.size(); ++i) {
+      auto const& item  = particles[i];
+      std::string where = "particles[" + std::to_string(i) + "]";
+      if (item.is_object() && item.contains("pdg") && item.at("pdg").is_number_integer()) {
+        where += " (PDG " + item.at("pdg").dump() + ")";
       }
-      if (decays_to_skip > 0) {
-        --decays_to_skip;
-        continue;
+      if (!item.is_object()) {
+        UFW_EXCEPT(invalid_table, source, where, "must be an object");
       }
+      check_keys(item, {"pdg", "name", "class", "mass", "charge"}, source, where);
 
-      auto const tokens = split(line);
-      if (tokens.size() < antiparticle_line_fields) {
-        UFW_EXCEPT(invalid_table, source, line_no, "too few fields");
+      int const code = get_int(item, "pdg", source, where);
+      if (!item.at("mass").is_number()) {
+        UFW_EXCEPT(invalid_table, source, where, "'mass' must be a number");
       }
-      auto const& name = tokens[1];
-      int const code   = parse_number<int>(tokens[2], source, line_no, "PDG code");
-
-      particle entry;
-      if (code < 0) {
-        // Antiparticle: same mass and class as the particle with the opposite code, opposite charge.
-        auto const it = m_particles.find(-code);
-        if (it == m_particles.end()) {
-          UFW_EXCEPT(invalid_table, source, line_no, "antiparticle of unknown particle " + std::to_string(-code));
-        }
-        entry = particle{name, it->second.mass, -it->second.charge, it->second.particle_class};
-      } else {
-        if (tokens.size() < particle_line_fields) {
-          UFW_EXCEPT(invalid_table, source, line_no, "too few fields for a particle");
-        }
-        double const charge = parse_number<double>(tokens[6], source, line_no, "charge");
-        double const mass   = parse_number<double>(tokens[7], source, line_no, "mass");
-        int const n_decays  = parse_number<int>(tokens[14], source, line_no, "number of decay channels");
-        if (n_decays < 0) {
-          UFW_EXCEPT(invalid_table, source, line_no, "negative number of decay channels");
-        }
-        entry          = particle{name, mass * CLHEP::GeV, charge / 3.0, tokens[5]};
-        decays_to_skip = static_cast<std::size_t>(n_decays);
+      double const mass = item.at("mass").get<double>();
+      if (!(mass >= 0.)) {
+        UFW_EXCEPT(invalid_table, source, where, "negative 'mass'");
+      }
+      int const charge = get_int(item, "charge", source, where);
+      auto name        = get_string(item, "name", source, where);
+      auto cls         = get_string(item, "class", source, where);
+      if (!codes_in_file.insert(code).second) {
+        UFW_EXCEPT(invalid_table, source, where, "PDG code repeated in the file");
       }
 
+      // Mass already in CLHEP units (MeV); charge in units of e.
+      particle entry{std::move(name), mass, static_cast<double>(charge), std::move(cls)};
       auto const [it, added] = m_particles.insert_or_assign(code, std::move(entry));
       if (added) {
         ++n_added;
@@ -148,9 +160,6 @@ namespace sand {
       }
     }
 
-    if (decays_to_skip > 0) {
-      UFW_EXCEPT(invalid_table, source, line_no, "missing decay channels at the end of the file");
-    }
     UFW_INFO("particle_table: {} particles added and {} replaced from '{}'.", n_added, n_replaced, source);
   }
 
