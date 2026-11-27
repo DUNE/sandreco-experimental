@@ -1,4 +1,4 @@
-# sandreco-experimental — Agent Guidelines
+# sandreco — Agent Guidelines
 
 ## Project Overview
 `sandreco` is a reconstruction framework for DUNE/ND/SAND, based on the [ufw](https://baltig.infn.it/dune/ufw) framework. It produces analysis-oriented CAF-like `.root` files. The project is C++17, built and deployed inside containerized environments from `baltig.infn.it:4567/dune/sand-ci/sandreco-ci`.
@@ -30,19 +30,12 @@ Each algorithm, data type, or streamer is its own module (shared library). Use t
 - `sandreco_add_process(name)` — for process/algorithm modules
 - `sandreco_add_complex_data(name)` — for complex data modules (exports headers)
 - One CMake per module, one library per CMake
+- more info at `docs/writing_new_modules.md`
 
 ### Naming conventions
 - Namespace: `sand::` for general things, otherwise `sand::<subdetector>::` (e.g. `sand::grain::`, `sand::tracker::`)
 - Module/library name: fully qualified class name with `::` replaced by `_` (e.g. `sand_grain_detector_response_fast`)
 - Folder structure mirrors the namespace hierarchy under `src/processes/<subdetector>/`, `src/filters/<subdetector>/`, etc.
-
-### Module structure
-Each module needs:
-1. A CMakeLists.txt using `sandreco_add_process` or `sandreco_add_complex_data`
-2. A `.hpp` header with `UFW_REGISTER_PROCESS` macro (for processes)
-3. A `.cpp` source with the implementation and factory registration
-
-See `docs/writing_new_modules.md` for a detailed guide.
 
 ## Code Style
 - **Indent**: 2 spaces, no tabs
@@ -51,6 +44,8 @@ See `docs/writing_new_modules.md` for a detailed guide.
 - **Short functions/lambdas**: allowed on a single line; if/for/while blocks: never
 - **Include sorting**: case-sensitive, ordered by category (`<` system → `<third-party` → `"internal"`)
 - `clang-format` config is in `.clang-format`. Apply with `clang-format -i <file>` or via the CMake `ClangFormat` module.
+- prefer `m_member` in new code, match existing otherwise
+- prefer using exisitng functions and libraries over new code
 
 ## Dependencies
 Critical external libraries: `ROOT`, `ufw`, `spdlog`, `pybind11`, `duneanaobj`, `Boost` (tests). Complex data libraries like `sand_geoinfo` are internal dependencies listed in each module's `target_link_libraries`.
@@ -65,27 +60,31 @@ Critical external libraries: `ROOT`, `ufw`, `spdlog`, `pybind11`, `duneanaobj`, 
 All building and testing must be performed inside the `sandreco-ci` podman container, which is running (if sandreco-ci is not running, try starting it; also try `sand-dev` or `sand-dev-cpu` which are richer containers).
  - The container provides the full development environment with all dependencies (ROOT, ufw, spdlog, etc.) pre-installed.
  - Dependencies are not installed outside the container and building will not be possible outside of it.
- - The container mounts the project folder `<local path>/sandreco-experimental` under a different name: `/home/sand/sandreco-experimental/`.
+ - The container mounts the project folder `<local path>/sandreco` under a different name: `/home/sand/sandreco/`.
  - The container also mounts the `ufw` library project folder `<local path>/ufw` under a different name: `/home/sand/ufw/`.
 
 ### Configure, build and install command
 Configuring is important whenever you make changes in include/ or make commits, as it picks up files and commit hash
- - Configure `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "cmake -S .. -B . -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=/usr/local/"`
- - Build and install `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "cmake --build . -j8 && cmake --install .`
+ - Configure `podman exec -w /home/sand/sandreco/build/ sandreco-ci bash -c "cmake -S .. -B . -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=/usr/local/"`
+ - Build and install `podman exec -w /home/sand/sandreco/build/ sandreco-ci bash -c "cmake --build . -j8 && cmake --install .`
  Build takes a couple of minutes
 
 ### Run all tests command
- `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "ctest --parallel 4 --output-on-failure`
+ `podman exec -w /home/sand/sandreco/build/ sandreco-ci bash -c "ctest --parallel 4 --output-on-failure`
  Tests may take up to 20 minutes, recommend background execution
 
 ### Run one test command
- `podman exec -w /home/sand/sandreco-experimental/build/ sandreco-ci bash -c "ctest -R <test name>`
+ `podman exec -w /home/sand/sandreco/build/ sandreco-ci bash -c "ctest -R <test name>`
  test name will be one of the tests from `tests/standalone` or `tests/framework`.
  Tests with the same hundreds digit may have data dependencies and need to be run in order.
-
 
 ### Available tests
 - **Standalone tests**: `tests/standalone/` — Boost.UnitTestFramework, header-only test executables. Include `tools/cmake/standalone_test.cmake` and use `add_test_with_libs()`.
 - **Framework tests**: `tests/framework/` — sample `.json` configs that exercise the full pipeline. Keep test data under ~100KB.
 - New tests should be added here too
 
+## Caution
+This project is under development by several people and agents at once:
+- When your changes impact APIs, file formats, etc... **review active work on other recent branches to predict upcoming conflicts.**.
+- Consider active at a minimum all work branching from or after the latest tag.
+- Impact on produced file formats **must involve human review**.
