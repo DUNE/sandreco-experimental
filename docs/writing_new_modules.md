@@ -96,8 +96,8 @@ exercised by the framework tests `016_store_write.json` / `017_store_read.json`.
    ```
 
    This produces, in namespace `sand`:
-   - `sand::vertices` — the collection type (`ufw::data::managed_collection<sand::vertex>`),
-     registered as managed data under this name;
+   - `sand::vertices` — the collection type (a `sand::keyed_store<sand::vertex, ...>` whose
+     single-value insertions return keys), registered as managed data under this name;
    - `sand::vertices_store()` — accessor for the current context's store;
    - `sand::vertices_index` — the typed key for that store, registered as unmanaged data.
 
@@ -137,10 +137,14 @@ keys into its records:
 
 ```cpp
 auto& store = sand::vertices_store();
-auto idx    = store.size();
-store.push_back(vertex);
-auto key    = sand::vertices_index{idx};
+auto key    = store.push_back(vertex); // the key is minted by the insertion itself
 ```
+
+The single-value insertions (`push_back`, `emplace_back`, single-element `insert`) return the
+key of the inserted element. A key cannot be constructed any other way: the raw-index
+constructor of `NAME_index` is private (the store is its only friend) and its `reset()` is
+deleted, so keys only ever come from store insertions (or are copied from existing keys). The
+multi-element `insert` overloads are deleted.
 
 ### Resolving keys
 
@@ -170,7 +174,7 @@ keys per store** and exposes a facade that iterates over them as if they were a 
 of the base type. `sand::reco::track` is the reference example:
 
 ```cpp
-track.push(sand::grain::grain_hits_index{0});    // one overload of push per store
+track.push(k);                                   // k: a grain_hits_index minted by an insertion
 trk.for_each_hit([](const reco::hit& h) {  // resolves each key against its store,
   h.width();                               // calls through the virtual base
 });

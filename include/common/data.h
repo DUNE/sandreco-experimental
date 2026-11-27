@@ -6,7 +6,9 @@
 #include <ufw/data.hpp>
 #include <ufw/store.hpp>
 
+#include <iterator>
 #include <set>
+#include <utility>
 #include <vector>
 
 
@@ -21,8 +23,54 @@ namespace sand {
     using type = T;
   };
 
-  // Shared-object collections are ufw::data::managed_collection (see
-  // SAND_SHARED_COLLECTION below); no sandreco-side counterpart is needed.
+  /**
+   * Base for a shared-object store (see SAND_SHARED_COLLECTION below).
+   *
+   * Named keyed_store because shared_store is taken by the accessor function of the
+   * sand::shared store.
+   *
+   * Behaves like ufw::data::managed_collection, but the single-value insertions
+   * (push_back, emplace_back, single-element insert) return the store's typed key
+   * (Key) of the inserted element, so a key can only be minted by inserting into
+   * the store or copied from an existing key: Key's raw-index constructor is
+   * private (the store is its only friend) and its reset() is deleted.
+   * The multi-element insert overloads cannot mint a single key and are deleted.
+   */
+  template <typename T, typename Key>
+  struct keyed_store : public ufw::data::managed_collection<T> {
+    using base           = ufw::data::managed_collection<T>;
+    using const_iterator = typename base::const_iterator;
+
+    Key push_back(const T& v) {
+      base::push_back(v);
+      return Key{this->size() - 1};
+    }
+
+    Key push_back(T&& v) {
+      base::push_back(std::move(v));
+      return Key{this->size() - 1};
+    }
+
+    template <class... Args>
+    Key emplace_back(Args&&... args) {
+      base::emplace_back(std::forward<Args>(args)...);
+      return Key{this->size() - 1};
+    }
+
+    Key insert(const_iterator pos, const T& v) {
+      return Key{static_cast<std::size_t>(std::distance(base::begin(), base::insert(pos, v)))};
+    }
+
+    Key insert(const_iterator pos, T&& v) {
+      return Key{static_cast<std::size_t>(std::distance(base::begin(), base::insert(pos, std::move(v))))};
+    }
+
+    // Multi-element insertions cannot mint a single key and are disabled.
+    void insert(const_iterator, std::size_t, const T&) = delete;
+    template <class InputIt>
+    void insert(const_iterator, InputIt, InputIt) = delete;
+    void insert(const_iterator, std::initializer_list<T>) = delete;
+  };
 
 } // namespace sand
 
@@ -89,16 +137,40 @@ UFW_DECLARE_UNMANAGED_DATA(sand::truth_index)
 
 /**
  * Declare a per-context store of shared objects addressed through typed keys, the
- * shared-store counterpart of SAND_DATA_COLLECTION: NS::NAME becomes the collection type
- * and the registered (streamed) name of the managed variable. UFW_DECLARE_STORE adds the
- * NS::NAME_store() accessor and the NS::NAME_index key type, and registers the key as
- * unmanaged data. NAME also becomes the public id of the store variable (the name used
- * in a process's reqs/prods and as a branch name); the public id space is flat —
+ * shared-store counterpart of SAND_DATA_COLLECTION: NS::NAME becomes the collection
+ * type (a sand::keyed_store whose single-value insertions return keys) and the
+ * registered (streamed) name of the managed variable.
+ *
+ * The macro creates, in namespace NS:
+ * - NS::NAME_store(): an inline accessor returning the current context's store;
+ * - NS::NAME_index: the typed key, bound to the store. It can only be obtained from
+ *   a store insertion (or copied): the raw-index constructor is private (the store
+ *   is the only friend) and reset() is deleted;
+ * and registers the collection as managed data and the key as unmanaged data, so
+ * both can be used as streamer variables.
+ *
+ * NAME also becomes the public id of the store variable (the name used in a
+ * process's reqs/prods and as a branch name); the public id space is flat —
  * namespaces do not qualify it — so NAME must be unique across all stores.
  */
-#define SAND_SHARED_COLLECTION(NS, T, NAME)                                                                            \
-  UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                    \
-  namespace NS {                                                                                                       \
-    using NAME = ufw::data::managed_collection<NS::T>;                                                                 \
-  }                                                                                                                    \
-  UFW_DECLARE_STORE(NS, NS::NAME, NAME)
+#define SAND_SHARED_COLLECTION(NS, T, NAME)                                                                              \
+  UFW_DECLARE_UNMANAGED_DATA(NS::T)                                                                                      \
+  namespace NS {                                                                                                         \
+    struct NAME;                                                                                                         \
+    inline NAME& NAME##_store();                                                                                         \
+    class NAME##_index;                                                                                                  \
+    struct NAME : public sand::keyed_store<T, NAME##_index> {};                                                          \
+    class NAME##_index final : public ufw::data::index<ufw::data::sequential_adapter<NAME, &NAME##_store>, std::size_t> {\
+      friend sand::keyed_store<T, NAME##_index>;                                                                         \
+      explicit NAME##_index(std::size_t i)                                                                               \
+        : ufw::data::index<ufw::data::sequential_adapter<NAME, &NAME##_store>, std::size_t>(i) {}                        \
+     public:                                                                                                             \
+      NAME##_index() = default;                                                                                          \
+      void reset(std::size_t) = delete;                                                                                  \
+    };                                                                                                                   \
+    static_assert(ufw::data::is_sequential_container<NAME>,                                                             \
+                  "SAND_SHARED_COLLECTION requires a collection with the sequential (at/size) interface");               \
+    inline NAME& NAME##_store() { return ufw::context::current()->instance<NAME>(#NAME); }                               \
+  }                                                                                                                      \
+  UFW_DECLARE_MANAGED_DATA(NS::NAME)                                                                                     \
+  UFW_DECLARE_UNMANAGED_DATA(NS::NAME##_index)

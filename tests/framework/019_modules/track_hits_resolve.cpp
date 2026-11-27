@@ -8,8 +8,10 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
-#include <cmath>
+#include <array>
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -22,7 +24,13 @@ namespace sand::test {
 
   // Reads back the track and hit stores written by 018_track_hits_write.json and verifies, through
   // the track interface, that every key resolves to the very element of the read-back store and
-  // that all values match the csv recorded by the fill run.
+  // that all values match the csv recorded by the fill run bit by bit (the numeric columns of the
+  // csv are the bit patterns of the values).
+  //
+  // Structural problems (invalid keys, non-permutation key order, keys resolving to the wrong
+  // element, missing csv rows) fail immediately; value mismatches are counted per field over the
+  // whole context and reported in a single summary, so the failure log shows which members are
+  // lost (as in 205_ecal_digi_streamer_read).
   struct track_hits_resolve : public ufw::process {
     track_hits_resolve();
     void run() override;
@@ -31,10 +39,10 @@ namespace sand::test {
   namespace {
 
     const std::string csv_path = "test/track_hits.csv";
-    const double tol           = 1.e-6;
 
     struct expected_hit {
-      double cx, cy, cz, ax, ay, az, t_earliest, t_best, t_latest, width;
+      // Bit patterns of the numeric members, exactly as written by the fill run.
+      std::uint64_t cx, cy, cz, ax, ay, az, t_earliest, t_best, t_latest, width;
       std::string dummy;
     };
 
@@ -44,6 +52,10 @@ namespace sand::test {
     const csv_map& load_csv() {
       static const csv_map csv = [] {
         csv_map m;
+        // Per-store rows, rows with a nonzero width, rows with a nonzero dummy, rows with a
+        // nonempty dummy: the test is only meaningful if the fill recorded at least one of each,
+        // so a systematically dropped member cannot yield a vacuous pass.
+        std::map<std::string, std::array<std::size_t, 4>> stats;
         // Same path convention as the streamer's root file: relative paths expand against the basepath.
         const auto csv_file = ufw::config::expand_path(csv_path, ufw::config::io::read | ufw::config::io::file);
         std::ifstream in(csv_file);
@@ -63,26 +75,68 @@ namespace sand::test {
           const std::size_t ctx   = std::stoull(next());
           const std::string store = next();
           const std::size_t idx   = std::stoull(next());
-          e.cx                    = std::stod(next());
-          e.cy                    = std::stod(next());
-          e.cz                    = std::stod(next());
-          e.ax                    = std::stod(next());
-          e.ay                    = std::stod(next());
-          e.az                    = std::stod(next());
-          e.t_earliest            = std::stod(next());
-          e.t_best                = std::stod(next());
-          e.t_latest              = std::stod(next());
-          e.width                 = std::stod(next());
+          e.cx                    = std::stoull(next());
+          e.cy                    = std::stoull(next());
+          e.cz                    = std::stoull(next());
+          e.ax                    = std::stoull(next());
+          e.ay                    = std::stoull(next());
+          e.az                    = std::stoull(next());
+          e.t_earliest            = std::stoull(next());
+          e.t_best                = std::stoull(next());
+          e.t_latest              = std::stoull(next());
+          e.width                 = std::stoull(next());
           e.dummy                 = next();
-          m.emplace(std::make_tuple(ctx, store, idx), e);
+          UFW_ASSERT(!iss.fail(), "Malformed csv line '{}'.", line);
+          const auto [it, ok] = m.emplace(std::make_tuple(ctx, store, idx), e);
+          UFW_ASSERT(ok, "The csv must not contain a duplicate row for context {} store {} index {}.", ctx, store, idx);
+          auto& s           = stats[store];
+          s[0] += 1;
+          s[1] += e.width != 0 ? 1 : 0;
+          s[2] += e.dummy != "0" ? 1 : 0;
+          s[3] += !e.dummy.empty() ? 1 : 0;
+        }
+        for (const auto store : {"grain", "tracker", "ecal"}) {
+          const auto it = stats.find(store);
+          UFW_ASSERT(it != stats.end(), "The csv must contain rows for the {} store.", store);
+          const auto& s = it->second;
+          UFW_ASSERT(s[1] > 0, "The csv must contain at least one {} hit with a nonzero width.", store);
+          UFW_ASSERT(s[2] > 0, "The csv must contain at least one {} hit with a nonzero dummy value.", store);
+          UFW_ASSERT(s[3] > 0, "The csv must contain at least one {} hit with a nonempty dummy value.", store);
         }
         return m;
       }();
       return csv;
     }
 
-    void close_enough(double a, double b, const std::string& what) {
-      UFW_ASSERT(std::abs(a - b) < tol, "The {} must match the csv: {} vs {}.", what, a, b);
+    // Bit pattern of the value, the same encoding the fill run used for the csv.
+    template <typename T>
+    std::uint64_t pattern(T v) {
+      std::uint64_t b = 0;
+      std::memcpy(&b, &v, sizeof(v));
+      return b;
+    }
+
+    // Counts the mismatches of each field over the context, so the summary shows which
+    // members are lost, then fails once with the summary.
+    struct field_errors {
+      std::map<std::string, std::size_t> count;
+      void add(const std::string& what) {
+        ++count[what];
+      }
+      bool empty() const { return count.empty(); }
+      std::string summary() const {
+        std::string s;
+        for (const auto& [f, n] : count) {
+          s += f + ": " + std::to_string(n) + "; ";
+        }
+        return s;
+      }
+    };
+
+    void same(field_errors& errs, std::uint64_t got, std::uint64_t ref, const std::string& what) {
+      if (got != ref) {
+        errs.add(what);
+      }
     }
 
   } // namespace
@@ -105,6 +159,7 @@ namespace sand::test {
     const auto& eh = sand::ecal::ecal_hits_store();
 
     std::size_t total = 0;
+    field_errors errs;
     // Check that the keys of one store form a permutation of [0, n), that every key
     // resolves to the very element of the read-back store, and that all values match the csv.
     auto check_store = [&](const std::string& name, const auto& store, const auto& keys, auto check_dummy) {
@@ -129,44 +184,43 @@ namespace sand::test {
         UFW_ASSERT(it != csv.end(), "The csv must contain a row for context {} store {} index {}.", ctx, name, i);
         const auto& e = it->second;
         const auto& h = *k;
-        close_enough(h.centre().x(), e.cx, "centre.x");
-        close_enough(h.centre().y(), e.cy, "centre.y");
-        close_enough(h.centre().z(), e.cz, "centre.z");
-        close_enough(h.axis().x(), e.ax, "axis.x");
-        close_enough(h.axis().y(), e.ay, "axis.y");
-        close_enough(h.axis().z(), e.az, "axis.z");
-        close_enough(h.t().earliest(), e.t_earliest, "time.earliest");
-        close_enough(h.t().best(), e.t_best, "time.best");
-        close_enough(h.t().latest(), e.t_latest, "time.latest");
-        close_enough(h.width(), e.width, "width");
-        check_dummy(h, e);
+        same(errs, pattern(h.centre().x()), e.cx, name + ".centre.x");
+        same(errs, pattern(h.centre().y()), e.cy, name + ".centre.y");
+        same(errs, pattern(h.centre().z()), e.cz, name + ".centre.z");
+        same(errs, pattern(h.axis().x()), e.ax, name + ".axis.x");
+        same(errs, pattern(h.axis().y()), e.ay, name + ".axis.y");
+        same(errs, pattern(h.axis().z()), e.az, name + ".axis.z");
+        same(errs, pattern(h.t().earliest()), e.t_earliest, name + ".time.earliest");
+        same(errs, pattern(h.t().best()), e.t_best, name + ".time.best");
+        same(errs, pattern(h.t().latest()), e.t_latest, name + ".time.latest");
+        same(errs, pattern(h.width()), e.width, name + ".width");
+        check_dummy(h, e, errs);
       }
       total += n;
     };
 
-    check_store("grain", gh, tr.grain_hits(), [](const auto& h, const expected_hit& e) {
-      UFW_ASSERT(std::abs(h.test_float() - std::stod(e.dummy)) < 1.e-6,
-                 "The grain dummy must match the csv: {} vs {}.",
-                 h.test_float(),
-                 e.dummy);
+    check_store("grain", gh, tr.grain_hits(), [](const auto& h, const expected_hit& e, field_errors& errs) {
+      same(errs, pattern(h.test_float()), std::stoull(e.dummy), "grain.test_float");
     });
-    check_store("tracker", th, tr.tracker_hits(), [](const auto& h, const expected_hit& e) {
-      UFW_ASSERT(std::abs(h.test_double() - std::stod(e.dummy)) < 1.e-6,
-                 "The tracker dummy must match the csv: {} vs {}.",
-                 h.test_double(),
-                 e.dummy);
+    check_store("tracker", th, tr.tracker_hits(), [](const auto& h, const expected_hit& e, field_errors& errs) {
+      same(errs, pattern(h.test_double()), std::stoull(e.dummy), "tracker.test_double");
     });
-    check_store("ecal", eh, tr.ecal_hits(), [](const auto& h, const expected_hit& e) {
-      UFW_ASSERT(h.test_string() == e.dummy,
-                 "The ecal dummy must match the csv: {} vs {}.",
-                 h.test_string(),
-                 e.dummy);
+    check_store("ecal", eh, tr.ecal_hits(), [](const auto& h, const expected_hit& e, field_errors& errs) {
+      if (h.test_string() != e.dummy) {
+        errs.add("ecal.test_string");
+      }
     });
+
+    // Guard against a vacuous pass: the read-back stores must not be empty.
+    UFW_ASSERT(total > 0, "The track's hit stores must not read back empty.");
 
     // Through the single-container interface, the track must visit every hit of its stores.
     std::size_t visited = 0;
     tr.for_each_hit([&](const reco::hit&) { ++visited; });
     UFW_ASSERT(visited == total, "for_each_hit must visit all {} hits, was {}.", total, visited);
+
+    // Report the value mismatches, if any, in one summary: which members are lost, and how often.
+    UFW_ASSERT(errs.empty(), "Value mismatches against the csv: {}", errs.summary());
   }
 
 } // namespace sand::test
