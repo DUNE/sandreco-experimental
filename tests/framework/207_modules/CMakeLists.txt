@@ -1,0 +1,4 @@
+sandreco_add_test_process(sand_test_ecal_preclustering)
+target_sources(sand_test_ecal_preclustering PRIVATE ecal_preclustering.cpp)
+target_include_directories(sand_test_ecal_preclustering PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_link_libraries(sand_test_ecal_preclustering PRIVATE sand_ecal_preclustering sand_geoinfo ROOT::MathCore)
