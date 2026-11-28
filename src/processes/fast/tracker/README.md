@@ -13,7 +13,8 @@ Builds the tracker objects (STT or drift chambers) from the edep-sim hits of eve
 | `min_energy_deposit` | 0 | MeV deposited in the tracker to see a particle |
 | `b_field_magnitude` | 0.6 | T, field along x, for `R` |
 
-Instances: `sand::edep_reader`, `sand::spill_maps`.
+Instances: `sand::edep_reader`, `sand::spill_maps`, `sand::particle_table` (mass and charge from the true pdg;
+mass 0 and charge 0 for codes not in the table).
 
 ## What it does
 

@@ -6,6 +6,7 @@
     "ufw-env": {}
   },
   "globals": {
+    "sand::particle_table": {},
     "sand::root_tgeomanager": {
       "geometry": "test/sand-spills.5.edep.root"
     }

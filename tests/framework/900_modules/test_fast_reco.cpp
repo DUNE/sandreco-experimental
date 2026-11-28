@@ -2,6 +2,7 @@
 #include <common/sand.h>
 
 #include <edep_reader/edep_reader.hpp>
+#include <particle_table/particle_table.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <spill_maps/spill_maps.hpp>
 
@@ -10,11 +11,9 @@
 #include <ufw/factory.hpp>
 #include <ufw/process.hpp>
 
-#include <TDatabasePDG.h>
 #include <TGeoMaterial.h>
 #include <TGeoNode.h>
 #include <TGeoVolume.h>
-#include <TParticlePDG.h>
 
 #include <algorithm>
 #include <array>
@@ -272,9 +271,9 @@ namespace sand::test {
                    "ixn[{}].part[{}]: {} track without entry point, but dir isn't the first hit's", i, j, in);
         return;
       }
-      auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
-      double const mass    = pdg_info != nullptr ? pdg_info->Mass() * 1000. : 0.; // GeV -> MeV
-      auto const& p_in     = entry->GetMomentum();                                // MeV
+      auto const& table = ufw::context::current()->instance<sand::particle_table>();
+      double const mass = table.contains(true_part.pdg) ? table.mass(true_part.pdg) : 0.; // MeV
+      auto const& p_in  = entry->GetMomentum();                                           // MeV
       UFW_ASSERT(close(track.E, std::sqrt(p_in.Mag2() + mass * mass)),
                  "ixn[{}].part[{}]: {} track E {} MeV isn't the energy at the entry point", i, j, in, track.E);
       // R [cm] = p_T [MeV] / (3 B [T]), p_T transverse to the field (along x)

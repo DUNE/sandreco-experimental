@@ -46,9 +46,11 @@ SRRecoParticle"]
 - `smear_particle()` does not smear `E` independently from `p`: smearing both independently
   would break the mass-shell relation `E^2 = |p|^2 + m^2` for the particle's `pdg`, effectively
   changing its invariant mass. Instead, only `p` is smeared and `E` is derived from the smeared
-  `p` and the rest mass looked up from `pdg` via `TDatabasePDG`, so `pdg` and the resulting mass
-  always stay consistent. `pdg` codes with no entry in `TDatabasePDG` (e.g.
-  `SRRecoParticle::kPdgHadronicBlob`) fall back to a rest mass of `0`.
+  `p` and the rest mass looked up from `pdg` in `sand::particle_table`, so `pdg` and the resulting mass
+  always stay consistent. `pdg` codes not in the table (e.g. `SRRecoParticle::kPdgHadronicBlob`, and nuclei unless
+  the job loads them with `extra_table`) fall back to a rest mass of `0`.
+- A job running `gauss_smearing` needs `"sand::particle_table": {}` in `globals` (see
+  `src/data/common/particle_table/README.md`).
 - Randomness comes from `ufw::context::current()->engine()`, the per-context RNG already
   seeded by the framework; `gauss_smearing` does not own or seed its own engine.
 - `smear_interaction()` mirrors `sand::fast::neutrino`'s choice of collapsing every `Enu` estimator

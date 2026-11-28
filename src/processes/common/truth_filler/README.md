@@ -108,6 +108,9 @@ auto const trj   = edep.GetTrajectory(maps.at(ixn).to_spill_id(true_part.G4ID));
 `truth_filler` itself takes the maps this way and passes each interaction's map to
 `build_true_particle_tree()`, so a job running it needs `"sand::spill_maps": {}` in `contexts.locals`.
 
+The final-state lepton is checked with the particle class of `sand::particle_table` (`"Lepton"`; codes not in the
+table are not leptons), so a job running `truth_filler` also needs `"sand::particle_table": {}` in `globals`.
+
 **Never pass `SRTrueParticle::G4ID` to `GetTrajectory()` directly**: it only works by chance for the
 primaries of the first interaction, and silently returns another particle's trajectory otherwise.
 
@@ -139,7 +142,7 @@ Stored in `truth_branch.nu[i]`. Filled by `filler_details::true_interaction_from
 | `Q2` | `float` | `−q²`, `q = p_ν − p_ℓ` | **GeV²** | |
 | `q0` | `float` | `q.E()` | **GeV** | |
 | `modq` | `float` | `q.P()` | **GeV/c** | |
-| `W` | `float` | `√(M² + 2·q₀·M + q²)` with `M = TDatabasePDG(2212)→Mass()` | **GeV** | Proton mass ≈ 0.9383; ND_CAFMaker uses `Mnuc = 0.939` |
+| `W` | `float` | `√(M² + 2·q₀·M + q²)` with `M = 0.939` | **GeV** | ND_CAFMaker value `Mnuc = 0.939`; the proton mass is 0.9383 |
 | `bjorkenX` | `float` | `Q² / (2·M·q₀)` | dimensionless | |
 | `inelasticity` | `float` | `q₀ / E_ν` | dimensionless | |
 | **GENIE flags** |||||

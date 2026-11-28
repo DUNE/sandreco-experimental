@@ -63,6 +63,8 @@ you need to make sure that sand headers are included before ufw headers in all c
 Go wild implementing your algorithm. Use `get<T>()` for managed inputs, `set<T>()` for managed outputs and `instance<T>()` for complex data.
 Remember to write a doxygen comment for the class which includes a table of the parameters used in `configure()`.
 
+For particle properties (mass, charge, class by PDG code) use `instance<sand::particle_table>()` and link `sand_particle_table`, never ROOT's `TDatabasePDG` directly; the job then needs `"sand::particle_table": {}` in `globals`. See `src/data/common/particle_table/README.md`.
+
 ## Streamers
 
 Streamers are tricky. Use the existing ones unless you really need a different file type and cannot convert. Fully featured streamers need to handle I/O of everything under `include/`. If you are an experienced developer, check `tree_streamer` for guidance. A streamer that handles only a handful of types could be made as well, such as `png_streamer`, that only writes 2D images.

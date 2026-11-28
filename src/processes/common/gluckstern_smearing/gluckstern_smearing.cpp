@@ -3,6 +3,7 @@
 #include <caf/caf_wrapper.hpp>
 
 #include <edep_reader/edep_reader.hpp>
+#include <particle_table/particle_table.hpp>
 #include <root_tgeomanager/root_tgeomanager.hpp>
 #include <spill_maps/spill_maps.hpp>
 
@@ -16,8 +17,7 @@
 
 #include <edep_reader/EDEPHit.h>
 
-#include <TDatabasePDG.h>
-#include <TParticlePDG.h>
+#include <Geant4/CLHEP/Units/SystemOfUnits.h>
 
 #include <algorithm>
 #include <cmath>
@@ -241,6 +241,7 @@ namespace sand::common {
     out_nd.sand = in_nd.sand;
 
     auto const& track_ids = instance<sand::spill_maps>();
+    auto const& table     = instance<sand::particle_table>();
 
     int n_smeared{};
     int n_out_of_range{};
@@ -284,8 +285,9 @@ namespace sand::common {
         continue;
       }
 
-      auto const* pdg_info = TDatabasePDG::Instance()->GetParticle(true_part.pdg);
-      float const mass     = pdg_info != nullptr ? static_cast<float>(pdg_info->Mass()) : 0.f;
+      // GeV, 0 for codes not in the table
+      float const mass =
+          table.contains(true_part.pdg) ? static_cast<float>(table.mass(true_part.pdg) / CLHEP::GeV) : 0.f;
 
       track.dir = normalize_to_direction(smeared_p->x, smeared_p->y, smeared_p->z);
       // smeared_p and mass are in GeV, SRTrack::E is in MeV
