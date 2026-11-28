@@ -115,8 +115,11 @@ void EDEPTree::fill_points(EDEPTrajectory& trj, const TG4Trajectory& g4trj, TGeo
     vol.push_back(classify(get_node(nav, p)));
   }
 
-  // 2. Store each point in its subdetector.
+  // 2. Store each point in its subdetector, and once in step order (the order must never be recovered from the
+  //    times: ~1e12 ns after the spill building, so points a few um apart can have the same time).
+  trj.ordered_points_.reserve(pts.size());
   for (std::size_t k = 0; k < pts.size(); k++) {
+    trj.ordered_points_.emplace_back(pts.at(k));
     trj.trajectory_points_[main_comp(vol.at(k))].emplace_back(pts.at(k));
     //if vol.at(k) is "TRACKER" -> STT and DRIFT, main_comp returns always DRIFT, add STT as well
     if (is_stt_and_drift(vol.at(k))) {

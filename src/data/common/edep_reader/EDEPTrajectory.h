@@ -220,7 +220,10 @@ class EDEPTrajectory {
 
   /**
    * @brief Get the trajectory points associated with this trajectory.
-   * @return All trajectory points associated with this trajectory ordered by increasing times.
+   * @return All trajectory points associated with this trajectory, once each, in the edep-sim (Geant4) step order,
+   *         i.e. by increasing time.
+   * @note The order is the one of the steps, not recomputed from the times: after the spill building the absolute
+   *       times are ~1e12 ns, so points a few um apart can have exactly the same double value.
    */
   std::vector<EDEPTrajectoryPoint> GetTrajectoryPointsVect() const;
 
@@ -296,6 +299,7 @@ class EDEPTrajectory {
   sand::vec_4d p0_{0, 0, 0, 0};                       ///< Initial momentum of the trajectory.
   EDEPHitsMap hit_map_;                               ///< Map of hits associated with the trajectory.
   EDEPTrajectoryPoints trajectory_points_;            ///< Trajectory points.
+  std::vector<EDEPTrajectoryPoint> ordered_points_;   ///< All the trajectory points, once each, in edep-sim step order.
   std::vector<EDEPTrajectory*> children_;             ///< Children trajectories.
   std::array<bool, sand::kNumComponents> exiting_{};  ///< Map indicating whether the trajectory is exiting a sand::subdetector_t.
   std::array<bool, sand::kNumComponents> entering_{}; ///< Map indicating whether the trajectory is entering a sand::subdetector_t.

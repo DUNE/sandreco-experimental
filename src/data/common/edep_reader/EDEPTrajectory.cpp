@@ -290,17 +290,4 @@ bool EDEPTrajectory::Match(std::string_view volume, std::initializer_list<std::s
   return false;
 }
 
-std::vector<EDEPTrajectoryPoint> EDEPTrajectory::GetTrajectoryPointsVect() const {
-  std::size_t n = 0;
-  for (const auto& comp : trajectory_points_) {
-    n += comp.second.size();
-  }
-  std::vector<EDEPTrajectoryPoint> points;
-  points.reserve(n);
-  for (const auto& comp : trajectory_points_) {
-    points.insert(points.end(), comp.second.begin(), comp.second.end());
-  }
-  std::stable_sort(points.begin(), points.end(), [](const EDEPTrajectoryPoint& a, const EDEPTrajectoryPoint& b) { return a.GetPosition().T() < b.GetPosition().T();});
-
-  return points;
-}
+std::vector<EDEPTrajectoryPoint> EDEPTrajectory::GetTrajectoryPointsVect() const { return ordered_points_; }
